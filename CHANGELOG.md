@@ -91,6 +91,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Wired the safety content cluster so it is no longer orphaned — Safety + Limits links in the site footer, `/learn` safety group links to `/safety`, informed-consent gate links to the safety guide, and cross-links between `/emdr`, `/safety`, and `/limits`
 - [internal] Public `/knowledge` — Nolla-style video Q stage (tap a question → different clip); pistachio marketing shell, FAQ JSON-LD, sitemap/robots/llms/footer; per-question mp4 when files land under `public/marketing/knowledge/`
 - [internal] Public `/pricing`, `/faq`, and `/support` marketing pages — plans (USD), merged FAQ, and how to get help; wired into SEO, sitemap, robots, llms.txt, footer, and header Prices
+- [internal] Cloudflare Turnstile Spin skill persisted under `.cursor/skills/turnstile-spin` for existing-widget follow-ups; production docs list sitekey `0x4AAAAAAEwsZmygyW6qxk-M`
 
 ### Changed
 - **Cursor rule `marketing-no-explain-copy`**: marketing surfaces must not use body text to explain — hierarchy, cards, labels, visuals + CTA; linked from `page-copy-design-review` and `nura-brand`

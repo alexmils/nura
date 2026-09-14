@@ -26,7 +26,7 @@ await fetch("/api/auth/register", { body: JSON.stringify({ email, password }) })
 
 ## Surfaces that already use this
 
-login · signup (`register`) · forgot-password · reset-password · create-password
+login · signup (`register`) · forgot-password · reset-password · create-password · guest help chat (`help-guest`) · guest help contact (`help-guest`)
 
 New guest forms (newsletter API, contact, waitlist, etc.) must follow the same contract with a new `action` string.
 
