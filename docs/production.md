@@ -185,9 +185,9 @@ Set in Coolify → **nurahelp** → Environment (values not in git):
 | `WEBAUTHN_ORIGIN` | `https://nurahelp.com` |
 | `PORT` | `3471` (image default) |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Prod Google OAuth; add redirect `https://nurahelp.com/api/auth/google/callback` |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Public Turnstile sitekey |
-| `TURNSTILE_SECRET` | Turnstile widget secret (Coolify only; never git) |
-| `TURNSTILE_HOSTNAMES` | Prod: `nurahelp.com,www.nurahelp.com` (no localhost) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `0x4AAAAAAEwsZmygyW6qxk-M` (public sitekey; safe in client) |
+| `TURNSTILE_SECRET` | Widget secret from Cloudflare Turnstile dashboard / `wrangler turnstile widget get` (Coolify only; never git) |
+| `TURNSTILE_HOSTNAMES` | Prod: `nurahelp.com,www.nurahelp.com` (no localhost / `127.0.0.1`) |
 | `CRON_SECRET` | Shared secret for scheduled jobs (e.g. guest help transcript cron) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Optional Web Push keys for Admin Help alerts (PWA). If unset, keys are auto-generated and stored in platform settings on first use |
 | `VAPID_SUBJECT` | Optional `mailto:` or `https://` contact for VAPID (defaults to `APP_URL`) |
