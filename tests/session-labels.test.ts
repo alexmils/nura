@@ -4,6 +4,7 @@ import {
   checkInPlaceholder,
   checkInQuickReplies,
   phaseLabel,
+  showsSessionQuickReplies,
 } from "../lib/session-labels.ts";
 
 describe("session labels", () => {
@@ -25,8 +26,49 @@ describe("session labels", () => {
   });
 
   it("uses phase-specific check-in placeholders", () => {
-    assert.match(checkInPlaceholder("intake"), /anxiety|memory/i);
+    assert.equal(checkInPlaceholder("intake"), "Type here…");
     assert.match(checkInPlaceholder("installation"), /VoC/i);
     assert.match(checkInPlaceholder("desensitization"), /SUDs/i);
+  });
+
+  it("shows topic starters only before the first user message", () => {
+    const before = {
+      sessionMode: "idle" as const,
+      phase: "intake" as const,
+      conversationStarted: false,
+    };
+    assert.equal(showsSessionQuickReplies(before), true);
+    assert.equal(
+      showsSessionQuickReplies({ ...before, conversationStarted: true }),
+      false
+    );
+  });
+
+  it("keeps set-rating chips during check-in, even mid-conversation", () => {
+    assert.equal(
+      showsSessionQuickReplies({
+        sessionMode: "check_in",
+        phase: "desensitization",
+        conversationStarted: true,
+      }),
+      true
+    );
+    // ...but not while the set is running or idle outside intake.
+    assert.equal(
+      showsSessionQuickReplies({
+        sessionMode: "running",
+        phase: "desensitization",
+        conversationStarted: true,
+      }),
+      false
+    );
+    assert.equal(
+      showsSessionQuickReplies({
+        sessionMode: "idle",
+        phase: "grounding",
+        conversationStarted: false,
+      }),
+      false
+    );
   });
 });

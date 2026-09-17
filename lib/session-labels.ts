@@ -23,6 +23,25 @@ export function phaseLabel(phase: ProtocolPhase): string {
 
 export type QuickReply = { label: string; value: string };
 
+/**
+ * Whether the suggested replies belong on screen right now.
+ *
+ * Topic starters (Anxiety, Stress, A specific memory) only make sense before
+ * the person has said anything. Once the conversation is going they clutter
+ * the chat and repeat what was already answered.
+ *
+ * Rating chips after a set (SUDs, VoC) are the opposite: they only appear
+ * during check-in, which happens mid-session by definition.
+ */
+export function showsSessionQuickReplies(opts: {
+  sessionMode: SessionMode;
+  phase: ProtocolPhase;
+  conversationStarted: boolean;
+}): boolean {
+  if (opts.sessionMode === "check_in") return true;
+  return opts.phase === "intake" && !opts.conversationStarted;
+}
+
 /** Suggested replies after a BLS set, by protocol phase. */
 export function checkInQuickReplies(phase: ProtocolPhase): QuickReply[] {
   switch (phase) {
@@ -31,7 +50,7 @@ export function checkInQuickReplies(phase: ProtocolPhase): QuickReply[] {
         { label: "Anxiety", value: "I'd like to work on anxiety." },
         { label: "Stress", value: "I'd like to work on stress." },
         { label: "A specific memory", value: "There's a specific memory I want to work on." },
-        { label: "Not sure yet", value: "I'm not sure yet — can you help me figure it out?" },
+        { label: "Not sure yet", value: "I'm not sure yet. Can you help me figure it out?" },
       ];
     case "desensitization":
       return [
@@ -68,7 +87,7 @@ export function checkInQuickReplies(phase: ProtocolPhase): QuickReply[] {
 export function checkInPlaceholder(phase: ProtocolPhase): string {
   switch (phase) {
     case "intake":
-      return "Anxiety, a memory…";
+      return "Type here…";
     case "desensitization":
       return "What do you notice? Or rate SUDs 0–10…";
     case "installation":

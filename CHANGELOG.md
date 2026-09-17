@@ -138,6 +138,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Brand rule `nura-brand` + `docs/brand.md`: titles/hero/H1 may lead with **AI-guided EMDR** (product + search term); wordmark stays **Nura** (never “Nura AI”). `/emdr` meta title now “AI-guided EMDR therapy online — bilateral stimulation app”
 - **Login passkey hint**: Google/passkey block grouped in `.auth-alt-methods`; hint uses `.auth-passkey-hint` with more line-height and `2rem` footer gap on login (less cramped vs Reset it / Create one)
 - [internal] Session language pack `lib/session-languages.ts` (45 languages: welcome line, Latin hint words, script + stem detection) and `useRotatingWelcome` hook; `threads.agent_language` column with `ALTER TABLE` in `lib/db.ts`; rule `nura-brand` → Session language
+- [internal] Quick-reply gate `showsSessionQuickReplies` in `lib/session-labels.ts` — intake topic starters only before the first user message; check-in rating chips unchanged
 - **Product page type pairing** (`/app` + auth + onboarding): shared `--ui-page-title-*` / `--ui-page-lead-*` tokens + `.ui-page-title` / `.ui-page-lead` — Source Sans **700** title (`clamp` 1.75–2.25rem) + **300** lead (~1.06–1.25rem, muted); wired on AuthShell, OnboardingShell, session start, informed consent
 - **Auth chrome**: create-account (`align="center"`) puts logo above the title on the centered axis; login/forgot keep top-left chrome logo (no Home link); form stack lowered on mobile; visual-pane social + SEO copy
 - **Legal / long-form type**: `/terms` + `/privacy` use Source Sans 3 (headings 600) — Fraunces reserved for marketing hero/section titles only; documented in `docs/brand.md`, `nura-brand`, `nura-ui-designer`
@@ -316,6 +317,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Esc toggles the app sidebar when nothing else is open (closed → open)
 - AI agent-guided opening line cycles through the major languages until you start writing, then locks to the language you write in
 - The session guide replies in the language you write in, and the check-in after a set comes in that language too
+- Suggested replies in a session no longer stay on screen after you have started talking; topic starters show only before your first message
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

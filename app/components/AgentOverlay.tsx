@@ -7,6 +7,7 @@ import type { SessionMode } from "@/lib/protocol";
 import {
   checkInPlaceholder,
   checkInQuickReplies,
+  showsSessionQuickReplies,
 } from "@/lib/session-labels";
 import {
   isBrowserSpeechSupported,
@@ -99,12 +100,19 @@ export function AgentOverlay({
   const prevId = useRef<string | null>(null);
   const checkIn = sessionMode === "check_in";
   const intake = phase === "intake";
-  const showQuickReplies = checkIn || intake;
-  const quickReplies = showQuickReplies ? checkInQuickReplies(phase) : [];
-  const canSend = reply.trim().length > 0;
-  const userInitial = userDisplayName.trim().charAt(0) || "U";
   /** Chat bubbles only after the user has replied once; open session = centered prompt. */
   const conversationStarted = messages.some((m) => m.role === "user");
+  // Topic starters only before the first user message; set-rating chips stay
+  // available during check-in (see showsSessionQuickReplies).
+  const quickReplies = showsSessionQuickReplies({
+    sessionMode,
+    phase,
+    conversationStarted,
+  })
+    ? checkInQuickReplies(phase)
+    : [];
+  const canSend = reply.trim().length > 0;
+  const userInitial = userDisplayName.trim().charAt(0) || "U";
   const showDictationMic = isBrowserSpeechSupported();
   const showVoiceMode = Boolean(voiceAvailable && onEnterVoice);
   const voiceChrome = voiceActive || voiceExiting;
