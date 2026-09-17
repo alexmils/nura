@@ -16,6 +16,7 @@ import {
 import { Avatar } from "./Avatar";
 import type { VoicePhase } from "./useGuidedVoiceMode";
 import { VoiceWave } from "./VoiceWave";
+import { useRotatingWelcome } from "./useRotatingWelcome";
 import {
   DEFAULT_GUIDED_CHAT_CHROME_ID,
   guidedChatChromeCssVars,
@@ -107,6 +108,12 @@ export function AgentOverlay({
   const showDictationMic = isBrowserSpeechSupported();
   const showVoiceMode = Boolean(voiceAvailable && onEnterVoice);
   const voiceChrome = voiceActive || voiceExiting;
+  /** Opening line only: cycles languages until the person writes. */
+  const welcome = useRotatingWelcome({
+    text: lastAgent?.content ?? "",
+    enabled: !conversationStarted && !voiceChrome,
+    draft: reply,
+  });
 
   useEffect(() => {
     if (voiceActive) {
@@ -155,7 +162,7 @@ export function AgentOverlay({
     });
     if (!session) {
       setDictationError(
-        "Voice isn’t supported in this browser — try Chrome or Edge."
+        "Voice isn’t supported in this browser. Try Chrome or Edge."
       );
       return;
     }
@@ -333,7 +340,7 @@ export function AgentOverlay({
   const checkInBanner = checkIn ? (
     <div className="agent-checkin-banner-row agent-fade-up">
       <p className="agent-checkin-banner">
-        Set complete — share what you notice, or repeat if you missed it.
+        Set complete. Share what you notice, or repeat if you missed it.
       </p>
       {onRepeatSet && !voiceChrome && (
         <button
@@ -358,11 +365,21 @@ export function AgentOverlay({
           <div className="agent-overlay-body">
             {lastAgent && (
               <div key={rollKey} className="agent-overlay-line agent-fade-up">
-                <p className="agent-overlay-text">{lastAgent.content}</p>
+                {welcome.swap ? (
+                  <p className="agent-overlay-text welcome-rotate-text">
+                    <span key={welcome.key} className="welcome-rotate-swap">
+                      {welcome.line}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="agent-overlay-text">{lastAgent.content}</p>
+                )}
                 {!voiceChrome && (
                   <button
                     type="button"
-                    onClick={() => onPlayLine(lastAgent.content)}
+                    onClick={() =>
+                      onPlayLine(welcome.swap ? welcome.line : lastAgent.content)
+                    }
                     className="btn-icon-sm agent-overlay-speak"
                     aria-label="Play message"
                   >

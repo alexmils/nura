@@ -3,6 +3,7 @@ import {
   knowledgeBlockForPhase,
   PROTOCOL_KNOWLEDGE_VERSION,
 } from "./protocol-knowledge";
+import { ENGLISH_WELCOME, languageInstruction } from "./session-languages";
 
 export type SessionMode = "idle" | "running" | "check_in";
 
@@ -32,9 +33,12 @@ export function nextPhaseAfterDesensitization(
 export function systemPromptForPhase(
   phase: ProtocolPhase,
   memoryContext: string,
-  profileContext = ""
+  profileContext = "",
+  languageCode = ""
 ): string {
   const knowledge = knowledgeBlockForPhase(phase);
+  const language = languageInstruction(languageCode);
+  const languageBlock = language ? `\n\nLanguage for this session:\n${language}` : "";
   const memory = memoryContext
     ? `\n\nEnabled memory sets for this session (user-owned context only):\n${memoryContext}`
     : "";
@@ -42,7 +46,7 @@ export function systemPromptForPhase(
     ? `\n\nClient profile (persistent across sessions — use for continuity):\n${profileContext}`
     : "";
 
-  return `${knowledge}\n\n(Knowledge version: ${PROTOCOL_KNOWLEDGE_VERSION})${memory}${profile}`;
+  return `${knowledge}\n\n(Knowledge version: ${PROTOCOL_KNOWLEDGE_VERSION})${languageBlock}${memory}${profile}`;
 }
 
 export function checkInLine(phase: ProtocolPhase): string {
@@ -63,19 +67,19 @@ export function checkInLine(phase: ProtocolPhase): string {
 export function openingLine(phase: ProtocolPhase): string {
   switch (phase) {
     case "intake":
-      return "Welcome. In a few words — what would you like to work on today?";
+      return ENGLISH_WELCOME;
     case "grounding":
-      return "Welcome. Before we work a target, let's ground. Notice your breath. When you're ready, describe your safe place in a few words — real or imagined.";
+      return "Welcome. Before we work a target, let's ground. Notice your breath. When you're ready, describe your safe place in a few words (real or imagined).";
     case "assessment":
       return "Bring up the target as a picture, or the strongest body sensation if there's no clear image. What is the worst part, and what negative belief about yourself goes with it?";
     case "desensitization":
-      return "Hold the target in mind — image, belief, and body sensation. I'll start the set now — follow the ball. I'll stay quiet while it moves.";
+      return "Hold the target in mind: image, belief, and body sensation. I'll start the set now. Follow the ball. I'll stay quiet while it moves.";
     case "installation":
       return "Focus on your positive belief together with the target. Notice how true it feels now, from 0 to 7.";
     case "body_scan":
       return "Think of the original target and slowly scan your body from head to toe. Tell me if any tension remains.";
     case "closure":
-      return "You did meaningful work. Take a deep breath. Processing may continue after the session — that's normal. Use your safe place or butterfly hug if anything stirs.";
+      return "You did meaningful work. Take a deep breath. Processing may continue after the session; that's normal. Use your safe place or butterfly hug if anything stirs.";
   }
 }
 
@@ -84,7 +88,7 @@ export function reevaluationOpeningLine(presentingProblem?: string): string {
   const prior = presentingProblem?.trim()
     ? ` Last time we noted: ${presentingProblem.trim().slice(0, 120)}.`
     : "";
-  return `Welcome back.${prior} Before we continue — what has changed since last time, and what would you like to work on today?`;
+  return `Welcome back.${prior} Before we continue, what has changed since last time, and what would you like to work on today?`;
 }
 
 /**
@@ -102,17 +106,17 @@ export function guidedFallbackReply(
       if (hasContent) {
         return "Thank you. When did this start to feel most present, and how does it show up in daily life now?";
       }
-      return "In a few words — what would you like to work on today?";
+      return "In a few words, what would you like to work on today?";
     case "grounding":
       if (hasContent) {
-        return "Good — hold that safe place. Notice one calm detail: a color, sound, or feeling. When you feel a bit steadier, say \"ready\" and we'll choose a target.";
+        return "Good. Hold that safe place. Notice one calm detail: a color, sound, or feeling. When you feel a bit steadier, say \"ready\" and we'll choose a target.";
       }
-      return "Describe your safe place in a few words — real or imagined — somewhere that feels calm.";
+      return "Describe your safe place in a few words (real or imagined), somewhere that feels calm.";
     case "assessment":
       if (hasContent) {
         return "Thank you. Next: what negative belief about yourself goes with that (present-tense \"I …\")?";
       }
-      return "What is the worst part of the target — an image, sensation, or feeling? One short phrase is enough.";
+      return "What is the worst part of the target: an image, sensation, or feeling? One short phrase is enough.";
     case "desensitization":
       return "Let it go, take a deep breath. What do you notice now? Then we'll go with that on the next set.";
     case "installation":
@@ -120,6 +124,6 @@ export function guidedFallbackReply(
     case "body_scan":
       return "Scan slowly from head to toe while thinking of the target. Tell me if any tension remains.";
     case "closure":
-      return "We're closing for now. Use your safe place or a butterfly hug if anything stirs later — that's normal.";
+      return "We're closing for now. Use your safe place or a butterfly hug if anything stirs later; that's normal.";
   }
 }

@@ -408,6 +408,7 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'guided';
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS description TEXT;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS intake_complete BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS agent_language TEXT;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
     ALTER TABLE memory_sets ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
   `);
@@ -485,6 +486,7 @@ function rowToThread(row: QueryResultRow): Thread {
     summary: (row.summary as string) ?? undefined,
     description: (row.description as string) ?? undefined,
     intakeComplete: Boolean(row.intake_complete),
+    agentLanguage: (row.agent_language as string) ?? undefined,
     incomplete: Boolean(row.incomplete),
     createdAt: new Date(row.created_at as string).toISOString(),
     updatedAt: new Date(row.updated_at as string).toISOString(),
@@ -646,7 +648,7 @@ export async function updateThread(
   await dbQuery(
     `UPDATE threads SET title=$1, phase=$2, target=$3, negative_cognition=$4, positive_cognition=$5,
      suds=$6, voc=$7, summary=$8, incomplete=$9, mode=$10, description=$11, intake_complete=$12,
-     updated_at=$13 WHERE id=$14`,
+     agent_language=$13, updated_at=$14 WHERE id=$15`,
     [
       merged.title,
       merged.phase,
@@ -660,6 +662,7 @@ export async function updateThread(
       merged.mode,
       merged.description?.trim() ? merged.description.trim() : null,
       merged.intakeComplete ?? false,
+      merged.agentLanguage ?? null,
       merged.updatedAt,
       id,
     ]
@@ -671,6 +674,39 @@ export async function deleteThread(id: string) {
   await dbQuery("DELETE FROM messages WHERE thread_id = $1", [id]);
   await dbQuery("DELETE FROM thread_memory_sets WHERE thread_id = $1", [id]);
   await dbQuery("DELETE FROM threads WHERE id = $1", [id]);
+}
+
+/**
+ * Drop unused session shells: pending picker tabs, or intake with no user
+ * message and no Free set started (`intake_complete`).
+ * Pass `exceptId` to keep the tab the user is currently on.
+ */
+export async function pruneEmptyThreads(
+  exceptId?: string | null
+): Promise<number> {
+  const { userId } = getRlsContext();
+  const { rows } = await dbQuery<{ id: string }>(
+    `SELECT t.id
+     FROM threads t
+     WHERE t.user_id = $1
+       AND ($2::text IS NULL OR t.id <> $2)
+       AND (
+         t.mode = 'pending'
+         OR (
+           t.phase = 'intake'
+           AND COALESCE(t.intake_complete, FALSE) = FALSE
+           AND NOT EXISTS (
+             SELECT 1 FROM messages m
+             WHERE m.thread_id = t.id AND m.role = 'user'
+           )
+         )
+       )`,
+    [userId, exceptId ?? null]
+  );
+  for (const row of rows) {
+    await deleteThread(row.id);
+  }
+  return rows.length;
 }
 
 export async function listMessages(threadId: string): Promise<Message[]> {
@@ -708,6 +744,21 @@ export async function addMessage(
     threadId,
   ]);
   return msg;
+}
+
+/**
+ * Rewrite one stored message in place. Used to lock the opening welcome to the
+ * language the user actually wrote in (the line is already on screen, so it
+ * must not flip back to English once the thread renders as bubbles).
+ */
+export async function updateMessageContent(
+  messageId: string,
+  content: string
+): Promise<void> {
+  await dbQuery("UPDATE messages SET content = $1 WHERE id = $2", [
+    content,
+    messageId,
+  ]);
 }
 
 function normalizeUserSettings(raw: unknown): AppSettings {

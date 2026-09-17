@@ -73,6 +73,24 @@ Loaded via `next/font` in `app/layout.tsx`. Scoped on `.frontend-home` in `app/g
 
 English, sentence case, short. No hype (“revolutionary”, “blockchain”, “neural networks”).
 
+### Never use the em dash (—)
+
+The long dash `—` (U+2014) in the middle of a sentence reads as AI-written. **Do not use it in user-facing copy** (UI, agent lines, emails, help, FAQ, marketing body, onboarding). Prefer a comma, period, colon, or parentheses.
+
+```txt
+# ❌ BAD
+Welcome. In a few words — what would you like to work on today?
+Animation, sound, and joystick rumble — you set speed and timing.
+
+# ✅ GOOD
+Welcome. In a few words, what would you like to work on today?
+Animation, sound, and joystick rumble. You set speed and timing.
+```
+
+Also strip `—` from agent/system prompts that shape spoken or chat lines (`lib/protocol.ts`, `lib/protocol-knowledge.ts`), or the model will keep writing them.
+
+OK elsewhere: code comments, Cursor rules/docs for agents, and the layout title template ` — Nura` / existing SEO title stems (prefer `:` when writing new titles).
+
 **Marketing:** do not explain the product in body paragraphs — titles, labels, cards, and visuals do the work (see `.cursor/rules/marketing-no-explain-copy.mdc`). Product/auth/onboarding may use short microcopy where needed.
 
 ### Never say BLS to users
@@ -81,37 +99,51 @@ English, sentence case, short. No hype (“revolutionary”, “blockchain”, �
 
 | Instead of | Write |
 |---|---|
-| BLS / free BLS / BLS minutes | **Free** / **Free mode** / **Free session time** |
+| BLS / free BLS / BLS minutes | **self-guided set time** / **set time** |
 | BLS running | **Set running** |
 | BLS bar / BLS controls | **Controls bar** / **Session controls** |
-| BLS preview | **Free session time** (or “live preview” for the gear sheet) |
+| BLS preview | **self-guided set time** (or “live preview” for the gear sheet) |
 
 Code/CSS identifiers may stay (`bls`, `TRIAL_BLS_SECONDS`, `.bls-dock`) — that is not user-facing. Extend `rewriteRetiredBrandCopy` if remapping stored help text.
 
 ### Visual sets — do not default to “moving ball”
 
-Free / agent-guided sets are **not** “just a ball.” The product already has multiple stimulus options (e.g. Dot and Flash animations, stereo sound, gamepad rumble), and more will ship. Marketing and first-run copy must not collapse the product to one animation.
+Self-guided / AI agent-guided sets are **not** “just a ball.” The product already has multiple stimulus options (e.g. Dot and Flash animations, stereo sound, gamepad rumble), and more will ship. Marketing and first-run copy must not collapse the product to one animation.
 
 | Instead of (default) | Write |
 |---|---|
 | the moving ball / just the ball | **visual set** / **sets** / **session sets** |
-| Free is the moving ball only | **Free is sets you run yourself** (no agent, no chat) |
+| Free is the moving ball only | **Self-guided is sets you run yourself** (no agent, no chat) |
 | BLS controls → moving ball | **Session controls** (speed, animation, sound, repeats) |
 
-OK to name the ball **once** on educational pages (`/emdr`, a guide about visual rhythm) as *one* way the set can look — not as the product definition, and not in Free headlines (“The moving ball, on your terms” is banned).
+OK to name the ball **once** on educational pages (`/emdr`, a guide about visual rhythm) as *one* way the set can look — not as the product definition, and not in Self-guided headlines (“The moving ball, on your terms” is banned).
 
 ### Session modes (marketing + first-run copy)
 
-Never use bare **“Choose Guided or Free”** on the homepage or other marketing — newcomers do not know what those words mean.
+See `.cursor/rules/session-mode-names.mdc`. Never use bare **“Choose Guided or Free”** — and never name the self-run mode **Free session** (reads as $0).
 
 | Instead of | Write |
 |---|---|
-| Guided / Guided mode (alone) | **Agent-guided** / **agent-guided session** / **session agent** |
-| Free mode (alone on marketing) | **Free session** / **Free (sets you run yourself)** |
-| Choose Guided or Free | **Choose agent-guided or Free** — then one line: agent walks phases; Free is sets without an agent |
+| Guided / Guided mode / Agent-guided | **AI agent-guided** / **AI agent-guided session** / **session agent** |
+| Free mode / Free session | **Self-guided** / **Self-guided session** (sets you run yourself) |
+| Choose Guided or Free | **Choose AI agent-guided or Self-guided** — then one line: agent walks phases; Self-guided is sets without an agent |
 
-Product chrome can keep short labels (**Agent-guided session** · **Free session**) if the subtitle or card description explains the difference. Headlines **may** lead with **AI-guided EMDR** (it is the product and the search term); inside the app, `agent-guided` / `session agent` stays the preferred label for the mode. Do not turn the wordmark into “Nura AI”. Internal code may stay `guided` / `free`.
+Product chrome labels: **AI agent-guided session** · **Self-guided session**. Headlines **may** lead with **AI-guided EMDR** (product + search term). Do not turn the wordmark into “Nura AI”. Internal code may stay `guided` / `free`.
 
-Prefer **Guided** vs **Free** only in admin/internal tooling where the audience already knows the modes.
+Do **not** keep **Free session** in admin chrome either — operators copy that language into the product.
+
+### Session language (AI agent-guided)
+
+The guide mirrors the person, not the other way round. `lib/session-languages.ts` owns the language pack; `app/components/useRotatingWelcome.ts` owns the rotation.
+
+| Rule | Detail |
+|---|---|
+| First line rotates | The opening welcome cycles through the major languages (~2.4s each) until the person writes. **No language name, code, or flag is shown**, only the greeting text |
+| Locks on first writing | As soon as the composer draft or the first user message is recognizable, the greeting locks to that language (`detectSessionLanguage`) and stops rotating |
+| Guide follows the user | `/api/chat` pins `threads.agent_language` and adds the language block to the system prompt: the guide replies in the user's language, including the post-set check-in |
+| App chrome stays English | Buttons, chips, placeholders, phase labels, SUDs/VoC scales, and admin stay English. Only the guide's spoken lines are localized |
+| Detection misses are safe | Unsure means English. Never guess a language from one ambiguous short word |
+
+When adding a language: add an entry to `SESSION_LANGUAGES` (code, name, native, welcome, optional Latin hints, no em dash, no **BLS**) and extend `tests/session-languages.test.ts`.
 
 Public routes (must stay in `lib/public-paths.ts` + `app/robots.txt/route.ts` + `app/sitemap.ts`): `/` `/about` `/editorial` `/emdr` `/learn` `/knowledge` `/blog` `/blog/[slug]` `/pricing` `/faq` `/support` `/changelog` `/privacy` `/terms` `/safety` `/limits`. Also public: `/llms.txt`. Nav: **Home · How it works · Prices · Blog · FAQ** (`Prices` → `/pricing`, `Blog` → `/blog`, `FAQ` → `/faq`; How it works stays `/#how-it-works`). No visible breadcrumbs on inner pages (JSON-LD BreadcrumbList may remain). Retired: `/therapy`, `/therapists`, and `/resources` redirect to `/learn`. In-app library stays `/app/resources`.

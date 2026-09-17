@@ -47,6 +47,11 @@ export interface Thread {
   description?: string;
   /** True once Phase 1 intake for this thread agreed a starting target. */
   intakeComplete?: boolean;
+  /**
+   * Language the user writes in (set from their first message). Pins the
+   * guide's reply language; `undefined` keeps the English default.
+   */
+  agentLanguage?: string;
   incomplete: boolean;
   createdAt: string;
   updatedAt: string;

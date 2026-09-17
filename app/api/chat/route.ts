@@ -6,6 +6,7 @@ import {
   getEnabledMemoryContext,
   getThread,
   listMessages,
+  updateMessageContent,
   updateThread,
   upsertClientProfile,
 } from "@/lib/db";
@@ -17,6 +18,11 @@ import {
   reevaluationOpeningLine,
   systemPromptForPhase,
 } from "@/lib/protocol";
+import {
+  detectSessionLanguage,
+  isWelcomeOpening,
+  welcomeLineFor,
+} from "@/lib/session-languages";
 import {
   getLlmRuntimeConfig,
   getPlatformSettings,
@@ -115,7 +121,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: msg });
     }
 
-    if (afterSet) {
+    // A pinned non-English session gets its post-set check-in from the guide so
+    // the line matches the user's language. English keeps the canned line (and
+    // the canned line stays the fallback if the model is unavailable).
+    const localizedCheckIn =
+      afterSet &&
+      Boolean(thread.agentLanguage) &&
+      thread.agentLanguage !== "en";
+
+    if (afterSet && !localizedCheckIn) {
       const line = checkInLine(thread.phase);
       const msg = await addMessage(threadId, "agent", line);
       return NextResponse.json({ message: msg });
@@ -127,6 +141,23 @@ export async function POST(request: Request) {
 
     let interpretation: SessionInterpretation | null = null;
     let workingThread = thread;
+
+    // The first recognizable user message decides the session language: pin the
+    // guide to it and rewrite the opening welcome so the first bubble matches.
+    // Stays open until a language is pinned, so a vague opener is not fatal.
+    if (userMessage && !workingThread.agentLanguage) {
+      const detected = detectSessionLanguage(userMessage);
+      if (detected) {
+        const opening = history.find((m) => m.role === "agent");
+        if (opening && isWelcomeOpening(opening.content)) {
+          await updateMessageContent(opening.id, welcomeLineFor(detected.code));
+        }
+        const withLanguage = await updateThread(threadId, {
+          agentLanguage: detected.code,
+        });
+        if (withLanguage) workingThread = withLanguage;
+      }
+    }
 
     if (userMessage && platform.flags.sessionInterpreter !== false) {
       const recent = (await listMessages(threadId)).slice(-8).map((m) => ({
@@ -234,7 +265,8 @@ export async function POST(request: Request) {
       systemPromptForPhase(
         workingThread.phase,
         memoryContext,
-        freshProfileContext
+        freshProfileContext,
+        workingThread.agentLanguage
       ) +
       (adminNotes
         ? `\n\nAdmin protocol notes (platform):\n${adminNotes.slice(0, 4000)}`
@@ -256,6 +288,17 @@ export async function POST(request: Request) {
             | "user",
           content: m.content,
         })),
+      // A set just ended in a session pinned to another language: instead of the
+      // canned English line, have the guide say it in the user's language. This
+      // control turn is only sent to the model, never stored.
+      ...(localizedCheckIn
+        ? [
+            {
+              role: "user" as const,
+              content: `(The set just finished. Reply with nothing but this line, translated into the language of this session: "${checkInLine(workingThread.phase)}")`,
+            },
+          ]
+        : []),
     ];
 
     try {
@@ -291,7 +334,9 @@ export async function POST(request: Request) {
       const fallback =
         interpretation?.needsGrounding || interpretation?.riskFlag
           ? "Let's pause and ground. Cross your arms for a butterfly hug, or picture your safe place. When you feel steadier, tell me what you notice. If you are in crisis, please seek professional or emergency help."
-          : guidedFallbackReply(workingThread.phase, userMessage);
+          : localizedCheckIn
+            ? checkInLine(workingThread.phase)
+            : guidedFallbackReply(workingThread.phase, userMessage);
       const agentMsg = await addMessage(threadId, "agent", fallback);
       return NextResponse.json({
         message: agentMsg,

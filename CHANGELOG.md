@@ -91,11 +91,53 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Wired the safety content cluster so it is no longer orphaned — Safety + Limits links in the site footer, `/learn` safety group links to `/safety`, informed-consent gate links to the safety guide, and cross-links between `/emdr`, `/safety`, and `/limits`
 - [internal] Public `/knowledge` — Nolla-style video Q stage (tap a question → different clip); pistachio marketing shell, FAQ JSON-LD, sitemap/robots/llms/footer; per-question mp4 when files land under `public/marketing/knowledge/`
 - [internal] Public `/pricing`, `/faq`, and `/support` marketing pages — plans (USD), merged FAQ, and how to get help; wired into SEO, sitemap, robots, llms.txt, footer, and header Prices
+- [internal] Design backup as reusable code: `docs/Design backups/Header 1/` (`Header1HeroAbout.tsx` + `header-1.css`)
+- [internal] Home: replace “Here when you need us” with Attio-style sticky session path (4 stages + centered Free finale, placeholders)
+- [internal] Home Memory sets: mid-session check-in (chest tightness / “I’m not good enough”); agent loads the note from the enabled set
 
 ### Changed
+- [internal] Session path: one H2 above (“A session, start to finish.”), muted sub smaller; right lead “From ground to close — one calm loop.” (≪ H2, not a second title); nav labels ≠ right leads
+- [internal] Session path ground duo: side-by-side `.fe-spath-pair` cards below hero media; GSAP flip-in on scroll (hidden until viewport); taller ground panel so duo stays below first fold
+- [internal] Session path intro: Attio-length H2 (ink + 3 muted fade lines); `.fe-spath` margin-top 100px for breathing room under header
+- [internal] Session path: drop “A session, start to finish.”; H2 is fade lines only; padding-top 100px (no margin seam); pair cards always sized + soft reveal
+- [internal] Session path: sticky stacked stages (next copy hidden until flip); duo cards rotate-in on Ground scroll
+- [internal] Session path: large gap under intro H2 before the track line; sticky stage lower (~24vh)
+- [internal] nura-ui-designer skill: Sticky session path (Attio) rules — hierarchy, sticky stack, mid-viewport, fade H2
+- [internal] Home How it works: sticky section is `#how-it-works` (header nav); letter-rise on stage leads, duo titles, finale; badge “How it works”
+- [internal] How it works mobile: centered wrapping chips, tap-to-stage, no full-viewport sticky trap after Check in
+- [internal] How it works phone: one-row peek chips that auto-scroll with the stage; card centered in leftover viewport; more spacing
+- [internal] How it works phone: chip row follows the active stage; stage height capped to dvh so it fits the window
+- [internal] How it works phone: Close gently chip can center; no letter-rise clip on leads; stage fills leftover viewport and centers the card
+- [internal] How it works iPhone: chip strip translate3d (not scrollTo); drop 50vw pad that overflowed the page; wrap copy
+- [internal] How it works phone: no overflow clip on the stage; Eyes/Ears/Hands stay three-up (stacking hid the rest)
+- [internal] How it works phone: overlay sticky stages again (hidden panels no longer stack); compact media centered in leftover viewport
+- [internal] Home: drop Why Nura; BrightHub-style session-chip marquee after Between sessions (`SessionLoopKit`)
+- [internal] How it works language board: real country flags + native language names; left kicker, title, and subtitle
+- Session agent matches the language you write in
+- [internal] Language board copy: Your language kicker, letter-rise H2, factual subtitle
+- [internal] Language board points: your language, safety, local crisis numbers
+- [internal] Language chips keep scrolling on hover; pill lifts instead of pausing
+- [internal] Language board copy fades in on scroll (same stagger as other home sections)
+- [internal] Home: drop duplicate How it works band (Personalized care, every step)
+- [internal] Home H2 letter-rise can play again after the title leaves the screen (same Aiero rise, not the GSAP fade)
+- [internal] Cursor rule `letter-rise-headings` — marketing H2s always `LetterRevealHeading`; never GSAP fade as the title motion
+- [internal] Home: drop Inside the app showcase
+- [internal] Home: topic cards after Your language (trauma, PTSD, anxiety, and related labels — not treatment claims)
+- [internal] Topic cards use Lucide line icons (same as language-board points), not isometric doodles
+- [internal] Topic-grid CTA card uses olive sidebar fill + sage Get started so it reads as chrome, not another pale tile
+- [internal] Topic cards: large isometric line icons, bigger labels/H2, hover lift + icon float (match DOSS module scale)
+- [internal] Topic grid: compact icons; H2 wrap on the title (22ch), not the head
+- [internal] Home pause CTA after modes (empty field, large title, Get started)
+- [internal] Home: drop Our journey in numbers stats band
+- [internal] Topic CTA is flat black; grid fades as one block so cards no longer overlap on scroll
+- [internal] Session mode names: **AI agent-guided** (never Agent-guided) vs **Self-guided** (never Free session — that reads as $0); rule `session-mode-names`
+- [internal] Home modes pair: two knowledge stock clips, muted autoplay loop, play/pause overlay
+- [internal] Home modes pair: sage Get started under the video board
+- Session modes: AI agent-guided and Self-guided (not Free session)
 - **Cursor rule `marketing-no-explain-copy`**: marketing surfaces must not use body text to explain — hierarchy, cards, labels, visuals + CTA; linked from `page-copy-design-review` and `nura-brand`
 - [internal] Brand rule `nura-brand` + `docs/brand.md`: titles/hero/H1 may lead with **AI-guided EMDR** (product + search term); wordmark stays **Nura** (never “Nura AI”). `/emdr` meta title now “AI-guided EMDR therapy online — bilateral stimulation app”
 - **Login passkey hint**: Google/passkey block grouped in `.auth-alt-methods`; hint uses `.auth-passkey-hint` with more line-height and `2rem` footer gap on login (less cramped vs Reset it / Create one)
+- [internal] Session language pack `lib/session-languages.ts` (45 languages: welcome line, Latin hint words, script + stem detection) and `useRotatingWelcome` hook; `threads.agent_language` column with `ALTER TABLE` in `lib/db.ts`; rule `nura-brand` → Session language
 - **Product page type pairing** (`/app` + auth + onboarding): shared `--ui-page-title-*` / `--ui-page-lead-*` tokens + `.ui-page-title` / `.ui-page-lead` — Source Sans **700** title (`clamp` 1.75–2.25rem) + **300** lead (~1.06–1.25rem, muted); wired on AuthShell, OnboardingShell, session start, informed consent
 - **Auth chrome**: create-account (`align="center"`) puts logo above the title on the centered axis; login/forgot keep top-left chrome logo (no Home link); form stack lowered on mobile; visual-pane social + SEO copy
 - **Legal / long-form type**: `/terms` + `/privacy` use Source Sans 3 (headings 600) — Fraunces reserved for marketing hero/section titles only; documented in `docs/brand.md`, `nura-brand`, `nura-ui-designer`
@@ -245,6 +287,35 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] `/privacy` hosts prepared Termly Privacy HTML (same chrome as `/terms`); AI providers OpenAI + Anthropic (Claude) + DeepSeek; hosting copy is EU/US only — no IPs or vendor hostnames
 - [internal] `/privacy` Nura product-details addendum from prior draft (Art. 9 special category, session fields, cookies, subprocessors, LLM, retention, in-app delete) — still no IPs or hosting-vendor names
 - [internal] Strip Termly generator footer / termly.io links from `/privacy` and `/terms` public HTML; rename legal CSS classes off “termly”
+- [internal] `/learn` Attio-style help hub: sidebar paths, hero search (⌘/Ctrl+K), category cards, numbered get-started panels (`LearnHelpCenter`)
+- [internal] `/learn` sidebar sticky top clears header pill (~10rem / ~58px air) so it no longer sits under the nav
+- [internal] `/pricing` rebuilt with plan cards + features bento + billing FAQ; page uses light pistachio (home `#prices` stays dark)
+- [internal] `/pricing` plan band remapped to mint ink/sage cards (no charcoal block)
+- [internal] `/pricing`: drop Pricing kicker, more space under nav, Yearly card lifted + sage ring + pill badge
+- [internal] `/pricing` cards: remove icon chrome; type-first Nura layout (name + price + includes)
+- [internal] `/pricing` bottom CTA: Laylo-style split (large title + sage Get started + Explore/Account/Care links)
+- [internal] `/pricing` page: white base + alternating white/mint section bands (not all green)
+- [internal] `/pricing` bottom CTA: Lassie-style rounded media stage with knowledge hero video + “Your healing starts here.”
+- [internal] `/pricing` plans: tighter header↔cards balance; Yearly Best value on pistachio fill; mint/white section bands refreshed
+- [internal] `/pricing` plans spacing: less air under header, more gap between trial line and cards; card hover off (button only)
+- [internal] `/pricing` plans: override global `.fe-pricing-section` pad; flex gap under trial so spacing can’t collapse
+- [internal] Cursor rule `marketing-section-spacing` + nura-ui-designer: centered heads use flex gap + clear overlay header
+- [internal] `/pricing` FAQ + bottom CTA share one white band (override global `.fe-faq` mint mix)
+- [internal] Marketing footer: Lassie-style scroll reveal — fixed white Nura lockup on black→sage gradient + spacer
+- [internal] Footer brand reveal: vector lockup (`Nura Logo.svg` mask), edge-to-edge width, mb ≈ logo height, black→bright mint gradient
+- [internal] Marketing footer: drop logo marquee; opaque `.frontend-main` / `.fe-blog` so fixed reveal never bleeds through
+- [internal] Marketing footer: Attio-style grid — brand + link columns + newsletter (no inline nav crush)
+- Self-guided start card: animation, sound, and joystick rumble (you set speed and timing)
+- [internal] Home FAQ, help seed, and knowledge clip: Self-guided sets include joystick rumble
+- Intake welcome: “In a few words, what would you like…” (no em dash)
+- [internal] Brand rule: never use em dash (—) in user-facing copy; strip from agent prompts too
+- Intake composer placeholder: Type here… (no Anxiety / memory example)
+- Empty New session / silent intake: no closure popup; unused tabs drop from Recent
+- Self-guided: never show “Session is not closed” on leave
+- Resources header: I need help now (same crisis control as sessions)
+- Esc toggles the app sidebar when nothing else is open (closed → open)
+- AI agent-guided opening line cycles through the major languages until you start writing, then locks to the language you write in
+- The session guide replies in the language you write in, and the check-in after a set comes in that language too
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -515,12 +586,15 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] SEO round 3: trim 3 double-Nura titles; pricing Product/Offer JSON-LD; H1 align knowledge/faq/support/learn; llms.txt lists 18 guides
 - [internal] nura-edge: Coolify must keep empty ports mapping + http FQDN; ensure/restore scripts on VPS if deploy clashes on :3471
 - [internal] Coolify `ports_mappings` must be SQL NULL (not `''`) — empty string emits `ports: ['']` and deploys fail with `no port specified`
+- [internal] Logo palette exports from master `Nura Logo.svg` — lockup / text / circle in sage·mint·pistachio·olive·ink·sidebar·B/W (`public/brand/logo-variants/`)
+- [internal] Footer brand peek is in-flow after the footer (not `position:fixed`) so Privacy and other inner pages no longer show a glued logo over the copy
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
 - Marketing footer social row: drop the `mailto:hello@nurahelp.com` envelope icon (Instagram + Facebook remain)
 - Marketing footer nav: drop **How we write** (`/editorial` stays public; still linked from About and articles)
 - Visible marketing breadcrumbs (`FrontendBreadcrumbs`) — pages start with kicker/title; JSON-LD BreadcrumbList unchanged
+- Session header line “Not a therapist. Not for emergencies.” (limits stay in footer, `/limits`, and I need help now)
 
 ---
 

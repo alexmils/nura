@@ -343,10 +343,6 @@ button {
   gap: 0.35rem;
 }
 
-.workspace-header-lead .session-not-therapy {
-  margin-top: 0.2rem;
-}
-
 .sidebar-row {
   display: block;
   width: 100%;
@@ -760,13 +756,6 @@ body:has(.app-shell.session-immersive) .help-fab {
     margin-left: 0;
   }
 
-  .workspace-header-lead .session-not-therapy {
-    margin-top: 0.15rem;
-    max-width: 100%;
-    font-size: 0.8125rem;
-    line-height: 1.35;
-  }
-
   .workspace-title {
     font-size: 1rem;
     line-height: 1.3;
@@ -1158,21 +1147,6 @@ body:has(.app-shell.session-immersive) .help-fab {
 
 .resources-main {
   background: var(--bg-canvas);
-}
-
-.resources-home-link {
-  flex-shrink: 0;
-  align-self: flex-start;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--accent);
-  text-decoration: none;
-  padding: 0.35rem 0.5rem;
-  border-radius: var(--radius-sm);
-}
-
-.resources-home-link:hover {
-  background: var(--accent-subtle);
 }
 
 .resources-scroll {
@@ -2303,6 +2277,39 @@ body:has(.app-shell.session-immersive) .help-fab {
 .agent-overlay-line .btn-icon-sm:hover {
   background: var(--bg-muted);
   color: var(--text);
+}
+
+/*
+ * Multilingual opening — the first agent line cycles languages until the
+ * person writes, then locks to the language they typed in (see
+ * useRotatingWelcome). Only the welcome line, never chat bubbles.
+ */
+.welcome-rotate-text {
+  /* Hold two lines so swapping languages does not jump the composer. */
+  min-height: 3em;
+  width: 100%;
+}
+
+.welcome-rotate-swap {
+  display: inline-block;
+  animation: welcome-language-swap 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes welcome-language-swap {
+  from {
+    opacity: 0;
+    transform: translateY(0.55em);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-rotate-swap {
+    animation: none;
+  }
 }
 
 .agent-chat-messages {
@@ -11291,13 +11298,6 @@ a.help-drawer-signin.btn-primary {
 }
 
 /* —— Safety / legal session chrome —— */
-.session-not-therapy {
-  margin: 0.3rem 0 0;
-  font-size: 0.8125rem;
-  line-height: 1.35;
-  color: var(--text-secondary, #6b7160);
-}
-
 .crisis-help {
   position: relative;
   flex-shrink: 0;
