@@ -605,11 +605,16 @@ body:has(.app-shell.session-immersive) .help-fab {
 .workspace-header-trail {
   display: flex;
   flex-shrink: 0;
-  align-items: center;
+  /* Baseline so the crisis pill lines up with the status chips even though the
+     status block continues below them with the target caption. */
+  align-items: baseline;
   align-self: center;
   justify-content: flex-end;
   gap: 0.65rem;
-  max-width: min(52%, 18rem);
+  /* Wide enough for the status chips plus the crisis pill on one line; the
+     in-header target caption may still truncate. */
+  max-width: min(72%, 34rem);
+  min-width: 0;
 }
 
 /* Consent gate: keep crisis pill vertically centered with the title row */
@@ -762,9 +767,19 @@ body:has(.app-shell.session-immersive) .help-fab {
   }
 
   .workspace-header-row .session-status {
-    width: 100%;
+    width: auto;
     max-width: none;
+    align-items: flex-start;
+  }
+
+  .workspace-header-row .session-status-chips {
     justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .workspace-header-row .session-status-chips::-webkit-scrollbar {
+    display: none;
   }
 
   .workspace-header-row .session-status-target {
@@ -1545,16 +1560,31 @@ body:has(.app-shell.session-immersive) .help-fab {
   border: 0;
 }
 
+/* Status = one chip row on top, the target as a caption underneath. */
 .session-status {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.session-status-chips {
+  display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.35rem;
-  max-width: min(100%, 28rem);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .session-status--compact {
+  align-items: center;
+}
+
+.session-status--compact .session-status-chips {
   justify-content: center;
 }
 
@@ -1589,12 +1619,15 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .session-status-target {
-  max-width: 10rem;
+  display: block;
+  max-width: min(100%, 22rem);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 0.6875rem;
+  line-height: 1.2;
   color: var(--text-muted);
+  text-align: right;
 }
 
 .session-status-float {
