@@ -7,6 +7,7 @@ import {
   BRAND_TITLE,
   brandMetadataBase,
 } from "@/lib/brand";
+import { a11yBootstrapScript } from "@/lib/a11y-preferences";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -61,6 +62,15 @@ export default function RootLayout({
       lang="en"
       className={`${sourceSans.variable} ${fraunces.variable} ${robotoMono.variable}`}
     >
+      <head>
+        {/*
+          Saved accessibility choices (text size, contrast, motion) must apply
+          before first paint, otherwise the page flashes at the wrong size.
+        */}
+        <script
+          dangerouslySetInnerHTML={{ __html: a11yBootstrapScript() }}
+        />
+      </head>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

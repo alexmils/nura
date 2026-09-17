@@ -140,6 +140,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Session language pack `lib/session-languages.ts` (45 languages: welcome line, Latin hint words, script + stem detection) and `useRotatingWelcome` hook; `threads.agent_language` column with `ALTER TABLE` in `lib/db.ts`; rule `nura-brand` → Session language
 - [internal] Quick-reply gate `showsSessionQuickReplies` in `lib/session-labels.ts` — intake topic starters only before the first user message; check-in rating chips unchanged
 - [internal] `agentTyping` in `AppProvider` (set/cleared around send, check-in and bootstrap) + `TypingIndicator` in `AgentOverlay`; `.agent-typing` keyframes in `globals.css` (reduced-motion aware)
+- [internal] Floating accessibility panel: `lib/a11y-preferences.ts` (validated prefs, `html` attribute map, drag clamping, pre-paint `a11yBootstrapScript`), `AccessibilityWidget` + `accessibility-widget.css` (draggable Nura mark, bottom sheet ≤640px, per-surface resting corner), effects block at the end of `globals.css`, `isA11yReduceMotionPreferred()` wired into landing GSAP; rule `accessibility-panel`
 - **Product page type pairing** (`/app` + auth + onboarding): shared `--ui-page-title-*` / `--ui-page-lead-*` tokens + `.ui-page-title` / `.ui-page-lead` — Source Sans **700** title (`clamp` 1.75–2.25rem) + **300** lead (~1.06–1.25rem, muted); wired on AuthShell, OnboardingShell, session start, informed consent
 - **Auth chrome**: create-account (`align="center"`) puts logo above the title on the centered axis; login/forgot keep top-left chrome logo (no Home link); form stack lowered on mobile; visual-pane social + SEO copy
 - **Legal / long-form type**: `/terms` + `/privacy` use Source Sans 3 (headings 600) — Fraunces reserved for marketing hero/section titles only; documented in `docs/brand.md`, `nura-brand`, `nura-ui-designer`
@@ -320,6 +321,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The session guide replies in the language you write in, and the check-in after a set comes in that language too
 - Suggested replies in a session no longer stay on screen after you have started talking; topic starters show only before your first message
 - Three dots show while the session guide is writing a reply, so the pause is never silent
+- **Accessibility button**: a Nura mark you can drag anywhere on the screen; it opens larger text, high contrast, bigger buttons, roomier spacing, underlined links, and reduced motion
+- Accessibility choices are saved on this device and applied before the page draws, so nothing flashes at the wrong size
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

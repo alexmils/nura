@@ -11797,3 +11797,151 @@ a.help-drawer-signin.btn-primary {
   }
 }
 
+/* ==================================================================
+   Accessibility preferences (floating widget)
+   ------------------------------------------------------------------
+   Attributes are set on <html> by AccessibilityWidget (and by the
+   pre-paint bootstrap script) from lib/a11y-preferences.ts. Keep this
+   block last: it is an override layer, so source order matters.
+
+   Variants: data-a11y-text (1–3) · data-a11y-contrast="high"
+   data-a11y-targets="large" · data-a11y-spacing="on"
+   data-a11y-links="on" · data-a11y-motion="reduced"
+   ================================================================== */
+
+/* —— Text size: scales every rem-based size in the app —— */
+
+html[data-a11y-text="1"] {
+  font-size: 106.25%;
+  --a11y-scale: 1.0625;
+}
+
+html[data-a11y-text="2"] {
+  font-size: 112.5%;
+  --a11y-scale: 1.125;
+}
+
+html[data-a11y-text="3"] {
+  font-size: 118.75%;
+  --a11y-scale: 1.1875;
+}
+
+/*
+ * The app rail is a fixed pixel width, so its own labels would crowd when the
+ * root size grows. Scale the rail with the text it holds.
+ */
+html[data-a11y-text] .app-sidebar {
+  width: calc(260px * var(--a11y-scale, 1));
+  min-width: calc(260px * var(--a11y-scale, 1));
+}
+
+@media (min-width: 768px) {
+  html[data-a11y-text] .app-shell:not(.sidebar-drawer-open) .app-sidebar {
+    width: 0;
+    min-width: 0;
+  }
+}
+
+/* —— High contrast: darker ink, stronger lines, dimmed muted text lifted —— */
+
+html[data-a11y-contrast="high"] {
+  --text: #14180e;
+  --text-secondary: #333f1d;
+  --text-muted: #46512a;
+  --border: #6d8a52;
+  --border-strong: #3f5a2a;
+  --accent: #4c6f31;
+  --accent-hover: #3b5824;
+  --on-accent: #ffffff;
+  --bg-page: #ffffff;
+  --bg-canvas: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-muted: #e8f1e2;
+  --sidebar-muted: #e8f2cc;
+}
+
+html[data-a11y-contrast="high"] .frontend-home {
+  --fe-bg: #ffffff;
+  --fe-fg: #14180e;
+  --fe-muted: #46512a;
+  --fe-line: rgba(20, 24, 14, 0.42);
+  --fe-accent: #4c6f31;
+  --fe-accent-fg: #ffffff;
+}
+
+/* Pistachio focus rings are too pale on white; use ink in contrast mode. */
+html[data-a11y-contrast="high"] :focus-visible {
+  outline: 3px solid #2a3020;
+  outline-offset: 2px;
+}
+
+/* —— Larger targets —— */
+
+html[data-a11y-targets="large"] {
+  --ui-control-h: 3.5rem;
+}
+
+html[data-a11y-targets="large"] .btn-primary,
+html[data-a11y-targets="large"] .btn-secondary,
+html[data-a11y-targets="large"] .btn-ghost,
+html[data-a11y-targets="large"] .fe-btn,
+html[data-a11y-targets="large"] .agent-composer,
+html[data-a11y-targets="large"] input:not([type="checkbox"]):not([type="radio"]):not(.a11y-switch),
+html[data-a11y-targets="large"] select,
+html[data-a11y-targets="large"] textarea {
+  min-height: 3.25rem;
+}
+
+html[data-a11y-targets="large"] .agent-quick-reply,
+html[data-a11y-targets="large"] .a11y-step {
+  min-height: 3rem;
+}
+
+/* —— Readable spacing —— */
+
+html[data-a11y-spacing="on"] p,
+html[data-a11y-spacing="on"] li,
+html[data-a11y-spacing="on"] dd,
+html[data-a11y-spacing="on"] .agent-chat-text,
+html[data-a11y-spacing="on"] .agent-overlay-text {
+  line-height: 1.75;
+  letter-spacing: 0.012em;
+  word-spacing: 0.06em;
+}
+
+/* —— Underline links (skip button-shaped links) —— */
+
+html[data-a11y-links="on"] a:not(.btn-primary):not(.btn-secondary):not(.btn-ghost):not(.fe-btn):not(.brand-lockup-link) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  text-decoration-thickness: from-font;
+}
+
+/* —— Reduce motion —— */
+
+html[data-a11y-motion="reduced"] {
+  scroll-behavior: auto;
+}
+
+html[data-a11y-motion="reduced"] *,
+html[data-a11y-motion="reduced"] *::before,
+html[data-a11y-motion="reduced"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/*
+ * Animated text that starts hidden and is revealed by an animation must be
+ * readable when that animation is collapsed (same fix the media query uses).
+ */
+html[data-a11y-motion="reduced"] .fe-letter-reveal .fe-letter,
+html[data-a11y-motion="reduced"] .fe-split-word,
+html[data-a11y-motion="reduced"] .fe-animate,
+html[data-a11y-motion="reduced"] .fe-display-word {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+

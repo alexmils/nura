@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
 import { FrontendBackToTop } from "@/app/components/frontend/FrontendBackToTop";
 import { FrontendFooter } from "@/app/components/frontend/FrontendFooter";
@@ -31,6 +32,7 @@ export function FrontendShellClient({
       <FrontendFooter />
       <FrontendBackToTop />
       <HelpChatWidget showFab />
+      <AccessibilityWidget />
       {marketingExtras}
     </div>
   );

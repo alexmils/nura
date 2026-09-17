@@ -1,0 +1,80 @@
+---
+description: Floating accessibility panel — preferences, CSS contract, and how to add a setting
+globs: app/globals.css,app/components/AccessibilityWidget.tsx,app/components/accessibility-widget.css,app/layout.tsx,app/app/layout.tsx,app/components/frontend/FrontendShellClient.tsx
+alwaysApply: false
+---
+
+# EMDR — accessibility panel
+
+`AccessibilityWidget` is the floating Nura mark button that opens a settings panel
+(text size, contrast, targets, spacing, links, motion). It sits on the marketing
+shell and under `/app`. Read this before touching it or the CSS it depends on.
+
+## Files
+
+| Job | Path |
+|---|---|
+| Types, validation, attributes, bootstrap script, FAB clamping | `lib/a11y-preferences.ts` |
+| Button + panel, drag, storage | `app/components/AccessibilityWidget.tsx` |
+| Widget styling (resting position per surface) | `app/components/accessibility-widget.css` |
+| The effects on the page | `app/globals.css` → last block, **Accessibility preferences** |
+| Pre-paint apply | inline script in `app/layout.tsx` (`a11yBootstrapScript()`) |
+| Tests | `tests/a11y-preferences.test.ts` |
+
+## How it works
+
+1. Preferences are stored in `localStorage` (`nura.a11y.v1`), **not** on the account.
+   Guests on the marketing site get them too.
+2. They are applied as attributes on `<html>`: `data-a11y-text`, `data-a11y-contrast`,
+   `data-a11y-targets`, `data-a11y-spacing`, `data-a11y-links`, `data-a11y-motion`.
+   A preference that is off **removes** its attribute, so the shipped CSS stays in charge.
+3. `a11yBootstrapScript()` re-applies them in `<head>` before first paint, so the page
+   never flashes at the wrong text size. Keep `A11Y_ATTRIBUTES` as the single source of
+   truth: the script is generated from it and a test asserts the script sets every key.
+4. Text size scales the **root font size** (100 / 106.25 / 112.5 / 118.75%), which scales
+   every rem in the app. Each step also sets `--a11y-scale` for fixed-pixel chrome that
+   must grow with its text (currently the `/app` sidebar rail).
+
+## Rules
+
+- **Never** scale `html` font size without adding the matching `--a11y-scale` and a test
+  case. `tests/a11y-preferences.test.ts` reads `globals.css` and fails when a step or an
+  attribute loses its styling block.
+- The effects block must stay **last** in `globals.css`: it is an override layer, so
+  source order decides against the base tokens.
+- The button is **draggable and remembers where it was put**. Inline `left/top` (from a
+  drag) always wins over the per-surface CSS default. Clamp through
+  `clampA11yFabPosition`, never by hand.
+- Bottom bars (`.fe-cookie-banner`, or add `data-a11y-lift` to a new one) push the button
+  up: the widget measures the tallest visible one into `--a11y-lift`. A new full-width
+  bottom bar must be added to `BOTTOM_BANNER_SELECTOR` or it will cover the button.
+- Resting positions: marketing rests bottom-left (help pill and back-to-top own the
+  right), `/app` stacks above the Help pill via `body:has(.app-shell)`. Keep it that way
+  when adding more floating chrome.
+- The button is hidden while a set runs (`body:has(.app-shell.session-immersive)`), same
+  as the Help FAB. The settings themselves always stay applied.
+- Accessibility controls are not decoration: do not hide the widget behind consent,
+  a login, or a modal.
+
+## Adding a setting
+
+1. Add the field to `A11yPreferences` + `DEFAULT_A11Y_PREFERENCES` in `lib/a11y-preferences.ts`.
+2. Add it to `A11Y_ATTRIBUTES`, `a11yAttributeValues`, and `a11yBootstrapScript`.
+3. Add a toggle row in `AccessibilityWidget` (`TOGGLE_ROWS`) or a new control.
+4. Add the CSS block in `globals.css` under the matching `html[data-a11y-…]` selector.
+5. Cover it in `tests/a11y-preferences.test.ts` (parse, attributes, CSS contract) and
+   check it at ~390×844.
+
+## Copy
+
+English, sentence case, no em dash. Short labels plus one plain hint line per row
+(what it does, not how it works). Follow `redpen` for anything longer.
+
+## Do not
+
+- Do not add dark mode, colour pickers, or font-family swaps here: the Nura palette and
+  Source Sans 3 are fixed (`nura-brand`).
+- Do not `!important` the reduced-motion reset per component. It is global on purpose:
+  `animation-duration`/`transition-duration` collapse to `0.001ms` with one iteration.
+- Do not rely on `prefers-reduced-motion` alone for JS motion. Landing GSAP checks
+  `isA11yReduceMotionPreferred()`; do the same in new JS animation.

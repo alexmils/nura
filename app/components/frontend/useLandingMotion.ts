@@ -3,6 +3,7 @@
 import { useEffect, type RefObject } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { isA11yReduceMotionPreferred } from "@/lib/a11y-preferences";
 import Lenis from "lenis";
 import { setLandingLenis } from "@/lib/landing-scroll";
 
@@ -12,10 +13,13 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     const root = rootRef.current;
     if (!root) return;
 
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced =
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      isA11yReduceMotionPreferred();
     if (reduced) {
-      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word").forEach((el) => {
+      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-card, .fe-topics-cta").forEach((el) => {
         gsap.set(el, { clearProps: "all", opacity: 1, y: 0, x: 0, color: "" });
+        el.classList.add("is-in");
       });
       return;
     }
@@ -79,9 +83,17 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       /* Keep overlay pinned to hero — do not translate (that strips the bottom filter). */
       /* —— Section stagger reveals —— */
       root.querySelectorAll<HTMLElement>(
-        ".fe-section-block, .fe-pricing-section, .fe-about, .fe-faq, .fe-blog, .fe-how-section"
+        ".fe-section-block, .fe-pricing-section, .fe-spath, .fe-spath-kit, .fe-topics, .fe-pause, .fe-modes, .fe-memory, .fe-faq, .fe-blog"
       ).forEach((section) => {
-        const items = section.querySelectorAll(".fe-animate");
+        const items = [
+          ...section.querySelectorAll<HTMLElement>(":scope .fe-animate"),
+        ].filter((el) => {
+          /* Kit sits inside .fe-spath — do not play its copy at How it works start. */
+          if (section.classList.contains("fe-spath") && el.closest(".fe-spath-kit")) {
+            return false;
+          }
+          return true;
+        });
         if (!items.length) return;
         gsap.from(items, {
           y: 56,
@@ -148,26 +160,6 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         });
       });
 
-      /* —— Curevo-style stat counters —— */
-      root.querySelectorAll<HTMLElement>(".fe-count").forEach((el, idx) => {
-        const target = parseInt(el.dataset.target ?? "0", 10);
-        const suffix = el.dataset.suffix ?? "";
-        const obj = { val: 0 };
-        gsap.to(obj, {
-          val: target,
-          duration: Math.max(1.2, Math.min(2.4, target / 4)),
-          ease: "power2.out",
-          delay: idx * 0.12,
-          scrollTrigger: { trigger: el, start: "top 85%" },
-          onUpdate: () => {
-            el.textContent = `${Math.floor(obj.val)}${suffix}`;
-          },
-          onComplete: () => {
-            el.textContent = `${target}${suffix}`;
-          },
-        });
-      });
-
       /* —— Closing band (CTA inside footer) —— */
       gsap.from(".fe-site-footer-cta-sub, .fe-site-footer-cta-actions", {
         y: 28,
@@ -177,6 +169,60 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         ease: "power3.out",
         scrollTrigger: { trigger: ".fe-site-footer", start: "top 85%" },
       });
+
+      const topicTiles = root.querySelectorAll<HTMLElement>(
+        ".fe-topics-card, .fe-topics-cta"
+      );
+      if (topicTiles.length) {
+        gsap.from(topicTiles, {
+          y: 28,
+          opacity: 0,
+          duration: 0.7,
+          stagger: 0.07,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: ".fe-topics-grid",
+            start: "top 82%",
+            toggleActions: "play none none none",
+          },
+          onComplete: () => {
+            gsap.set(topicTiles, { clearProps: "transform" });
+          },
+        });
+      }
+
+      /* Session path duo is driven in SessionPathSticky (stage-local flip). */
+
+      /* —— Self-guided finale: far → zoom in on scroll —— */
+      const finaleZoom = root.querySelector<HTMLElement>(".fe-spath-finale-zoom");
+      const finale = root.querySelector<HTMLElement>(".fe-spath-finale");
+      if (finale && finaleZoom) {
+        gsap.fromTo(
+          finaleZoom,
+          {
+            scale: 0.62,
+            y: 96,
+            rotateX: 9,
+            opacity: 0.38,
+            filter: "blur(10px)",
+          },
+          {
+            scale: 1,
+            y: 0,
+            rotateX: 0,
+            opacity: 1,
+            filter: "blur(0px)",
+            ease: "none",
+            scrollTrigger: {
+              trigger: finale,
+              start: "top 92%",
+              end: "top 28%",
+              scrub: 0.85,
+              invalidateOnRefresh: true,
+            },
+          }
+        );
+      }
 
     }, root);
 

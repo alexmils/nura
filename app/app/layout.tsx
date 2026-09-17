@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { AppAccessGate } from "@/app/components/AppAccessGate";
 import { FeedbackPromptHost } from "@/app/components/FeedbackPromptHost";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
@@ -21,12 +22,13 @@ export default function AppConsoleLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppAccessGate>
-      <ToastProvider>
-        {children}
-        <FeedbackPromptHost />
-        <HelpChatWidget showFab />
-      </ToastProvider>
-    </AppAccessGate>
+      <AppAccessGate>
+        <ToastProvider>
+          {children}
+          <FeedbackPromptHost />
+          <HelpChatWidget showFab />
+          <AccessibilityWidget />
+        </ToastProvider>
+      </AppAccessGate>
   );
 }
