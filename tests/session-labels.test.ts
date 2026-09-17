@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  checkInPlaceholder,
   checkInQuickReplies,
   phaseLabel,
   showsSessionQuickReplies,
@@ -33,16 +32,6 @@ describe("session labels", () => {
       replies.map((r) => r.value),
       ["again", "done"]
     );
-    assert.match(
-      checkInPlaceholder("desensitization", { setStopped: true }),
-      /rerun/i
-    );
-  });
-
-  it("uses phase-specific check-in placeholders", () => {
-    assert.equal(checkInPlaceholder("intake"), "Type here…");
-    assert.match(checkInPlaceholder("installation"), /VoC/i);
-    assert.match(checkInPlaceholder("desensitization"), /SUDs/i);
   });
 
   it("shows topic starters only before the first user message", () => {

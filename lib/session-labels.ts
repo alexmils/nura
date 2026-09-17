@@ -94,22 +94,3 @@ export function checkInQuickReplies(
       ];
   }
 }
-
-export function checkInPlaceholder(
-  phase: ProtocolPhase,
-  opts: { setStopped?: boolean } = {}
-): string {
-  if (opts.setStopped) return "Rerun the set, or say what you noticed…";
-  switch (phase) {
-    case "intake":
-      return "Type here…";
-    case "desensitization":
-      return "What do you notice? Or rate SUDs 0–10…";
-    case "installation":
-      return "How true is the positive belief? VoC 0–7…";
-    case "body_scan":
-      return "Any tension left in the body?";
-    default:
-      return "What do you notice now?";
-  }
-}

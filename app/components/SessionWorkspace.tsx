@@ -860,6 +860,7 @@ export function SessionWorkspace() {
             sessionMode={sessionMode}
             phase={thread.phase}
             setStopped={thread.lastSetOutcome === "stopped"}
+            guideLanguage={thread.agentLanguage}
             agentTyping={agentTyping}
             userAvatarUrl={currentUser?.avatarUrl}
             userDisplayName={displayNameFor(currentUser)}

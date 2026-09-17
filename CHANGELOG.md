@@ -147,6 +147,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Floating accessibility panel: `lib/a11y-preferences.ts` (validated prefs, `html` attribute map, drag clamping, pre-paint `a11yBootstrapScript`), `AccessibilityWidget` + `accessibility-widget.css` (draggable Nura mark, bottom sheet ≤640px, per-surface resting corner), effects block at the end of `globals.css`, `isA11yReduceMotionPreferred()` wired into landing GSAP; rule `accessibility-panel`
 - [internal] Session restore: `lib/session-restore.ts` + `AppProvider` remember the open session (`nura.last-session-id`) and keep `?thread=<id>` in the URL via `replaceState`, so a hard refresh re-opens the session instead of Home; quiet `.workspace-restore` placeholder while it loads, 404 clears the store, Home still forgets the session
 - [internal] Session status header: `SessionStatusBar` splits into a `.session-status-chips` row (never wraps) with the target as a caption underneath; `.workspace-header-trail` baseline-aligned and widened so the chips and the crisis pill share one line; mobile keeps one scrollable row
+- [internal] Localized composer placeholders: `lib/session-placeholders.ts` (44 languages across message / intake / rating / VoC / body scan / stopped set), `composerPlaceholder()` wired into `AgentOverlay` via `guideLanguage` (`thread.agentLanguage`); scale names SUDs and VoC stay English, `checkInPlaceholder` moved out of `lib/session-labels.ts`
 - **Product page type pairing** (`/app` + auth + onboarding): shared `--ui-page-title-*` / `--ui-page-lead-*` tokens + `.ui-page-title` / `.ui-page-lead` — Source Sans **700** title (`clamp` 1.75–2.25rem) + **300** lead (~1.06–1.25rem, muted); wired on AuthShell, OnboardingShell, session start, informed consent
 - **Auth chrome**: create-account (`align="center"`) puts logo above the title on the centered axis; login/forgot keep top-left chrome logo (no Home link); form stack lowered on mobile; visual-pane social + SEO copy
 - **Legal / long-form type**: `/terms` + `/privacy` use Source Sans 3 (headings 600) — Fraunces reserved for marketing hero/section titles only; documented in `docs/brand.md`, `nura-brand`, `nura-ui-designer`
@@ -331,6 +332,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Accessibility choices are saved on this device and applied before the page draws, so nothing flashes at the wrong size
 - A refresh keeps you in the session you had open instead of dropping you back to the start
 - Session status stays on one line: phase and rating chips sit beside the help button, with the session target reading on the line below
+- The message box hint now comes in the language you are writing in, so it reads in the same language as the guide
 - The first set now starts from the distress rating you give, whatever it is, instead of waiting for the number to come down first
 
 ### Fixed

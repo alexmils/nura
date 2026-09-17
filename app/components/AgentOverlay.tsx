@@ -4,12 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowUp, AudioLines, Mic, Volume2, X } from "lucide-react";
 import type { Message, ProtocolPhase } from "@/lib/types";
 import type { SessionMode } from "@/lib/protocol";
-import {
-  checkInPlaceholder,
-  checkInQuickReplies,
-  showsSessionQuickReplies,
-} from "@/lib/session-labels";
-import {
+import { checkInQuickReplies, showsSessionQuickReplies } from "@/lib/session-labels";import {
   isBrowserSpeechSupported,
   startBrowserSpeech,
   type BrowserSpeechSession,
@@ -18,6 +13,7 @@ import { Avatar } from "./Avatar";
 import type { VoicePhase } from "./useGuidedVoiceMode";
 import { VoiceWave } from "./VoiceWave";
 import { useRotatingWelcome } from "./useRotatingWelcome";
+import { composerPlaceholder } from "@/lib/session-placeholders";
 import {
   DEFAULT_GUIDED_CHAT_CHROME_ID,
   guidedChatChromeCssVars,
@@ -48,6 +44,8 @@ interface AgentOverlayProps {
   onExitVoice?: () => void;
   /** Platform chrome theme id (1–20). */
   chromeId?: number;
+  /** Language the guide answers in; the composer hint follows it. */
+  guideLanguage?: string | null;
 }
 
 /** Three dots that rise in sequence while the guide is writing. */
@@ -101,6 +99,7 @@ export function AgentOverlay({
   onEnterVoice,
   onExitVoice,
   chromeId = DEFAULT_GUIDED_CHAT_CHROME_ID,
+  guideLanguage = null,
 }: AgentOverlayProps) {
   const chrome = resolveGuidedChatChrome(chromeId);
   const chromeVars = guidedChatChromeCssVars(chrome.theme);
@@ -121,6 +120,17 @@ export function AgentOverlay({
   const prevId = useRef<string | null>(null);
   const checkIn = sessionMode === "check_in";
   const intake = phase === "intake";
+  /**
+   * Composer hint follows the language the guide answers in, so the person is
+   * invited to write in their own language. Falls back to English until the
+   * session language is known.
+   */
+  const composerPlaceholderText = composerPlaceholder({
+    phase,
+    checkIn,
+    language: guideLanguage,
+    setStopped,
+  });
   /** Chat bubbles only after the user has replied once; open session = centered prompt. */
   const conversationStarted = messages.some((m) => m.role === "user");
   // Topic starters only before the first user message; set-rating chips stay
@@ -300,13 +310,9 @@ export function AgentOverlay({
           ref={inputRef}
           value={reply}
           onChange={(e) => setReply(e.target.value)}
-          placeholder={
-            checkIn || intake
-              ? checkInPlaceholder(phase, { setStopped })
-              : "Message the guide…"
-          }
+          placeholder={composerPlaceholderText}
           className="agent-composer-input"
-          aria-label="Message the guide"
+          aria-label={composerPlaceholderText}
         />
         {canSend ? (
           <button
