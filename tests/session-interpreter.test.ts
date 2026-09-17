@@ -40,20 +40,94 @@ describe("session interpreter", () => {
     assert.equal(interp.suds, null);
     assert.equal(interp.voc, null);
     assert.equal(interp.distress, "overwhelm");
-    assert.equal(interp.needsGrounding, true);
+    // A distress label alone must not force grounding: only an explicit
+    // out-of-window signal (or the user asking) does.
+    assert.equal(interp.needsGrounding, false);
+    assert.equal(interp.outOfWindow, false);
     assert.equal(interp.suggestedPhase, null);
+
+    const explicit = parseSessionInterpretation({
+      distress: "ok",
+      needsGrounding: true,
+      summary: "asked for safe place",
+    });
+    assert.equal(explicit.needsGrounding, true);
   });
 
-  it("forces grounding on overwhelm", () => {
+  it("forces grounding when the user is out of the window", () => {
     const patch = threadPatchFromInterpretation(baseThread("desensitization"), {
       ...EMPTY_INTERPRETATION,
       suds: 9,
       suggestedPhase: "installation",
       distress: "overwhelm",
+      outOfWindow: true,
       needsGrounding: true,
       summary: "flooded",
     });
     assert.equal(patch.phase, "grounding");
+  });
+
+  it("does not ground a high SUD on desensitization", () => {
+    const patch = threadPatchFromInterpretation(
+      baseThread("desensitization"),
+      parseSessionInterpretation({
+        suds: 10,
+        distress: "overwhelm",
+        outOfWindow: false,
+        needsGrounding: false,
+        summary: "still high",
+      })
+    );
+    assert.equal(patch.phase, undefined);
+    assert.equal(patch.suds, 10);
+  });
+
+  it("advances assessment to desensitization on any SUD, including 10", () => {
+    const patch = threadPatchFromInterpretation(
+      baseThread("assessment"),
+      parseSessionInterpretation({
+        target: "car crash",
+        negativeCognition: "I am not safe",
+        suds: 10,
+        distress: "elevated",
+        outOfWindow: false,
+        summary: "baseline",
+      })
+    );
+    assert.equal(patch.phase, "desensitization");
+  });
+
+  it("does not advance on a set that was stopped or repeated", () => {
+    for (const setReport of ["stopped", "repeat", "unfocused"] as const) {
+      const patch = threadPatchFromInterpretation(
+        baseThread("desensitization"),
+        parseSessionInterpretation({
+          suds: 0,
+          setReport,
+          distress: "ok",
+          summary: "interrupted",
+        })
+      );
+      assert.equal(patch.phase, undefined, setReport);
+    }
+  });
+
+  it("parses outOfWindow and setReport", () => {
+    const interp = parseSessionInterpretation({
+      outOfWindow: true,
+      setReport: "repeat",
+      distress: "elevated",
+      summary: "wants it again",
+    });
+    assert.equal(interp.outOfWindow, true);
+    assert.equal(interp.setReport, "repeat");
+    const bogus = parseSessionInterpretation({
+      outOfWindow: false,
+      setReport: "later",
+      summary: "x",
+    });
+    assert.equal(bogus.outOfWindow, false);
+    assert.equal(bogus.setReport, null);
   });
 
   it("advances desensitization to installation on low SUDs", () => {

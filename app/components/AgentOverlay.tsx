@@ -30,6 +30,8 @@ interface AgentOverlayProps {
   autoVoice: boolean;
   sessionMode: SessionMode;
   phase: ProtocolPhase;
+  /** True when the last set was cut short, so nothing was processed. */
+  setStopped?: boolean;
   /** True while the guide is composing a reply. */
   agentTyping?: boolean;
   userAvatarUrl?: string | null;
@@ -84,6 +86,7 @@ export function AgentOverlay({
   autoVoice,
   sessionMode,
   phase,
+  setStopped = false,
   agentTyping = false,
   userAvatarUrl,
   userDisplayName = "You",
@@ -127,7 +130,7 @@ export function AgentOverlay({
     phase,
     conversationStarted,
   })
-    ? checkInQuickReplies(phase)
+    ? checkInQuickReplies(phase, { setStopped })
     : [];
   const canSend = reply.trim().length > 0;
   const userInitial = userDisplayName.trim().charAt(0) || "U";
@@ -299,7 +302,7 @@ export function AgentOverlay({
           onChange={(e) => setReply(e.target.value)}
           placeholder={
             checkIn || intake
-              ? checkInPlaceholder(phase)
+              ? checkInPlaceholder(phase, { setStopped })
               : "Message the guide…"
           }
           className="agent-composer-input"

@@ -64,6 +64,23 @@ export function checkInLine(phase: ProtocolPhase): string {
   }
 }
 
+/**
+ * Post-set line when the set did not run to completion: the person stopped it,
+ * got distracted, or something interrupted them. Nothing was processed, so this
+ * never reads a scale. It only teaches the two words the guide needs next
+ * ("again" to rerun the same set, "done" when it really finished).
+ */
+export function interruptedSetLine(phase: ProtocolPhase): string {
+  switch (phase) {
+    case "installation":
+      return 'Set stopped early. Nothing is lost. Take a breath, then say "again" to rerun it with your positive belief.';
+    case "body_scan":
+      return 'Set stopped early. Take a breath, then say "again" to rerun that short set.';
+    default:
+      return 'Set stopped early. Nothing is lost. Take a breath, then say "again" to rerun it or "done" if you finished it.';
+  }
+}
+
 export function openingLine(phase: ProtocolPhase): string {
   switch (phase) {
     case "intake":

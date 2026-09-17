@@ -94,6 +94,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Design backup as reusable code: `docs/Design backups/Header 1/` (`Header1HeroAbout.tsx` + `header-1.css`)
 - [internal] Home: replace “Here when you need us” with Attio-style sticky session path (4 stages + centered Free finale, placeholders)
 - [internal] Home Memory sets: mid-session check-in (chest tightness / “I’m not good enough”); agent loads the note from the enabled set
+- The session guide starts the set itself, so you no longer have to press anything after it says the set is starting
+- Say “again” after a set that was interrupted, or that you were not focused for, and the guide runs the same set again
+- Say “done” to confirm you finished a set, and the guide carries on from there
+- [internal] Threads remember set state (`set_count`, `last_set_outcome`) so the guide knows whether a set actually ran
 
 ### Changed
 - [internal] Session path: one H2 above (“A session, start to finish.”), muted sub smaller; right lead “From ground to close — one calm loop.” (≪ H2, not a second title); nav labels ≠ right leads
@@ -141,6 +145,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Quick-reply gate `showsSessionQuickReplies` in `lib/session-labels.ts` — intake topic starters only before the first user message; check-in rating chips unchanged
 - [internal] `agentTyping` in `AppProvider` (set/cleared around send, check-in and bootstrap) + `TypingIndicator` in `AgentOverlay`; `.agent-typing` keyframes in `globals.css` (reduced-motion aware)
 - [internal] Floating accessibility panel: `lib/a11y-preferences.ts` (validated prefs, `html` attribute map, drag clamping, pre-paint `a11yBootstrapScript`), `AccessibilityWidget` + `accessibility-widget.css` (draggable Nura mark, bottom sheet ≤640px, per-surface resting corner), effects block at the end of `globals.css`, `isA11yReduceMotionPreferred()` wired into landing GSAP; rule `accessibility-panel`
+- [internal] Session restore: `lib/session-restore.ts` + `AppProvider` remember the open session (`nura.last-session-id`) and keep `?thread=<id>` in the URL via `replaceState`, so a hard refresh re-opens the session instead of Home; quiet `.workspace-restore` placeholder while it loads, 404 clears the store, Home still forgets the session
 - **Product page type pairing** (`/app` + auth + onboarding): shared `--ui-page-title-*` / `--ui-page-lead-*` tokens + `.ui-page-title` / `.ui-page-lead` — Source Sans **700** title (`clamp` 1.75–2.25rem) + **300** lead (~1.06–1.25rem, muted); wired on AuthShell, OnboardingShell, session start, informed consent
 - **Auth chrome**: create-account (`align="center"`) puts logo above the title on the centered axis; login/forgot keep top-left chrome logo (no Home link); form stack lowered on mobile; visual-pane social + SEO copy
 - **Legal / long-form type**: `/terms` + `/privacy` use Source Sans 3 (headings 600) — Fraunces reserved for marketing hero/section titles only; documented in `docs/brand.md`, `nura-brand`, `nura-ui-designer`
@@ -323,6 +328,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Three dots show while the session guide is writing a reply, so the pause is never silent
 - **Accessibility button**: a Nura mark you can drag anywhere on the screen; it opens larger text, high contrast, bigger buttons, roomier spacing, underlined links, and reduced motion
 - Accessibility choices are saved on this device and applied before the page draws, so nothing flashes at the wrong size
+- A refresh keeps you in the session you had open instead of dropping you back to the start
+- The first set now starts from the distress rating you give, whatever it is, instead of waiting for the number to come down first
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -595,6 +602,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Coolify `ports_mappings` must be SQL NULL (not `''`) — empty string emits `ports: ['']` and deploys fail with `no port specified`
 - [internal] Logo palette exports from master `Nura Logo.svg` — lockup / text / circle in sage·mint·pistachio·olive·ink·sidebar·B/W (`public/brand/logo-variants/`)
 - [internal] Footer brand peek is in-flow after the footer (not `position:fixed`) so Privacy and other inner pages no longer show a glued logo over the copy
+- Grounding is no longer forced by a high distress rating: only real out-of-window signals (flooding, dissociation, feeling unsafe), a red flag, or asking to pause send the session back to grounding
+- A set you stopped or were interrupted during is no longer read as processed work, and no longer moves the phase on
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

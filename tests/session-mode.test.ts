@@ -230,9 +230,20 @@ describe("session mode helpers", () => {
         sessionKind: "guided",
         phase: "desensitization",
         sessionMode: "idle",
-        distress: "overwhelm",
+        outOfWindow: true,
       }),
       false
+    );
+    // A high SUDs is not out of window: the guide must still be free to start.
+    assert.equal(
+      shouldAutoStartSet({
+        startSet: true,
+        sessionKind: "guided",
+        phase: "desensitization",
+        sessionMode: "idle",
+        outOfWindow: false,
+      }),
+      true
     );
     assert.equal(
       shouldAutoStartSet({

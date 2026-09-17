@@ -81,8 +81,13 @@ export function canRepeatGuidedSet(opts: {
 }
 
 /**
- * Whether Voice Mode may auto-start a set after the guide finishes speaking.
- * Requires interpreter startSet plus the same gates as a manual start.
+ * Whether the guide may start a set on its own after replying, in chat or in
+ * Voice Mode. Requires interpreter startSet plus the same gates as a manual
+ * start, so the person never has to press anything for a set the guide called.
+ *
+ * `outOfWindow` (flooding / dissociation / felt unsafety) blocks it. A high
+ * SUDs must NOT come through here: it is the normal baseline a target starts
+ * from, and blocking on it would strand the session in chat.
  */
 export function shouldAutoStartSet(opts: {
   startSet: boolean;
@@ -90,11 +95,11 @@ export function shouldAutoStartSet(opts: {
   phase: ProtocolPhase;
   sessionMode: SessionMode;
   riskFlag?: boolean;
-  distress?: "ok" | "elevated" | "overwhelm";
+  outOfWindow?: boolean;
 }): boolean {
   if (!opts.startSet) return false;
   if (opts.riskFlag) return false;
-  if (opts.distress === "overwhelm") return false;
+  if (opts.outOfWindow) return false;
   return canStartBls({
     sessionKind: opts.sessionKind,
     phase: opts.phase,

@@ -409,6 +409,8 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS description TEXT;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS intake_complete BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS agent_language TEXT;
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS set_count INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS last_set_outcome TEXT;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
     ALTER TABLE memory_sets ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
   `);
@@ -487,6 +489,11 @@ function rowToThread(row: QueryResultRow): Thread {
     description: (row.description as string) ?? undefined,
     intakeComplete: Boolean(row.intake_complete),
     agentLanguage: (row.agent_language as string) ?? undefined,
+    setCount: row.set_count != null ? Number(row.set_count) : undefined,
+    lastSetOutcome:
+      row.last_set_outcome === "completed" || row.last_set_outcome === "stopped"
+        ? (row.last_set_outcome as Thread["lastSetOutcome"])
+        : undefined,
     incomplete: Boolean(row.incomplete),
     createdAt: new Date(row.created_at as string).toISOString(),
     updatedAt: new Date(row.updated_at as string).toISOString(),
@@ -648,7 +655,7 @@ export async function updateThread(
   await dbQuery(
     `UPDATE threads SET title=$1, phase=$2, target=$3, negative_cognition=$4, positive_cognition=$5,
      suds=$6, voc=$7, summary=$8, incomplete=$9, mode=$10, description=$11, intake_complete=$12,
-     agent_language=$13, updated_at=$14 WHERE id=$15`,
+     agent_language=$13, set_count=$14, last_set_outcome=$15, updated_at=$16 WHERE id=$17`,
     [
       merged.title,
       merged.phase,
@@ -663,6 +670,8 @@ export async function updateThread(
       merged.description?.trim() ? merged.description.trim() : null,
       merged.intakeComplete ?? false,
       merged.agentLanguage ?? null,
+      merged.setCount ?? 0,
+      merged.lastSetOutcome ?? null,
       merged.updatedAt,
       id,
     ]

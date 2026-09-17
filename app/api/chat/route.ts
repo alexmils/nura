@@ -14,6 +14,7 @@ import { chatCompletion } from "@/lib/llm";
 import {
   checkInLine,
   guidedFallbackReply,
+  interruptedSetLine,
   openingLine,
   reevaluationOpeningLine,
   systemPromptForPhase,
@@ -83,14 +84,16 @@ async function runInterpreter(opts: {
 export async function POST(request: Request) {
   return withAuth(async () => {
     const body = await request.json();
-    const { threadId, userMessage, bootstrap, afterSet } = body as {
-      threadId: string;
-      userMessage?: string;
-      bootstrap?: boolean;
-      afterSet?: boolean;
-    };
+    const { threadId, userMessage, bootstrap, afterSet, setOutcome } =
+      body as {
+        threadId: string;
+        userMessage?: string;
+        bootstrap?: boolean;
+        afterSet?: boolean;
+        setOutcome?: "completed" | "stopped";
+      };
 
-    const thread = await getThread(threadId);
+    let thread = await getThread(threadId);
     if (!thread) {
       return NextResponse.json({ error: "Thread not found" }, { status: 404 });
     }
@@ -99,6 +102,19 @@ export async function POST(request: Request) {
         { error: "Chat is only available in guided sessions" },
         { status: 400 }
       );
+    }
+
+    // How the set the app just ran actually ended. The guide cannot see the
+    // ball, so without this it has no way to tell a finished set from one the
+    // person cut short, and would treat both as processed material.
+    if (afterSet && setOutcome) {
+      const updated = await updateThread(threadId, {
+        lastSetOutcome: setOutcome,
+        ...(setOutcome === "completed"
+          ? { setCount: (thread.setCount ?? 0) + 1 }
+          : {}),
+      });
+      if (updated) thread = updated;
     }
 
     const { userId } = getRlsContext();
@@ -121,6 +137,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: msg });
     }
 
+    // A stopped set did not process anything, so it gets the "nothing is lost,
+    // say again" line instead of the scale reading. A completed set keeps the
+    // normal check-in.
+    const setLine =
+      setOutcome === "stopped"
+        ? interruptedSetLine(thread.phase)
+        : checkInLine(thread.phase);
+
     // A pinned non-English session gets its post-set check-in from the guide so
     // the line matches the user's language. English keeps the canned line (and
     // the canned line stays the fallback if the model is unavailable).
@@ -130,9 +154,8 @@ export async function POST(request: Request) {
       thread.agentLanguage !== "en";
 
     if (afterSet && !localizedCheckIn) {
-      const line = checkInLine(thread.phase);
-      const msg = await addMessage(threadId, "agent", line);
-      return NextResponse.json({ message: msg });
+      const msg = await addMessage(threadId, "agent", setLine);
+      return NextResponse.json({ message: msg, thread });
     }
 
     if (userMessage) {
@@ -175,6 +198,8 @@ export async function POST(request: Request) {
           `suds=${thread.suds ?? ""}`,
           `voc=${thread.voc ?? ""}`,
           `intakeComplete=${thread.intakeComplete ?? false}`,
+          `setsCompleted=${thread.setCount ?? 0}`,
+          `lastSetOutcome=${thread.lastSetOutcome ?? "none"}`,
           profileContext ? `profile:\n${profileContext}` : "profile: none",
         ].join("\n"),
         recentMessages: recent,
@@ -187,6 +212,14 @@ export async function POST(request: Request) {
         if (Object.keys(patch).length > 0) {
           const updated = await updateThread(threadId, patch);
           if (updated) workingThread = updated;
+        }
+
+        // The advance out of assessment is deterministic, so the start has to
+        // be too. Otherwise a model that forgets startSet leaves the phase in
+        // desensitization with the ball waiting on the person to press
+        // something, which is exactly the gap this closes.
+        if (thread.phase === "assessment" && patch.phase === "desensitization") {
+          interpretation = { ...interpretation, startSet: true };
         }
 
         const profilePatch = clientProfilePatchFromInterpretation(
@@ -273,7 +306,8 @@ export async function POST(request: Request) {
         : "") +
       (interpretation
         ? `\n\n${interpretationContextBlock(interpretation)}`
-        : "");
+        : "") +
+      `\n\nSet state for this thread (the app runs the sets, you do not see them):\n- sets completed: ${workingThread.setCount ?? 0}\n- last set: ${workingThread.lastSetOutcome ?? "none yet"}\nA "stopped" last set means the person was interrupted or cut it short, so nothing was processed: the same set is repeated, and you do not read SUDs or VoC from it.`;
 
     const messages = [
       {
@@ -295,7 +329,7 @@ export async function POST(request: Request) {
         ? [
             {
               role: "user" as const,
-              content: `(The set just finished. Reply with nothing but this line, translated into the language of this session: "${checkInLine(workingThread.phase)}")`,
+              content: `(The set just ended. Reply with nothing but this line, translated into the language of this session: "${setLine}")`,
             },
           ]
         : []),
@@ -322,6 +356,8 @@ export async function POST(request: Request) {
               voc: interpretation.voc,
               suggestedPhase: interpretation.suggestedPhase,
               distress: interpretation.distress,
+              outOfWindow: interpretation.outOfWindow,
+              setReport: interpretation.setReport,
               needsGrounding: interpretation.needsGrounding,
               intakeComplete: interpretation.intakeComplete,
               riskFlag: interpretation.riskFlag,
@@ -332,10 +368,12 @@ export async function POST(request: Request) {
     } catch (e) {
       console.warn("[chat] LLM failed:", e);
       const fallback =
-        interpretation?.needsGrounding || interpretation?.riskFlag
+        interpretation?.outOfWindow ||
+        interpretation?.needsGrounding ||
+        interpretation?.riskFlag
           ? "Let's pause and ground. Cross your arms for a butterfly hug, or picture your safe place. When you feel steadier, tell me what you notice. If you are in crisis, please seek professional or emergency help."
           : localizedCheckIn
-            ? checkInLine(workingThread.phase)
+            ? setLine
             : guidedFallbackReply(workingThread.phase, userMessage);
       const agentMsg = await addMessage(threadId, "agent", fallback);
       return NextResponse.json({
@@ -347,6 +385,8 @@ export async function POST(request: Request) {
               voc: interpretation.voc,
               suggestedPhase: interpretation.suggestedPhase,
               distress: interpretation.distress,
+              outOfWindow: interpretation.outOfWindow,
+              setReport: interpretation.setReport,
               needsGrounding: interpretation.needsGrounding,
               intakeComplete: interpretation.intakeComplete,
               riskFlag: interpretation.riskFlag,

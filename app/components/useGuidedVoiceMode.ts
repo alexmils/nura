@@ -20,6 +20,8 @@ export type VoicePhase =
 export type SendUserMessageResult = {
   startSet: boolean;
   riskFlag?: boolean;
+  /** Flooding / dissociation / felt unsafety. Never set by a high SUDs. */
+  outOfWindow?: boolean;
   distress?: "ok" | "elevated" | "overwhelm";
   agentText?: string;
   agentId?: string;
@@ -131,7 +133,7 @@ export function useGuidedVoiceMode({
         phase: result.phase ?? optsRef.current.phase,
         sessionMode: "idle",
         riskFlag: result.riskFlag,
-        distress: result.distress,
+        outOfWindow: result.outOfWindow,
       });
 
       if (auto) {
@@ -206,7 +208,7 @@ export function useGuidedVoiceMode({
       setError(
         supported
           ? "Voice is turned off for this workspace."
-          : "Voice isn’t supported in this browser — try Chrome or Edge."
+          : "Voice isn’t supported in this browser. Try Chrome or Edge."
       );
       return;
     }

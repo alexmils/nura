@@ -25,6 +25,20 @@ describe("session labels", () => {
     assert.ok(replies.some((r) => /anxiety/i.test(r.value)));
   });
 
+  it("offers rerun/done instead of ratings after a stopped set", () => {
+    const replies = checkInQuickReplies("desensitization", {
+      setStopped: true,
+    });
+    assert.deepEqual(
+      replies.map((r) => r.value),
+      ["again", "done"]
+    );
+    assert.match(
+      checkInPlaceholder("desensitization", { setStopped: true }),
+      /rerun/i
+    );
+  });
+
   it("uses phase-specific check-in placeholders", () => {
     assert.equal(checkInPlaceholder("intake"), "Type here…");
     assert.match(checkInPlaceholder("installation"), /VoC/i);

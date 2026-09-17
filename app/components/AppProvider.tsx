@@ -22,7 +22,7 @@ import type {
 } from "@/lib/types";
 import { DEFAULT_BLS, DEFAULT_SETTINGS } from "@/lib/types";
 import type { SessionMode } from "@/lib/protocol";
-import { fetchJson } from "@/lib/fetch-json";
+import { fetchJson, FetchJsonError } from "@/lib/fetch-json";
 import { DEFAULT_GUIDED_CHAT_CHROME_ID } from "@/lib/guided-chat-chrome";
 import { DEFAULT_FREE_SESSION_CHROME_ID } from "@/lib/free-session-chrome";
 import {
@@ -36,6 +36,11 @@ import {
   loadBlsPrefs,
   saveBlsPrefs,
 } from "@/lib/bls-prefs";
+import {
+  resolveSessionThreadId,
+  storeSessionId,
+  withThreadParam,
+} from "@/lib/session-restore";
 import {
   parsePublicAdsConfig,
   resolveAdDecision,
@@ -110,6 +115,11 @@ interface AppState {
   messages: Message[];
   /** True while the session guide is composing a reply. */
   agentTyping: boolean;
+  /**
+   * True while a reload is re-opening the session that was open before, so the
+   * UI can hold a quiet placeholder instead of flashing the Home screen.
+   */
+  restoringSession: boolean;
   memorySets: MemorySet[];
   threadMemorySets: ThreadMemorySet[];
   memoryEnabled: boolean;
@@ -135,12 +145,17 @@ interface AppState {
   sendUserMessage: (text: string) => Promise<{
     startSet: boolean;
     riskFlag?: boolean;
+    outOfWindow?: boolean;
     distress?: "ok" | "elevated" | "overwhelm";
     agentText?: string;
     agentId?: string;
     phase?: ProtocolPhase;
   }>;
-  requestCheckIn: () => Promise<void>;
+  /**
+   * Tell the guide a set ended. `completed` is a set that ran out; `stopped`
+   * is one the person cut short, which must not count as processed material.
+   */
+  requestCheckIn: (outcome?: "completed" | "stopped") => Promise<void>;
   bootstrapAgent: () => Promise<void>;
   refreshSettings: () => Promise<void>;
   saveSettings: (s: AppSettings) => Promise<void>;
@@ -181,6 +196,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  /**
+   * True while a hard refresh is re-opening the session that was open before.
+   * The UI shows a quiet placeholder instead of the Home screen, which would
+   * look like the session was lost.
+   */
+  const [restoringSession, setRestoringSession] = useState(true);
   const [memorySets, setMemorySets] = useState<MemorySet[]>([]);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -342,21 +363,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeThreadId]);
 
-  const selectThreadRaw = useCallback(async (id: string) => {
-    try {
-      const data = await fetchJson<{
-        messages?: Message[];
-        memorySets?: ThreadMemorySet[];
-        allSets?: MemorySet[];
-      }>(`/api/threads?id=${id}`);
-      setActiveThreadId(id);
-      setMessages(data.messages ?? []);
-      setThreadMemorySets(data.memorySets ?? []);
-      setMemorySets(data.allSets ?? []);
-    } catch (err) {
-      console.error("selectThread failed:", err);
-    }
+  /**
+   * Push the open session into the URL so a refresh, a duplicate tab, or a
+   * shared link lands in the same session. `replaceState` keeps the history
+   * clean (no extra Back steps).
+   */
+  const syncSessionUrl = useCallback((threadId: string | null) => {
+    if (typeof window === "undefined") return;
+    const next = withThreadParam({
+      pathname: window.location.pathname,
+      search: window.location.search,
+      threadId,
+    });
+    const current = `${window.location.pathname}${window.location.search}`;
+    if (next === current) return;
+    window.history.replaceState(window.history.state, "", next);
   }, []);
+
+  /**
+   * Load one thread and remember it as the open session.
+   * Returns false when the thread is gone (deleted, or pruned as an empty
+   * tab), so the caller can fall back to Home instead of showing a dead shell.
+   */
+  const selectThreadRaw = useCallback(
+    async (id: string): Promise<boolean> => {
+      try {
+        const data = await fetchJson<{
+          messages?: Message[];
+          memorySets?: ThreadMemorySet[];
+          allSets?: MemorySet[];
+          thread?: Thread;
+        }>(`/api/threads?id=${id}`);
+        if (!data.thread) {
+          // Pruned or deleted while we were away: forget it.
+          storeSessionId(null);
+          syncSessionUrl(null);
+          return false;
+        }
+        setActiveThreadId(id);
+        setMessages(data.messages ?? []);
+        setThreadMemorySets(data.memorySets ?? []);
+        setMemorySets(data.allSets ?? []);
+        storeSessionId(id);
+        syncSessionUrl(id);
+        return true;
+      } catch (err) {
+        // A session that no longer exists (deleted here or in another tab) must
+        // not be remembered, or every reload would retry it forever.
+        if (err instanceof FetchJsonError && err.status === 404) {
+          storeSessionId(null);
+          syncSessionUrl(null);
+        } else {
+          console.error("selectThread failed:", err);
+        }
+        return false;
+      }
+    },
+    [syncSessionUrl]
+  );
 
   const selectThread = useCallback(
     async (id: string) => {
@@ -377,8 +441,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setMessages([]);
       setThreadMemorySets([]);
       setSessionMode("idle");
+      // Going Home means "do not bring me back here on refresh".
+      storeSessionId(null);
+      syncSessionUrl(null);
     });
-  }, [runWithLeaveGuard]);
+  }, [runWithLeaveGuard, syncSessionUrl]);
 
   const createThread = useCallback(async () => {
     const go = async () => {
@@ -565,10 +632,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (activeThreadId === id) {
         setActiveThreadId(null);
         setMessages([]);
+        storeSessionId(null);
+        syncSessionUrl(null);
       }
       await refreshThreads(nextActive);
     },
-    [activeThreadId, refreshThreads]
+    [activeThreadId, refreshThreads, syncSessionUrl]
   );
 
   const sendUserMessage = useCallback(async (text: string) => {
@@ -593,6 +662,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         interpretation?: {
           startSet?: boolean;
           riskFlag?: boolean;
+          outOfWindow?: boolean;
           distress?: "ok" | "elevated" | "overwhelm";
         } | null;
       }>("/api/chat", {
@@ -620,6 +690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return {
         startSet: Boolean(data.interpretation?.startSet),
         riskFlag: data.interpretation?.riskFlag,
+        outOfWindow: data.interpretation?.outOfWindow,
         distress: data.interpretation?.distress,
         agentText: data.message?.content,
         agentId: data.message?.id,
@@ -630,22 +701,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [activeThreadId]);
 
-  const requestCheckIn = useCallback(async () => {
-    if (!activeThreadId) return;
-    setAgentTyping(true);
-    try {
-      const data = await fetchJson<{ message?: Message }>("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threadId: activeThreadId, afterSet: true }),
-      });
-      if (data.message) {
-        setMessages((m) => [...m, data.message!]);
+  const requestCheckIn = useCallback(
+    async (outcome: "completed" | "stopped" = "completed") => {
+      if (!activeThreadId) return;
+      setAgentTyping(true);
+      try {
+        const data = await fetchJson<{ message?: Message; thread?: Thread }>(
+          "/api/chat",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              threadId: activeThreadId,
+              afterSet: true,
+              setOutcome: outcome,
+            }),
+          }
+        );
+        if (data.message) {
+          setMessages((m) => [...m, data.message!]);
+        }
+        if (data.thread) {
+          setThreads((list) =>
+            list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
+          );
+        }
+      } finally {
+        setAgentTyping(false);
       }
-    } finally {
-      setAgentTyping(false);
-    }
-  }, [activeThreadId]);
+    },
+    [activeThreadId]
+  );
 
   const bootstrapAgent = useCallback(async () => {
     if (!activeThreadId) return;
@@ -747,11 +833,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
 
   useEffect(() => {
-    void refreshThreads();
     void refreshSettings();
     void refreshEntitlement();
     void refreshConsent();
-  }, [refreshThreads, refreshSettings, refreshEntitlement, refreshConsent]);
+    // Threads load in the restore effect below, which knows whether a session
+    // must be kept alive instead of being pruned as an empty tab.
+  }, [refreshSettings, refreshEntitlement, refreshConsent]);
 
   useEffect(() => {
     // Hydrate BLS Adjustments before auth resolves (anon key).
@@ -775,13 +862,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Deep-link only: open a thread when ?thread=<id> is present. Do not
-  // auto-select the latest Recent item on a bare /app visit.
+  /**
+   * Restore the session that was open before a reload. Runs once: a hard
+   * refresh, a duplicate tab, or a `?thread=<id>` link must land back in the
+   * session, not on Home.
+   *
+   * A bare `/app` visit still shows Home when no session was open (Home nav and
+   * delete clear the stored id), so this cannot turn into "open the newest".
+   */
+  const restoreStartedRef = useRef(false);
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("thread");
-    if (id) void selectThreadRaw(id);
-  }, [selectThreadRaw]);
+    if (restoreStartedRef.current) return;
+    restoreStartedRef.current = true;
+    void (async () => {
+      const id = resolveSessionThreadId({ search: window.location.search });
+      if (id) {
+        const restored = await selectThreadRaw(id);
+        if (restored) {
+          // Keep the tab list in sync without pruning the session we just
+          // restored (a pending picker counts as empty to `pruneEmptyThreads`).
+          await refreshThreads(id);
+          setRestoringSession(false);
+          return;
+        }
+      }
+      // Nothing to restore (or it was deleted while we were away).
+      await refreshThreads();
+      setRestoringSession(false);
+    })();
+    // One-shot on mount: `selectThreadRaw`/`refreshThreads` change identity with
+    // the active thread, and re-running would fight the user's navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Once a thread is open (however it was opened), it becomes the session to
+  // restore on the next load.
+  useEffect(() => {
+    if (activeThreadId) setRestoringSession(false);
+  }, [activeThreadId]);
 
   // Switching sessions must not carry the previous thread's writing indicator.
   useEffect(() => {
@@ -805,6 +923,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeThreadId,
       messages,
       agentTyping,
+      restoringSession,
       memorySets,
       threadMemorySets,
       memoryEnabled,
@@ -848,6 +967,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       activeThreadId,
       messages,
       agentTyping,
+      restoringSession,
       memorySets,
       threadMemorySets,
       memoryEnabled,

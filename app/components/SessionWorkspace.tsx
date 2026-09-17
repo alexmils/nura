@@ -32,6 +32,8 @@ import { useGamepadConnected } from "@/lib/useGamepadConnected";
 import {
   canRepeatGuidedSet,
   canStartBls,
+  phaseAllowsBlsSet,
+  shouldAutoStartSet,
   showsBlsToolbar,
   showsComposer,
   usesAgent,
@@ -64,6 +66,7 @@ export function SessionWorkspace() {
     activeThreadId,
     messages,
     agentTyping,
+    restoringSession,
     bls,
     setBls,
     sessionMode,
@@ -101,6 +104,8 @@ export function SessionWorkspace() {
   const stageRef = useRef<HTMLDivElement>(null);
   const blsDockRef = useRef<HTMLDivElement>(null);
   const runningRef = useRef(running);
+  /** True while Voice Mode owns auto-start, so chat does not double-start a set. */
+  const voiceActiveRef = useRef(false);
   const toggleRunningRef = useRef<() => void>(() => {});
   const navigateToolbarRef = useRef<
     (direction: "left" | "right" | "up" | "down") => void
@@ -339,6 +344,14 @@ export function SessionWorkspace() {
       clearFreeLeaseTimer();
       runningRef.current = false;
       setRunning(false);
+      // A set cut short processed nothing. Record it as stopped so the guide
+      // knows the work did not happen and offers the same set again, instead
+      // of silently reading it as a finished set.
+      if (guided && phaseAllowsBlsSet(thread.phase)) {
+        setSessionMode("check_in");
+        void requestCheckIn("stopped");
+        return;
+      }
       setSessionMode("idle");
       return;
     }
@@ -382,6 +395,7 @@ export function SessionWorkspace() {
   }, [
     blsActive,
     thread,
+    guided,
     sessionMode,
     setSessionMode,
     entitlement,
@@ -389,6 +403,7 @@ export function SessionWorkspace() {
     clearFreeLeaseTimer,
     maybeShowAd,
     beginBlsRun,
+    requestCheckIn,
   ]);
 
   useEffect(() => {
@@ -412,7 +427,7 @@ export function SessionWorkspace() {
       return;
     }
     setSessionMode("check_in");
-    void requestCheckIn();
+    void requestCheckIn("completed");
   }, [
     guided,
     setSessionMode,
@@ -557,9 +572,25 @@ export function SessionWorkspace() {
       if (!guided) return { startSet: false as const };
       const result = await sendUserMessage(text);
       setSessionMode("idle");
+      // The guide owns the ball in chat too, not only in Voice Mode. Without
+      // this the reply says "I'll start the set now" and then nothing moves,
+      // which is what forced people to press Space themselves.
+      if (
+        !voiceActiveRef.current &&
+        shouldAutoStartSet({
+          startSet: result.startSet,
+          sessionKind: thread?.mode ?? "pending",
+          phase: result.phase ?? thread?.phase ?? "intake",
+          sessionMode: "idle",
+          riskFlag: result.riskFlag,
+          outOfWindow: result.outOfWindow,
+        })
+      ) {
+        beginBlsRun();
+      }
       return result;
     },
-    [guided, sendUserMessage, setSessionMode]
+    [guided, thread?.mode, thread?.phase, sendUserMessage, setSessionMode, beginBlsRun]
   );
 
   const lastAgent = [...messages].reverse().find((m) => m.role === "agent");
@@ -576,6 +607,8 @@ export function SessionWorkspace() {
     lastAgentId: lastAgent?.id ?? null,
     lastAgentContent: lastAgent?.content ?? null,
   });
+
+  voiceActiveRef.current = voice.active;
 
   const exitVoiceMode = voice.exit;
   const exitVoice = useCallback(() => {
@@ -614,6 +647,40 @@ export function SessionWorkspace() {
               void refreshConsent();
             }}
           />
+        </div>
+      </main>
+    );
+  }
+
+  /**
+   * A reload re-opens the session in the background. Hold a quiet placeholder
+   * meanwhile: showing "Start a session" here would look like the session was
+   * lost.
+   */
+  if (!thread && restoringSession) {
+    return (
+      <main className="workspace-main flex min-h-0 flex-1 flex-col">
+        <header className="workspace-header">
+          <div className="workspace-header-row">
+            <div className="workspace-header-lead">
+              <WorkspaceMenuButton />
+              <div className="min-w-0">
+                <h1 className="workspace-title">Nura</h1>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div
+          className="workspace-restore"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="workspace-restore-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </span>
+          <p className="workspace-restore-text">Opening your session</p>
         </div>
       </main>
     );
@@ -792,6 +859,7 @@ export function SessionWorkspace() {
             autoVoice={settings.autoVoice}
             sessionMode={sessionMode}
             phase={thread.phase}
+            setStopped={thread.lastSetOutcome === "stopped"}
             agentTyping={agentTyping}
             userAvatarUrl={currentUser?.avatarUrl}
             userDisplayName={displayNameFor(currentUser)}

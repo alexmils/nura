@@ -52,6 +52,16 @@ export interface Thread {
    * guide's reply language; `undefined` keeps the English default.
    */
   agentLanguage?: string;
+  /**
+   * Sets that ran to completion in this thread. A set stopped early does not
+   * count: the guide uses this to know a set really happened.
+   */
+  setCount?: number;
+  /**
+   * How the most recent set ended. `stopped` means the user cut it short (or
+   * something interrupted them) and the phase must not advance from it.
+   */
+  lastSetOutcome?: "completed" | "stopped";
   incomplete: boolean;
   createdAt: string;
   updatedAt: string;

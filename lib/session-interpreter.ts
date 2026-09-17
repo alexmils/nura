@@ -3,6 +3,13 @@ import { PHASE_ORDER } from "./protocol";
 
 export type DistressLevel = "ok" | "elevated" | "overwhelm";
 
+/**
+ * What the user says about the last set. `done` = it finished, `stopped` =
+ * something cut it short, `repeat` = run the same set again, `unfocused` =
+ * they were distracted and want it again rather than moving on.
+ */
+export type SetReport = "done" | "stopped" | "repeat" | "unfocused";
+
 export type SessionInterpretation = {
   suds: number | null;
   voc: number | null;
@@ -11,6 +18,14 @@ export type SessionInterpretation = {
   positiveCognition: string | null;
   suggestedPhase: ProtocolPhase | null;
   distress: DistressLevel;
+  /**
+   * True only when the user is outside the window of tolerance: flooding,
+   * dissociation, feeling unreal or unsafe, losing the present. A high SUD
+   * (even 10) is a normal processing baseline and must NOT set this.
+   */
+  outOfWindow: boolean;
+  /** What the user reports about the last set, if anything. */
+  setReport: SetReport | null;
   needsGrounding: boolean;
   summary: string;
   userFacingHint: string | null;
@@ -34,6 +49,8 @@ export const EMPTY_INTERPRETATION: SessionInterpretation = {
   positiveCognition: null,
   suggestedPhase: null,
   distress: "ok",
+  outOfWindow: false,
+  setReport: null,
   needsGrounding: false,
   summary: "",
   userFacingHint: null,
@@ -49,6 +66,14 @@ export const EMPTY_INTERPRETATION: SessionInterpretation = {
 };
 
 const PHASE_SET = new Set<string>(PHASE_ORDER);
+const SET_REPORTS = new Set<string>(["done", "stopped", "repeat", "unfocused"]);
+
+/** Processing phases where a set runs and a stopped set must not advance. */
+const PROCESSING_PHASES = new Set<ProtocolPhase>([
+  "desensitization",
+  "installation",
+  "body_scan",
+]);
 
 function clampInt(value: unknown, min: number, max: number): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
@@ -67,6 +92,11 @@ function asTrimmedString(value: unknown, maxLen = 280): string | null {
 function asPhase(value: unknown): ProtocolPhase | null {
   if (typeof value !== "string") return null;
   return PHASE_SET.has(value) ? (value as ProtocolPhase) : null;
+}
+
+function asSetReport(value: unknown): SetReport | null {
+  if (typeof value !== "string") return null;
+  return SET_REPORTS.has(value) ? (value as SetReport) : null;
 }
 
 function asDistress(value: unknown): DistressLevel {
@@ -105,8 +135,9 @@ export function parseSessionInterpretation(
     positiveCognition: asTrimmedString(o.positiveCognition),
     suggestedPhase: asPhase(o.suggestedPhase),
     distress,
-    needsGrounding:
-      Boolean(o.needsGrounding) || distress === "overwhelm" || riskFlag,
+    outOfWindow: Boolean(o.outOfWindow),
+    setReport: asSetReport(o.setReport),
+    needsGrounding: Boolean(o.needsGrounding) || riskFlag,
     summary: asTrimmedString(o.summary, 400) ?? "",
     userFacingHint: asTrimmedString(o.userFacingHint, 200),
     presentingProblem: asTrimmedString(o.presentingProblem, 400),
@@ -133,6 +164,8 @@ Return ONLY a single JSON object (no markdown, no prose) with this exact shape:
   "positiveCognition": string|null,
   "suggestedPhase": "intake"|"grounding"|"assessment"|"desensitization"|"installation"|"body_scan"|"closure"|null,
   "distress": "ok"|"elevated"|"overwhelm",
+  "outOfWindow": boolean,
+  "setReport": "done"|"stopped"|"repeat"|"unfocused"|null,
   "needsGrounding": boolean,
   "summary": string,
   "userFacingHint": string|null,
@@ -152,9 +185,12 @@ Rules:
 - Extract target/NC/PC only when the user clearly names them; do not invent.
 - During intake: fill presentingProblem/historyNotes/triggers/resources/goals when the user shares them; set intakeComplete true only when a concrete starting target is agreed AND safety screening is OK (no crisis).
 - riskFlag true if suicidality, active crisis, severe dissociation, or feels unsafe — also set riskNotes briefly.
-- suggestedPhase: only when the conversation clearly warrants advancing or returning (e.g. intakeComplete → grounding; SUDs 0-1 in desensitization → installation; overwhelm → grounding). Prefer null if unsure.
-- needsGrounding true if user asks for safe place, feels flooded, dissociated, or unsafe.
-- startSet: true only when a bilateral set should begin now — phase is (or this turn advances to) desensitization, installation, or body_scan; distress is not overwhelm; riskFlag is false; and the user is ready to continue / go with that / begin the set. Never true during intake, grounding, assessment, or closure. Prefer false if unsure.
+- outOfWindow true ONLY for flooding, dissociation, feeling unreal, feeling unsafe, or losing contact with the present. A high SUDs (8-10) alone is NOT outOfWindow: it is the normal starting baseline for a target and processing must be allowed to start. Never set outOfWindow just because a number is high. If unsure, false.
+- setReport describes the last set the user is talking about: "done" (it finished), "stopped" (something interrupted it or they cut it short), "repeat" (they want the same set again), "unfocused" (they were distracted and want it again rather than moving on). null when they are not reporting on a set.
+- A set that was stopped or that the user wants again does NOT move the phase forward and is NOT read for SUDs/VoC: it is simply run again. Treat "again", "repeat", "I wasn't focused", "it stopped", "something interrupted me" as setReport, not as progress.
+- suggestedPhase: only when the conversation clearly warrants advancing or returning (e.g. intakeComplete → grounding; SUDs 0-1 in desensitization → installation; outOfWindow → grounding). Assessment does NOT need suggestedPhase to reach desensitization: once a target and SUDs are known the app advances and starts the set. Prefer null if unsure.
+- needsGrounding true if the user asks for safe place or wants to pause. Do not set it from a high SUDs number.
+- startSet: true when a set should begin now — the phase is (or this turn advances to) desensitization, installation, or body_scan; riskFlag is false; outOfWindow is false; and the user is ready to continue, go with that, begin, or repeat the set. A high SUDs (up to 10) does NOT block the first set and does NOT delay it. Never true during intake, grounding, assessment, or closure. Prefer false if unsure.
 - summary: one short clinical note for the guide agent (not shown verbatim to user unless needed).
 - userFacingHint: optional one short line the guide may use; null if none.
 - Current phase is ${phase}. Do not output anything except JSON.`;
@@ -166,10 +202,12 @@ export function interpretationContextBlock(
   const lines = [
     "Structured interpretation of the latest user turn (for your guidance only):",
     `- distress: ${interp.distress}`,
+    `- outOfWindow: ${interp.outOfWindow}`,
     `- needsGrounding: ${interp.needsGrounding}`,
     `- riskFlag: ${interp.riskFlag}`,
     `- intakeComplete: ${interp.intakeComplete}`,
     `- startSet: ${interp.startSet}`,
+    interp.setReport ? `- setReport: ${interp.setReport}` : null,
     interp.suds != null ? `- suds: ${interp.suds}` : null,
     interp.voc != null ? `- voc: ${interp.voc}` : null,
     interp.target ? `- target: ${interp.target}` : null,
@@ -214,22 +252,50 @@ export function threadPatchFromInterpretation(
     patch.positiveCognition = interp.positiveCognition;
   }
 
-  if (interp.riskFlag || interp.needsGrounding || interp.distress === "overwhelm") {
-    if (thread.phase === "intake" && interp.riskFlag) {
-      // Stay in resourcing: still force grounding + incomplete
-      patch.phase = "grounding";
-      patch.incomplete = true;
-      return patch;
-    }
-    if (interp.needsGrounding || interp.distress === "overwhelm") {
-      patch.phase = "grounding";
-      patch.incomplete = true;
-      return patch;
-    }
+  // Grounding is forced only by real out-of-window signals (flooding,
+  // dissociation, felt unsafety) or by a red flag. A high SUDs is the normal
+  // baseline a target starts from, so the number alone must never send the
+  // session back to grounding: that would lock the person in a chat loop and
+  // delay the set that actually lowers the distress.
+  if (interp.riskFlag) {
+    patch.phase = "grounding";
+    patch.incomplete = true;
+    return patch;
+  }
+  if (interp.outOfWindow || (interp.needsGrounding && thread.phase !== "intake")) {
+    patch.phase = "grounding";
+    patch.incomplete = true;
+    return patch;
   }
 
   if (interp.intakeComplete) {
     patch.intakeComplete = true;
+  }
+
+  const inProcessing = PROCESSING_PHASES.has(thread.phase);
+
+  // A set that was stopped early, or one the user wants again because they were
+  // not focused, is simply repeated: the phase holds and nothing is read from
+  // it. Advancing here would move on from work that never happened.
+  if (
+    inProcessing &&
+    (interp.setReport === "stopped" ||
+      interp.setReport === "repeat" ||
+      interp.setReport === "unfocused")
+  ) {
+    return patch;
+  }
+
+  // Assessment is done once a target and a baseline SUDs exist, whatever that
+  // SUDs is (10 included). This is deterministic so the first set never depends
+  // on the model choosing to emit a phase.
+  if (
+    thread.phase === "assessment" &&
+    Boolean(interp.target || thread.target) &&
+    interp.suds != null
+  ) {
+    patch.phase = "desensitization";
+    return patch;
   }
 
   if (interp.suggestedPhase) {
@@ -264,12 +330,7 @@ export function threadPatchFromInterpretation(
     ) {
       patch.phase = "assessment";
     } else if (
-      thread.phase === "assessment" &&
-      interp.suds != null &&
-      interp.suds >= 0
-    ) {
-      patch.phase = "desensitization";
-    } else if (
+      // Assessment → desensitization is handled above, before suggestedPhase.
       thread.phase === "desensitization" &&
       interp.suds != null &&
       interp.suds <= 1

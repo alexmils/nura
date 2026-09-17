@@ -43,7 +43,18 @@ export function showsSessionQuickReplies(opts: {
 }
 
 /** Suggested replies after a BLS set, by protocol phase. */
-export function checkInQuickReplies(phase: ProtocolPhase): QuickReply[] {
+export function checkInQuickReplies(
+  phase: ProtocolPhase,
+  opts: { setStopped?: boolean } = {}
+): QuickReply[] {
+  // A stopped set processed nothing, so rating chips would ask the person to
+  // score work that never happened. Offer the two words the guide acts on.
+  if (opts.setStopped) {
+    return [
+      { label: "Run the set again", value: "again" },
+      { label: "I finished it", value: "done" },
+    ];
+  }
   switch (phase) {
     case "intake":
       return [
@@ -84,7 +95,11 @@ export function checkInQuickReplies(phase: ProtocolPhase): QuickReply[] {
   }
 }
 
-export function checkInPlaceholder(phase: ProtocolPhase): string {
+export function checkInPlaceholder(
+  phase: ProtocolPhase,
+  opts: { setStopped?: boolean } = {}
+): string {
+  if (opts.setStopped) return "Rerun the set, or say what you noticed…";
   switch (phase) {
     case "intake":
       return "Type here…";
