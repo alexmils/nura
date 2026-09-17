@@ -14,10 +14,7 @@ import { SessionStatusBar } from "./SessionStatusBar";
 import { SessionStartScreen } from "./SessionStartScreen";
 import { SessionDescription } from "./SessionDescription";
 import { InformedConsentGate } from "./InformedConsentGate";
-import {
-  CrisisHelpButton,
-  SessionNotTherapyStrip,
-} from "./CrisisHelpButton";
+import { CrisisHelpButton } from "./CrisisHelpButton";
 import {
   ResumeClosureBanner,
   SessionClosureModal,
@@ -47,6 +44,7 @@ import { useGuidedVoiceMode } from "./useGuidedVoiceMode";
 import {
   shouldOfferResumeClosure,
   shouldPromptSessionClosure,
+  isEmptyDisposableSession,
 } from "@/lib/session-closure";
 
 function isTypingTarget(target: EventTarget | null) {
@@ -65,6 +63,7 @@ export function SessionWorkspace() {
     threads,
     activeThreadId,
     messages,
+    agentTyping,
     bls,
     setBls,
     sessionMode,
@@ -85,6 +84,7 @@ export function SessionWorkspace() {
     refreshConsent,
     registerLeaveGuard,
     updateThreadLocal,
+    deleteThread,
   } = useApp();
   const { user: currentUser } = useCurrentUser();
 
@@ -117,6 +117,7 @@ export function SessionWorkspace() {
   gamepadConnectedRef.current = gamepadConnected;
 
   const thread = threads.find((t) => t.id === activeThreadId);
+  const hasUserMessage = messages.some((m) => m.role === "user");
   const guided = thread ? usesAgent(thread.mode) : false;
   const blsActive = thread != null && thread.mode !== "pending";
   const startAllowed =
@@ -153,12 +154,26 @@ export function SessionWorkspace() {
 
   useEffect(() => {
     registerLeaveGuard((proceed) => {
-      if (
-        !shouldPromptSessionClosure({
-          thread,
-          setRunning: runningRef.current,
-        })
-      ) {
+      const gate = {
+        thread,
+        setRunning: runningRef.current,
+        hasUserMessage,
+      };
+      if (isEmptyDisposableSession(gate)) {
+        const id = thread?.id;
+        void (async () => {
+          stopSetForLeave();
+          if (id) await deleteThread(id);
+          proceed();
+        })();
+        return true;
+      }
+      // Self-guided: leave quietly (stop set if running; no closure modal).
+      if (thread?.mode === "free") {
+        stopSetForLeave();
+        return false;
+      }
+      if (!shouldPromptSessionClosure(gate)) {
         return false;
       }
       pendingLeaveRef.current = proceed;
@@ -166,7 +181,13 @@ export function SessionWorkspace() {
       return true;
     });
     return () => registerLeaveGuard(null);
-  }, [registerLeaveGuard, thread]);
+  }, [
+    registerLeaveGuard,
+    thread,
+    hasUserMessage,
+    deleteThread,
+    stopSetForLeave,
+  ]);
 
   useEffect(() => {
     setResumeDismissed(false);
@@ -196,19 +217,28 @@ export function SessionWorkspace() {
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (
-        shouldPromptSessionClosure({
-          thread,
-          setRunning: runningRef.current,
-        })
-      ) {
+      const gate = {
+        thread,
+        setRunning: runningRef.current,
+        hasUserMessage,
+      };
+      if (isEmptyDisposableSession(gate) && thread?.id) {
+        void fetch("/api/threads", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", id: thread.id }),
+          keepalive: true,
+        });
+        return;
+      }
+      if (shouldPromptSessionClosure(gate)) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [thread]);
+  }, [thread, hasUserMessage]);
 
   const handleDoClosure = useCallback(() => {
     setClosureOpen(false);
@@ -289,10 +319,19 @@ export function SessionWorkspace() {
     setRunning(true);
     runningRef.current = true;
     setSessionMode("running");
+    if (thread.mode === "free" && !thread.intakeComplete) {
+      void updateThreadLocal(thread.id, { intakeComplete: true });
+    }
     if (thread.mode === "free" && entitlement?.isTrialLimited) {
       void continueFreeLease();
     }
-  }, [thread, setSessionMode, entitlement, continueFreeLease]);
+  }, [
+    thread,
+    setSessionMode,
+    entitlement,
+    continueFreeLease,
+    updateThreadLocal,
+  ]);
 
   const toggleRunning = useCallback(() => {
     if (!blsActive || !thread) return;
@@ -562,7 +601,6 @@ export function SessionWorkspace() {
               <WorkspaceMenuButton />
               <div className="min-w-0">
                 <h1 className="workspace-title">Safety consent</h1>
-                <SessionNotTherapyStrip />
               </div>
             </div>
             <div className="workspace-header-trail">
@@ -590,7 +628,6 @@ export function SessionWorkspace() {
               <WorkspaceMenuButton />
               <div className="min-w-0">
                 <h1 className="workspace-title">Nura</h1>
-                <SessionNotTherapyStrip />
               </div>
             </div>
             <div className="workspace-header-trail">
@@ -637,7 +674,6 @@ export function SessionWorkspace() {
               <div className="min-w-0">
                 <h1 className="workspace-title">{thread.title}</h1>
                 <p className="workspace-hint">Choose a session type to begin</p>
-                <SessionNotTherapyStrip />
               </div>
             </div>
             <div className="workspace-header-trail">
@@ -683,7 +719,6 @@ export function SessionWorkspace() {
                 threadId={thread.id}
                 description={thread.description}
               />
-              {!running ? <SessionNotTherapyStrip /> : null}
             </div>
           </div>
           <div className="workspace-header-trail">
@@ -757,6 +792,7 @@ export function SessionWorkspace() {
             autoVoice={settings.autoVoice}
             sessionMode={sessionMode}
             phase={thread.phase}
+            agentTyping={agentTyping}
             userAvatarUrl={currentUser?.avatarUrl}
             userDisplayName={displayNameFor(currentUser)}
             onReply={(t) => void handleReply(t)}

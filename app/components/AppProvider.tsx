@@ -25,6 +25,10 @@ import type { SessionMode } from "@/lib/protocol";
 import { fetchJson } from "@/lib/fetch-json";
 import { DEFAULT_GUIDED_CHAT_CHROME_ID } from "@/lib/guided-chat-chrome";
 import { DEFAULT_FREE_SESSION_CHROME_ID } from "@/lib/free-session-chrome";
+import {
+  SESSION_MODE_GUIDED_LABEL,
+  SESSION_MODE_SELF_LABEL,
+} from "@/lib/brand";
 import { shouldBootstrapAgent } from "@/lib/session-mode";
 import {
   clearBlsPrefs,
@@ -104,6 +108,8 @@ interface AppState {
   threads: Thread[];
   activeThreadId: string | null;
   messages: Message[];
+  /** True while the session guide is composing a reply. */
+  agentTyping: boolean;
   memorySets: MemorySet[];
   threadMemorySets: ThreadMemorySet[];
   memoryEnabled: boolean;
@@ -185,6 +191,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     DEFAULT_FREE_SESSION_CHROME_ID
   );
   const [consentOk, setConsentOk] = useState<boolean | null>(null);
+  /** True while the session guide is composing a reply (typing indicator). */
+  const [agentTyping, setAgentTyping] = useState(false);
   const leaveGuardRef = useRef<((proceed: () => void) => boolean) | null>(
     null
   );
@@ -317,14 +325,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     proceed();
   }, []);
 
-  const refreshThreads = useCallback(async () => {
+  const refreshThreads = useCallback(async (exceptId?: string | null) => {
     try {
-      const data = await fetchJson<{ threads?: Thread[] }>("/api/threads");
+      const keep =
+        exceptId === undefined ? activeThreadId : exceptId;
+      const q =
+        keep != null && keep !== ""
+          ? `?except=${encodeURIComponent(keep)}`
+          : "";
+      const data = await fetchJson<{ threads?: Thread[] }>(
+        `/api/threads${q}`
+      );
       setThreads(data.threads ?? []);
     } catch (err) {
       console.error("refreshThreads failed:", err);
     }
-  }, []);
+  }, [activeThreadId]);
 
   const selectThreadRaw = useCallback(async (id: string) => {
     try {
@@ -400,8 +416,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           return;
         }
-        await refreshThreads();
-        if (data.thread?.id) await selectThreadRaw(data.thread.id);
+        if (data.thread?.id) {
+          await selectThreadRaw(data.thread.id);
+          await refreshThreads(data.thread.id);
+        } else {
+          await refreshThreads();
+        }
       } catch (err) {
         console.error("createThread failed:", err);
       }
@@ -462,7 +482,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             id: activeThreadId,
             patch: {
               mode: kind,
-              title: kind === "free" ? "Free session" : "Agent-guided session",
+              title: kind === "free" ? SESSION_MODE_SELF_LABEL : SESSION_MODE_GUIDED_LABEL,
             },
           }),
         });
@@ -541,11 +561,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "delete", id }),
       });
-      await refreshThreads();
+      const nextActive = activeThreadId === id ? null : activeThreadId;
       if (activeThreadId === id) {
         setActiveThreadId(null);
         setMessages([]);
       }
+      await refreshThreads(nextActive);
     },
     [activeThreadId, refreshThreads]
   );
@@ -562,66 +583,85 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setMessages((m) => [...m, optimistic]);
-    const data = await fetchJson<{
-      message?: Message;
-      thread?: Thread;
-      interpretation?: {
-        startSet?: boolean;
-        riskFlag?: boolean;
-        distress?: "ok" | "elevated" | "overwhelm";
-      } | null;
-    }>("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId: activeThreadId, userMessage: text }),
-    });
-    if (data.thread) {
-      setThreads((list) =>
-        list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
-      );
-    }
-    if (data.message) {
-      const assistantMsg = data.message;
-      setMessages((m) => {
-        const withoutTmp = m.filter((x) => x.id !== optimistic.id);
-        const hasUser = withoutTmp.some(
-          (x) => x.role === "user" && x.content === text
-        );
-        return hasUser
-          ? [...withoutTmp, assistantMsg]
-          : [...withoutTmp, optimistic, assistantMsg];
+    // Writing indicator for the whole round trip. `finally` matters: a failed
+    // request must not leave the dots moving forever.
+    setAgentTyping(true);
+    try {
+      const data = await fetchJson<{
+        message?: Message;
+        thread?: Thread;
+        interpretation?: {
+          startSet?: boolean;
+          riskFlag?: boolean;
+          distress?: "ok" | "elevated" | "overwhelm";
+        } | null;
+      }>("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId: activeThreadId, userMessage: text }),
       });
+      if (data.thread) {
+        setThreads((list) =>
+          list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
+        );
+      }
+      if (data.message) {
+        const assistantMsg = data.message;
+        setMessages((m) => {
+          const withoutTmp = m.filter((x) => x.id !== optimistic.id);
+          const hasUser = withoutTmp.some(
+            (x) => x.role === "user" && x.content === text
+          );
+          return hasUser
+            ? [...withoutTmp, assistantMsg]
+            : [...withoutTmp, optimistic, assistantMsg];
+        });
+      }
+      return {
+        startSet: Boolean(data.interpretation?.startSet),
+        riskFlag: data.interpretation?.riskFlag,
+        distress: data.interpretation?.distress,
+        agentText: data.message?.content,
+        agentId: data.message?.id,
+        phase: data.thread?.phase,
+      };
+    } finally {
+      setAgentTyping(false);
     }
-    return {
-      startSet: Boolean(data.interpretation?.startSet),
-      riskFlag: data.interpretation?.riskFlag,
-      distress: data.interpretation?.distress,
-      agentText: data.message?.content,
-      agentId: data.message?.id,
-      phase: data.thread?.phase,
-    };
   }, [activeThreadId]);
 
   const requestCheckIn = useCallback(async () => {
     if (!activeThreadId) return;
-    const data = await fetchJson<{ message?: Message }>("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId: activeThreadId, afterSet: true }),
-    });
-    if (data.message) {
-      setMessages((m) => [...m, data.message!]);
+    setAgentTyping(true);
+    try {
+      const data = await fetchJson<{ message?: Message }>("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId: activeThreadId, afterSet: true }),
+      });
+      if (data.message) {
+        setMessages((m) => [...m, data.message!]);
+      }
+    } finally {
+      setAgentTyping(false);
     }
   }, [activeThreadId]);
 
   const bootstrapAgent = useCallback(async () => {
     if (!activeThreadId) return;
-    const data = await fetchJson<{ message?: Message }>("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ threadId: activeThreadId, bootstrap: true }),
-    });
-    if (data.message) setMessages([data.message]);
+    // The opening line is instant, but this avoids a blank stage if the guide
+    // is slow to answer on a cold thread.
+    setAgentTyping(true);
+    try {
+      const data = await fetchJson<{ message?: Message }>("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ threadId: activeThreadId, bootstrap: true }),
+      });
+      if (data.message) setMessages([data.message]);
+    } finally {
+      setAgentTyping(false);
+    }
   }, [activeThreadId]);
 
   const refreshSettings = useCallback(async () => {
@@ -743,6 +783,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (id) void selectThreadRaw(id);
   }, [selectThreadRaw]);
 
+  // Switching sessions must not carry the previous thread's writing indicator.
+  useEffect(() => {
+    setAgentTyping(false);
+  }, [activeThreadId]);
+
   useEffect(() => {
     const thread = threads.find((t) => t.id === activeThreadId);
     if (
@@ -759,6 +804,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       threads,
       activeThreadId,
       messages,
+      agentTyping,
       memorySets,
       threadMemorySets,
       memoryEnabled,
@@ -801,6 +847,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       threads,
       activeThreadId,
       messages,
+      agentTyping,
       memorySets,
       threadMemorySets,
       memoryEnabled,

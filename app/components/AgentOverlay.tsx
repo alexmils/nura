@@ -30,6 +30,8 @@ interface AgentOverlayProps {
   autoVoice: boolean;
   sessionMode: SessionMode;
   phase: ProtocolPhase;
+  /** True while the guide is composing a reply. */
+  agentTyping?: boolean;
   userAvatarUrl?: string | null;
   userDisplayName?: string;
   onReply: (text: string) => void;
@@ -44,6 +46,21 @@ interface AgentOverlayProps {
   onExitVoice?: () => void;
   /** Platform chrome theme id (1–20). */
   chromeId?: number;
+}
+
+/** Three dots that rise in sequence while the guide is writing. */
+function TypingIndicator({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`agent-typing${className ? ` ${className}` : ""}`}
+      role="status"
+      aria-label="Nura is writing"
+    >
+      <span className="agent-typing-dot" aria-hidden="true" />
+      <span className="agent-typing-dot" aria-hidden="true" />
+      <span className="agent-typing-dot" aria-hidden="true" />
+    </span>
+  );
 }
 
 function voiceStatusLabel(phase: VoicePhase): string {
@@ -67,6 +84,7 @@ export function AgentOverlay({
   autoVoice,
   sessionMode,
   phase,
+  agentTyping = false,
   userAvatarUrl,
   userDisplayName = "You",
   onReply,
@@ -203,7 +221,7 @@ export function AgentOverlay({
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, hidden, conversationStarted, voiceInterim]);
+  }, [messages.length, hidden, conversationStarted, voiceInterim, agentTyping]);
 
   if (hidden) return null;
 
@@ -371,7 +389,7 @@ export function AgentOverlay({
         <div className="agent-overlay-inner">
           {checkInBanner}
           <div className="agent-overlay-body">
-            {lastAgent && (
+            {lastAgent ? (
               <div key={rollKey} className="agent-overlay-line agent-fade-up">
                 {welcome.swap ? (
                   <p className="agent-overlay-text welcome-rotate-text">
@@ -395,7 +413,11 @@ export function AgentOverlay({
                   </button>
                 )}
               </div>
-            )}
+            ) : agentTyping && !voiceChrome ? (
+              <div className="agent-overlay-line">
+                <TypingIndicator className="agent-typing--prompt" />
+              </div>
+            ) : null}
           </div>
           {quickReplyRow}
           {composer}
@@ -454,6 +476,19 @@ export function AgentOverlay({
               </div>
             );
           })}
+          {agentTyping && !voiceChrome ? (
+            <div className="agent-chat-row agent-chat-row--agent">
+              <Avatar
+                src={guideAvatar}
+                alt="Nura"
+                fallback="N"
+                className="avatar-sm avatar-guide"
+              />
+              <div className="agent-chat-bubble agent-chat-bubble--agent agent-chat-bubble--typing">
+                <TypingIndicator />
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {quickReplyRow}
