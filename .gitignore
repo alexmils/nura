@@ -9,3 +9,7 @@ __pycache__/
 *.pyc
 .tmp-pdf-extract/
 *.tsbuildinfo
+
+# TEMPORARY: phone voice diagnostic payloads (may contain speech text).
+# Delete with public/voice-diagnostic.html and app/api/voice-diagnostic-log/.
+voice-diag.log

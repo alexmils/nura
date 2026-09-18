@@ -116,6 +116,7 @@
     </p>
 
     <div class="env" id="env">loading</div>
+    <div class="env" id="ship">telemetry: waiting</div>
 
     <div class="row">
       <button id="btn-loop">A. Nura loop</button>
@@ -125,6 +126,9 @@
     </div>
     <div class="row">
       <button id="btn-gum" class="ghost">D. Mic level loop</button>
+      <button id="btn-copy" class="ghost">Copy log</button>
+    </div>
+    <div class="row">
       <button id="btn-clear" class="ghost">Clear log</button>
     </div>
 
@@ -147,6 +151,74 @@
 
         var t0 = Date.now();
         var logEl = document.getElementById("log");
+        var SID =
+          "s" +
+          Date.now().toString(36).slice(-5) +
+          Math.random().toString(36).slice(2, 5);
+        var pending = [];
+        var shipTimer = null;
+        var shipEl = document.getElementById("ship");
+        var shipSent = 0;
+        var shipFailed = 0;
+        var lastShip = "waiting";
+
+        function shipStatus() {
+          if (!shipEl) return;
+          shipEl.textContent =
+            "telemetry: " + shipSent + " sent, " + shipFailed + " failed (last: " + lastShip + ")";
+        }
+
+        /** Send the log to the dev server so the agent can read it. */
+        function ship(immediate) {
+          if (pending.length === 0) return;
+          var payload = "sid=" + SID + " " + pending.join("\n");
+          pending = [];
+          try {
+            fetch("/api/voice-diagnostic-log", {
+              method: "POST",
+              headers: { "Content-Type": "text/plain" },
+              body: payload,
+              keepalive: true,
+            })
+              .then(function (res) {
+                if (res.status === 204) {
+                  shipSent += 1;
+                  lastShip = "ok";
+                } else {
+                  shipFailed += 1;
+                  lastShip = "HTTP " + res.status;
+                }
+                shipStatus();
+              })
+              .catch(function (e) {
+                shipFailed += 1;
+                lastShip = String((e && e.message) || e);
+                shipStatus();
+              });
+          } catch (e) {
+            shipFailed += 1;
+            lastShip = String((e && e.message) || e);
+            shipStatus();
+          }
+          if (immediate && shipTimer) {
+            clearTimeout(shipTimer);
+            shipTimer = null;
+          }
+        }
+
+        function queue(text) {
+          pending.push(text);
+          if (pending.length >= 6) {
+            ship(true);
+            return;
+          }
+          if (!shipTimer) {
+            shipTimer = setTimeout(function () {
+              shipTimer = null;
+              ship(false);
+            }, 700);
+          }
+        }
         var counts = {
           start: 0,
           audio: 0,
@@ -177,6 +249,7 @@
           logEl.appendChild(rest);
           logEl.appendChild(document.createTextNode("\n"));
           logEl.scrollTop = logEl.scrollHeight;
+          queue("+" + ms + "ms " + text);
         }
 
         var Ctor =
@@ -195,6 +268,35 @@
         ].join("\n");
 
         line("page ready. tap A, then speak one sentence.", "ok");
+        shipStatus();
+        queue(
+          "env :: " +
+            document.getElementById("env").textContent.replace(/\n/g, " | ")
+        );
+        ship(true);
+
+        // Anything that throws on the phone must land in the log too, so a
+        // crash is visible in the telemetry instead of just going blank.
+        window.addEventListener("error", function (ev) {
+          line(
+            "JS ERROR " +
+              (ev.message || "unknown") +
+              " @ " +
+              (ev.filename || "") +
+              ":" +
+              (ev.lineno || 0),
+            "bad"
+          );
+          ship(true);
+        });
+        window.addEventListener("unhandledrejection", function (ev) {
+          var reason = ev && ev.reason;
+          line(
+            "JS REJECTION " + String((reason && reason.message) || reason),
+            "bad"
+          );
+          ship(true);
+        });
 
         var active = false;
         var current = null;
@@ -232,6 +334,7 @@
           });
           live = [];
           line("stopped: " + reason, "warn");
+          ship(true);
         }
 
         function attach(rec, mode) {
@@ -388,6 +491,24 @@
         document.getElementById("btn-stop").onclick = function () { stopAll("tap"); };
         document.getElementById("btn-gum").onclick = micLoop;
         document.getElementById("btn-clear").onclick = function () { logEl.textContent = ""; };
+        document.getElementById("btn-copy").onclick = function () {
+          var text = logEl.textContent || "";
+          var done = function () { line("log copied to clipboard", "ok"); };
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(done, function () {
+                line("clipboard blocked, select the log and copy manually", "warn");
+              });
+              return;
+            }
+          } catch (e) {}
+          line("clipboard unavailable, select the log and copy manually", "warn");
+        };
+
+        window.addEventListener("pagehide", function () { ship(true); });
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "hidden") ship(true);
+        });
       })();
     </script>
   </body>
