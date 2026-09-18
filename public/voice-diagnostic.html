@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Voice diagnostic</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px 16px 48px;
+        background: #10130c;
+        color: #eef3e6;
+        font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      h1 {
+        font-size: 19px;
+        margin: 0 0 4px;
+      }
+      p.hint {
+        margin: 0 0 14px;
+        color: #b7c2a8;
+        font-size: 13px;
+      }
+      .env {
+        padding: 10px 12px;
+        border: 1px solid #33392a;
+        border-radius: 10px;
+        background: #171b12;
+        font-size: 12px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 14px 0 10px;
+      }
+      button {
+        flex: 1 1 46%;
+        min-height: 52px;
+        padding: 10px 12px;
+        border: 1px solid #4b5540;
+        border-radius: 12px;
+        background: #84b067;
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      button.ghost {
+        background: transparent;
+        color: #dbe4cf;
+        font-weight: 500;
+      }
+      button.stop {
+        background: #7d3b31;
+        border-color: #93564b;
+      }
+      .counts {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        margin: 10px 0;
+        font-size: 13px;
+      }
+      .counts span {
+        padding: 8px 10px;
+        border: 1px solid #33392a;
+        border-radius: 10px;
+        background: #171b12;
+      }
+      .counts b {
+        color: #c6d67e;
+      }
+      #log {
+        margin: 0;
+        padding: 12px;
+        min-height: 240px;
+        max-height: 52vh;
+        overflow: auto;
+        border: 1px solid #33392a;
+        border-radius: 12px;
+        background: #0b0d08;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      .t0 {
+        color: #8e9a80;
+      }
+      .ok {
+        color: #a4eda5;
+      }
+      .warn {
+        color: #e7c46a;
+      }
+      .bad {
+        color: #f08a7a;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Voice diagnostic</h1>
+    <p class="hint">
+      Temporary test page. Run the buttons in order, speak after each one, and
+      send a screenshot of the log.
+    </p>
+
+    <div class="env" id="env">loading</div>
+
+    <div class="row">
+      <button id="btn-loop">A. Nura loop</button>
+      <button id="btn-single" class="ghost">B. Single session</button>
+      <button id="btn-after" class="ghost">C. Loop after a sound</button>
+      <button id="btn-stop" class="stop">Stop</button>
+    </div>
+    <div class="row">
+      <button id="btn-gum" class="ghost">D. Mic level loop</button>
+      <button id="btn-clear" class="ghost">Clear log</button>
+    </div>
+
+    <div class="counts">
+      <span>onstart <b id="c-start">0</b></span>
+      <span>audiostart <b id="c-audio">0</b></span>
+      <span>speechstart <b id="c-speech">0</b></span>
+      <span>results <b id="c-res">0</b></span>
+      <span>finals <b id="c-fin">0</b></span>
+      <span>errors <b id="c-err">0</b></span>
+      <span>onend <b id="c-end">0</b></span>
+      <span>instances <b id="c-inst">0</b></span>
+    </div>
+
+    <pre id="log" aria-live="polite"></pre>
+
+    <script>
+      (function () {
+        "use strict";
+
+        var t0 = Date.now();
+        var logEl = document.getElementById("log");
+        var counts = {
+          start: 0,
+          audio: 0,
+          speech: 0,
+          res: 0,
+          fin: 0,
+          err: 0,
+          end: 0,
+          inst: 0,
+        };
+        var label = { start: "c-start", audio: "c-audio", speech: "c-speech", res: "c-res", fin: "c-fin", err: "c-err", end: "c-end", inst: "c-inst" };
+
+        function bump(key) {
+          counts[key] += 1;
+          var el = document.getElementById(label[key]);
+          if (el) el.textContent = String(counts[key]);
+        }
+
+        function line(text, cls) {
+          var ms = Date.now() - t0;
+          var span = document.createElement("span");
+          span.className = (cls || "") + " t0";
+          span.textContent = "+" + ms + "ms ";
+          var rest = document.createElement("span");
+          rest.className = cls || "";
+          rest.textContent = text;
+          logEl.appendChild(span);
+          logEl.appendChild(rest);
+          logEl.appendChild(document.createTextNode("\n"));
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        var Ctor =
+          window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+        document.getElementById("env").textContent = [
+          "secure context: " + String(window.isSecureContext),
+          "SpeechRecognition: " + (Ctor ? "yes" : "no"),
+          "webkitSpeechRecognition: " + String(!!window.webkitSpeechRecognition),
+          "mediaDevices: " + String(!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)),
+          "audioSession API: " + String(!!navigator.audioSession),
+          "pointer coarse: " + String(window.matchMedia("(pointer: coarse)").matches),
+          "standalone: " + String(window.navigator.standalone === true),
+          "lang: " + navigator.language,
+          "ua: " + navigator.userAgent,
+        ].join("\n");
+
+        line("page ready. tap A, then speak one sentence.", "ok");
+
+        var active = false;
+        var current = null;
+        var restartTimer = null;
+        var failures = 0;
+        var live = []; // streams / audio we must release
+
+        function release(rec) {
+          if (!rec) return;
+          rec.onresult = null;
+          rec.onerror = null;
+          rec.onend = null;
+          rec.onstart = null;
+          rec.onaudiostart = null;
+          rec.onspeechstart = null;
+          try {
+            rec.abort();
+          } catch (e) {}
+        }
+
+        function stopAll(reason) {
+          active = false;
+          if (restartTimer) {
+            clearTimeout(restartTimer);
+            restartTimer = null;
+          }
+          release(current);
+          current = null;
+          live.forEach(function (item) {
+            try {
+              if (item.stop) item.stop();
+              if (item.getTracks) item.getTracks().forEach(function (t) { t.stop(); });
+              if (item.close) item.close();
+            } catch (e) {}
+          });
+          live = [];
+          line("stopped: " + reason, "warn");
+        }
+
+        function attach(rec, mode) {
+          rec.continuous = mode === "single" ? true : false;
+          rec.interimResults = true;
+          rec.lang = navigator.language || "en-US";
+
+          rec.onstart = function () { bump("start"); line("onstart"); };
+          rec.onaudiostart = function () { bump("audio"); line("onaudiostart", "ok"); };
+          rec.onaudioend = function () { line("onaudioend"); };
+          rec.onsoundstart = function () { line("onsoundstart", "ok"); };
+          rec.onsoundend = function () { line("onsoundend"); };
+          rec.onspeechstart = function () { bump("speech"); line("onspeechstart", "ok"); };
+          rec.onspeechend = function () { line("onspeechend"); };
+          rec.onnomatch = function () { line("onnomatch", "warn"); };
+          rec.onresult = function (ev) {
+            bump("res");
+            var interim = "";
+            var finalChunk = "";
+            for (var i = ev.resultIndex; i < ev.results.length; i++) {
+              var r = ev.results[i];
+              var piece = (r[0] && r[0].transcript) || "";
+              if (r.isFinal) finalChunk += piece;
+              else interim += piece;
+            }
+            if (finalChunk) { bump("fin"); line("RESULT final: " + finalChunk, "ok"); }
+            if (interim) line("RESULT interim: " + interim, "ok");
+          };
+          rec.onerror = function (ev) {
+            bump("err");
+            line("ERROR " + ev.error + (ev.message ? " (" + ev.message + ")" : ""), "bad");
+          };
+          rec.onend = function () {
+            bump("end");
+            line("onend");
+            if (!active) return;
+            if (mode === "single") { line("single session ended, no restart by design", "warn"); return; }
+            failures += 1;
+            restartTimer = setTimeout(function () {
+              restartTimer = null;
+              if (active) spawn(mode);
+            }, 300);
+          };
+        }
+
+        function spawn(mode) {
+          if (!active || !Ctor) return;
+          bump("inst");
+          var rec = new Ctor();
+          current = rec;
+          attach(rec, mode);
+          try {
+            rec.start();
+            failures = 0;
+            line("start() ok (instance " + counts.inst + ")", "ok");
+          } catch (e) {
+            line("start() threw: " + (e && e.message ? e.message : e), "bad");
+            if (current === rec) current = null;
+            if (failures += 1, failures <= 5) {
+              restartTimer = setTimeout(function () {
+                restartTimer = null;
+                if (active) spawn(mode);
+              }, 600);
+            } else {
+              line("giving up after repeated start failures", "bad");
+              stopAll("start failures");
+            }
+          }
+        }
+
+        function start(mode, afterSound) {
+          if (!Ctor) { line("no SpeechRecognition in this browser", "bad"); return; }
+          stopAll("restart");
+          active = true;
+          failures = 0;
+          line("=== mode: " + mode + (afterSound ? " (after a sound)" : "") + " ===", "warn");
+          if (afterSound) {
+            playTone(function () {
+              line("tone finished, starting recognition", "warn");
+              if (active) spawn(mode);
+            });
+            return;
+          }
+          spawn(mode);
+        }
+
+        function playTone(done) {
+          try {
+            var AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) { line("no AudioContext, skipping tone", "warn"); done(); return; }
+            var ctx = new AC();
+            live.push(ctx);
+            var osc = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.frequency.value = 440;
+            gain.gain.value = 0.08;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            line("playing a 1.5s tone (like the guide speaking)", "warn");
+            if (ctx.state === "suspended") ctx.resume().catch(function () {});
+            osc.start();
+            osc.stop(ctx.currentTime + 1.5);
+            osc.onended = function () {
+              try { ctx.close(); } catch (e) {}
+              done();
+            };
+          } catch (e) {
+            line("tone failed: " + (e && e.message ? e.message : e), "bad");
+            done();
+          }
+        }
+
+        function micLoop() {
+          if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            line("no getUserMedia", "bad");
+            return;
+          }
+          line("=== mode: mic level (getUserMedia, no recognition) ===", "warn");
+          navigator.mediaDevices
+            .getUserMedia({ audio: true })
+            .then(function (stream) {
+              live.push(stream);
+              var AC = window.AudioContext || window.webkitAudioContext;
+              var ctx = new AC();
+              live.push(ctx);
+              var src = ctx.createMediaStreamSource(stream);
+              var an = ctx.createAnalyser();
+              an.fftSize = 256;
+              src.connect(an);
+              var buf = new Uint8Array(an.fftSize);
+              var peak = 0;
+              var timer = setInterval(function () {
+                an.getByteTimeDomainData(buf);
+                var max = 0;
+                for (var i = 0; i < buf.length; i++) {
+                  max = Math.max(max, Math.abs(buf[i] - 128));
+                }
+                peak = Math.max(peak, max);
+              }, 100);
+              setTimeout(function () {
+                clearInterval(timer);
+                line("mic level peak over 3s: " + peak + (peak > 2 ? " (mic is delivering audio)" : " (silence)"), peak > 2 ? "ok" : "bad");
+                stopAll("mic test done");
+              }, 3000);
+            })
+            .catch(function (e) {
+              line("getUserMedia failed: " + (e && e.message ? e.message : e), "bad");
+            });
+        }
+
+        document.getElementById("btn-loop").onclick = function () { start("loop", false); };
+        document.getElementById("btn-single").onclick = function () { start("single", false); };
+        document.getElementById("btn-after").onclick = function () { start("loop", true); };
+        document.getElementById("btn-stop").onclick = function () { stopAll("tap"); };
+        document.getElementById("btn-gum").onclick = micLoop;
+        document.getElementById("btn-clear").onclick = function () { logEl.textContent = ""; };
+      })();
+    </script>
+  </body>
+</html>
