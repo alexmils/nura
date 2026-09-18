@@ -423,74 +423,86 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [activeThreadId, runWithLeaveGuard, selectThreadRaw]
   );
 
+  /**
+   * Leave the open session without asking. The product tour needs a scratch
+   * session screen to point at, and the closure gate is about the person
+   * abandoning their own session. The tour must never pop that modal, and the
+   * real session stays in Recent untouched.
+   */
+  const clearActiveThreadRaw = useCallback(() => {
+    setActiveThreadId(null);
+    setMessages([]);
+    setSessionMode("idle");
+    // Going Home means "do not bring me back here on refresh".
+    storeSessionId(null);
+    syncSessionUrl(null);
+  }, [syncSessionUrl]);
   const clearActiveThread = useCallback(() => {
     runWithLeaveGuard(() => {
-      setActiveThreadId(null);
-      setMessages([]);
-      setSessionMode("idle");
-      // Going Home means "do not bring me back here on refresh".
-      storeSessionId(null);
-      syncSessionUrl(null);
+      clearActiveThreadRaw();
     });
-  }, [runWithLeaveGuard, syncSessionUrl]);
+  }, [clearActiveThreadRaw, runWithLeaveGuard]);
 
-  const createThread = useCallback(async () => {
-    const go = async () => {
-      const ok = consentOk === true ? true : await refreshConsent();
-      if (!ok) {
-        setConsentOk(false);
-        return;
-      }
-      try {
-        const res = await fetch("/api/threads", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "create", title: "New session" }),
-        });
-        const data = (await res.json()) as {
-          thread?: Thread;
-          code?: string;
-          entitlement?: EntitlementPublic;
-        };
-        if (!res.ok) {
-          if (data.code === "needs_consent") {
-            setConsentOk(false);
-            return;
-          }
-          if (data.entitlement) setEntitlement(data.entitlement);
-          if (
-            data.code === "trial_limit_reached" ||
-            data.code === "needs_payment"
-          ) {
-            openUpgradeModal(
-              data.code === "trial_limit_reached"
-                ? "trial_limit_reached"
-                : "generic"
-            );
-          }
-          return;
+  /** Opens a fresh thread. Returns the new thread id, or null on failure. */
+  const createThreadRaw = useCallback(async (): Promise<string | null> => {
+    const ok = consentOk === true ? true : await refreshConsent();
+    if (!ok) {
+      setConsentOk(false);
+      return null;
+    }
+    try {
+      const res = await fetch("/api/threads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create", title: "New session" }),
+      });
+      const data = (await res.json()) as {
+        thread?: Thread;
+        code?: string;
+        entitlement?: EntitlementPublic;
+      };
+      if (!res.ok) {
+        if (data.code === "needs_consent") {
+          setConsentOk(false);
+          return null;
         }
-        if (data.thread?.id) {
-          await selectThreadRaw(data.thread.id);
-          await refreshThreads(data.thread.id);
-        } else {
-          await refreshThreads();
+        if (data.entitlement) setEntitlement(data.entitlement);
+        if (
+          data.code === "trial_limit_reached" ||
+          data.code === "needs_payment"
+        ) {
+          openUpgradeModal(
+            data.code === "trial_limit_reached"
+              ? "trial_limit_reached"
+              : "generic"
+          );
         }
-      } catch (err) {
-        console.error("createThread failed:", err);
+        return null;
       }
-    };
-    runWithLeaveGuard(() => {
-      void go();
-    });
+      if (data.thread?.id) {
+        await selectThreadRaw(data.thread.id);
+        await refreshThreads(data.thread.id);
+        return data.thread.id;
+      }
+      await refreshThreads();
+      return null;
+    } catch (err) {
+      console.error("createThread failed:", err);
+      return null;
+    }
   }, [
     consentOk,
     refreshConsent,
     refreshThreads,
     openUpgradeModal,
-    runWithLeaveGuard,
     selectThreadRaw,
   ]);
+
+  const createThread = useCallback(async () => {
+    runWithLeaveGuard(() => {
+      void createThreadRaw();
+    });
+  }, [createThreadRaw, runWithLeaveGuard]);
 
   const updateThreadLocal = useCallback(
     async (id: string, patch: Partial<Thread>) => {
@@ -884,20 +896,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Actions the product tour can call: open a session, pick a mode, or start
   // a fresh chat once the tour closes. Re-picking the mode the session already
   // has is a no-op, so the tour does not re-write the thread on every step.
+  /** Thread the tour opened just to have a session screen to point at. */
+  const guideScratchRef = useRef<string | null>(null);
+
   useGuideHost({
     ensurePendingThread: async () => {
       // Consent is the one gate the tour cannot work around: without it the
       // session screen never mounts, so tell the engine to skip the group.
       const ok = consentOk === true ? true : await refreshConsent();
       if (!ok) return false;
-      clearActiveThread();
-      await createThread();
+      // Unguarded on purpose: the closure gate would hold the action and pop a
+      // modal over the tour (see clearActiveThreadRaw).
+      clearActiveThreadRaw();
+      const createdId = await createThreadRaw();
+      if (!createdId) return false;
+      guideScratchRef.current = createdId;
       // Wait for the picker before the step tries to measure it.
       for (let i = 0; i < 20; i += 1) {
         if (document.querySelector('[data-guide="mode-cards"]')) return true;
         await new Promise((resolve) => window.setTimeout(resolve, 120));
       }
       return false;
+    },
+    // Leaving the tour must not litter Recent with the scratch session. It is
+    // cleared, then the list is refetched without a protected id so the server
+    // prune removes it right away instead of on the next unrelated fetch.
+    cleanupSession: () => {
+      const id = guideScratchRef.current;
+      guideScratchRef.current = null;
+      if (!id || id !== activeThreadId) return;
+      if (messages.some((m) => m.role === "user")) return;
+      clearActiveThreadRaw();
+      void refreshThreads(null);
     },
     chooseSelfGuided: () => {
       const current = threads.find((t) => t.id === activeThreadId);
@@ -910,7 +940,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return chooseSessionMode("guided");
     },
     startNewChat: () => {
-      void createThread();
+      // The person asked for a real session: it must not be cleaned up.
+      guideScratchRef.current = null;
+      void createThreadRaw();
     },
     // Only a *known* block skips the session steps. Entitlement and consent
     // arrive a beat after the shell mounts, and treating "still loading" as

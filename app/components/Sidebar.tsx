@@ -172,6 +172,9 @@ export function Sidebar() {
   // and get back Home for the last step.
   useGuideHost({
     openSidebar,
+    // Mobile only, matching the app: nav and thread clicks close the drawer but
+    // leave the desktop rail alone. A step about the workspace calls this.
+    closeSidebar: closeSidebarDrawer,
     openAccountMenu: () => {
       setHelpOpen(false);
       setAccountOpen(true);

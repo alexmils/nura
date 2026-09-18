@@ -123,17 +123,6 @@ export function SessionWorkspace() {
   runningRef.current = running;
   gamepadConnectedRef.current = gamepadConnected;
 
-  // The product tour points at the controls bar, then opens the gear sheet and
-  // expands the section it talks about.
-  useGuideHost({
-    openGear: () => setGearOpen(true),
-    closeGear: () => setGearOpen(false),
-    openGearSection: (section) => {
-      setGearSection({ id: section, nonce: Date.now() });
-      setGearOpen(true);
-    },
-  });
-
   // The controller step shows the real vibration control, which the bar hides
   // until a gamepad is connected.
   const guide = useGuideOptional();
@@ -174,6 +163,19 @@ export function SessionWorkspace() {
     setRunning(false);
     setSessionMode("idle");
   }, [setSessionMode]);
+
+  // The product tour points at the controls bar, opens the gear sheet and
+  // expands the section it talks about, and can stop a set before switching
+  // session (so no lease keeps ticking behind the tour).
+  useGuideHost({
+    openGear: () => setGearOpen(true),
+    closeGear: () => setGearOpen(false),
+    stopSet: stopSetForLeave,
+    openGearSection: (section) => {
+      setGearSection({ id: section, nonce: Date.now() });
+      setGearOpen(true);
+    },
+  });
 
   useEffect(() => {
     registerLeaveGuard((proceed) => {

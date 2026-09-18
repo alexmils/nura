@@ -47,6 +47,17 @@ type GuideRect = { top: number; left: number; width: number; height: number };
 
 export type GuideHostActions = {
   openSidebar?: () => void;
+  /** Stop a running set before the tour switches session. */
+  stopSet?: () => void;
+  /** Let go of the scratch session the tour opened, if it is still empty. */
+  cleanupSession?: () => void;
+  /**
+   * Get the rail out of the way. On phones the sidebar is a fixed 280px drawer
+   * over the workspace, so a step about the canvas, the controls, or the
+   * library would otherwise be highlighted behind it. The host decides whether
+   * that means anything (the desktop rail stays put).
+   */
+  closeSidebar?: () => void;
   openAccountMenu?: () => void;
   closeAccountMenu?: () => void;
   ensurePendingThread?: () => Promise<boolean> | boolean;
@@ -103,8 +114,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
  * True when the element is fully inside the window and inside every scrollable
  * ancestor (the adjustments sheet scrolls its sections).
  */
-function isFullyVisible(el: Element): boolean {
-  const r = el.getBoundingClientRect();
+function isFullyVisible(el: Element): boolean {  const r = el.getBoundingClientRect();
   if (r.width === 0 && r.height === 0) return false;
   if (
     r.top < 0 ||
@@ -167,6 +177,15 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     setRect(null);
     setPos(null);
     prevStepRef.current = null;
+    // Leaving must not leave a scratch session behind (or a set running).
+    try {
+      hostRef.current.stopSet?.();
+      hostRef.current.closeGear?.();
+      hostRef.current.closeAccountMenu?.();
+      hostRef.current.cleanupSession?.();
+    } catch {
+      /* a failing host action must not trap the exit */
+    }
     const storage = sessionStore();
     if (storage) {
       clearGuideStepIndex(storage);
@@ -209,6 +228,9 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
               break;
             case "closeGear":
               host.closeGear?.();
+              break;
+            case "stopSet":
+              host.stopSet?.();
               break;
             case "showHome":
               host.showHome?.();
@@ -320,6 +342,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     let lastKey = "";
 
     const attach = (el: Element) => {
+      // A step about the workspace must not be highlighted behind the mobile
+      // drawer: close it before measuring. Steps inside the rail keep it open.
+      if (!el.closest(".app-sidebar")) hostRef.current.closeSidebar?.();
+
       const update = () => {
         if (cancelled) return;
         const r = el.getBoundingClientRect();

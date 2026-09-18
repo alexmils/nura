@@ -20,6 +20,7 @@ export const GUIDE_ACTIONS = [
   "openGear",
   "openGearSection",
   "closeGear",
+  "stopSet",
   "showHome",
   "wait",
 ] as const;
@@ -142,7 +143,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Two ways to run a session",
     body: "An AI agent-guided session walks the phases with you and checks in after each set. A Self-guided session is a set you run yourself, with no agent and no chat.",
     group: "session",
-    prepare: ["ensurePendingThread"],
+    prepare: ["stopSet", "ensurePendingThread"],
   },
   {
     id: "canvas",

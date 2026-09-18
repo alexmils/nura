@@ -176,6 +176,17 @@ describe("guide steps", () => {
     );
   });
 
+  it("stops a running set before switching to the tour session", () => {
+    const mode = GUIDE_STEPS.find((step) => step.id === "mode");
+    assert.ok(mode);
+    const prepare = mode.prepare ?? [];
+    assert.ok(
+      prepare.indexOf("stopSet") < prepare.indexOf("ensurePendingThread"),
+      "stopSet must run before the session is switched"
+    );
+    assert.ok(GUIDE_ACTIONS.includes("stopSet"));
+  });
+
   it("shows the controller step on the controls bar, at step 12", () => {    const joystickIndex = GUIDE_STEPS.findIndex((step) => step.id === "joystick");
     assert.ok(joystickIndex >= 0);
     assert.equal(joystickIndex + 1, 12, "the controller step should be step 12");
