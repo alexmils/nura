@@ -18,12 +18,31 @@ export const GUIDE_ACTIONS = [
   "chooseSelfGuided",
   "chooseGuided",
   "openGear",
+  "openGearSection",
   "closeGear",
   "showHome",
   "wait",
 ] as const;
 
 export type GuideAction = (typeof GUIDE_ACTIONS)[number];
+
+/** Collapsible sections of the adjustments sheet. */
+export type GuideGearSection =
+  | "speed"
+  | "repeats"
+  | "sound"
+  | "animation"
+  | "look"
+  | "vibration";
+
+export const GUIDE_GEAR_SECTIONS: readonly GuideGearSection[] = [
+  "speed",
+  "repeats",
+  "sound",
+  "animation",
+  "look",
+  "vibration",
+];
 
 /** An inline live demo the card renders itself (no app target needed). */
 export type GuideDemo = "gamepad";
@@ -51,6 +70,8 @@ export type GuideStep = {
   group?: GuideStepGroup;
   /** Runs before the step is shown. A falsy result skips the group. */
   prepare?: GuideAction[];
+  /** Section to expand when the step uses the `openGearSection` action. */
+  gearSection?: GuideGearSection;
   /** Runs when leaving the step (e.g. close a menu the tour opened). */
   cleanup?: GuideAction[];
   /** Primary button becomes "finish": run these, then end the tour. */
@@ -198,7 +219,8 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Look",
     body: "Ball colour, ball size, and background, with speed, repeats, sound, and set length in the sections above. What you pick here is remembered on this device.",
     group: "session",
-    prepare: ["openGear"],
+    gearSection: "look",
+    prepare: ["openGearSection"],
     cleanup: ["closeGear"],
   },
   {

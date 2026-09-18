@@ -58,6 +58,9 @@ type SectionId =
   | "look"
   | "vibration";
 
+/** Collapsible section ids, exported for the product tour. */
+export type GearSectionId = SectionId;
+
 const SOUND_OPTIONS: { value: SoundMode; label: string; icon: ReactNode }[] = [
   { value: "mute", label: "Mute", icon: <VolumeX size={16} strokeWidth={2} /> },
   {
@@ -267,14 +270,23 @@ export function GearPanel({
   bls,
   onChange,
   onClose,
+  expandSection,
 }: {
   bls: BlsSettings;
   onChange: (patch: Partial<BlsSettings>) => void;
   onClose: () => void;
+  /** Guide request: open this section. A new object re-opens it. */
+  expandSection?: { id: GearSectionId; nonce: number } | null;
 }) {
   const gamepadConnected = useGamepadConnected();
   const [playing, setPlaying] = useState(false);
   const [openSection, setOpenSection] = useState<SectionId | null>("speed");
+
+  // Only the open section renders its body, so the tour cannot point at it
+  // until it is expanded.
+  useEffect(() => {
+    if (expandSection) setOpenSection(expandSection.id);
+  }, [expandSection]);
 
   const toggleSection = (id: SectionId) => {
     setOpenSection((current) => (current === id ? null : id));

@@ -9,7 +9,7 @@ import {
 } from "@/lib/free-session-chrome";
 import { BlsToolbar } from "./BlsToolbar";
 import { AgentOverlay } from "./AgentOverlay";
-import { GearPanel } from "./GearPanel";
+import { GearPanel, type GearSectionId } from "./GearPanel";
 import { SessionStatusBar } from "./SessionStatusBar";
 import { SessionStartScreen } from "./SessionStartScreen";
 import { SessionDescription } from "./SessionDescription";
@@ -93,6 +93,10 @@ export function SessionWorkspace() {
 
   const [running, setRunning] = useState(false);
   const [gearOpen, setGearOpen] = useState(false);
+  const [gearSection, setGearSection] = useState<{
+    id: GearSectionId;
+    nonce: number;
+  } | null>(null);
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [focusedField, setFocusedField] = useState<BlsToolbarField>("speed1");
   const [closureOpen, setClosureOpen] = useState(false);
@@ -119,10 +123,15 @@ export function SessionWorkspace() {
   runningRef.current = running;
   gamepadConnectedRef.current = gamepadConnected;
 
-  // The product tour points at the controls bar, then opens the gear sheet.
+  // The product tour points at the controls bar, then opens the gear sheet and
+  // expands the section it talks about.
   useGuideHost({
     openGear: () => setGearOpen(true),
     closeGear: () => setGearOpen(false),
+    openGearSection: (section) => {
+      setGearSection({ id: section, nonce: Date.now() });
+      setGearOpen(true);
+    },
   });
 
   const thread = threads.find((t) => t.id === activeThreadId);
@@ -895,6 +904,7 @@ export function SessionWorkspace() {
           bls={bls}
           onChange={setBls}
           onClose={() => setGearOpen(false)}
+          expandSection={gearSection}
         />
       )}
 

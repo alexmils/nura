@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import { APP_BASE } from "../lib/app-base.ts";
 import {
   GUIDE_ACTIONS,
+  GUIDE_GEAR_SECTIONS,
   GUIDE_STEPS,
   clearGuideStepIndex,
   consumeGuideNewChat,
@@ -71,6 +72,26 @@ describe("guide steps", () => {
       ]) {
         assert.ok(isGuideAction(action), `unknown action ${action} in ${step.id}`);
       }
+      if (step.gearSection) {
+        assert.ok(
+          GUIDE_GEAR_SECTIONS.includes(step.gearSection),
+          `unknown gear section ${step.gearSection} in ${step.id}`
+        );
+        assert.ok(
+          step.prepare?.includes("openGearSection"),
+          `step ${step.id} declares a gear section but never opens it`
+        );
+      }
+      if (step.prepare?.includes("openGearSection")) {
+        assert.ok(
+          step.gearSection,
+          `step ${step.id} opens a gear section without naming one`
+        );
+        assert.ok(
+          step.cleanup?.includes("closeGear"),
+          `step ${step.id} should close the sheet when it leaves`
+        );
+      }
     }
     assert.ok(GUIDE_ACTIONS.includes("ensurePendingThread"));
   });
@@ -95,6 +116,11 @@ describe("guide steps", () => {
     assert.ok(anchors.includes('[data-guide="composer"]'));
     assert.ok(anchors.includes('[data-guide-field="sound"]'));
     assert.ok(anchors.includes('[data-guide-field="adjustments"]'));
+    // The adjustments step points at a section body that only renders expanded.
+    assert.ok(
+      anchors.includes('.gear-section-body[data-section="look"]'),
+      "the gear step should target the opened section body"
+    );
   });
 
   it("keeps session steps in one contiguous block before resources", () => {

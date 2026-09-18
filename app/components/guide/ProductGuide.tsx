@@ -28,6 +28,7 @@ import {
   requestGuideNewChat,
   writeGuideStepIndex,
   type GuideAction,
+  type GuideGearSection,
   type GuideStep,
   type GuideStorageLike,
 } from "@/lib/guide-steps";
@@ -39,7 +40,8 @@ const DOT_SIZE = 12;
 const VIEWPORT_MARGIN = 12;
 /** Spotlight padding around the target. */
 const RING_PAD = 6;
-const TARGET_TIMEOUT_MS = 5000;
+const TARGET_TIMEOUT_MS = 3000;
+const TARGET_POLL_MS = 90;
 
 type GuideRect = { top: number; left: number; width: number; height: number };
 
@@ -51,6 +53,7 @@ export type GuideHostActions = {
   chooseSelfGuided?: () => Promise<boolean> | boolean;
   chooseGuided?: () => Promise<boolean> | boolean;
   openGear?: () => void;
+  openGearSection?: (section: GuideGearSection) => void;
   closeGear?: () => void;
   showHome?: () => void;
   startNewChat?: () => void;
@@ -94,6 +97,36 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return (
     tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable
   );
+}
+
+/**
+ * True when the element is fully inside the window and inside every scrollable
+ * ancestor (the adjustments sheet scrolls its sections).
+ */
+function isFullyVisible(el: Element): boolean {
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 && r.height === 0) return false;
+  if (
+    r.top < 0 ||
+    r.left < 0 ||
+    r.bottom > window.innerHeight ||
+    r.right > window.innerWidth
+  ) {
+    return false;
+  }
+  let parent = el.parentElement;
+  while (parent) {
+    const style = window.getComputedStyle(parent);
+    const scrollable =
+      /(auto|scroll|overlay)/.test(style.overflowY) ||
+      /(auto|scroll|overlay)/.test(style.overflowX);
+    if (scrollable) {
+      const pr = parent.getBoundingClientRect();
+      if (r.top < pr.top - 2 || r.bottom > pr.bottom + 2) return false;
+    }
+    parent = parent.parentElement;
+  }
+  return true;
 }
 
 /** Live controller status, shown only inside the tour. */
@@ -172,7 +205,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const runActions = useCallback(
-    async (actions?: GuideAction[]): Promise<boolean> => {
+    async (actions?: GuideAction[], step?: GuideStep | null): Promise<boolean> => {
       if (!actions || actions.length === 0) return true;
       for (const action of actions) {
         const host = hostRef.current;
@@ -189,6 +222,9 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
               break;
             case "openGear":
               host.openGear?.();
+              break;
+            case "openGearSection":
+              if (step?.gearSection) host.openGearSection?.(step.gearSection);
               break;
             case "closeGear":
               host.closeGear?.();
@@ -259,7 +295,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const ok = await runActions(current.prepare);
+      const ok = await runActions(current.prepare, current);
       if (cancelled) return;
       if (!ok) {
         goTo(nextIndexOutsideGroup(stepIndex, current.group));
@@ -324,13 +360,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
         observer?.disconnect();
       };
 
-      const r = el.getBoundingClientRect();
-      const offscreen =
-        r.top < 0 ||
-        r.bottom > window.innerHeight ||
-        r.left < 0 ||
-        r.right > window.innerWidth;
-      if (offscreen) {
+      if (!isFullyVisible(el)) {
         try {
           el.scrollIntoView({
             block: "center",
@@ -352,10 +382,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       }
       attempts += 1;
       if (attempts > 45 || Date.now() - startedAt > TARGET_TIMEOUT_MS) {
+        // Keep the card without the dim so a missing target never leaves the
+        // whole app shaded and unusable (see the shade fallback in the render).
         setRect(null);
         return;
       }
-      timer = window.setTimeout(poll, 110);
+      timer = window.setTimeout(poll, TARGET_POLL_MS);
     };
     poll();
 
@@ -596,7 +628,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
                 aria-hidden
               />
             </>
-          ) : (
+          ) : current.target ? null : (
             <div className="pg-shade pg-shade--full" />
           )}
 

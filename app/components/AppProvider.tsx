@@ -882,15 +882,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [activeThreadId, messages.length, threads, bootstrapAgent]);
 
   // Actions the product tour can call: open a session, pick a mode, or start
-  // a fresh chat once the tour closes.
+  // a fresh chat once the tour closes. Re-picking the mode the session already
+  // has is a no-op, so the tour does not re-write the thread on every step.
   useGuideHost({
     ensurePendingThread: async () => {
       clearActiveThread();
       await createThread();
       return true;
     },
-    chooseSelfGuided: () => chooseSessionMode("free"),
-    chooseGuided: () => chooseSessionMode("guided"),
+    chooseSelfGuided: () => {
+      const current = threads.find((t) => t.id === activeThreadId);
+      if (current?.mode === "free") return true;
+      return chooseSessionMode("free");
+    },
+    chooseGuided: () => {
+      const current = threads.find((t) => t.id === activeThreadId);
+      if (current?.mode === "guided") return true;
+      return chooseSessionMode("guided");
+    },
     startNewChat: () => {
       void createThread();
     },
