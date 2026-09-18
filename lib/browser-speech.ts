@@ -90,6 +90,26 @@ export function isFatalSpeechError(code: BrowserSpeechErrorCode): boolean {
 }
 
 /**
+ * Whether to ask the engine itself for a continuous session.
+ *
+ * `continuous` is implemented on desktop Chromium and on iOS WebKit, but not on
+ * Chrome for Android (crbug 41297427), where the session still ends after every
+ * utterance. iOS is the case that matters most: WebKit honours continuous, so
+ * forcing it off makes recognition end after each utterance and lean on
+ * restarts that iOS then refuses, and listening dies while the UI still says
+ * "Listening".
+ */
+export function speechUsesContinuous(userAgent: string): boolean {
+  return !/Android/i.test(userAgent);
+}
+
+/** Browser-input wrapper for {@link speechUsesContinuous}. */
+export function browserSpeechUsesContinuous(): boolean {
+  if (typeof window === "undefined") return false;
+  return speechUsesContinuous(window.navigator?.userAgent ?? "");
+}
+
+/**
  * Whether holding a second `getUserMedia` capture (the mic visualiser) is safe
  * while speech recognition runs. Desktop Chrome tolerates it; Android and iOS
  * hand the microphone to whoever asked first, which silently blanks the
@@ -158,7 +178,7 @@ export function startBrowserSpeech(
 
   const lang = options?.lang ?? "en-US";
   const Recognition: SpeechRecognitionCtor = Ctor;
-  const exclusiveMic = browserSpeechNeedsExclusiveMic();
+  const wantContinuous = browserSpeechUsesContinuous();
 
   let active = true;
   let current: SpeechRecognitionLike | null = null;
@@ -219,7 +239,7 @@ export function startBrowserSpeech(
     if (!active) return;
     const rec = new Recognition();
     current = rec;
-    rec.continuous = !exclusiveMic;
+    rec.continuous = wantContinuous;
     rec.interimResults = true;
     rec.lang = lang;
 

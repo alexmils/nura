@@ -119,16 +119,19 @@
     <div class="env" id="ship">telemetry: waiting</div>
 
     <div class="row">
-      <button id="btn-loop">A. Nura loop</button>
-      <button id="btn-single" class="ghost">B. Single session</button>
-      <button id="btn-after" class="ghost">C. Loop after a sound</button>
+      <button id="btn-loop">A. loop: continuous OFF + restart</button>
+      <button id="btn-single" class="ghost">B. single: continuous ON, no restart</button>
+    </div>
+    <div class="row">
+      <button id="btn-ios" class="ghost">E. iOS mode: continuous ON + restart</button>
+      <button id="btn-after" class="ghost">C. loop after a sound</button>
+    </div>
+    <div class="row">
       <button id="btn-stop" class="stop">Stop</button>
-    </div>
-    <div class="row">
       <button id="btn-gum" class="ghost">D. Mic level loop</button>
-      <button id="btn-copy" class="ghost">Copy log</button>
     </div>
     <div class="row">
+      <button id="btn-copy" class="ghost">Copy log</button>
       <button id="btn-clear" class="ghost">Clear log</button>
     </div>
 
@@ -269,11 +272,48 @@
 
         line("page ready. tap A, then speak one sentence.", "ok");
         shipStatus();
+
+        // Was this a fresh load or a reload after a crash?
+        var loadNo = 0;
+        try {
+          loadNo = Number(sessionStorage.getItem("voiceDiagLoads") || "0") + 1;
+          sessionStorage.setItem("voiceDiagLoads", String(loadNo));
+        } catch (e) {}
+        queue("load #" + loadNo + " (counter survives a tab crash)");
+
         queue(
           "env :: " +
             document.getElementById("env").textContent.replace(/\n/g, " | ")
         );
         ship(true);
+
+        // A crash takes the page down mid-batch, so print a heartbeat: if it
+        // stops while the tab looks fine, the page froze instead of dying.
+        var heartbeat = 0;
+        setInterval(function () {
+          heartbeat += 1;
+          var inst = current ? "yes" : "no";
+          queue(
+            "heartbeat " +
+              heartbeat +
+              " | active=" +
+              String(active) +
+              " | instances=" +
+              counts.inst +
+              " | rec=" +
+              inst +
+              " | vis=" +
+              document.visibilityState +
+              " | failures=" +
+              failures
+          );
+          ship(true);
+        }, 5000);
+
+        document.addEventListener("visibilitychange", function () {
+          queue("visibility: " + document.visibilityState);
+          ship(true);
+        });
 
         // Anything that throws on the phone must land in the log too, so a
         // crash is visible in the telemetry instead of just going blank.
@@ -337,10 +377,23 @@
           ship(true);
         }
 
+        /**
+         * A = the pattern the app used on phones (continuous off + restart).
+         * B = what iOS actually supports (continuous on, one session).
+         * E = candidate fix (continuous on, restart only as a safety net).
+         */
+        var MODES = {
+          loop: { continuous: false, restart: true },
+          single: { continuous: true, restart: false },
+          continuous: { continuous: true, restart: true },
+        };
+
         function attach(rec, mode) {
-          rec.continuous = mode === "single" ? true : false;
+          var cfg = MODES[mode] || MODES.loop;
+          rec.continuous = cfg.continuous;
           rec.interimResults = true;
           rec.lang = navigator.language || "en-US";
+          var startedAt = Date.now();
 
           rec.onstart = function () { bump("start"); line("onstart"); };
           rec.onaudiostart = function () { bump("audio"); line("onaudiostart", "ok"); };
@@ -369,9 +422,15 @@
           };
           rec.onend = function () {
             bump("end");
-            line("onend");
+            var lived = Date.now() - startedAt;
+            line("onend after " + lived + "ms (continuous=" + cfg.continuous + ")");
             if (!active) return;
-            if (mode === "single") { line("single session ended, no restart by design", "warn"); return; }
+            if (!cfg.restart) {
+              active = false;
+              line("no restart by design, run finished", "warn");
+              ship(true);
+              return;
+            }
             failures += 1;
             restartTimer = setTimeout(function () {
               restartTimer = null;
@@ -410,7 +469,13 @@
           stopAll("restart");
           active = true;
           failures = 0;
-          line("=== mode: " + mode + (afterSound ? " (after a sound)" : "") + " ===", "warn");
+          var cfg = MODES[mode] || MODES.loop;
+          line(
+            "=== mode: " + mode + " (continuous=" + cfg.continuous + ", restart=" + cfg.restart + ")" +
+              (afterSound ? " after a sound" : "") + " ===",
+            "warn"
+          );
+          ship(true);
           if (afterSound) {
             playTone(function () {
               line("tone finished, starting recognition", "warn");
@@ -487,6 +552,7 @@
 
         document.getElementById("btn-loop").onclick = function () { start("loop", false); };
         document.getElementById("btn-single").onclick = function () { start("single", false); };
+        document.getElementById("btn-ios").onclick = function () { start("continuous", false); };
         document.getElementById("btn-after").onclick = function () { start("loop", true); };
         document.getElementById("btn-stop").onclick = function () { stopAll("tap"); };
         document.getElementById("btn-gum").onclick = micLoop;

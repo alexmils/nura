@@ -6,6 +6,7 @@ import {
   MAX_SPEECH_START_FAILURES,
   speechNeedsExclusiveMic,
   speechRestartDelayMs,
+  speechUsesContinuous,
   startBrowserSpeech,
   type BrowserSpeechCallbacks,
 } from "../lib/browser-speech.ts";
@@ -13,6 +14,17 @@ import {
 describe("browser-speech", () => {
   it("reports unsupported without a browser SpeechRecognition API", () => {
     assert.equal(isBrowserSpeechSupported(), false);
+  });
+
+  it("asks for a continuous session everywhere except Chrome for Android", () => {
+    // iOS WebKit honours continuous; forcing it off is what killed listening.
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) CriOS/149"), true);
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) Safari/605"), true);
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/149"), true);
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/149"), true);
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/149"), false);
+    assert.equal(speechUsesContinuous("Mozilla/5.0 (Linux; Android 13; SM-S918B) SamsungBrowser/25.0"), false);
+    assert.equal(speechUsesContinuous(""), true);
   });
 
   it("gives the engine a beat before a normal restart", () => {
@@ -152,6 +164,19 @@ function removeWindow() {
   delete (globalThis as unknown as { window?: unknown }).window;
 }
 
+function installIosWindow() {
+  AndroidLikeRecognition.instances = [];
+  AndroidLikeRecognition.failStart = false;
+  (globalThis as unknown as { window: unknown }).window = {
+    SpeechRecognition: AndroidLikeRecognition,
+    navigator: {
+      userAgent:
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/149 Mobile/15E148",
+    },
+    matchMedia: () => ({ matches: true }),
+  };
+}
+
 describe("browser-speech continuous listening", () => {
   it("keeps hearing after the engine ends each utterance", async () => {
     installAndroidWindow();
@@ -186,6 +211,53 @@ describe("browser-speech continuous listening", () => {
       AndroidLikeRecognition.instances[1].emitFinal("in my shoulders");
       assert.deepEqual(finals, ["I feel tense", "in my shoulders"]);
       assert.ok(statuses.includes("listening"));
+    } finally {
+      session?.abort();
+      removeWindow();
+    }
+  });
+
+  it("asks iOS for one continuous session instead of restarting it", () => {
+    installIosWindow();
+    const session = startBrowserSpeech({});
+    assert.ok(session);
+
+    try {
+      const first = AndroidLikeRecognition.instances[0];
+      assert.equal(
+        first.continuous,
+        true,
+        "iOS WebKit honours continuous, so one session must carry the dialogue"
+      );
+      assert.equal(
+        AndroidLikeRecognition.instances.length,
+        1,
+        "iOS must not be driven by restarts"
+      );
+    } finally {
+      session?.abort();
+      removeWindow();
+    }
+  });
+
+  it("still recovers on iOS if the continuous session ends anyway", async () => {
+    installIosWindow();
+    const finals: string[] = [];
+    const session = startBrowserSpeech({ onFinal: (t) => finals.push(t) });
+    assert.ok(session);
+
+    try {
+      const first = AndroidLikeRecognition.instances[0];
+      first.emitFinal("one");
+      first.emitEnd();
+
+      await sleep(600);
+      assert.equal(
+        AndroidLikeRecognition.instances.length,
+        2,
+        "an unexpected end still needs a fresh instance"
+      );
+      assert.deepEqual(finals, ["one"]);
     } finally {
       session?.abort();
       removeWindow();
