@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { browserSpeechNeedsExclusiveMic } from "@/lib/browser-speech";
 import { waveAmplitude } from "@/lib/mic-level";
 import type { VoicePhase } from "./useGuidedVoiceMode";
 import { useMicLevel } from "./useMicLevel";
@@ -60,7 +61,16 @@ export function VoiceWave({
   fadingOut = false,
 }: VoiceWaveProps) {
   const listen = active && phase === "listening" && !fadingOut;
-  const micLevel = useMicLevel(listen);
+  /**
+   * On phones the recogniser and getUserMedia cannot both hold the mic, so the
+   * ribbons ride the ambient fallback instead of stealing the audio. Assume
+   * "don't share" until the first client effect says otherwise.
+   */
+  const [shareMic, setShareMic] = useState(false);
+  useEffect(() => {
+    setShareMic(!browserSpeechNeedsExclusiveMic());
+  }, []);
+  const micLevel = useMicLevel(listen && shareMic);
   const micRef = useRef(micLevel);
   micRef.current = micLevel;
   const phaseRef = useRef(phase);

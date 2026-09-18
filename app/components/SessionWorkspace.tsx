@@ -886,8 +886,10 @@ export function SessionWorkspace() {
             voicePhase={voice.phase}
             voiceInterim={voice.interim}
             voiceError={voice.error}
+            voiceStalled={voice.stalled}
             onEnterVoice={voice.enter}
             onExitVoice={exitVoice}
+            onResumeVoice={voice.resume}
             chromeId={guidedChatChromeId}
           />
         )}

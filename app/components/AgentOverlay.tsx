@@ -40,8 +40,11 @@ interface AgentOverlayProps {
   voicePhase?: VoicePhase;
   voiceInterim?: string;
   voiceError?: string | null;
+  /** Mic engine stopped while voice mode is on. */
+  voiceStalled?: boolean;
   onEnterVoice?: () => void;
   onExitVoice?: () => void;
+  onResumeVoice?: () => void;
   /** Platform chrome theme id (1–20). */
   chromeId?: number;
   /** Language the guide answers in; the composer hint follows it. */
@@ -63,7 +66,8 @@ function TypingIndicator({ className = "" }: { className?: string }) {
   );
 }
 
-function voiceStatusLabel(phase: VoicePhase): string {
+function voiceStatusLabel(phase: VoicePhase, stalled = false): string {
+  if (stalled) return "Mic paused";
   switch (phase) {
     case "listening":
       return "Listening…";
@@ -96,8 +100,10 @@ export function AgentOverlay({
   voicePhase = "off",
   voiceInterim = "",
   voiceError = null,
+  voiceStalled = false,
   onEnterVoice,
   onExitVoice,
+  onResumeVoice,
   chromeId = DEFAULT_GUIDED_CHAT_CHROME_ID,
   guideLanguage = null,
 }: AgentOverlayProps) {
@@ -244,25 +250,38 @@ export function AgentOverlay({
     >
       <VoiceWave
         active={voiceChrome}
-        phase={voiceExiting ? "off" : voicePhase}
+        phase={voiceExiting || voiceStalled ? "off" : voicePhase}
         fadingOut={voiceExiting}
       />
       <div className="agent-voice-bar" role="status" aria-live="polite">
         <div
-          className={`agent-voice-orb agent-voice-orb--${voiceExiting ? "off" : voicePhase}`}
+          className={`agent-voice-orb agent-voice-orb--${
+            voiceExiting || voiceStalled ? "off" : voicePhase
+          }`}
           aria-hidden
         />
         <div className="agent-voice-meta">
           <p className="agent-voice-status">
-            {voiceExiting ? "Ending…" : voiceStatusLabel(voicePhase)}
+            {voiceExiting
+              ? "Ending…"
+              : voiceStatusLabel(voicePhase, voiceStalled)}
           </p>
-          {!voiceExiting && voiceInterim ? (
+          {!voiceExiting && !voiceStalled && voiceInterim ? (
             <p className="agent-voice-interim">{voiceInterim}</p>
           ) : null}
           {!voiceExiting && voiceError ? (
             <p className="agent-voice-error">{voiceError}</p>
           ) : null}
         </div>
+        {!voiceExiting && voiceStalled && onResumeVoice ? (
+          <button
+            type="button"
+            className="agent-voice-resume"
+            onClick={onResumeVoice}
+          >
+            <span>Resume</span>
+          </button>
+        ) : null}
         <button
           type="button"
           className="agent-voice-end"

@@ -619,6 +619,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Grounding is no longer forced by a high distress rating: only real out-of-window signals (flooding, dissociation, feeling unsafe), a red flag, or asking to pause send the session back to grounding
 - A set you stopped or were interrupted during is no longer read as processed work, and no longer moves the phase on
 - A connected joystick or gamepad now really starts and pauses a set with its main button, and its stick or D-pad moves between the session controls (a connected controller also reaches the vibration control)
+- Voice mode keeps listening on phones: the mic visualiser no longer holds the microphone away from speech recognition, and the engine now restarts after every utterance instead of dying silently while the screen still said “Listening…”. If the browser does hand the microphone back, the voice bar says “Mic paused” with a **Resume** button instead of pretending
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

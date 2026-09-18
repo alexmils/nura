@@ -63,9 +63,13 @@ export function useGuidedVoiceMode({
   const [phaseVoice, setPhaseVoice] = useState<VoicePhase>("off");
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
+  /** True when the mic engine really stopped while we meant to be listening. */
+  const [stalled, setStalled] = useState(false);
 
   const sessionRef = useRef<BrowserSpeechSession | null>(null);
   const finalBufRef = useRef("");
+  /** Latest interim text; used if the engine dies before it becomes final. */
+  const interimBufRef = useRef("");
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
   const phaseRef = useRef<VoicePhase>("off");
@@ -111,6 +115,7 @@ export function useGuidedVoiceMode({
     stopRecognition();
     setInterim("");
     finalBufRef.current = "";
+    interimBufRef.current = "";
     setPhaseVoice("thinking");
     setError(null);
 
@@ -155,7 +160,7 @@ export function useGuidedVoiceMode({
   const scheduleSilenceCommit = useCallback(() => {
     clearSilence();
     silenceTimerRef.current = setTimeout(() => {
-      const text = finalBufRef.current.trim();
+      const text = `${finalBufRef.current} ${interimBufRef.current}`.trim();
       if (text) void finishTurn(text);
     }, SILENCE_MS);
   }, [clearSilence, finishTurn]);
@@ -167,16 +172,22 @@ export function useGuidedVoiceMode({
     }
     stopRecognition();
     finalBufRef.current = "";
+    interimBufRef.current = "";
     setInterim("");
+    setStalled(false);
     setPhaseVoice("listening");
 
     const session = startBrowserSpeech({
       onInterim: (t) => {
         if (phaseRef.current !== "listening") return;
+        interimBufRef.current = t;
         setInterim(t);
+        // Keep the turn open while the person is still talking.
+        scheduleSilenceCommit();
       },
       onFinal: (chunk) => {
         if (phaseRef.current !== "listening") return;
+        interimBufRef.current = "";
         finalBufRef.current = `${finalBufRef.current} ${chunk}`.trim();
         setInterim("");
         scheduleSilenceCommit();
@@ -185,15 +196,33 @@ export function useGuidedVoiceMode({
         if (code === "aborted" || code === "no-speech") return;
         setError(message);
         if (code === "not-allowed" || code === "unsupported") {
+          activeRef.current = false;
           setActive(false);
+          setStalled(false);
           setPhaseVoice("off");
           stopRecognition();
+        }
+      },
+      onStatus: (status) => {
+        if (status === "listening") {
+          setStalled(false);
+          return;
+        }
+        // The engine gave up while the person still expects to be heard.
+        if (
+          status === "stopped" &&
+          activeRef.current &&
+          phaseRef.current === "listening"
+        ) {
+          setStalled(true);
         }
       },
     });
 
     if (!session) {
+      activeRef.current = false;
       setActive(false);
+      setStalled(false);
       setPhaseVoice("off");
       return;
     }
@@ -213,6 +242,7 @@ export function useGuidedVoiceMode({
       return;
     }
     setError(null);
+    setStalled(false);
     setActive(true);
     activeRef.current = true;
     setPhaseVoice("listening");
@@ -222,12 +252,22 @@ export function useGuidedVoiceMode({
   const exit = useCallback(() => {
     activeRef.current = false;
     setActive(false);
+    setStalled(false);
     setPhaseVoice("off");
     setInterim("");
     finalBufRef.current = "";
+    interimBufRef.current = "";
     turnBusyRef.current = false;
     stopRecognition();
   }, [stopRecognition]);
+
+  /** Tap-to-resume after the browser gave the microphone back. */
+  const resume = useCallback(() => {
+    if (!activeRef.current || !available) return;
+    setError(null);
+    setStalled(false);
+    startListeningRef.current();
+  }, [available]);
 
   // Pause mic while BLS runs; resume after check-in TTS.
   useEffect(() => {
@@ -289,11 +329,12 @@ export function useGuidedVoiceMode({
   ]);
 
   // Restart listening when entering listening phase without an active session.
+  // When the engine stalled we wait for an explicit resume instead of spinning.
   useEffect(() => {
-    if (!active || phaseVoice !== "listening" || running) return;
+    if (!active || phaseVoice !== "listening" || running || stalled) return;
     if (sessionRef.current) return;
     startListening();
-  }, [active, phaseVoice, running, startListening]);
+  }, [active, phaseVoice, running, stalled, startListening]);
 
   useEffect(() => () => stopRecognition(), [stopRecognition]);
 
@@ -304,8 +345,11 @@ export function useGuidedVoiceMode({
     phase: phaseVoice,
     interim,
     error,
+    /** Mic engine stopped while voice mode is still on. Offer `resume`. */
+    stalled,
     enter,
     exit,
+    resume,
     clearError: () => setError(null),
   };
 }
