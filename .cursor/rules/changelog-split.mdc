@@ -30,7 +30,7 @@ Append under `[Unreleased]` → Added / Changed / Fixed / Removed. Newest **last
 ```md
 # ✅ Public — short, what the user sees (no prefix)
 - Password show/hide on login
-- Agent-guided sessions can start a set with voice
+- AI agent-guided sessions can start a set with voice
 
 # ✅ Internal — prefix required
 - [internal] Admin Users directory restyle (`app/admin/users/page.tsx`)

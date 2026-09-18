@@ -180,12 +180,3 @@ export function CrisisHelpButton() {
     </div>
   );
 }
-
-/** Persistent, non-dismissible product positioning in session chrome. */
-export function SessionNotTherapyStrip() {
-  return (
-    <p className="session-not-therapy" role="note">
-      Not a therapist. Not for emergencies.
-    </p>
-  );
-}

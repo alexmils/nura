@@ -5,7 +5,7 @@ import { getLlmRuntimeConfig } from "@/lib/platform-settings";
 import { isValidElevenLabsVoiceId } from "@/lib/provider-catalog";
 
 const PREVIEW_TEXT =
-  "Hi — this is a short sample of this voice for Nura sessions.";
+  "Hi. This is a short sample of this voice for Nura sessions.";
 
 /** Simple in-memory cooldown per process (best-effort against click spam). */
 const lastPreviewAt = new Map<string, number>();

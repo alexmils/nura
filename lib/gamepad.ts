@@ -1,14 +1,14 @@
 import type { VibrationMode } from "./types";
 
-export type GamepadCallback = (
-  action:
-    | "toggle"
-    | "safe_place"
-    | "nav_up"
-    | "nav_down"
-    | "nav_left"
-    | "nav_right"
-) => void;
+export type GamepadNavDirection = "up" | "down" | "left" | "right";
+
+/** Handlers the controller drives while a set screen is open. */
+export interface GamepadLoopHandlers {
+  /** Main button (A / cross): start or pause the set. */
+  onToggle?: () => void;
+  /** D-pad or left stick: move between the session controls. */
+  onNavigate?: (direction: GamepadNavDirection) => void;
+}
 
 export const VIBRATION_INTENSITY: Record<VibrationMode, number> = {
   none: 0,
@@ -52,7 +52,7 @@ export function isGamepadConnected(): boolean {
 }
 
 let rafId: number | null = null;
-let onActionRef: GamepadCallback | null = null;
+let onActionRef: GamepadLoopHandlers | null = null;
 let activePadIndex: number | null = null;
 let prevButtons: boolean[] = [];
 let prevStick = { x: 0, y: 0 };
@@ -90,8 +90,8 @@ function edgeButton(buttons: boolean[], index: number) {
   return Boolean(buttons[index] && !prevButtons[index]);
 }
 
-export function startGamepadLoop(onAction: GamepadCallback) {
-  onActionRef = onAction;
+export function startGamepadLoop(handlers: GamepadLoopHandlers) {
+  onActionRef = handlers;
   if (rafId !== null) return;
 
   const tick = () => {
@@ -120,23 +120,22 @@ export function startGamepadLoop(onAction: GamepadCallback) {
       const now = performance.now();
       if (now - lastToggleAt >= TOGGLE_COOLDOWN_MS) {
         lastToggleAt = now;
-        fire?.("toggle");
+        fire?.onToggle?.();
       }
     }
-    if (edgeButton(buttons, 1)) fire?.("safe_place");
-    if (edgeButton(buttons, 12)) fire?.("nav_up");
-    if (edgeButton(buttons, 13)) fire?.("nav_down");
-    if (edgeButton(buttons, 14)) fire?.("nav_left");
-    if (edgeButton(buttons, 15)) fire?.("nav_right");
+    if (edgeButton(buttons, 12)) fire?.onNavigate?.("up");
+    if (edgeButton(buttons, 13)) fire?.onNavigate?.("down");
+    if (edgeButton(buttons, 14)) fire?.onNavigate?.("left");
+    if (edgeButton(buttons, 15)) fire?.onNavigate?.("right");
 
     prevButtons = buttons;
 
     const stickX = stickAxis(pad.axes[0] ?? 0);
     const stickY = stickAxis(pad.axes[1] ?? 0);
-    if (stickY === -1 && prevStick.y !== -1) fire?.("nav_up");
-    if (stickY === 1 && prevStick.y !== 1) fire?.("nav_down");
-    if (stickX === -1 && prevStick.x !== -1) fire?.("nav_left");
-    if (stickX === 1 && prevStick.x !== 1) fire?.("nav_right");
+    if (stickY === -1 && prevStick.y !== -1) fire?.onNavigate?.("up");
+    if (stickY === 1 && prevStick.y !== 1) fire?.onNavigate?.("down");
+    if (stickX === -1 && prevStick.x !== -1) fire?.onNavigate?.("left");
+    if (stickX === 1 && prevStick.x !== 1) fire?.onNavigate?.("right");
     prevStick = { x: stickX, y: stickY };
 
     rafId = requestAnimationFrame(tick);

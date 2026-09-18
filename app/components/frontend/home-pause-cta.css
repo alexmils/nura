@@ -1,0 +1,61 @@
+/* Reflex-style pause: empty field, large title, quiet CTA */
+
+.fe-pause {
+  background: #fff;
+}
+
+.fe-pause > .fe-pause-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+  padding: clamp(7.5rem, 16vh, 12rem) 1.25rem;
+  text-align: center;
+}
+
+.fe-pause-title {
+  margin: 0;
+  max-width: 16ch;
+  font-family: var(--font-sans);
+  font-size: clamp(2.15rem, 4.6vw, 3.35rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--fe-fg, #2a3020);
+}
+
+.frontend-home h2.fe-pause-title {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+.fe-pause-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0 1.15rem;
+  border-radius: 6.25rem;
+  border: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 16%, transparent);
+  background: transparent;
+  color: var(--fe-fg, #2a3020);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.fe-pause-cta:focus-visible {
+  outline: 2px solid var(--fe-gold, #c6d67e);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .fe-pause > .fe-pause-frame {
+    padding: clamp(5.5rem, 12vh, 8rem) 1rem;
+    gap: 1.4rem;
+  }
+}

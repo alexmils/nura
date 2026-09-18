@@ -71,14 +71,14 @@ export const KNOWLEDGE_SERIES: readonly KnowledgeSeries[] = [
     clips: [
       {
         id: "guided",
-        question: "What is an agent-guided session?",
+        question: "What is an AI agent-guided session?",
         answer: "A session agent walks phases and check-ins with you.",
         poster: IMG.support,
         videoSrc: STOCK.f,
       },
       {
         id: "free",
-        question: "What is a Free session?",
+        question: "What is a Self-guided session?",
         answer: "Sets you run yourself — no agent, no chat.",
         poster: IMG.practice,
         videoSrc: STOCK.m,
@@ -86,7 +86,7 @@ export const KNOWLEDGE_SERIES: readonly KnowledgeSeries[] = [
       {
         id: "sets",
         question: "What are visual sets?",
-        answer: "Left–right rhythm: animation, speed, sound, timing.",
+        answer: "Left–right rhythm: animation, sound, joystick rumble.",
         poster: IMG.hands,
         videoSrc: STOCK.h,
       },
@@ -100,7 +100,7 @@ export const KNOWLEDGE_SERIES: readonly KnowledgeSeries[] = [
       {
         id: "trial",
         question: "How does the trial work?",
-        answer: `${TRIAL_DAYS} days with capped agent-guided sessions and Free time.`,
+        answer: `${TRIAL_DAYS} days with capped AI agent-guided sessions and self-guided set time.`,
         poster: IMG.evening,
         videoSrc: STOCK.i,
       },

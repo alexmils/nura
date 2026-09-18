@@ -49,6 +49,7 @@ import {
 import { UpgradeModal } from "./UpgradeModal";
 import { AdInterstitial } from "./AdInterstitial";
 import { AdSenseLoader } from "./AdSenseLoader";
+import { useGuideHost } from "./guide/ProductGuide";
 
 export type EntitlementPublic = {
   accessTier: string;
@@ -879,6 +880,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void bootstrapAgent();
     }
   }, [activeThreadId, messages.length, threads, bootstrapAgent]);
+
+  // Actions the product tour can call: open a session, pick a mode, or start
+  // a fresh chat once the tour closes.
+  useGuideHost({
+    ensurePendingThread: async () => {
+      clearActiveThread();
+      await createThread();
+      return true;
+    },
+    chooseSelfGuided: () => chooseSessionMode("free"),
+    chooseGuided: () => chooseSessionMode("guided"),
+    startNewChat: () => {
+      void createThread();
+    },
+    canRunSession: () =>
+      consentOk === true &&
+      entitlement != null &&
+      entitlement.canUseApp &&
+      !(
+        entitlement.isTrialLimited &&
+        (entitlement.guidedRemaining <= 0 ||
+          entitlement.blsSecondsRemaining <= 0)
+      ),
+  });
 
   const value = useMemo(
     () => ({

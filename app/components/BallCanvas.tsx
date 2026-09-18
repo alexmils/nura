@@ -275,6 +275,7 @@ export function BallCanvas({
       className="workspace-canvas relative h-full min-h-0 flex-1 overflow-hidden outline-none"
       style={{ background }}
       data-bls-axis={axis}
+      data-guide="canvas"
     >
       {animation === "flash" && running && horizontal && (
         <>

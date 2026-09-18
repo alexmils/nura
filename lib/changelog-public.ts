@@ -57,7 +57,7 @@ const FILE_PATH_RE =
 
 /** Signed-in app: session, auth, billing, settings — not the marketing site. */
 const APP_USER_RE =
-  /\b(\/app|session|visual set|free session|agent-guided|voice mode|intake|login|sign in|create account|password|passkey|onboarding|billing|upgrade|trial|settings|sidebar|thread|memory|help|crisis|delete account|account deletion|composer|check-in|immersive|google|charge hint|renews|guided|free mode|set running|informed consent|not-therapy|nps|danger zone|show\/hide|gamepad|animation|repeats)\b/i;
+  /\b(\/app|session|visual set|free session|self-guided|agent-guided|AI agent-guided|voice mode|intake|login|sign in|create account|password|passkey|onboarding|billing|upgrade|trial|settings|sidebar|thread|memory|help|crisis|delete account|account deletion|composer|check-in|immersive|google|charge hint|renews|guided|free mode|set running|informed consent|not-therapy|nps|danger zone|show\/hide|gamepad|animation|repeats)\b/i;
 
 export function isForcedPublicItem(raw: string): boolean {
   return /^\s*\[public\]\s+/i.test(raw);
@@ -93,8 +93,8 @@ export function formatPublicChangelogItem(raw: string): string {
     .trim();
   text = rewriteRetiredBrandCopy(text);
   text = text.replace(/\bBLS\b/g, "session");
-  text = text.replace(/\bGuided vs Free\b/g, "agent-guided or Free");
-  text = text.replace(/\bGuided sessions\b/g, "Agent-guided sessions");
+  text = text.replace(/\bGuided vs Free\b/g, "AI agent-guided or Self-guided");
+  text = text.replace(/\bGuided sessions\b/g, "AI agent-guided sessions");
   text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
   text = text.replace(/`([^`]+)`/g, "$1");
   text = text.replace(/\*\*([^*]+)\*\*/g, "$1");

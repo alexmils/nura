@@ -102,6 +102,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Settings → Memory shows your notes in one list, with edit and delete on each one
 - Clear all memory in Settings wipes every note at once; your intake history stays
 - Importing a ChatGPT or Claude export adds notes to that same list, with no sets to arrange
+- **Guide**: a replayable walkthrough of the app, always from the first step, from the new **Guide** item in your account menu; it highlights New chat, your session list, the session controls, sound, animation, the controller, and the resource library
+- The tour also runs once by itself after onboarding
 
 ### Changed
 - [internal] Session path: one H2 above (“A session, start to finish.”), muted sub smaller; right lead “From ground to close — one calm loop.” (≪ H2, not a second title); nav labels ≠ right leads
@@ -614,6 +616,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Footer brand peek is in-flow after the footer (not `position:fixed`) so Privacy and other inner pages no longer show a glued logo over the copy
 - Grounding is no longer forced by a high distress rating: only real out-of-window signals (flooding, dissociation, feeling unsafe), a red flag, or asking to pause send the session back to grounding
 - A set you stopped or were interrupted during is no longer read as processed work, and no longer moves the phase on
+- A connected joystick or gamepad now really starts and pauses a set with its main button, and its stick or D-pad moves between the session controls (a connected controller also reaches the vibration control)
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

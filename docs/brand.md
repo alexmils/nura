@@ -94,15 +94,19 @@ Do not use Inter on any surface. Avoid rounded soft grotesks (Nunito, Manrope, r
 
 Files: `public/brand/nura-wave-logo.png` (+ `-black` / `-white` / color squares), `nura-text*.png`, `mark.png`, `lockup.png` / `lockup.svg`, `mark.svg`. Component: `app/components/BrandLockup.tsx` (`tone="color" | "black" | "white"`).
 
+**Master vector (correct paths):** `public/brand/Nura Logo.svg`. Palette exports (lockup / text-only / circle, SVG + PNG): `public/brand/logo-variants/` (`contact-sheet.png`, `README.md`).
+
 ## Voice
 
 English, sentence case, short sentences. No hype (“revolutionary”, “neural networks”, “blockchain”). Clinic-quiet, not a startup pitch.
 
-**Never say BLS to users.** Prefer **Free** / **Free mode** / **Set running** / **visual sets** / **session controls**. Internal code names (`bls`, `TRIAL_BLS_SECONDS`) are fine. See `.cursor/rules/nura-brand.mdc`.
+**Never use the em dash (—)** in user-facing sentences (UI, agent lines, emails, FAQ, marketing body). It reads as AI-written. Prefer a comma, period, colon, or parentheses. Strip it from agent prompts too, or the model will keep writing it. OK in code comments and the layout title template ` — Nura`. See `.cursor/rules/nura-brand.mdc`.
 
-**Do not default Free to “moving ball.”** Sets include animation choices (Dot, Flash, …), sound, and optional gamepad rumble. Prefer **visual sets** / **sets you run yourself**. Name the ball only when teaching visual rhythm on an educational page — never as the Free headline.
+**Never say BLS to users.** Prefer **self-guided set time** / **Set running** / **visual sets** / **session controls**. Internal code names (`bls`, `TRIAL_BLS_SECONDS`) are fine. See `.cursor/rules/nura-brand.mdc`.
 
-**Session modes on marketing:** do not say bare “Guided or Free.” Prefer **agent-guided** (session agent through phases) vs **Free** (sets without an agent). Headlines may lead with **AI-guided EMDR** (product + search term); keep the wordmark as **Nura**, never “Nura AI.”
+**Do not default Self-guided to “moving ball.”** Sets include animation choices (Dot, Flash, …), sound, and optional gamepad rumble. Prefer **visual sets** / **sets you run yourself**. Name the ball only when teaching visual rhythm on an educational page — never as the Self-guided headline.
+
+**Session modes:** do not say bare “Guided or Free.” Use **AI agent-guided** vs **Self-guided** (never **Free session** — that reads as $0). Headlines may lead with **AI-guided EMDR**; wordmark stays **Nura**. See `.cursor/rules/session-mode-names.mdc`.
 
 ## SEO
 

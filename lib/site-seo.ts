@@ -154,7 +154,7 @@ export const SITE_SEO_DEFAULTS: PageDefault[] = [
     label: "About",
     title: "About the EMDR therapy online app",
     description:
-      "Nura is an online app for guided EMDR therapy between sessions — agent-guided practice and Free visual sets on your schedule.",
+      "Nura is an online app for guided EMDR therapy between sessions — AI agent-guided practice and self-guided visual sets on your schedule.",
   },
   {
     id: "clinical-team",
@@ -194,7 +194,7 @@ export const SITE_SEO_DEFAULTS: PageDefault[] = [
     label: "Knowledge",
     title: "EMDR Video Clips — Sessions & Safety",
     description:
-      "Short clips answering the questions people ask before a session: how Guided works, what Free mode does, the trial, and when to stop.",
+      "Short clips answering the questions people ask before a session: how AI agent-guided works, what Self-guided does, the trial, and when to stop.",
   },
   {
     id: "blog",
@@ -210,7 +210,7 @@ export const SITE_SEO_DEFAULTS: PageDefault[] = [
     label: "Pricing",
     title: "Pricing — EMDR App Plans & Free Trial",
     description:
-      "Nura pricing: $4.99/week, $14.99/month, or $99/year after a 7-day trial. Every plan unlocks agent-guided and Free sessions. Cancel anytime.",
+      "Nura pricing: $4.99/week, $14.99/month, or $99/year after a 7-day trial. Every plan unlocks AI agent-guided and Self-guided sessions. Cancel anytime.",
   },
   {
     id: "faq",

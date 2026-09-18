@@ -270,7 +270,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
           },
           {
             href: "/admin/platform?tab=free-session",
-            label: "Free session",
+            label: "Self-guided",
             tab: "free-session",
           },
           {

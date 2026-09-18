@@ -72,7 +72,7 @@ describe("admin search index", () => {
     assert.ok(index.some((e) => e.kind === "tab" && e.href.includes("tab=")));
   });
 
-  it("includes Platform Brand, Guided chat, and Free session tabs", () => {
+  it("includes Platform Brand, Guided chat, and Self-guided tabs", () => {
     const index = buildAdminSearchIndex(true);
     assert.ok(
       index.some(
@@ -95,7 +95,7 @@ describe("admin search index", () => {
         (e) =>
           e.kind === "tab" &&
           e.href === "/admin/platform?tab=free-session" &&
-          e.title === "Free session"
+          e.title === "Self-guided"
       )
     );
     assert.equal(

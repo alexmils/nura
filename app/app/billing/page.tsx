@@ -268,7 +268,7 @@ function BillingPageInner() {
                       </strong>
                     </div>
                     <div className="settings-row settings-kv">
-                      <span>Free session time</span>
+                      <span>Self-guided set time</span>
                       <strong>
                         {Math.floor(status.blsSecondsUsed / 60)} /{" "}
                         {Math.floor(status.blsSecondsLimit / 60)} min

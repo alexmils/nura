@@ -3,6 +3,7 @@ import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { AppAccessGate } from "@/app/components/AppAccessGate";
 import { FeedbackPromptHost } from "@/app/components/FeedbackPromptHost";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
+import { ProductGuideProvider } from "@/app/components/guide/ProductGuide";
 import { ToastProvider } from "@/app/components/Toast";
 import { BRAND_PRODUCT, BRAND_SPOKEN } from "@/lib/brand";
 
@@ -24,10 +25,12 @@ export default function AppConsoleLayout({
   return (
       <AppAccessGate>
         <ToastProvider>
-          {children}
-          <FeedbackPromptHost />
-          <HelpChatWidget showFab />
-          <AccessibilityWidget />
+          <ProductGuideProvider>
+            {children}
+            <FeedbackPromptHost />
+            <HelpChatWidget showFab />
+            <AccessibilityWidget />
+          </ProductGuideProvider>
         </ToastProvider>
       </AppAccessGate>
   );

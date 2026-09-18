@@ -15,7 +15,7 @@ import {
 export const HELP_PRICES_URL = "https://nurahelp.com/pricing";
 
 const HELP_BILLING_BODY =
-  `New users start a 7-day trial after adding a payment method. Trial includes up to 3 guided sessions and 10 minutes of Free mode. After the trial, the chosen weekly, monthly, or yearly plan renews. Current public prices: ${HELP_PRICES_URL} . To change or cancel after signing in, use Billing → Manage billing in the app. Never name payment processors in replies.`;
+  `New users start a 7-day trial after adding a payment method. Trial includes up to 3 AI agent-guided sessions and 10 minutes of self-guided set time. After the trial, the chosen weekly, monthly, or yearly plan renews. Current public prices: ${HELP_PRICES_URL} . To change or cancel after signing in, use Billing → Manage billing in the app. Never name payment processors in replies.`;
 
 const HELP_PRICING_BODY =
   `When someone asks about price, cost, or plans, send them to ${HELP_PRICES_URL} (Pricing). Do not invent dollar amounts. Do not tell them to open a customer portal only to see prices. Never name payment processors or payment brands in replies.`;
@@ -156,7 +156,7 @@ export async function ensureHelpSchema(): Promise<void> {
     const seeds: { title: string; body: string; tags: string[] }[] = [
       {
         title: "What Nura is",
-        body: "Nura is a self-help wellness tool with agent-guided sessions and Free visual sets. It is not a licensed therapist, not emergency care, and not a medical device. Users should seek professional help for clinical needs.",
+        body: "Nura is a self-help wellness tool with AI agent-guided sessions and self-guided visual sets. It is not a licensed therapist, not emergency care, and not a medical device. Users should seek professional help for clinical needs.",
         tags: ["product", "safety"],
       },
       {
@@ -171,7 +171,7 @@ export async function ensureHelpSchema(): Promise<void> {
       },
       {
         title: "Session modes",
-        body: "Agent-guided sessions use a session agent through wellness phases with check-ins. Free sessions are visual sets you run yourself — animation, speed, sound, and timing, with no agent. Start with New chat, then choose agent-guided or Free.",
+        body: "AI agent-guided sessions use a session agent through wellness phases with check-ins. Self-guided sessions are sets you run yourself: animation, sound, and joystick rumble, with no agent. Start with New chat, then choose AI agent-guided or Self-guided.",
         tags: ["sessions"],
       },
       {

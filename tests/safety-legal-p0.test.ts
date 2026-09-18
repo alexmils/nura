@@ -16,6 +16,7 @@ import {
   phaseNeedsClosureGate,
   shouldOfferResumeClosure,
   shouldPromptSessionClosure,
+  isEmptyDisposableSession,
 } from "../lib/session-closure.ts";
 
 describe("consents helpers", () => {
@@ -67,11 +68,89 @@ describe("session closure gates", () => {
         thread: { mode: "free", phase: "intake", incomplete: false },
         setRunning: true,
       }),
-      true
+      false
+    );
+    assert.equal(
+      shouldPromptSessionClosure({
+        thread: {
+          mode: "free",
+          phase: "desensitization",
+          incomplete: true,
+        },
+      }),
+      false
     );
     assert.equal(
       shouldPromptSessionClosure({
         thread: { mode: "pending", phase: "intake", incomplete: true },
+      }),
+      false
+    );
+    assert.equal(
+      shouldPromptSessionClosure({
+        thread: {
+          mode: "guided",
+          phase: "intake",
+          incomplete: true,
+        },
+        hasUserMessage: false,
+      }),
+      false
+    );
+    assert.equal(
+      shouldPromptSessionClosure({
+        thread: {
+          mode: "guided",
+          phase: "intake",
+          incomplete: true,
+        },
+        hasUserMessage: true,
+      }),
+      true
+    );
+  });
+
+  it("treats unused picker / silent intake as disposable", () => {
+    assert.equal(
+      isEmptyDisposableSession({
+        thread: { mode: "pending", phase: "intake", incomplete: true },
+        hasUserMessage: false,
+      }),
+      true
+    );
+    assert.equal(
+      isEmptyDisposableSession({
+        thread: {
+          mode: "guided",
+          phase: "intake",
+          incomplete: true,
+          intakeComplete: false,
+        },
+        hasUserMessage: false,
+      }),
+      true
+    );
+    assert.equal(
+      isEmptyDisposableSession({
+        thread: {
+          mode: "guided",
+          phase: "intake",
+          incomplete: true,
+          intakeComplete: false,
+        },
+        hasUserMessage: true,
+      }),
+      false
+    );
+    assert.equal(
+      isEmptyDisposableSession({
+        thread: {
+          mode: "free",
+          phase: "intake",
+          incomplete: true,
+          intakeComplete: true,
+        },
+        hasUserMessage: false,
       }),
       false
     );

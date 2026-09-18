@@ -45,13 +45,29 @@ export function SidebarNavProvider({
   }, [forceClosed]);
 
   useEffect(() => {
-    if (!open) return;
+    if (forceClosed) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key !== "Escape") return;
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (
+          tag === "INPUT" ||
+          tag === "TEXTAREA" ||
+          tag === "SELECT" ||
+          target.isContentEditable
+        ) {
+          return;
+        }
+      }
+      // Leave Escape to open dialogs / popovers (crisis, gear, help, …).
+      if (document.querySelector('[role="dialog"]')) return;
+      setOpen((wasOpen) => !wasOpen);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [forceClosed]);
 
   const openSidebar = useCallback(() => setOpen(true), []);
   const closeSidebar = useCallback(() => setOpen(false), []);

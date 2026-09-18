@@ -35,7 +35,7 @@ export const EMDR_FAQ_ITEMS: readonly EmdrFaqItem[] = [
     a: "Typically 15–30 minutes. You can stop at any point, though the app will always ask you to close out properly first.",
   },
   {
-    q: "What is the difference between guided and Free mode?",
-    a: "Agent-guided runs the full session with the AI. Free gives you the set alone — no structure, no prompts — useful if you already have a protocol from your therapist.",
+    q: "What is the difference between AI agent-guided and Self-guided?",
+    a: "AI agent-guided runs the full session with the AI. Self-guided gives you the set alone — no structure, no prompts — useful if you already have a protocol from your therapist.",
   },
 ];

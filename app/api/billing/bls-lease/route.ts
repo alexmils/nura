@@ -42,6 +42,6 @@ export async function POST(request: Request) {
       );
     }
     console.error("[billing/bls-lease]", err);
-    return NextResponse.json({ error: "Free session time lease failed" }, { status: 500 });
+    return NextResponse.json({ error: "Self-guided set time lease failed" }, { status: 500 });
   }
 }

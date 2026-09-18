@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { SessionKind } from "@/lib/types";
+import {
+  SESSION_MODE_GUIDED_LABEL,
+  SESSION_MODE_GUIDED_SHORT,
+  SESSION_MODE_SELF_LABEL,
+  SESSION_MODE_SELF_SET_TIME,
+  SESSION_MODE_SELF_SHORT,
+} from "@/lib/brand";
 import { useApp } from "./AppProvider";
 
 type Choice = Exclude<SessionKind, "pending">;
@@ -14,16 +21,16 @@ const CHOICES: {
 }[] = [
   {
     id: "guided",
-    title: "AI-guided session",
+    title: SESSION_MODE_GUIDED_LABEL,
     description:
       "An AI session guide walks you through EMDR phases, grounding, and check-ins after each set.",
     keyHint: "1",
   },
   {
     id: "free",
-    title: "Free session",
+    title: SESSION_MODE_SELF_LABEL,
     description:
-      "Visual sets you control — animation, speed, sound, and timing. No agent, no chat.",
+      "Animation, sound, and joystick rumble. You set speed and timing. No agent, no chat.",
     keyHint: "2",
   },
 ];
@@ -102,14 +109,16 @@ export function SessionStartScreen() {
       <div className="session-start-inner">
         <h2 className="session-start-title">Start a session</h2>
         <p className="session-start-subtitle">
-          AI-guided (with a session guide) or Free (sets you run yourself).
-          This choice stays for this session.
+          {SESSION_MODE_GUIDED_SHORT} (with a session guide) or{" "}
+          {SESSION_MODE_SELF_SHORT} (sets you run yourself). This choice stays
+          for this session.
         </p>
         {entitlement?.isTrialLimited && (
           <p className="session-start-trial">
-            Trial: {Math.max(0, entitlement.guidedRemaining)} AI-guided left ·{" "}
+            Trial: {Math.max(0, entitlement.guidedRemaining)}{" "}
+            {SESSION_MODE_GUIDED_SHORT} left ·{" "}
             {Math.floor(Math.max(0, entitlement.blsSecondsRemaining) / 60)} min
-            Free left
+            self-guided left
             {(guidedBlocked || blsBlocked) && (
               <>
                 {" "}
@@ -133,6 +142,7 @@ export function SessionStartScreen() {
           className="session-start-cards"
           role="listbox"
           aria-label="Session type"
+          data-guide="mode-cards"
         >
           {CHOICES.map((c) => {
             const blocked =
@@ -155,8 +165,8 @@ export function SessionStartScreen() {
                 <span className="session-start-card-desc">
                   {blocked
                     ? c.id === "guided"
-                      ? "Trial AI-guided sessions used — upgrade to continue."
-                      : "Trial Free session time used — upgrade to continue."
+                      ? `Trial ${SESSION_MODE_GUIDED_SHORT} sessions used — upgrade to continue.`
+                      : `Trial ${SESSION_MODE_SELF_SET_TIME} used — upgrade to continue.`
                     : c.description}
                 </span>
               </button>

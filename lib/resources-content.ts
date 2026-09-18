@@ -8,15 +8,15 @@ export const SEED_RESOURCES: ResourceItem[] = [
     slug: "what-is-emdr",
     kind: "article",
     title: "What is EMDR?",
-    summary: "How the moving ball fits Guided and Free.",
+    summary: "How the moving ball fits AI agent-guided and Self-guided.",
     readMinutes: 3,
     featured: true,
-    body: `EMDR (Eye Movement Desensitization and Reprocessing) is a structured approach often used with traumatic or distressing memories. In practice, many people follow a **moving target left and right** — like the ball in Free or Guided mode — while holding a target memory or sensation in mind.
+    body: `EMDR (Eye Movement Desensitization and Reprocessing) is a structured approach often used with traumatic or distressing memories. In practice, many people follow a **moving target left and right** — like the ball in Self-guided or AI agent-guided mode — while holding a target memory or sensation in mind.
 
 Nura offers two ways to work:
 
-- **Guided session** — an AI guide walks through intake, grounding, assessment, and processing phases, with check-ins after each set.
-- **Free session** — you control the ball, speed, and timing yourself.
+- **AI agent-guided session** — an AI guide walks through intake, grounding, assessment, and processing phases, with check-ins after each set.
+- **Self-guided session** — you control the ball, speed, and timing yourself.
 
 This app is a **self-help tool**, not a replacement for licensed clinical care. If you are in crisis or feel unsafe, pause and use the safety resources in the library or contact local emergency services.`,
   },
@@ -33,7 +33,7 @@ This app is a **self-help tool**, not a replacement for licensed clinical care. 
 2. **Five senses** — name one thing you see, hear, and feel.
 3. **Safe place** — recall a calm image or location; stay with it until your breath slows.
 
-In a **Guided** session, the guide will not start a set until after intake and grounding. In **Free** mode, pause anytime — you are in control of when the ball runs.`,
+In an **AI agent-guided** session, the guide will not start a set until after intake and grounding. In **Self-guided**, pause anytime — you are in control of when the ball runs.`,
   },
   {
     slug: "when-to-pause",
@@ -56,13 +56,13 @@ Nura is not an emergency service. If you might hurt yourself or someone else, co
   {
     slug: "guided-vs-free",
     kind: "article",
-    title: "Guided vs free sessions",
+    title: "AI agent-guided vs Self-guided sessions",
     summary: "Which mode to pick when you open a new chat.",
     readMinutes: 2,
     featured: false,
-    body: `**Guided** is best when you want structure: phase prompts, SUDs/VoC tracking, and check-ins after each set. The AI follows an EMDR-informed protocol (intake → grounding → assessment → processing phases).
+    body: `**AI agent-guided** is best when you want structure: phase prompts, SUDs/VoC tracking, and check-ins after each set. The AI follows an EMDR-informed protocol (intake → grounding → assessment → processing phases).
 
-**Free** is best when you already know what you are doing and only need the ball — no chat overlay, full control of session settings.
+**Self-guided** is best when you already know what you are doing and only need the set — no chat overlay, full control of session settings.
 
 You choose once per session; the mode stays locked for that thread. Start a **New chat** to pick again.`,
   },

@@ -67,11 +67,11 @@ describe("rewriteRetiredBrandCopy", () => {
     assert.equal(rewriteRetiredBrandCopy("What NuraHelp is"), "What Nura is");
     assert.equal(
       rewriteRetiredBrandCopy("Trial includes 10 minutes of free BLS"),
-      "Trial includes 10 minutes of Free mode"
+      "Trial includes 10 minutes of self-guided set time"
     );
     assert.equal(
       rewriteRetiredBrandCopy("Free mode is BLS-only controls"),
-      "Free mode is sets you run yourself"
+      "self-guided session is sets you run yourself"
     );
     assert.equal(
       rewriteRetiredBrandCopy(

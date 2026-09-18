@@ -65,7 +65,7 @@ function MiniPreview({
       </div>
       <div className="gc-pick-composer">
         <Mic size={large ? 22 : 14} strokeWidth={2} className="gc-pick-mic" />
-        <span className="gc-pick-ph">Anxiety, a memory…</span>
+        <span className="gc-pick-ph">Type here…</span>
         <span className="gc-pick-voice">
           <AudioLines size={large ? 22 : 14} strokeWidth={2.25} />
         </span>

@@ -8,7 +8,7 @@ alwaysApply: false
 
 On **marketing** surfaces (`.frontend-home`, `app/components/frontend/**`, public `/`, `/about`, `/emdr`, `/learn`, `/blog`, pricing/FAQ sections on the landing), **do not use body copy to explain the product**. Hierarchy, layout, labels, and visuals carry meaning; paragraphs that “teach” are banned unless the surface is explicitly long-form (blog article, editorial, legal).
 
-Still run **redpen** + **writing-copy** + **frontend-design** per `page-copy-design-review.mdc`. Obey **nura-brand** (no BLS jargon, agent-guided / Free session language, no “moving ball” as the product).
+Still run **redpen** + **writing-copy** + **frontend-design** per `page-copy-design-review.mdc`. Obey **nura-brand** (no BLS jargon, AI agent-guided / Self-guided language, no “moving ball” as the product).
 
 ## Use instead of explanatory text
 
@@ -39,7 +39,7 @@ Still run **redpen** + **writing-copy** + **frontend-design** per `page-copy-des
 
 ```tsx
 // ❌ BAD — paragraph explains what the section title already claims
-<h2>Agent-guided sessions</h2>
+<h2>AI agent-guided sessions</h2>
 <p>
   Our AI agent walks you through EMDR phases step by step so you always know
   what to do next. You can chat, run visual sets, and track progress in one calm app.
@@ -48,7 +48,7 @@ Still run **redpen** + **writing-copy** + **frontend-design** per `page-copy-des
 // ✅ GOOD — title + labeled cards + CTA
 <p className="fe-section-kicker">Session modes</p>
 <h2 className="fe-section-title">Choose how you practice</h2>
-{/* two cards: Agent-guided · Free session — 1 line each, no essay */}
+{/* two cards: AI agent-guided · Self-guided session — 1 line each, no essay */}
 <Link href="/app/create-account" className="fe-btn-primary">Get started</Link>
 ```
 

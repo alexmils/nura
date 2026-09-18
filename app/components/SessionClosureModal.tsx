@@ -33,7 +33,7 @@ export function SessionClosureModal({
         </h2>
         <p className="session-closure-body">
           Leaving mid-set can leave material unfinished. A short close (about 2
-          minutes) — calm breathing or a containment image — helps you exit more
+          minutes), calm breathing or a containment image, helps you exit more
           safely.
         </p>
         <div className="session-closure-actions">

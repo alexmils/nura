@@ -23,7 +23,7 @@ export default async function PricingPage() {
   const origin = siteOrigin(publicUrl);
 
   return (
-    <FrontendShell>
+    <FrontendShell wide>
       <JsonLd data={buildPricingJsonLd(origin)} />
       <PricingPageView />
     </FrontendShell>

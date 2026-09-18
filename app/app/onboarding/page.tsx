@@ -15,6 +15,7 @@ import {
   type BillingPlanMeta,
 } from "@/lib/billing-constants";
 import { APP_BASE } from "@/lib/app-base";
+import { resetGuideState } from "@/lib/guide-steps";
 import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
@@ -240,6 +241,12 @@ function OnboardingFlow() {
         if (data.code === "needs_payment") setStep("plan");
         return;
       }
+      // A fresh account gets the guided tour even on a shared device.
+      try {
+        resetGuideState(window.localStorage, window.sessionStorage);
+      } catch {
+        /* storage unavailable: the tour simply may not auto-start */
+      }
       router.replace(APP_BASE);
       router.refresh();
     } catch {
@@ -354,8 +361,8 @@ function OnboardingFlow() {
             })}
           </div>
           <p className="ob-note">
-            {TRIAL_GUIDED_SESSIONS} AI-guided sessions and {FREE_MINUTES} minutes of
-            Free session time in the trial. We save your card now. You won’t be
+            {TRIAL_GUIDED_SESSIONS} AI agent-guided sessions and {FREE_MINUTES} minutes of
+            self-guided set time in the trial. We save your card now. You won’t be
             charged for {TRIAL_DAYS} days.
           </p>
           <button

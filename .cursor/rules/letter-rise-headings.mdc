@@ -1,0 +1,45 @@
+---
+description: Marketing big titles always use LetterRevealHeading letter-rise — never GSAP fade
+alwaysApply: true
+---
+
+# EMDR — letter-rise on big marketing titles
+
+Do **not** skip this. When the user says “scroll animation like the other sections” for **big titles**, they mean **letter-rise**, not GSAP `fe-animate`.
+
+## Always
+
+Marketing section **H2** (and equivalent display titles: pricing, blog, FAQ, stories, footer CTA, `SessionLoopKit`, `SessionTopicsGrid`, `SessionModesPair`, `HomePauseCta`, `HomeMemorySets`): `LetterRevealHeading` from `app/components/frontend/LetterRevealHeading.tsx`.
+
+Letters rise from below (`fe-letter-rise` / `fe-letter-fade`). That component already replays when the heading is fully off-screen, then scrolled in again.
+
+```tsx
+// ✅ GOOD
+<p className="fe-section-kicker fe-animate">Your language</p>
+<LetterRevealHeading className="fe-section-title">
+  A calm session in many languages.
+</LetterRevealHeading>
+
+// ❌ BAD — GSAP block fade is not the title motion
+<h2 className="fe-section-title fe-animate">A calm session in many languages.</h2>
+```
+
+## Never for those titles
+
+- `.fe-animate` on the heading or wrapping `.fe-section-head`
+- `gsap.from` / `fromTo` `y` + `opacity` as a stand-in for letter-rise
+- “Fix replay” by changing `useLandingMotion` section fades — leave `.fe-animate` for **kicker / body / cards** only
+- Inventing a new title tween
+
+`.fe-animate` + ScrollTrigger stays on small copy and cards (`toggleActions: "play none none none"`).
+
+## Exceptions (do not letter-rise)
+
+| Surface | Motion |
+|---|---|
+| Home hero **H1** | `.fe-split-word` on load |
+| Session path **intro** H2 | Attio ink→muted inline fade — not `LetterRevealHeading` |
+| Session path **stage / pair / finale** leads | `LetterRevealHeading` (`eager` on sticky leads) |
+| `/app`, `/admin`, legal/long-form | Source Sans, no letter-rise |
+
+Skill: `.cursor/skills/nura-ui-designer/SKILL.md` → **Letter-rise section titles**.

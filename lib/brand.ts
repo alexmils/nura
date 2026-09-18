@@ -30,6 +30,17 @@ export const BRAND_DESCRIPTION =
   "Guided EMDR sessions you run yourself: visual sets, optional voice, grounding, and short guides for between sessions. Start with a 7-day trial.";
 
 /**
+ * User-facing session mode names. Internal ids stay `guided` | `free`.
+ * Never call the self-run mode “Free session” — it reads as $0, not “no agent.”
+ */
+export const SESSION_MODE_GUIDED_LABEL = "AI agent-guided session";
+export const SESSION_MODE_SELF_LABEL = "Self-guided session";
+export const SESSION_MODE_GUIDED_SHORT = "AI agent-guided";
+export const SESSION_MODE_SELF_SHORT = "Self-guided";
+/** Trial / billing cap on self-guided visual-set minutes (not a price). */
+export const SESSION_MODE_SELF_SET_TIME = "self-guided set time";
+
+/**
  * Canonical limits sentence — footer, /limits lead, llms.txt.
  * Not for meta descriptions (snippet layer).
  */
@@ -130,21 +141,28 @@ export function rewriteRetiredBrandCopy(text: string): string {
       "use **a moving target left and right**",
       "follow **a moving target left and right**"
     )
-    .replaceAll("10 minutes of free BLS", "10 minutes of Free mode")
-    .replaceAll("free BLS minutes", "Free mode minutes")
-    .replaceAll("free BLS", "Free mode")
+    .replaceAll("10 minutes of free BLS", "10 minutes of self-guided set time")
+    .replaceAll("free BLS minutes", "self-guided set minutes")
+    .replaceAll("free BLS", "self-guided session")
     .replaceAll(
       "Free mode is BLS-only controls",
-      "Free mode is sets you run yourself"
+      "self-guided session is sets you run yourself"
     )
-    .replaceAll("free BLS-only", "Free mode (sets you run yourself)")
+    .replaceAll("free BLS-only", "self-guided session (sets you run yourself)")
     .replaceAll("BLS-only", "sets you run yourself")
     .replaceAll("BLS controls", "Session controls")
     .replaceAll(
       "Free mode is the moving ball only",
-      "Free mode is sets you run yourself"
+      "self-guided session is sets you run yourself"
     )
-    .replaceAll("the moving ball only", "sets you run yourself");
+    .replaceAll("the moving ball only", "sets you run yourself")
+    .replaceAll("Free session time", "self-guided set time")
+    .replaceAll("Free sessions", "self-guided sessions")
+    .replaceAll("Free session", "Self-guided session")
+    .replaceAll("Free visual sets", "self-guided visual sets")
+    .replaceAll("Free mode", "self-guided session")
+    .replace(/(?<!AI )Agent-guided/g, "AI agent-guided")
+    .replace(/(?<!AI )agent-guided/g, "AI agent-guided");
 }
 
 export function brandMetadataBase(): URL {

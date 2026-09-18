@@ -286,6 +286,7 @@ export function AgentOverlay({
     >
       <form
         className={`agent-composer${showDictationMic ? " agent-composer--with-mic" : ""}`}
+        data-guide="composer"
         onSubmit={(e) => {
           e.preventDefault();
           if (!canSend) return;

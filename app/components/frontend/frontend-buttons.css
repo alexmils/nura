@@ -24,12 +24,12 @@
 .frontend-home .frontend-btn-primary,
 .frontend-home .frontend-header-cta,
 .frontend-home .fe-about-cta,
-.frontend-home .fe-how-cta,
 .frontend-home .fe-price-card-cta,
 .frontend-home .fe-price-card-cta--accent,
 .frontend-home .fe-site-footer-cta-btn--primary,
 .frontend-home .fe-site-footer-send,
-.frontend-home .fe-stories-nav-btn--accent {
+.frontend-home .fe-stories-nav-btn--accent,
+.frontend-home .fe-topics-cta-btn {
   transition:
     background 0.22s ease,
     border-color 0.22s ease,
@@ -43,13 +43,13 @@
 .frontend-home .frontend-btn-primary:hover,
 .frontend-home .frontend-header-cta:hover,
 .frontend-home .fe-about-cta:hover,
-.frontend-home .fe-how-cta:hover,
 .frontend-home .fe-price-card-cta:hover,
 .frontend-home .fe-price-card-cta--accent:hover,
 .frontend-home .fe-site-footer-cta-btn--primary:hover,
 .frontend-home .fe-site-footer-send:hover,
 .frontend-home .fe-stories-nav-btn--accent:hover,
-.frontend-home .fe-blog-cta:hover {
+.frontend-home .fe-blog-cta:hover,
+.frontend-home .fe-topics-cta-btn:hover {
   background: var(--fe-btn-pistachio);
   border-color: var(--fe-btn-pistachio);
   color: var(--fe-btn-ink);
@@ -70,9 +70,12 @@
 
 /* Outline / ghost CTAs */
 .frontend-home .frontend-btn-ghost,
+.frontend-home .fe-spath-cta,
 .frontend-home .fe-site-footer-cta-btn--ghost,
 .frontend-home .fe-stories-nav-btn:not(.fe-stories-nav-btn--accent),
-.frontend-home .fe-blog-cta {
+.frontend-home .fe-blog-cta,
+.frontend-home .fe-topics-cta-ghost,
+.frontend-home .fe-pause-cta {
   transition:
     background 0.22s ease,
     border-color 0.22s ease,
@@ -82,8 +85,11 @@
 }
 
 .frontend-home .frontend-btn-ghost:hover,
+.frontend-home .fe-spath-cta:hover,
 .frontend-home .fe-site-footer-cta-btn--ghost:hover,
-.frontend-home .fe-stories-nav-btn:not(.fe-stories-nav-btn--accent):hover {
+.frontend-home .fe-stories-nav-btn:not(.fe-stories-nav-btn--accent):hover,
+.frontend-home .fe-topics-cta-ghost:hover,
+.frontend-home .fe-pause-cta:hover {
   border-color: var(--fe-btn-pistachio);
   color: var(--fe-btn-pistachio);
   background: color-mix(in srgb, var(--fe-btn-pistachio) 12%, transparent);
@@ -108,13 +114,15 @@
   .frontend-home .frontend-btn-primary:hover,
   .frontend-home .frontend-header-cta:hover,
   .frontend-home .fe-about-cta:hover,
-  .frontend-home .fe-how-cta:hover,
   .frontend-home .fe-price-card-cta:hover,
   .frontend-home .fe-price-card-cta--accent:hover,
   .frontend-home .fe-site-footer-cta-btn--primary:hover,
   .frontend-home .fe-site-footer-send:hover,
   .frontend-home .fe-stories-nav-btn--accent:hover,
   .frontend-home .fe-blog-cta:hover,
+  .frontend-home .fe-topics-cta-btn:hover,
+  .frontend-home .fe-topics-cta-ghost:hover,
+  .frontend-home .fe-pause-cta:hover,
   .frontend-home .frontend-btn-ghost:hover,
   .frontend-home .fe-site-footer-cta-btn--ghost:hover,
   .frontend-home .fe-stories-nav-btn:not(.fe-stories-nav-btn--accent):hover {

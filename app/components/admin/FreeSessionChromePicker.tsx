@@ -36,7 +36,7 @@ function MiniPreview({
       aria-hidden
     >
       <div className="fs-pick-header">
-        <span className="fs-pick-header-title">Free session</span>
+        <span className="fs-pick-header-title">Self-guided</span>
         <span className="fs-pick-header-hint">Calm paced sets</span>
       </div>
       <div className="fs-pick-canvas">
@@ -101,7 +101,7 @@ export function FreeSessionChromePicker({
       <div
         className="fs-pick-grid"
         role="radiogroup"
-        aria-label="Free session look"
+        aria-label="Self-guided look"
       >
         {FREE_SESSION_CHROMES.map((chrome) => {
           const selected = chrome.id === value;

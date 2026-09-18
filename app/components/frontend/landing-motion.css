@@ -12,8 +12,10 @@
   padding: 0 clamp(1rem, 4vw, 2rem);
 }
 
-.fe-landing {
+.fe-landing,
+.frontend-home-landing {
   overflow-x: clip;
+  max-width: 100%;
 }
 
 /* Split headline (Scalient / Webflow SplitText-style) */
@@ -658,277 +660,6 @@
   color: var(--fe-muted);
 }
 
-/* Showcase — large image + copy rows */
-.fe-showcase-section {
-  padding: clamp(5rem, 12vw, 8.5rem) 0;
-  background: color-mix(in srgb, #fff 55%, var(--fe-bg));
-}
-
-.fe-showcase-list {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(4rem, 9vw, 7rem);
-}
-
-.fe-showcase {
-  display: grid;
-  gap: clamp(1.75rem, 4vw, 3.5rem);
-  align-items: center;
-}
-
-.fe-showcase-media {
-  border-radius: 1.35rem;
-  overflow: hidden;
-  border: 1px solid var(--fe-line);
-  box-shadow: 0 28px 64px rgba(42, 48, 32, 0.12);
-  min-height: min(52vw, 28rem);
-}
-
-.fe-showcase-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: min(52vw, 28rem);
-  object-fit: cover;
-  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.fe-showcase:hover .fe-showcase-image {
-  transform: scale(1.04);
-}
-
-.fe-showcase-title {
-  margin: 0.65rem 0 0;
-  font-family: var(--font-sans);
-  font-size: clamp(1.9rem, 3.8vw, 2.9rem);
-  font-weight: 400;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-}
-
-.fe-showcase-body {
-  margin: 1rem 0 0;
-  font-size: 1.2rem;
-  line-height: 1.65;
-  color: var(--fe-muted);
-  max-width: 34rem;
-}
-
-.fe-showcase-points {
-  margin: 1.35rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.7rem;
-}
-
-.fe-showcase-points li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  font-size: 1.125rem;
-  line-height: 1.45;
-  color: var(--fe-fg);
-}
-
-.fe-showcase-points svg {
-  flex-shrink: 0;
-  margin-top: 0.15rem;
-  color: var(--fe-accent);
-}
-
-/* How it works — Novawell-style dark band */
-.fe-how-section {
-  --fe-how-bg: #141710;
-  --fe-how-card: #22261c;
-  --fe-how-text: #f2f7ec;
-  --fe-how-muted: #a8b09a;
-  --fe-how-lime: #a4eda5;
-  --fe-how-line: rgba(242, 247, 236, 0.12);
-
-  padding: clamp(5rem, 12vw, 8.5rem) 0;
-  background: var(--fe-how-bg);
-  color: var(--fe-how-text);
-}
-
-.fe-section-kicker--on-dark {
-  color: var(--fe-how-lime);
-}
-
-.fe-how-head {
-  max-width: 40rem;
-  margin-bottom: clamp(2.5rem, 5vw, 3.75rem);
-}
-
-.fe-how-title {
-  margin: 0.5rem 0 0;
-  font-family: var(--font-sans);
-  font-size: clamp(2.15rem, 5vw, 3.5rem);
-  font-weight: 400;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
-  color: var(--fe-how-text);
-}
-
-.fe-how-sub {
-  margin: 1rem 0 0;
-  font-size: 1.25rem;
-  line-height: 1.6;
-  color: var(--fe-how-muted);
-  max-width: 34rem;
-}
-
-.fe-how-layout {
-  display: grid;
-  gap: clamp(1.5rem, 3vw, 2.5rem);
-}
-
-.fe-how-tabs {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.fe-how-tab {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  width: 100%;
-  text-align: left;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid var(--fe-how-line);
-  border-radius: 1rem;
-  background: var(--fe-how-card);
-  color: var(--fe-how-text);
-  cursor: pointer;
-  transition:
-    border-color 0.25s ease,
-    background 0.25s ease,
-    transform 0.25s ease;
-}
-
-.fe-how-tab:hover {
-  border-color: color-mix(in srgb, var(--fe-how-lime) 40%, var(--fe-how-line));
-}
-
-.fe-how-tab.is-active {
-  border-color: color-mix(in srgb, var(--fe-how-lime) 55%, transparent);
-  background: color-mix(in srgb, var(--fe-how-lime) 12%, var(--fe-how-card));
-  transform: translateY(-1px);
-}
-
-.fe-how-tab-n {
-  font-family: var(--font-sans);
-  font-size: 1.65rem;
-  line-height: 1;
-  color: var(--fe-how-lime);
-  flex-shrink: 0;
-}
-
-.fe-how-tab-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-width: 0;
-}
-
-.fe-how-tab-title {
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.fe-how-tab-summary {
-  font-size: 1.2rem;
-  line-height: 1.4;
-  color: var(--fe-how-muted);
-}
-
-.fe-how-panel {
-  display: grid;
-  gap: 1.5rem;
-  padding: clamp(1.25rem, 3vw, 1.75rem);
-  border-radius: 1.35rem;
-  background: var(--fe-how-card);
-  border: 1px solid var(--fe-how-line);
-  min-height: min(70vh, 36rem);
-}
-
-.fe-how-panel-copy h3 {
-  margin: 0 0 0.85rem;
-  font-family: var(--font-sans);
-  font-size: clamp(1.7rem, 3.2vw, 2.3rem);
-  font-weight: 400;
-  color: var(--fe-how-text);
-}
-
-.fe-how-panel-copy p {
-  margin: 0 0 1.15rem;
-  line-height: 1.65;
-  color: var(--fe-how-muted);
-  max-width: 34rem;
-}
-
-.fe-how-panel-copy ul {
-  margin: 0 0 1.5rem;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.6rem;
-}
-
-.fe-how-panel-copy li {
-  position: relative;
-  padding-left: 1.15rem;
-  font-size: 1.1rem;
-  line-height: 1.5;
-  color: var(--fe-how-text);
-}
-
-.fe-how-panel-copy li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.55em;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--fe-how-lime);
-}
-
-.fe-how-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.85rem 1.25rem;
-  border-radius: 999px;
-  background: var(--fe-how-lime);
-  color: #1a1d14;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    gap 0.2s ease,
-    background 0.2s ease;
-}
-
-.fe-how-cta:hover {
-  gap: 0.7rem;
-  /* color/pulse — frontend-buttons.css */
-}
-
-.fe-how-panel-media {
-  border-radius: 1rem;
-  overflow: hidden;
-  min-height: 18rem;
-  background: #0d0f0a;
-}
-
-.fe-how-panel-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 18rem;
-  object-fit: cover;
-}
-
 /* Steps tabs (Curevo — unused legacy) */
 .fe-steps-layout {
   display: grid;
@@ -1105,41 +836,6 @@
   margin: 0.5rem 0 0;
   font-size: 1.2rem;
   line-height: 1.55;
-  color: var(--fe-muted);
-}
-
-/* Stats */
-.fe-stats-section {
-  padding: clamp(5rem, 10vw, 7rem) 0;
-  border-block: 1px solid var(--fe-line);
-  background: color-mix(in srgb, var(--fe-accent) 8%, var(--fe-bg));
-}
-
-.fe-stats-grid {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.fe-stat {
-  text-align: center;
-  padding: 1rem;
-}
-
-.fe-count {
-  margin: 0;
-  font-family: var(--font-sans);
-  font-size: clamp(2.5rem, 6vw, 3.75rem);
-  font-weight: 400;
-  line-height: 1;
-  color: var(--fe-accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.fe-stat-label {
-  margin: 0.65rem 0 0;
-  font-size: 1.2rem;
-  line-height: 1.45;
   color: var(--fe-muted);
 }
 
@@ -1615,7 +1311,7 @@
 /* Blog — Nexsas-style masonry + centered Load more */
 .fe-blog {
   padding: clamp(4rem, 9vw, 6.5rem) 0;
-  background: transparent;
+  background: var(--fe-bg, #edf9ed);
   color: var(--fe-fg);
 }
 
@@ -2028,40 +1724,9 @@
     grid-template-columns: 1fr 1fr;
   }
 
-  .fe-showcase {
-    grid-template-columns: 1.05fr 0.95fr;
-  }
-
-  .fe-showcase--flip .fe-showcase-media {
-    order: 2;
-  }
-
-  .fe-showcase--flip .fe-showcase-copy {
-    order: 1;
-  }
-
-  .fe-how-layout {
-    grid-template-columns: minmax(0, 22rem) minmax(0, 1fr);
-    align-items: stretch;
-  }
-
-  .fe-how-panel {
-    grid-template-columns: 1fr 1.05fr;
-    align-items: stretch;
-  }
-
-  .fe-how-panel-media,
-  .fe-how-panel-image {
-    min-height: 100%;
-  }
-
   .fe-steps-layout {
     grid-template-columns: minmax(0, 340px) 1fr;
     align-items: start;
-  }
-
-  .fe-stats-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

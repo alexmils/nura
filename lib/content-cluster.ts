@@ -85,7 +85,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
       {
         heading: "What Nura is — and is not",
         paragraphs: [
-          "Nura is self-help software for practice: intake and grounding in Guided mode, a moving ball for visual sets, optional voice, then a check-in. Free mode is the ball only.",
+          "Nura is self-help software for practice: intake and grounding in AI agent-guided, a moving ball for visual sets, optional voice, then a check-in. Self-guided is the ball only.",
           "It is not a licensed therapist, not emergency care, and not a diagnosis. If you have a clinician, this is the quiet homework between sessions — not a replacement for them.",
         ],
       },
@@ -120,7 +120,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         heading: "Talking is not a set",
         paragraphs: [
           "A lot of “AI therapy” products can reflect your words. They cannot move your gaze. If an app says it does EMDR but there is no left–right stimulus, it is a conversation about EMDR — not a set.",
-          "Nura’s differentiator is unglamorous on purpose: a ball that travels while you hold a target. Guided mode wraps that in intake, grounding, and check-ins. Free mode is the ball on your terms.",
+          "Nura’s differentiator is unglamorous on purpose: a ball that travels while you hold a target. AI agent-guided wraps that in intake, grounding, and check-ins. Self-guided is the ball on your terms.",
         ],
       },
       {
@@ -239,7 +239,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         heading: "What to run, what to save for the room",
         paragraphs: [
           "Good between-session work is bounded: grounding you already know, a target you have named before, a short set, a check-in, stop. Save brand-new trauma history for a human who can stay with you.",
-          "Guided mode in Nura still starts with intake and grounding before the ball. That is on purpose. Free mode skips the talk if you already know the drill.",
+          "AI agent-guided in Nura still starts with intake and grounding before the ball. That is on purpose. Self-guided skips the talk if you already know the drill.",
         ],
       },
       {
@@ -273,7 +273,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         heading: "Two meanings of “alone”",
         paragraphs: [
           "If you mean “without a therapist in the chair,” yes — people practice sets that way. If you mean “the same as eight phases with a trained EMDR clinician,” no. An app cannot hold you if you drop.",
-          "Nura is built for the first meaning: a moving ball, optional voice, a protocol you can follow in Guided mode. You are still the adult in the room.",
+          "Nura is built for the first meaning: a moving ball, optional voice, a protocol you can follow in AI agent-guided. You are still the adult in the room.",
         ],
       },
       {
@@ -316,7 +316,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
       {
         heading: "What you control in the app",
         paragraphs: [
-          "In Nura you set speed and how many times the ball repeats. You can stop mid-set. Guided mode still wants grounding before the first one.",
+          "In Nura you set speed and how many times the ball repeats. You can stop mid-set. AI agent-guided still wants grounding before the first one.",
           "Do not chase a feeling of “done” by stacking sets until you are wrung out. Stop on a slightly better or even place, then leave the room.",
         ],
       },
@@ -354,7 +354,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         heading: "If you still want a set",
         paragraphs: [
           "Pick a concrete target (a scene, a sentence, a place in the body), ground, run a short visual set, check. If the wave is panic — not “a bit activated” — stop and come back to the room.",
-          "Guided mode is slower on purpose. Free mode is faster to the ball. Neither is a panic button.",
+          "AI agent-guided is slower on purpose. Self-guided is faster to the ball. Neither is a panic button.",
         ],
       },
       {
@@ -390,7 +390,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
       {
         heading: "What the product is",
         paragraphs: [
-          "Nura gives you visual sets (a moving ball), Guided phases including intake and grounding, and Free mode. It is for people who want structured practice, including between sessions.",
+          "Nura gives you visual sets (a moving ball), Guided phases including intake and grounding, and Self-guided. It is for people who want structured practice, including between sessions.",
           "It does not diagnose PTSD. It does not certify that a memory is “processed.” It does not replace VA, NHS, or private trauma care.",
         ],
       },
@@ -442,36 +442,36 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
   },
   {
     slug: "guided-vs-free-mode",
-    title: "Guided vs Free Mode — Two Ways to Run a Set",
+    title: "AI agent-guided vs Self-guided — two ways to run a set",
     description:
-      "Nura has two session types: agent-guided, which walks you through phases and check-ins, and Free, where you run visual sets yourself. How to choose.",
+      "Nura has two session types: AI agent-guided, which walks you through phases and check-ins, and Self-guided, where you run visual sets yourself. How to choose.",
     kicker: "Modes",
     dek: "One walks you. One gets out of the way.",
     publishedAt: "2026-09-12T10:00:00.000Z",
     topic: "practice",
     featured: false,
     coverUrl: COVER.window,
-    emdrAnchor: "Guided and Free modes in a Nura EMDR session",
+    emdrAnchor: "AI agent-guided and Self-guided modes in a Nura EMDR session",
     related: ["emdr-session-structure", "visual-sets-and-the-moving-ball", "emdr-check-ins-after-sets"],
     sections: [
       {
-        heading: "Guided",
+        heading: "AI agent-guided",
         paragraphs: [
-          "You start a session and choose Guided. A guide walks intake (history and safety), then grounding, then processing with the ball, then a check-in. Voice is optional.",
+          "You start a session and choose AI agent-guided. A guide walks intake (history and safety), then grounding, then processing with the ball, then a check-in. Voice is optional.",
           "The ball does not start until the phase allows it. That is slower than tapping “go,” and that is the point.",
         ],
       },
       {
-        heading: "Free",
+        heading: "Self-guided",
         paragraphs: [
-          "Free mode is the moving ball, your speed, your repeats, no chat overlay. You already know the drill, or you only want the stimulus.",
-          "You are still responsible for grounding and stopping. The mode name is “Free,” not “unsafe.”",
+          "Self-guided is the visual set, your speed, your repeats, no chat overlay. You already know the drill, or you only want the stimulus.",
+          "You are still responsible for grounding and stopping. The mode name is “Self-guided,” not “unpaid.”",
         ],
       },
       {
         heading: "Picking without overthinking",
         paragraphs: [
-          "New to sets? Guided. Know your target and want quiet? Free. You can choose again next time — the product does not lock a personality onto you.",
+          "New to sets? AI agent-guided. Know your target and want quiet? Self-guided. You can choose again next time — the product does not lock a personality onto you.",
           "Neither mode is a licensed course of EMDR. Both are practice tools around the same visual set.",
         ],
       },
@@ -508,7 +508,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
       {
         heading: "In Nura",
         paragraphs: [
-          "Guided mode keeps grounding before processing. Free mode will let you skip it. Skipping is a choice, not a flex.",
+          "AI agent-guided keeps grounding before processing. Self-guided will let you skip it. Skipping is a choice, not a flex.",
           "You can stop a running set the same way you stop anything else in the app: you mean to stop, and the ball stops.",
         ],
       },
@@ -688,7 +688,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         ],
       },
       {
-        heading: "Free mode has no prompt",
+        heading: "Self-guided has no prompt",
         paragraphs: [
           "If you run Free, you must ask yourself the same questions. Skip that and you are just watching a ball, which is a different hobby.",
           "Ten seconds of honesty after the set is cheaper than an hour of being weird at dinner.",
@@ -725,7 +725,7 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
         heading: "Before the ball moves",
         paragraphs: [
           "You have a target you can name in a sentence. You have grounded enough to feel the chair. You know how you will stop.",
-          "If any of those are missing, you do not have a set. You have a hope. Guided mode will stall you at grounding for this reason.",
+          "If any of those are missing, you do not have a set. You have a hope. AI agent-guided will stall you at grounding for this reason.",
         ],
       },
       {

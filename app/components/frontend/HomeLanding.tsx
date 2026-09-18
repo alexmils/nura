@@ -5,26 +5,22 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
-  BookOpen,
-  Calendar,
   Check,
   ChevronLeft,
   ChevronRight,
   HeartHandshake,
   Play,
-  Shield,
-  Sparkles,
   Star,
-  Users,
-  Waves,
 } from "lucide-react";
 import { appPath } from "@/lib/app-base";
-import { BRAND_SPOKEN } from "@/lib/brand";
+import {
+  BRAND_SPOKEN,
+  SESSION_MODE_GUIDED_SHORT,
+  SESSION_MODE_SELF_SHORT,
+} from "@/lib/brand";
 import {
   BILLING_PLANS,
   TRIAL_DAYS,
-  TRIAL_GUIDED_SESSIONS,
-  type BillingPlanId,
 } from "@/lib/billing-constants";
 import {
   formatBlogDate,
@@ -32,7 +28,13 @@ import {
 } from "@/lib/landing-blog";
 import { LANDING_FAQ_ITEMS } from "@/lib/landing-faq";
 import { scheduleScrollToLandingHash } from "@/lib/landing-scroll";
+import { MARKETING_PRICING_CARDS } from "./marketingPricingCards";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { SessionPathSticky } from "./SessionPathSticky";
+import { SessionTopicsGrid } from "./SessionTopicsGrid";
+import { HomePauseCta } from "./HomePauseCta";
+import { HomeMemorySets } from "./HomeMemorySets";
+import { SessionModesPair } from "./SessionModesPair";
 import { useLandingMotion } from "./useLandingMotion";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
@@ -40,32 +42,13 @@ import "./landing-motion.css";
 /** Local marketing photos (self-hosted — Unsplash remote was flaky). */
 const IMG = {
   calmRest: "/marketing/landing/calm-rest.jpg",
-  greenLandscape: "/marketing/landing/green-landscape.jpg",
   supportTalk: "/marketing/landing/support-talk.jpg",
-  practiceSpace: "/marketing/landing/practice-space.jpg",
   reading: "/marketing/landing/reading.jpg",
-  eveningLight: "/marketing/landing/evening-light.jpg",
-  together: "/marketing/landing/together.jpg",
-  softWindow: "/marketing/landing/soft-window.jpg",
-  quietHands: "/marketing/landing/quiet-hands.jpg",
   avatarMaya: "/marketing/landing/avatar-maya.jpg",
   avatarJames: "/marketing/landing/avatar-james.jpg",
   avatarSophie: "/marketing/landing/avatar-sophie.jpg",
   avatarDaniel: "/marketing/landing/avatar-daniel.jpg",
 } as const;
-
-const ABOUT_IMAGES = [
-  { src: IMG.calmRest, alt: "Calm moment of rest" },
-  { src: IMG.greenLandscape, alt: "Soft green landscape" },
-  { src: IMG.supportTalk, alt: "Supportive conversation" },
-  { src: IMG.practiceSpace, alt: "Quiet practice space" },
-  { src: IMG.reading, alt: "Reading and reflection" },
-  { src: IMG.eveningLight, alt: "Gentle evening light" },
-  { src: IMG.softWindow, alt: "Soft window light" },
-  { src: IMG.quietHands, alt: "Quiet hands at rest" },
-];
-
-const ABOUT_COPY = `At ${BRAND_SPOKEN}, we believe therapy support is more than a blank screen — it’s a commitment to calmer sessions and clearer steps. Agent-guided EMDR when you want a session agent with you, Free sessions when you run the sets yourself, and readable resources — we keep the workspace quiet so you can stay with what matters.`;
 
 /** Decorative photos — native img so next/image does not emit 10+ srcset variants each. */
 function DecorativeImg({
@@ -93,128 +76,10 @@ function DecorativeImg({
   );
 }
 
-const FEATURES = [
-  {
-    icon: HeartHandshake,
-    title: "Calm session design",
-    body: "Soft surfaces, gentle motion, and room to breathe — not a clinical dashboard.",
-  },
-  {
-    icon: Waves,
-    title: "Agent-guided or Free",
-    body: "A session agent walks you through EMDR phases and check-ins — or Free, where you run visual sets yourself with no agent and no chat.",
-  },
-  {
-    icon: Shield,
-    title: "Safety built in",
-    body: "Intake and grounding before sets, clear crisis guidance, and honest limits about what Nura is.",
-  },
-  {
-    icon: BookOpen,
-    title: "Learn at your pace",
-    body: "Short guides for EMDR and therapy support — written for real people, not jargon.",
-  },
-];
-
-/** Large alternating image + copy blocks (fills the page between about and how-it-works). */
-const SHOWCASES = [
-  {
-    kicker: "Agent-guided",
-    title: "A quiet workspace for difficult moments",
-    body: "Start with intake and grounding, then move through protocol phases with a session agent — check-ins after each set, not a rush to finish.",
-    points: [
-      "Structured phases from intake through closure",
-      "Check-ins after visual sets with the session agent",
-      "Clear copy when you need a pause or grounding",
-    ],
-    image: IMG.practiceSpace,
-    alt: "Quiet practice space with soft light",
-  },
-  {
-    kicker: "Free session",
-    title: "Sets without an agent",
-    body: "When you already know what you need, Free is visual sets on your own — pick animation, speed, sound, and repeats, then go fullscreen while a set runs.",
-    points: [
-      "Visual sets you start and stop yourself",
-      "Animation, speed, sound, and repeats in session controls",
-      "Immersive fullscreen while a set is running",
-    ],
-    image: IMG.calmRest,
-    alt: "Calm rest and focus",
-  },
-  {
-    kicker: "Learn",
-    title: "Guides you can actually finish",
-    body: "Short articles on EMDR, safety, and what to expect — written for real people between sessions, not textbooks.",
-    points: [
-      "Readable articles and short videos",
-      "Honest limits — self-help, not a licensed therapist",
-      "Linked from the app when you need context",
-    ],
-    image: IMG.reading,
-    alt: "Reading and reflection",
-  },
-];
-
-const STEPS = [
-  {
-    n: "01",
-    title: "Create your space",
-    summary: "Sign up and land in a calm workspace.",
-    body: "Create an account, finish a short onboarding, and open a session workspace built for focus — not a busy dashboard.",
-    bullets: [
-      "Private sessions tied to your account",
-      "Trial time to explore before you commit",
-      "Settings for sound and motion preferences",
-    ],
-    image: IMG.eveningLight,
-    alt: "Warm evening light in a quiet room",
-  },
-  {
-    n: "02",
-    title: "Choose agent-guided or Free",
-    summary: "One path with a session agent. One with sets you run yourself.",
-    body: "Agent-guided sessions use a session agent through protocol phases, grounding, and check-ins. Free is visual sets without an agent — you control animation, speed, sound, and timing.",
-    bullets: [
-      "Agent-guided: phases, check-ins, and grounding",
-      "Free: sets you run yourself, no agent",
-      "Pick again whenever you start a new session",
-    ],
-    image: IMG.supportTalk,
-    alt: "Supportive conversation in a calm setting",
-  },
-  {
-    n: "03",
-    title: "Run your sets",
-    summary: "Ground, then start visual sets.",
-    body: "In agent-guided, follow grounding and intake, then run sets when you are ready. In Free, start a set anytime. Adjust session controls, then go immersive while a set runs.",
-    bullets: [
-      "Speed, animation, sound, and repeats in session controls",
-      "Check in after each set when you use the agent",
-      "Fullscreen while a set is running",
-    ],
-    image: IMG.greenLandscape,
-    alt: "Soft green landscape for calm focus",
-  },
-  {
-    n: "04",
-    title: "Stay supported",
-    summary: "Resources and plans when you need more.",
-    body: "Browse guides, track trial time, and upgrade when you want unlimited agent-guided sessions and full Free session time — cancel anytime in the portal.",
-    bullets: [
-      `${TRIAL_DAYS}-day trial with agent-guided sessions included`,
-      "Weekly, monthly, or yearly billing",
-      "Customer portal for billing anytime",
-    ],
-    image: IMG.together,
-    alt: "People sharing a calm supportive moment",
-  },
-];
-
 const TESTIMONIALS = [
   {
     quote:
-      "The interface feels calm enough to actually stay with a difficult memory. Free sessions let me practice without an agent.",
+      "The interface feels calm enough to actually stay with a difficult memory. Self-guided sessions let me practice without an agent.",
     name: "Maya L.",
     role: "Trial member",
     image: IMG.avatarMaya,
@@ -242,7 +107,7 @@ const TESTIMONIALS = [
   },
   {
     quote:
-      "I open Free when I need a quiet set — no agent, no pressure, just the controls I need.",
+      "I open Self-guided when I need a quiet set — no agent, no pressure, just the controls I need.",
     name: "Elena P.",
     role: "Weekly plan",
     image: IMG.avatarMaya,
@@ -432,86 +297,6 @@ function StoriesSection() {
 const HERO_IMAGE = IMG.supportTalk;
 const HERO_PREVIEW_IMAGE = IMG.calmRest;
 
-const STATS = [
-  { target: 8, suffix: "", label: "Protocol phases with the session agent" },
-  { target: 2, suffix: "", label: "Session modes — agent-guided & Free" },
-  { target: TRIAL_DAYS, suffix: " days", label: "Trial to explore Nura" },
-  { target: TRIAL_GUIDED_SESSIONS, suffix: "", label: "Agent-guided sessions in trial" },
-];
-
-const PRICING_CARDS: {
-  id: BillingPlanId;
-  icon: typeof Calendar;
-  title: string;
-  badge?: string;
-  featured?: boolean;
-  details: string;
-  /** Extra line under the period, e.g. yearly → monthly equivalent */
-  periodNote?: string;
-  features: string[];
-}[] = [
-  {
-    id: "weekly",
-    icon: Calendar,
-    title: "Weekly",
-    details:
-      "Flexible billing if you want to stay light — same full app, billed each week.",
-    features: [
-      "Unlimited agent-guided sessions",
-      "Full Free sessions (sets you run yourself)",
-      "No ads on paid plans",
-      "Cancel anytime in the portal",
-      "Same session workspace as other plans",
-    ],
-  },
-  {
-    id: "yearly",
-    icon: HeartHandshake,
-    title: "Yearly",
-    badge: "Best value",
-    featured: true,
-    details:
-      "One calm price for a full year — the lowest cost per month if Nura is part of your routine.",
-    periodNote: "≈ $8.25 / month",
-    features: [
-      "Everything in Monthly",
-      "Lowest cost per month",
-      "Pay once, fewer interruptions",
-      "Customer portal for billing",
-      "Keep your history and settings",
-    ],
-  },
-  {
-    id: "monthly",
-    icon: Sparkles,
-    title: "Monthly",
-    badge: "Most popular",
-    details:
-      "The everyday plan for practice between sessions — billed monthly, cancel anytime.",
-    features: [
-      "Unlimited agent-guided + Free sessions",
-      "Full protocol phases & check-ins",
-      "Resources library access",
-      "Customer portal for billing",
-      "Upgrade or switch plans later",
-    ],
-  },
-];
-
-function AboutRevealText({ text }: { text: string }) {
-  const words = text.trim().split(/\s+/);
-  return (
-    <h2 className="fe-about-title">
-      {words.map((word, i) => (
-        <span key={`w-${i}`}>
-          <span className="fe-about-word">{word}</span>
-          {i < words.length - 1 ? " " : null}
-        </span>
-      ))}
-    </h2>
-  );
-}
-
 /** Nexsas home/blog stagger — fixed crop heights across 3 columns. */
 const HOME_BLOG_HEIGHTS = [420, 320, 520] as const;
 const HOME_BLOG_PAGE_SIZE = 5;
@@ -660,7 +445,6 @@ export function HomeLanding({
   blogPosts?: LandingBlogPost[];
 }) {
   const landingRef = useRef<HTMLDivElement | null>(null);
-  const [activeStep, setActiveStep] = useState(0);
   useLandingMotion(landingRef);
 
   useEffect(() => {
@@ -675,8 +459,6 @@ export function HomeLanding({
       window.removeEventListener("hashchange", onHashChange);
     };
   }, []);
-
-  const step = STEPS[activeStep];
 
   return (
     <div ref={landingRef} className="fe-landing">
@@ -766,211 +548,15 @@ export function HomeLanding({
         </div>
       </section>
 
-      <section className="fe-about">
-        <div className="fe-container fe-about-inner">
-          <div className="fe-about-kicker-wrap fe-animate">
-            <Users size={16} strokeWidth={1.75} aria-hidden />
-            <p className="fe-about-kicker">Here when you need us</p>
-          </div>
-          <AboutRevealText text={ABOUT_COPY} />
-        </div>
+      <SessionPathSticky />
 
-        <div className="fe-about-marquee fe-animate" aria-hidden>
-          <div className="fe-about-marquee-fade fe-about-marquee-fade--left" />
-          <div className="fe-about-marquee-fade fe-about-marquee-fade--right" />
-          <div className="fe-about-marquee-track">
-            {[...ABOUT_IMAGES, ...ABOUT_IMAGES].map((img, i) => (
-              <div key={`${img.src}-${i}`} className="fe-about-marquee-item">
-                <DecorativeImg
-                  src={img.src}
-                  width={280}
-                  height={280}
-                  className="fe-about-marquee-image"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+      <SessionTopicsGrid />
 
-        <div className="fe-container fe-about-cta-wrap fe-animate">
-          <Link href="/about" className="fe-about-cta">
-            More about {BRAND_SPOKEN}
-            <span className="fe-about-cta-icon" aria-hidden>
-              <ArrowRight size={14} />
-            </span>
-          </Link>
-        </div>
-      </section>
+      <SessionModesPair />
 
-      <section className="fe-section-block">
-        <div className="fe-container">
-          <div className="fe-section-head">
-            <p className="fe-section-kicker fe-animate">Why {BRAND_SPOKEN}</p>
-            <LetterRevealHeading className="fe-section-title">
-              Support crafted around your pace
-            </LetterRevealHeading>
-            <p className="fe-section-body fe-animate">
-              Every surface is built for calm focus — a session agent when you want
-              structure, Free when you run the sets yourself, and resources you
-              can finish in one sitting.
-            </p>
-          </div>
-          <div className="fe-feature-grid">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="fe-feature-card fe-animate">
-                <f.icon size={22} strokeWidth={1.75} aria-hidden />
-                <h3>{f.title}</h3>
-                <p>{f.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomePauseCta />
 
-      <section className="fe-showcase-section">
-        <div className="fe-container">
-          <div className="fe-section-head fe-section-head--center">
-            <p className="fe-section-kicker fe-animate">Inside the app</p>
-            <LetterRevealHeading className="fe-section-title">
-              Tools that stay with you between sessions
-            </LetterRevealHeading>
-            <p className="fe-section-body fe-section-body--center fe-animate">
-              Large, quiet blocks for the parts of Nura you will use most — not a
-              thin strip of icons.
-            </p>
-          </div>
-          <div className="fe-showcase-list">
-            {SHOWCASES.map((block, i) => (
-              <article
-                key={block.title}
-                className={`fe-showcase fe-animate${i % 2 === 1 ? " fe-showcase--flip" : ""}`}
-              >
-                <div className="fe-showcase-media">
-                  <Image
-                    src={block.image}
-                    alt={block.alt}
-                    width={960}
-                    height={720}
-                    className="fe-showcase-image"
-                    priority={false}
-                    sizes="(max-width: 900px) 100vw, 48vw"
-                  />
-                </div>
-                <div className="fe-showcase-copy">
-                  <p className="fe-section-kicker">{block.kicker}</p>
-                  <h3 className="fe-showcase-title">{block.title}</h3>
-                  <p className="fe-showcase-body">{block.body}</p>
-                  <ul className="fe-showcase-points">
-                    {block.points.map((p) => (
-                      <li key={p}>
-                        <Check size={16} strokeWidth={2.25} aria-hidden />
-                        <span>{p}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="fe-how-section" id="how-it-works">
-        <div className="fe-container">
-          <div className="fe-how-head">
-            <p className="fe-section-kicker fe-section-kicker--on-dark fe-animate">
-              How it works
-            </p>
-            <LetterRevealHeading className="fe-how-title">
-              Personalized care, every step
-            </LetterRevealHeading>
-            <p className="fe-how-sub fe-animate">
-              Four calm steps from signup to ongoing support — same agent-guided
-              sessions and Free once you are in.
-            </p>
-          </div>
-
-          <div className="fe-how-layout">
-            <div
-              className="fe-how-tabs fe-animate"
-              role="tablist"
-              aria-label="How it works"
-            >
-              {STEPS.map((s, i) => (
-                <button
-                  key={s.n}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeStep === i}
-                  className={`fe-how-tab${activeStep === i ? " is-active" : ""}`}
-                  onClick={() => setActiveStep(i)}
-                >
-                  <span className="fe-how-tab-n">{s.n}</span>
-                  <span className="fe-how-tab-text">
-                    <span className="fe-how-tab-title">{s.title}</span>
-                    <span className="fe-how-tab-summary">{s.summary}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="fe-how-panel fe-animate" role="tabpanel" key={step.n}>
-              <div className="fe-how-panel-copy">
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-                <ul>
-                  {step.bullets.map((b) => (
-                    <li key={b}>{b}</li>
-                  ))}
-                </ul>
-                <Link
-                  href={appPath("/create-account")}
-                  className="fe-how-cta"
-                >
-                  Get started
-                  <ArrowRight size={16} aria-hidden />
-                </Link>
-              </div>
-              <div className="fe-how-panel-media">
-                <Image
-                  src={step.image}
-                  alt={step.alt}
-                  width={720}
-                  height={900}
-                  className="fe-how-panel-image"
-                  sizes="(max-width: 900px) 100vw, 42vw"
-                  priority={false}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="fe-stats-section fe-section-block">
-        <div className="fe-container">
-          <div className="fe-section-head fe-section-head--center">
-            <p className="fe-section-kicker fe-animate">Our journey in numbers</p>
-            <LetterRevealHeading className="fe-section-title">
-              A community built on calm and clarity
-            </LetterRevealHeading>
-          </div>
-          <div className="fe-stats-grid">
-            {STATS.map((s) => (
-              <div key={s.label} className="fe-stat fe-animate">
-                <p
-                  className="fe-count"
-                  data-target={String(s.target)}
-                  data-suffix={s.suffix}
-                >
-                  0{s.suffix}
-                </p>
-                <p className="fe-stat-label">{s.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <HomeMemorySets />
 
       <section className="fe-pricing-section" id="prices">
         <div className="fe-container">
@@ -979,14 +565,14 @@ export function HomeLanding({
               Plans tailored to your pace
             </LetterRevealHeading>
             <p className="fe-pricing-sub fe-animate">
-              Start with a {TRIAL_DAYS}-day trial. Every paid plan unlocks the same
-              agent-guided sessions and Free sessions — pick how often you want to
-              be billed.
+              Start with a {TRIAL_DAYS}-day trial. Every paid plan unlocks the same{" "}
+              {SESSION_MODE_GUIDED_SHORT} sessions and {SESSION_MODE_SELF_SHORT}{" "}
+              sessions — pick how often you want to be billed.
             </p>
           </div>
 
           <div className="fe-pricing-grid">
-            {PRICING_CARDS.map((card) => {
+            {MARKETING_PRICING_CARDS.map((card) => {
               const plan = BILLING_PLANS[card.id];
               const featured = Boolean(card.featured);
               const Icon = card.icon;

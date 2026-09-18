@@ -12,6 +12,11 @@ export function setLandingLenis(instance: Lenis | null) {
   landingLenis = instance;
 }
 
+/** Active Lenis instance on the home landing (null off-home). */
+export function getLandingLenis(): Lenis | null {
+  return landingLenis;
+}
+
 export function notifyLandingPreloaderDone() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(PRELOADER_DONE_EVENT));
@@ -63,7 +68,10 @@ export function resolveLandingHash(preferred?: string | null): string {
  * Smooth-scroll to a landing section id (with header offset).
  * Prefers Lenis when the home page is mounted; falls back to native smooth scroll.
  */
-export function scrollToLandingSection(hashOrId: string): boolean {
+export function scrollToLandingSection(
+  hashOrId: string,
+  extraOffsetPx = 0
+): boolean {
   if (typeof document === "undefined") return false;
   const id = hashOrId.replace(/^#/, "");
   if (!id) return false;
@@ -74,7 +82,8 @@ export function scrollToLandingSection(hashOrId: string): boolean {
   if (isLandingPreloaderActive()) return false;
 
   const header = document.querySelector<HTMLElement>(".frontend-header");
-  const offset = header ? -(header.offsetHeight + 12) : -88;
+  const offset =
+    (header ? -(header.offsetHeight + 12) : -88) + extraOffsetPx;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (landingLenis && !reduced) {

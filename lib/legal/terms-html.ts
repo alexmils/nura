@@ -58,7 +58,7 @@ const NURA_ADDENDUM = `
   <p>
     Working with difficult memories can bring up intense emotions, flooding, or
     intrusive material. You choose to use the product at your own risk. You are
-    responsible for deciding whether self-guided or agent-guided sets are
+    responsible for deciding whether self-guided or AI agent-guided sets are
     appropriate for you, and for stopping if you feel unsafe.
   </p>
   <h3 id="nura-emergency">No emergency duty</h3>
@@ -69,9 +69,9 @@ const NURA_ADDENDUM = `
     <strong>988</strong>. See our
     <a href="/learn">Learn</a> page for additional links.
   </p>
-  <h3 id="nura-ai">Agent-guided features</h3>
+  <h3 id="nura-ai">AI agent-guided features</h3>
   <p>
-    Agent-guided sessions and help chat use automated systems. Outputs can be
+    AI agent-guided sessions and help chat use automated systems. Outputs can be
     incomplete or wrong. The session agent is not a human clinician and must not
     be treated as one.
   </p>

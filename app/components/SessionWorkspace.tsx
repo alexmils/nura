@@ -23,12 +23,12 @@ import { signalFeedbackSessionEnd } from "./FeedbackPromptHost";
 import { startGamepadLoop, stopGamepadLoop } from "@/lib/gamepad";
 import { displayNameFor, useCurrentUser } from "./useCurrentUser";
 import {
-  adjustBlsToolbarField,
   moveBlsToolbarField,
   type BlsToolbarField,
 } from "@/lib/bls-toolbar-nav";
 import { getActiveSpeedHz } from "@/lib/bls-speed";
 import { useGamepadConnected } from "@/lib/useGamepadConnected";
+import { useGuideHost } from "./guide/ProductGuide";
 import {
   canRepeatGuidedSet,
   canStartBls,
@@ -111,15 +111,19 @@ export function SessionWorkspace() {
     (direction: "left" | "right" | "up" | "down") => void
   >(() => {});
   const gamepadConnected = useGamepadConnected();
-  const focusedFieldRef = useRef(focusedField);
   const gamepadConnectedRef = useRef(gamepadConnected);
   const freeLeaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const freeLeaseBusyRef = useRef(false);
   const adGateBusyRef = useRef(false);
 
   runningRef.current = running;
-  focusedFieldRef.current = focusedField;
   gamepadConnectedRef.current = gamepadConnected;
+
+  // The product tour points at the controls bar, then opens the gear sheet.
+  useGuideHost({
+    openGear: () => setGearOpen(true),
+    closeGear: () => setGearOpen(false),
+  });
 
   const thread = threads.find((t) => t.id === activeThreadId);
   const hasUserMessage = messages.some((m) => m.role === "user");
@@ -497,7 +501,10 @@ export function SessionWorkspace() {
 
   const navigateToolbar = useCallback(
     (direction: "left" | "right" | "up" | "down") => {
-      setFocusedField((prev) => moveBlsToolbarField(prev, direction));
+      const step = direction === "left" || direction === "up" ? -1 : 1;
+      setFocusedField((prev) =>
+        moveBlsToolbarField(prev, step, gamepadConnectedRef.current)
+      );
     },
     []
   );
@@ -521,15 +528,6 @@ export function SessionWorkspace() {
     startGamepadLoop({
       onToggle: () => toggleRunningRef.current(),
       onNavigate: (d) => navigateToolbarRef.current(d),
-      getFocused: () => focusedFieldRef.current,
-      adjustField: (field, delta) => {
-        setBls((prev) => {
-          const next = { ...prev };
-          adjustBlsToolbarField(next, field, delta);
-          return next;
-        });
-      },
-      connectedRef: gamepadConnectedRef,
     });
     return () => stopGamepadLoop();
   }, [setBls]);

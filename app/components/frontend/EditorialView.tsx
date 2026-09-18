@@ -20,7 +20,7 @@ export function EditorialView() {
             <p>
               The{" "}
               <Link href="/blog">guides</Link> describe how EMDR-style visual
-              sets work in this app: a moving ball, Guided and Free modes,
+              sets work in this app: a moving ball, AI agent-guided and Self-guided modes,
               grounding, and when to stop. They exist so search and a tired
               Tuesday night can meet the same honest sentences.
             </p>

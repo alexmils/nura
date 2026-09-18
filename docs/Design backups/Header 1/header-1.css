@@ -1,0 +1,421 @@
+/**
+ * BACKUP — Header 1 styles (hero + about)
+ * Captured 2026-09-13 from app/components/frontend/landing-motion.css
+ * Pair with Header1HeroAbout.tsx. Needs .fe-container + marketing tokens
+ * (--fe-bg, --fe-fg, --fe-muted, --fe-accent, --font-display, --font-sans, --font-alt).
+ */
+
+/* Split headline (Scalient / Webflow SplitText-style) */
+.fe-split-line {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  line-height: inherit;
+}
+
+.fe-split-word {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* —— Hero (Curevo full-bleed image + bottom content grid) —— */
+.fe-hero {
+  --fe-hero-dark: #26332d;
+  --fe-hero-title-color: #daffd3;
+  --fe-hero-kicker-color: #a4eda5;
+  --fe-hero-body-color: color-mix(in srgb, #daffd3 88%, #fff);
+  position: relative;
+  background: var(--fe-hero-dark);
+  overflow: hidden;
+}
+
+.fe-hero-image-wrap {
+  position: relative;
+}
+
+.fe-hero-image {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: clamp(34rem, 92vh, 48rem);
+  padding: clamp(6.5rem, 14vw, 10rem) 0 clamp(2.5rem, 5vw, 4rem);
+  overflow: hidden;
+  box-shadow:
+    inset 420px 0 200px 0 var(--fe-hero-dark),
+    inset -420px 0 200px 0 var(--fe-hero-dark);
+}
+
+.fe-hero-image-bg {
+  object-fit: cover;
+  object-position: center 20%;
+  z-index: 0;
+}
+
+.fe-hero-image-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(38, 51, 45, 0.58) 0%,
+      rgba(38, 51, 45, 0.32) 38%,
+      rgba(38, 51, 45, 0.72) 72%,
+      rgba(38, 51, 45, 0.97) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(38, 51, 45, 0.78) 0%,
+      rgba(38, 51, 45, 0.22) 55%,
+      rgba(38, 51, 45, 0.68) 100%
+    );
+  pointer-events: none;
+}
+
+/* Soft handoff into the about band — stays put while the photo parallax moves */
+.fe-hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(4.5rem, 12vw, 8rem);
+  z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed)) 100%
+  );
+}
+
+.fe-hero-content-wrap {
+  position: relative;
+  z-index: 2;
+}
+
+.fe-hero-info-inner {
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: end;
+}
+
+.fe-hero-left {
+  max-width: 34rem;
+}
+
+.fe-hero-kicker {
+  margin: 0 0 0.625rem;
+  font-family: var(--font-alt);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fe-hero-kicker-color);
+}
+
+.fe-hero-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6.5vw, 4rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--fe-hero-title-color);
+}
+
+.fe-hero-title-line {
+  display: block;
+}
+
+.fe-hero-title-line--accent em {
+  font-style: italic;
+  font-weight: 400;
+}
+
+.fe-hero-right {
+  max-width: 24rem;
+}
+
+.fe-hero-description {
+  margin: 0 0 1.25rem;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  line-height: 1.5;
+  color: var(--fe-hero-body-color);
+}
+
+.fe-hero-card-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.625rem;
+}
+
+.fe-hero-inner-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.625rem;
+  background: color-mix(in srgb, var(--fe-hero-dark) 55%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid color-mix(in srgb, #fff 12%, transparent);
+}
+
+.fe-hero-inner-icon {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fe-hero-kicker-color) 22%, transparent);
+  color: var(--fe-hero-kicker-color);
+}
+
+.fe-hero-inner-label {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  color: var(--fe-hero-body-color);
+}
+
+.fe-hero-inner-link {
+  display: inline-block;
+  margin-top: 0.2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--fe-hero-kicker-color);
+  text-decoration: none;
+}
+
+.fe-hero-inner-link:hover {
+  color: #fff;
+}
+
+.fe-hero-video-thumb {
+  position: relative;
+  flex: none;
+  width: 7.5rem;
+  border-radius: 0.625rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, #fff 14%, transparent);
+  text-decoration: none;
+}
+
+.fe-hero-video-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 5.5rem;
+  object-fit: cover;
+}
+
+.fe-hero-video-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--fe-hero-dark) 35%, transparent);
+  color: #fff;
+  transition: background 0.25s ease;
+}
+
+.fe-hero-video-thumb:hover .fe-hero-video-play {
+  background: color-mix(in srgb, var(--fe-hero-dark) 15%, transparent);
+}
+
+/* —— About (Curevo “Here when you need us”) —— */
+.fe-about {
+  padding: clamp(4rem, 9vw, 7rem) 0 clamp(3.5rem, 7vw, 5.5rem);
+  background: color-mix(in srgb, #fff 55%, var(--fe-bg));
+}
+
+.fe-about-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  max-width: 56rem;
+  text-align: center;
+}
+
+.fe-about-kicker-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--fe-muted);
+}
+
+.fe-about-kicker {
+  margin: 0;
+  font-family: var(--font-alt);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Curevo about statement — large body grotesk + scroll-scrub word color */
+.fe-about-title {
+  margin: 0;
+  max-width: min(54rem, 100%);
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 5vw, 3.45rem);
+  font-weight: 500;
+  line-height: 1.22;
+  letter-spacing: -0.025em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.fe-about-word {
+  display: inline;
+  color: var(--fe-fg);
+  will-change: color;
+}
+
+.fe-about-word.is-dim {
+  color: color-mix(in srgb, var(--fe-fg) 20%, transparent);
+}
+
+.fe-about-marquee {
+  position: relative;
+  width: min(100%, 72rem);
+  margin: clamp(3rem, 6vw, 4.5rem) auto 0;
+  overflow: hidden;
+}
+
+.fe-about-marquee-track {
+  display: flex;
+  gap: 1.35rem;
+  width: max-content;
+  animation: fe-about-marquee 42s linear infinite;
+}
+
+.fe-about-marquee-item {
+  flex: none;
+  width: clamp(14rem, 28vw, 20rem);
+  aspect-ratio: 1;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--fe-fg) 8%, var(--fe-bg));
+}
+
+.fe-about-marquee-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fe-about-marquee-fade {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(3rem, 12vw, 7rem);
+  z-index: 1;
+}
+
+.fe-about-marquee-fade--left {
+  left: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #fff 55%, var(--fe-bg)) 0%,
+    color-mix(in srgb, #fff 55%, var(--fe-bg)) 35%,
+    transparent 100%
+  );
+}
+
+.fe-about-marquee-fade--right {
+  right: 0;
+  background: linear-gradient(
+    270deg,
+    color-mix(in srgb, #fff 55%, var(--fe-bg)) 0%,
+    color-mix(in srgb, #fff 55%, var(--fe-bg)) 35%,
+    transparent 100%
+  );
+}
+
+@keyframes fe-about-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.fe-about-cta-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(2rem, 4vw, 2.75rem);
+}
+
+.fe-about-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.65rem 0.75rem 1.65rem;
+  border-radius: 6.25rem;
+  background: var(--fe-accent);
+  color: var(--fe-fg);
+  font-size: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    filter 0.25s ease,
+    transform 0.25s ease;
+}
+
+.fe-about-cta:hover {
+  /* hover pulse + pistachio — frontend-buttons.css */
+}
+
+.fe-about-cta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--fe-fg);
+  color: var(--fe-accent-fg);
+}
+
+@media (min-width: 720px) {
+  .fe-hero-info-inner {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.55fr);
+    justify-content: space-between;
+  }
+
+  .fe-hero-right {
+    justify-self: end;
+  }
+}
+
+@media (max-width: 719px) {
+  .fe-hero-card-row {
+    flex-direction: column;
+  }
+
+  .fe-hero-video-thumb {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-about-marquee-track {
+    animation: none;
+  }
+
+  .fe-about-word,
+  .fe-about-word.is-dim {
+    color: var(--fe-fg);
+  }
+}

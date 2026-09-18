@@ -19,6 +19,7 @@ import {
 } from "@/lib/resources";
 import { WorkspaceMenuButton } from "./SidebarNavContext";
 import { AdDisplayUnit } from "./AdDisplayUnit";
+import { CrisisHelpButton } from "./CrisisHelpButton";
 import { useApp } from "./AppProvider";
 
 function ResourceReadCard({ item }: { item: ResourceItem }) {
@@ -171,9 +172,9 @@ export function ResourcesLibrary() {
               </p>
             </div>
           </div>
-          <Link href={appPath()} className="resources-home-link">
-            Home
-          </Link>
+          <div className="workspace-header-trail">
+            <CrisisHelpButton />
+          </div>
         </div>
       </header>
 

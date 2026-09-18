@@ -87,13 +87,19 @@ function BlsGroup({
   label,
   focused,
   children,
+  field,
 }: {
   label: string;
   focused?: boolean;
   children: ReactNode;
+  /** Tour anchor for this control group. */
+  field?: string;
 }) {
   return (
-    <div className={`bls-group ${focused ? "bls-group-focused" : ""}`}>
+    <div
+      className={`bls-group ${focused ? "bls-group-focused" : ""}`}
+      data-guide-field={field}
+    >
       <div className="bls-seg" role="group" aria-label={label}>
         {children}
       </div>
@@ -249,6 +255,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
           <div className="bls-panel">
             <BlsGroup
               label="Speed"
+              field="speed"
               focused={SPEED_FIELDS.includes(focusedField)}
             >
               {bls.speedPresets.map((hz, index) => {
@@ -268,7 +275,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
               })}
             </BlsGroup>
 
-            <BlsGroup label="Repeats" focused={focusedField === "repeats"}>
+            <BlsGroup label="Repeats" field="repeats" focused={focusedField === "repeats"}>
               <input
                 type="number"
                 inputMode="numeric"
@@ -318,7 +325,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
               </SegBtn>
             </BlsGroup>
 
-            <BlsGroup label="Stereo sound" focused={focusedField === "sound"}>
+            <BlsGroup label="Stereo sound" field="sound" focused={focusedField === "sound"}>
               {SOUND_OPTIONS.map((opt) => (
                 <SegBtn
                   key={opt.value}
@@ -332,7 +339,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
               ))}
             </BlsGroup>
 
-            <BlsGroup label="Animation" focused={focusedField === "animation"}>
+            <BlsGroup label="Animation" field="animation" focused={focusedField === "animation"}>
               {ANIMATION_OPTIONS.map((opt) => (
                 <SegBtn
                   key={opt.value}
@@ -351,6 +358,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
             {gamepadConnected ? (
               <BlsGroup
                 label="Vibrations"
+                field="vibration"
                 focused={focusedField === "vibration"}
               >
                 {VIBRATION_OPTIONS.map((opt) => (
@@ -370,7 +378,7 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
               </BlsGroup>
             ) : null}
 
-            <BlsGroup label="Adjustments">
+            <BlsGroup label="Adjustments" field="adjustments">
               <SegBtn ariaLabel="Ball adjustments" onClick={onOpenGear}>
                 <SlidersHorizontal size={16} strokeWidth={2} />
               </SegBtn>

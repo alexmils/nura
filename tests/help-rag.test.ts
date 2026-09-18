@@ -81,12 +81,12 @@ describe("help RAG", () => {
       },
       {
         title: "Billing and trial",
-        body: "Trial includes guided sessions and Free mode minutes.",
+        body: "Trial includes guided sessions and self-guided set minutes.",
         tags: ["billing", "trial"],
       },
       {
         title: "Session modes",
-        body: "Guided vs Free mode (ball only).",
+        body: "AI agent-guided vs Self-guided (sets you run yourself).",
         tags: ["sessions"],
       },
     ];

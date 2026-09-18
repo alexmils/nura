@@ -21,6 +21,7 @@ import {
   hasClinicalAdvisorConfigured,
   legalEntityDisplayName,
 } from "@/lib/legal-entity";
+import { PRICING_FAQ_ITEMS } from "@/lib/pricing-faq";
 
 export const SITE_CONTENT_LANGUAGE = "en";
 
@@ -130,16 +131,15 @@ export function collectionPageJsonLd({
 
 /** Visible H1 + dek on `/learn` — JSON-LD must match the hub, not the meta title. */
 export const LEARN_JSON_LD = {
-  name: "Learn EMDR — reading paths",
-  description:
-    "Three short paths — pick a topic, read in order. For every guide newest-first, see the blog.",
+  name: "How can we help?",
+  description: "Short guides on EMDR, sets, and staying safe.",
 } as const;
 
 /** Visible H1 on `/knowledge` — matches meta keyword focus. */
 export const KNOWLEDGE_JSON_LD = {
   name: "EMDR knowledge clips",
   description:
-    "Short clips answering the questions people ask before a session: how Guided works, what Free mode does, the trial, and when to stop.",
+    "Short clips answering the questions people ask before a session: how AI agent-guided works, what Self-guided does, the trial, and when to stop.",
 } as const;
 
 /** Visible H1 + dek on `/blog` (dek without the Learn link markup). */
@@ -464,8 +464,8 @@ function offerAmount(displayPrice: string): string {
 
 /** H1 + lead mirrored into JSON-LD for `/pricing`. */
 export const PRICING_JSON_LD = {
-  name: "Pricing — EMDR app plans and free trial",
-  description: `Nura pricing: weekly, monthly, or yearly after a ${TRIAL_DAYS}-day trial. Every plan unlocks agent-guided and Free sessions.`,
+  name: "Plans tailored to your pace",
+  description: `${TRIAL_DAYS}-day trial. Same full app on every plan — pick how often you pay.`,
 } as const;
 
 /** H1 mirrored into JSON-LD for `/faq`. */
@@ -490,7 +490,7 @@ export function buildPricingJsonLd(origin: string) {
     "@id": `${base}/pricing#offer-${plan.id}`,
     position: i + 1,
     name: `${BRAND_SPOKEN} ${plan.label}`,
-    description: `${plan.label} plan after a ${TRIAL_DAYS}-day trial. Agent-guided and Free sessions included.`,
+    description: `${plan.label} plan after a ${TRIAL_DAYS}-day trial. AI agent-guided and Self-guided sessions included.`,
     price: offerAmount(plan.displayPrice),
     priceCurrency: "USD",
     url: `${base}/pricing`,
@@ -538,6 +538,7 @@ export function buildPricingJsonLd(origin: string) {
         },
       },
       ...offerNodes,
+      faqPageJsonLd([...PRICING_FAQ_ITEMS]),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
         { name: "Pricing", path: "/pricing" },
@@ -611,7 +612,7 @@ export function buildSupportJsonLd(origin: string) {
 export const ABOUT_JSON_LD = {
   name: "About the EMDR therapy online app",
   description:
-    "Nura is an online app for guided EMDR therapy between sessions — agent-guided practice and Free visual sets on your schedule.",
+    "Nura is an online app for guided EMDR therapy between sessions — AI agent-guided practice and self-guided visual sets on your schedule.",
 } as const;
 
 export function buildAboutJsonLd(origin: string) {

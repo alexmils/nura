@@ -19,6 +19,7 @@ import { Avatar } from "./Avatar";
 import { BrandLockup } from "./BrandLockup";
 import { displayNameFor, useCurrentUser } from "./useCurrentUser";
 import { useSidebarNav } from "./SidebarNavContext";
+import { useGuideHost, useGuideOptional } from "./guide/ProductGuide";
 import { APP_BASE, appPath } from "@/lib/app-base";
 
 const SIDEBAR_NAV = [
@@ -49,7 +50,8 @@ export function Sidebar() {
     openUpgradeModal,
   } = useApp();
   const { user } = useCurrentUser();
-  const { closeSidebar, closeSidebarDrawer } = useSidebarNav();
+  const { closeSidebar, closeSidebarDrawer, openSidebar } = useSidebarNav();
+  const guide = useGuideOptional();
   const [accountOpen, setAccountOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
@@ -80,7 +82,10 @@ export function Sidebar() {
       return;
     }
     const onPointer = (e: MouseEvent) => {
-      if (!accountFootRef.current?.contains(e.target as Node)) {
+      const target = e.target as Element | null;
+      // The tour opens this menu on purpose; its own clicks must not close it.
+      if (target?.closest?.("[data-guide-root]")) return;
+      if (!accountFootRef.current?.contains(target as Node)) {
         setAccountOpen(false);
         setHelpOpen(false);
       }
@@ -163,6 +168,25 @@ export function Sidebar() {
 
   const label = displayNameFor(user);
 
+  // The product tour drives the rail: open the drawer, open the account menu,
+  // and get back Home for the last step.
+  useGuideHost({
+    openSidebar,
+    openAccountMenu: () => {
+      setHelpOpen(false);
+      setAccountOpen(true);
+    },
+    closeAccountMenu: () => {
+      setHelpOpen(false);
+      setAccountOpen(false);
+    },
+    showHome: () => {
+      clearActiveThread();
+      closeSidebarDrawer();
+      router.push(APP_BASE);
+    },
+  });
+
   const clearLongPress = useCallback(() => {
     if (longPressRef.current) {
       clearTimeout(longPressRef.current.timer);
@@ -229,6 +253,7 @@ export function Sidebar() {
         <button
           type="button"
           onClick={onNewChat}
+          data-guide="new-chat"
           className="btn-primary flex w-full"
         >
           <Plus size={15} strokeWidth={2} />
@@ -261,6 +286,7 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
+              data-guide={isHome ? undefined : "nav-resources"}
               onClick={() => {
                 if (isHome) clearActiveThread();
                 closeSidebarDrawer();
@@ -276,7 +302,7 @@ export function Sidebar() {
 
       <p className="text-sidebar-section px-4 pb-1 pt-2">Recent</p>
 
-      <nav className="flex-1 overflow-y-auto px-2 py-1">
+      <nav className="flex-1 overflow-y-auto px-2 py-1" data-guide="threads">
         {threads.length === 0 && (
           <p className="text-sidebar-muted px-3 py-4 text-center">
             No sessions yet
@@ -383,6 +409,18 @@ export function Sidebar() {
             >
               Billing
             </Link>
+            <button
+              type="button"
+              className="dropdown-item w-full text-left"
+              role="menuitem"
+              data-guide="guide-item"
+              onClick={() => {
+                closeAccountMenus();
+                guide?.start(0);
+              }}
+            >
+              Guide
+            </button>
             <div
               className="sidebar-help-wrap"
               onMouseEnter={openHelpMenu}
@@ -458,6 +496,7 @@ export function Sidebar() {
           className="sidebar-account-btn"
           aria-expanded={accountOpen}
           aria-haspopup="menu"
+          data-guide="account"
         >
           <span className="sidebar-account-identity">
             <Avatar

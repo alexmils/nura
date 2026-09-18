@@ -27,7 +27,7 @@ export function AboutView() {
             <h2>What Nura is</h2>
             <p>
               {BRAND_SPOKEN} is a calm web app for AI-guided EMDR practice:
-              agent-guided sessions with optional voice, or Free visual sets you
+              AI agent-guided sessions with optional voice, or self-guided visual sets you
               run yourself — no agent, no chat. It is software for practice
               between sessions, not a clinic, not an EHR, and not emergency care.
             </p>
@@ -47,8 +47,8 @@ export function AboutView() {
           <section>
             <h2>How sessions work</h2>
             <p>
-              In an agent-guided session, a session agent walks phases and can
-              invite a visual set when it is time. Free is sets on your terms:
+              In an AI agent-guided session, a session agent walks phases and can
+              invite a visual set when it is time. Self-guided is sets on your terms:
               you choose speed, animation, sound, and repeats from session
               controls. Both modes stay inside the same calm workspace.
             </p>

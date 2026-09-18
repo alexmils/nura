@@ -76,7 +76,7 @@ export function AdInterstitial({
           Sponsored break
         </h2>
         <p className="admin-panel-sub mt-2">
-          Free sessions include a short ad. Upgrade anytime for an ad-free
+          Self-guided sessions include a short ad. Upgrade anytime for an ad-free
           experience.
         </p>
 

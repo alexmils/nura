@@ -87,7 +87,7 @@ export function startBrowserSpeech(
   if (!Ctor) {
     callbacks.onError?.(
       "unsupported",
-      "Voice isn’t supported in this browser — try Chrome or Edge."
+      "Voice isn’t supported in this browser. Try Chrome or Edge."
     );
     return null;
   }

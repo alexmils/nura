@@ -1,0 +1,48 @@
+---
+description: Session mode names — AI agent-guided vs Self-guided; never Free session as a mode
+alwaysApply: true
+---
+
+# EMDR — session mode names
+
+Internal ids stay `guided` | `free`. User-facing names do not.
+
+## Canonical labels
+
+| Internal | Write (full) | Short |
+|---|---|---|
+| `guided` | **AI agent-guided session** | **AI agent-guided** |
+| `free` | **Self-guided session** | **Self-guided** |
+
+Constants: `SESSION_MODE_*` in `lib/brand.ts`.
+
+```ts
+// ❌ BAD
+"Agent-guided session"
+"Free session"
+"Free mode"
+"Choose Guided or Free"
+
+// ✅ GOOD
+"AI agent-guided session"
+"Self-guided session"
+"Choose AI agent-guided or Self-guided"
+```
+
+## Why not “Free session”
+
+**Free** reads as **unpaid / $0**, not “no agent.” The self-run mode is on paid plans too. Never use **Free session**, **Free mode**, or **Free sessions** as the mode name.
+
+OK to keep **free** only for real price: “Start for free”, “7 days free”, “ad-free”, “won’t be charged.”
+
+Trial minutes on that mode: **self-guided set time** — not “Free session time.”
+
+## AI agent-guided (not Agent-guided)
+
+Always **AI agent-guided** for the agent mode. Do not drop “AI.”
+
+Product headlines may still say **AI-guided EMDR**. Wordmark stays **Nura** (never “Nura AI”).
+
+## Admin / code
+
+Admin chrome should use the same labels (**Self-guided**, not Free session). Code/CSS (`freeSessionChromeId`, `mode-free.mp4`, `threads.mode = 'free'`) may stay. Extend `rewriteRetiredBrandCopy` for leftover help text.

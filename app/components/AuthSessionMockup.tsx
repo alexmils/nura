@@ -24,7 +24,7 @@ export function AuthSessionMockup() {
           <p className="auth-visual-kicker">Self-help EMDR</p>
           <p className="auth-visual-title">EMDR therapy online</p>
           <p className="auth-visual-lead">
-            AI agent-guided sessions and Free visual sets in a calm app.
+            AI agent-guided sessions and self-guided visual sets in a calm app.
           </p>
         </div>
         <div className="auth-visual-social-wrap" aria-label="Follow Nura">

@@ -90,7 +90,7 @@ describe("changelog public parse", () => {
   it("rewrites BLS and strips markdown for the public page", () => {
     assert.equal(
       formatPublicChangelogItem("Trial includes 10 minutes of free BLS"),
-      "Trial includes 10 minutes of Free mode"
+      "Trial includes 10 minutes of self-guided set time"
     );
     assert.match(
       formatPublicChangelogItem("**Session header** (`threads.description`)"),

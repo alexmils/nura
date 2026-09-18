@@ -30,7 +30,7 @@ export class PaymentRequiredError extends Error {
 
   constructor(
     entitlement: EntitlementSnapshot,
-    message = "Payment required to use Free session time"
+    message = "Payment required to use self-guided set time"
   ) {
     super(message);
     this.entitlement = entitlement;
@@ -186,7 +186,7 @@ export async function consumeBlsSeconds(input: {
       throw new TrialLimitError(
         "bls_limit_reached",
         entitlement,
-        "Trial Free session time limit reached"
+        "Trial self-guided set time limit reached"
       );
     }
     granted = Math.min(seconds, remaining);

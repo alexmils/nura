@@ -48,7 +48,7 @@ export default async function ClinicalTeamPage() {
         <ul>
           <li>Intake screening and red-flag barriers before sets can run</li>
           <li>Safety copy, crisis language, and consent gate wording</li>
-          <li>When Free and agent-guided sets stay off</li>
+          <li>When Self-guided and AI agent-guided sets stay off</li>
         </ul>
 
         <h2>Authorities we cite</h2>

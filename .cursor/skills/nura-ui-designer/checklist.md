@@ -11,7 +11,9 @@ Use before ending a UI/UX turn.
 - [ ] One primary action; secondary chrome does not compete
 - [ ] No forbidden colors/fonts; no BLS in user copy
 - [ ] Removing the lockup would still feel like Nura (or deliberate product chrome)
-- [ ] New marketing section H2s use `LetterRevealHeading` (not hero / about / legal); title not wrapped in `.fe-animate`
+- [ ] New marketing section H2s use `LetterRevealHeading` (not hero / about / legal / Session path Attio fade); title not wrapped in `.fe-animate`; do not substitute GSAP fade (rule `letter-rise-headings.mdc`)
+- [ ] Session path / How it works: `id="how-it-works"` on section start; letter-rise on stage leads, pair titles, finale (not intro H2)
+- [ ] Centered title + sub above cards: flex `gap` on container (not margin-only); overlay header cleared; equal air under pill / under sub / under band (rule `marketing-section-spacing.mdc`)
 
 ## Copy (if strings changed)
 

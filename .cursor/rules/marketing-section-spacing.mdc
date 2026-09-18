@@ -1,0 +1,50 @@
+---
+description: >-
+  Marketing centered section heads — clear overlay header, flex gap (not
+  margin) between title/sub and content, equal vertical rhythm.
+globs: app/components/frontend/**/*.{tsx,css}
+alwaysApply: false
+---
+
+# EMDR — marketing section spacing (centered heads)
+
+When a marketing band has a **centered title + sub** above cards/grid/content (e.g. `/pricing` plans, similar hubs):
+
+## Do this
+
+1. **Clear the overlay header** — `.frontend-header--overlay` / `.frontend-header-pill` sits on top of the page. `padding-top` on the section must put the H1/H2 **below** the pill with ~2.5–3.5rem air (measure: `titleTop > pillBottom + ~40px`). Do not guess from “looks fine” while the title underlaps the header hit box.
+2. **Separate head from content with flex `gap`** — on the section’s `.fe-container` (or equivalent wrapper):
+
+```css
+.section > .fe-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: clamp(3.5rem, 6vw, 5rem); /* title/sub → cards */
+}
+
+.section .fe-pricing-head /* or .fe-section-head */ {
+  margin: 0 auto; /* kill global margin: 0 auto clamp(...) */
+  max-width: /* as designed */;
+}
+```
+
+3. **Equal rhythm** — roughly match:
+   - air under the pill → title
+   - gap under title/sub → content
+   - padding under the content band
+
+4. **Override shared section chrome** — global rules like `.fe-pricing-section { padding: … }` or `.fe-pricing-head { margin: 0 auto clamp(…) }` will fight page-specific layout. Use higher specificity (and `!important` on padding only when a shorthand elsewhere wins) scoped to the page modifier (e.g. `.fe-pricing-section--page`).
+
+## Do not
+
+| Bad | Why |
+|---|---|
+| Only `margin-bottom` on the head | Collapses / loses to global `.fe-pricing-head { margin: 0 auto clamp }` |
+| Tiny `padding-top` under overlay (~5–7rem) | Title sits under the pill; looks “cramped under header” |
+| `min-height: 100svh` + `justify-content: center` for this job | Uneven air above/below when content height varies |
+| Card hover lift (`translateY`) eating the gap under the sub | Lift eats the trial→cards air — lift only if grid has compensating `padding-top` |
+
+## Reference
+
+Shipped pattern: `app/components/frontend/pricing-page.css` (plans band). Skill: `.cursor/skills/nura-ui-designer/SKILL.md` → **Centered section heads**.
