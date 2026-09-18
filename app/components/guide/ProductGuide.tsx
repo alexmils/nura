@@ -437,6 +437,17 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    // A target taller than the viewport (the canvas, a long resource section)
+    // has no room above or below it: pin the card to the bottom of the window
+    // and centered, so it stays readable instead of being clamped over the top.
+    if (rect && (current.placement === "top" || current.placement === "bottom")) {
+      const tall = rect.height > vh * 0.45;
+      if (tall) {
+        left = (vw - cw) / 2;
+        top = vh - ch - m - 8;
+      }
+    }
+
     const maxLeft = Math.max(m, vw - cw - m);
     const maxTop = Math.max(m, vh - ch - m);
     setPos({

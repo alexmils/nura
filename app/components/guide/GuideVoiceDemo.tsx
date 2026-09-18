@@ -53,17 +53,17 @@ export function GuideVoiceDemo({ composerSelector }: { composerSelector: string 
   /** The demo owns the composer, so it can key the timeline to the real element. */
   const ready = rect != null && anchor != null;
 
-  /* Track the composer: it moves with the keyboard inset and window resizes. */
+  /* Track the composer: it mounts a beat after the step opens (guided mode is
+     switched on in the step's prepare), so poll until it appears. */
   useEffect(() => {
+    let cancelled = false;
+    let timer = 0;
     let frame = 0;
-    const composer = document.querySelector(composerSelector);
-    if (!composer) {
-      setRect(null);
-      setAnchor(null);
-      return;
-    }
+    const startedAt = Date.now();
 
-    const measure = () => {
+    const measure = (): boolean => {
+      const composer = document.querySelector(composerSelector);
+      if (!composer) return false;
       setRect(rectOf(composer));
       const button = composer.querySelector('[data-guide="voice-mode"]');
       const r = (button ?? composer).getBoundingClientRect();
@@ -72,19 +72,35 @@ export function GuideVoiceDemo({ composerSelector }: { composerSelector: string 
           ? { x: r.left + r.width / 2, y: r.top + r.height / 2 }
           : { x: r.right - 26, y: r.top + r.height / 2 }
       );
+      return true;
     };
-    measure();
+
+    const tick = () => {
+      if (cancelled) return;
+      if (!measure() && Date.now() - startedAt < 6000) {
+        timer = window.setTimeout(tick, 120);
+      }
+    };
+    tick();
 
     const onResize = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(measure);
+      frame = requestAnimationFrame(() => {
+        measure();
+      });
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", onResize, true);
-    const id = window.setInterval(measure, 900);
+    // The composer moves with the keyboard inset and re-renders on new lines.
+    const id = window.setInterval(() => {
+      measure();
+    }, 800);
+
     return () => {
-      cancelAnimationFrame(frame);
+      cancelled = true;
+      window.clearTimeout(timer);
       window.clearInterval(id);
+      cancelAnimationFrame(frame);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onResize, true);
     };
@@ -153,6 +169,7 @@ export function GuideVoiceDemo({ composerSelector }: { composerSelector: string 
 
   if (!ready) return null;
 
+  const vh = window.innerHeight;
   const dockVisible = beat !== "idle" && beat !== "move" && beat !== "click";
   // On the button while it presses, then it steps out of the way of the dock.
   const onButton = beat === "move" || beat === "click";
@@ -186,7 +203,11 @@ export function GuideVoiceDemo({ composerSelector }: { composerSelector: string 
       {dockVisible ? (
         <div
           className="pg-voice"
-          style={{ left: rect.left - 8, width: rect.width + 16, top: rect.top - 86 }}
+          style={{
+            left: rect.left - 8,
+            width: rect.width + 16,
+            bottom: vh - rect.top + 10,
+          }}
         >
           <div className="pg-voice-bars">
             {Array.from({ length: 9 }).map((_, i) => (

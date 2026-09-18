@@ -224,7 +224,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "gear-panel",
     surface: APP_BASE,
-    target: '.gear-section-body[data-section="look"]',
+    target: '[data-gear-section="look"]',
     placement: "top",
     kicker: "Session controls",
     title: "Look",
@@ -243,14 +243,14 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Talk to your guide",
     body: "In an AI agent-guided session you write here, or use the microphone to dictate. The guide answers in the language you write in, and checks in after each set. Watch:",
     demo: "voice",
-    cardOffset: 104,
+    cardOffset: 168,
     group: "session",
     prepare: ["chooseGuided"],
   },
   {
     id: "resources-watch",
     surface: RESOURCES_PATH,
-    target: "#resources-watch",
+    target: '[data-guide="resources-watch"]',
     placement: "bottom",
     kicker: "Resources",
     title: "Watch and learn",
@@ -259,7 +259,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "resources-read",
     surface: RESOURCES_PATH,
-    target: "#resources-read",
+    target: '[data-guide="resources-read"]',
     placement: "bottom",
     kicker: "Resources",
     title: "Read",
@@ -268,7 +268,7 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "resources-safety",
     surface: RESOURCES_PATH,
-    target: "#resources-safety",
+    target: '[data-guide="resources-safety"]',
     placement: "bottom",
     kicker: "Resources",
     title: "Safety",

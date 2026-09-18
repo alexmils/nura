@@ -95,8 +95,7 @@ describe("guide steps", () => {
     assert.ok(GUIDE_ACTIONS.includes("ensurePendingThread"));
   });
 
-  it("points targets at guide anchors that exist in the shell", () => {
-    const anchors = GUIDE_STEPS.map((step) => step.target).filter(
+  it("points targets at guide anchors that exist in the shell", () => {    const anchors = GUIDE_STEPS.map((step) => step.target).filter(
       (target): target is string => Boolean(target)
     );
     for (const anchor of anchors) {
@@ -116,10 +115,14 @@ describe("guide steps", () => {
     assert.ok(anchors.includes('[data-guide-field="sound"]'));
     assert.ok(anchors.includes('[data-guide-field="adjustments"]'));
     assert.ok(anchors.includes('[data-guide-field="vibration"]'));
-    // The adjustments step points at a section body that only renders expanded.
+    // Resource steps highlight the whole section, not just its heading.
+    assert.ok(anchors.includes('[data-guide="resources-watch"]'));
+    assert.ok(anchors.includes('[data-guide="resources-read"]'));
+    assert.ok(anchors.includes('[data-guide="resources-safety"]'));
+    // The adjustments step points at the whole Look card, not just its body.
     assert.ok(
-      anchors.includes('.gear-section-body[data-section="look"]'),
-      "the gear step should target the opened section body"
+      anchors.includes('[data-gear-section="look"]'),
+      "the gear step should target the whole section card"
     );
   });
 

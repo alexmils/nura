@@ -157,7 +157,10 @@ function GearSection({
 }) {
   const panelId = useId();
   return (
-    <section className={`gear-section ${open ? "gear-section-open" : ""}`}>
+    <section
+      className={`gear-section ${open ? "gear-section-open" : ""}`}
+      data-gear-section={id}
+    >
       <button
         type="button"
         className="gear-section-head"

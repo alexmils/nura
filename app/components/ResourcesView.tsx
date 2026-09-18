@@ -185,7 +185,11 @@ export function ResourcesLibrary() {
         {error ? <p className="workspace-hint">{error}</p> : null}
 
         {videos.length > 0 ? (
-          <section className="resources-section" aria-labelledby="resources-watch">
+          <section
+            className="resources-section"
+            aria-labelledby="resources-watch"
+            data-guide="resources-watch"
+          >
             <h2 id="resources-watch" className="resources-section-title">
               Watch & learn
             </h2>
@@ -198,7 +202,11 @@ export function ResourcesLibrary() {
         ) : null}
 
         {articles.length > 0 ? (
-          <section className="resources-section" aria-labelledby="resources-read">
+          <section
+            className="resources-section"
+            aria-labelledby="resources-read"
+            data-guide="resources-read"
+          >
             <h2 id="resources-read" className="resources-section-title">
               Read
             </h2>
@@ -211,7 +219,11 @@ export function ResourcesLibrary() {
         ) : null}
 
         {safety.length > 0 ? (
-          <section className="resources-section" aria-labelledby="resources-safety">
+          <section
+            className="resources-section"
+            aria-labelledby="resources-safety"
+            data-guide="resources-safety"
+          >
             <h2 id="resources-safety" className="resources-section-title">
               Safety
             </h2>
