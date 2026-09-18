@@ -140,6 +140,7 @@
 .pg-foot {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.7rem;
   margin-top: 0.4rem;
   padding-top: 0.85rem;
@@ -147,6 +148,7 @@
 }
 
 .pg-link {
+  flex: none;
   border: 0;
   background: transparent;
   padding: 0;
@@ -154,6 +156,7 @@
   color: var(--text-muted);
   text-decoration: underline;
   text-underline-offset: 2px;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -162,19 +165,23 @@
 }
 
 .pg-progress {
+  flex: none;
   font-size: 0.875rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .pg-actions {
   margin-left: auto;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
 .pg-btn {
+  flex: none;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -182,6 +189,7 @@
   border-radius: var(--radius-md);
   font-size: 0.9375rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   border: 1px solid transparent;
 }

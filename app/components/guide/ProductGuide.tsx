@@ -663,15 +663,6 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
                     <span>Back</span>
                   </button>
                 ) : null}
-                {current.finishSecondaryCta ? (
-                  <button
-                    type="button"
-                    className="pg-btn pg-btn--ghost"
-                    onClick={stop}
-                  >
-                    {current.finishSecondaryCta}
-                  </button>
-                ) : null}
                 <button
                   type="button"
                   className="pg-btn pg-btn--primary"

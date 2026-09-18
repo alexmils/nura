@@ -40,7 +40,6 @@ const USER_FACING_STRINGS = GUIDE_STEPS.flatMap((step) => [
   step.body,
   step.kicker ?? "",
   step.cta ?? "",
-  step.finishSecondaryCta ?? "",
 ]);
 
 describe("guide steps", () => {
@@ -143,6 +142,17 @@ describe("guide steps", () => {
     assert.equal(last.id, "finish");
     assert.ok((last.finishActions ?? []).length > 0);
     assert.ok(last.cta);
+  });
+
+  it("keeps button labels short enough to stay on one line", () => {
+    for (const step of GUIDE_STEPS) {
+      if (!step.cta) continue;
+      assert.ok(
+        step.cta.length <= 22,
+        `cta too long for the nowrap footer button: ${step.cta}`
+      );
+      assert.equal(step.cta.includes("\n"), false);
+    }
   });
 
   it("shows the controller step on the controls bar, at step 12", () => {

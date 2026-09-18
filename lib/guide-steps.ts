@@ -72,8 +72,6 @@ export type GuideStep = {
   cleanup?: GuideAction[];
   /** Primary button becomes "finish": run these, then end the tour. */
   finishActions?: GuideAction[];
-  /** Secondary button label for the final step. */
-  finishSecondaryCta?: string;
 };
 
 const RESOURCES_PATH = appPath("/resources");
@@ -277,7 +275,6 @@ export const GUIDE_STEPS: GuideStep[] = [
     body: "Everything lives in one screen, and the library sits in the sidebar. Run this tour again whenever you like from Guide in your account menu.",
     cta: "Start a session",
     finishActions: ["showHome"],
-    finishSecondaryCta: "Close",
   },
 ];
 
