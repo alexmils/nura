@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AppleToggle } from "@/app/components/AppleToggle";
 import { PasskeySettings } from "@/app/components/PasskeySettings";
+import { PasswordSettings } from "@/app/components/PasswordSettings";
 import { Avatar } from "@/app/components/Avatar";
 import { DeleteAccountZone } from "@/app/components/DeleteAccountZone";
 import { MemoryImportDropzone } from "@/app/components/MemoryImportDropzone";
@@ -305,6 +306,10 @@ function SettingsPageContent() {
                 </p>
               )}
             </div>
+            <PasswordSettings
+              hasPassword={Boolean(user?.hasPassword)}
+              onSaved={refreshUser}
+            />
             <DeleteAccountZone
               email={user?.email}
               hasPassword={Boolean(user?.hasPassword)}

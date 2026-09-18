@@ -104,6 +104,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Importing a ChatGPT or Claude export adds notes to that same list, with no sets to arrange
 - **Guide**: a replayable walkthrough of the app, always from the first step, from the new **Guide** item in your account menu; it highlights New chat, your session list, the session controls, sound, animation, the controller, and the resource library
 - The tour also runs once by itself after onboarding
+- Settings → Profile has a Password section: add a password to a Google account, or change the one you have
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
