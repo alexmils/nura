@@ -34,7 +34,7 @@ import {
 import "./product-guide.css";
 
 /** Space kept between the spotlight edge and the card. */
-const CARD_GAP = 14;
+const CARD_GAP = 16;
 const VIEWPORT_MARGIN = 12;
 /** Spotlight padding around the target. */
 const RING_PAD = 6;
@@ -102,7 +102,7 @@ function GamepadDemo() {
   return (
     <div className="pg-demo" data-guide="joystick-demo">
       <span className={`pg-chip${connected ? " is-on" : " is-off"}`}>
-        <Gamepad2 size={15} strokeWidth={2.1} aria-hidden />
+        <Gamepad2 size={17} strokeWidth={2.1} aria-hidden />
         {connected ? "Connected" : "Disconnected"}
       </span>
       <p className="pg-demo-hint">
@@ -621,7 +621,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
                 onClick={stop}
                 aria-label="Close guide"
               >
-                <X size={16} strokeWidth={2} aria-hidden />
+                <X size={18} strokeWidth={2} aria-hidden />
               </button>
             </div>
 
@@ -648,7 +648,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
                     className="pg-btn pg-btn--ghost"
                     onClick={previous}
                   >
-                    <ArrowLeft size={15} strokeWidth={2.25} aria-hidden />
+                    <ArrowLeft size={17} strokeWidth={2.25} aria-hidden />
                     <span>Back</span>
                   </button>
                 ) : null}
@@ -668,7 +668,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
                 >
                   <span>{primaryLabel}</span>
                   {current.finishActions ? null : (
-                    <ArrowRight size={15} strokeWidth={2.25} aria-hidden />
+                    <ArrowRight size={17} strokeWidth={2.25} aria-hidden />
                   )}
                 </button>
               </div>
