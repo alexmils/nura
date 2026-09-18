@@ -13,12 +13,10 @@ import type {
   AppSettings,
   BlsSettings,
   Memory,
-  MemorySet,
   Message,
   ProtocolPhase,
   SessionKind,
   Thread,
-  ThreadMemorySet,
 } from "@/lib/types";
 import { DEFAULT_BLS, DEFAULT_SETTINGS } from "@/lib/types";
 import type { SessionMode } from "@/lib/protocol";
@@ -120,8 +118,6 @@ interface AppState {
    * UI can hold a quiet placeholder instead of flashing the Home screen.
    */
   restoringSession: boolean;
-  memorySets: MemorySet[];
-  threadMemorySets: ThreadMemorySet[];
   memoryEnabled: boolean;
   settings: AppSettings;
   bls: BlsSettings;
@@ -161,7 +157,6 @@ interface AppState {
   saveSettings: (s: AppSettings) => Promise<void>;
   memories: Memory[];
   refreshMemories: () => Promise<void>;
-  setThreadMemorySet: (setId: string, enabled: boolean) => Promise<void>;
   openUpgradeModal: (reason?: UpgradeState["reason"]) => void;
   leaseBlsSeconds: (seconds: number) => Promise<number>;
   /** Show free-session interstitial when frequency rules say so. */
@@ -202,7 +197,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * look like the session was lost.
    */
   const [restoringSession, setRestoringSession] = useState(true);
-  const [memorySets, setMemorySets] = useState<MemorySet[]>([]);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [guidedChatChromeId, setGuidedChatChromeId] = useState(
@@ -216,9 +210,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [agentTyping, setAgentTyping] = useState(false);
   const leaveGuardRef = useRef<((proceed: () => void) => boolean) | null>(
     null
-  );
-  const [threadMemorySets, setThreadMemorySets] = useState<ThreadMemorySet[]>(
-    []
   );
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -390,8 +381,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         const data = await fetchJson<{
           messages?: Message[];
-          memorySets?: ThreadMemorySet[];
-          allSets?: MemorySet[];
           thread?: Thread;
         }>(`/api/threads?id=${id}`);
         if (!data.thread) {
@@ -402,8 +391,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         setActiveThreadId(id);
         setMessages(data.messages ?? []);
-        setThreadMemorySets(data.memorySets ?? []);
-        setMemorySets(data.allSets ?? []);
         storeSessionId(id);
         syncSessionUrl(id);
         return true;
@@ -439,7 +426,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     runWithLeaveGuard(() => {
       setActiveThreadId(null);
       setMessages([]);
-      setThreadMemorySets([]);
       setSessionMode("idle");
       // Going Home means "do not bring me back here on refresh".
       storeSessionId(null);
@@ -755,7 +741,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchJson<{
         settings?: AppSettings;
         memories?: Memory[];
-        memorySets?: MemorySet[];
         memoryEnabled?: boolean;
         voiceEnabled?: boolean;
         guidedChatChromeId?: number;
@@ -763,7 +748,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }>("/api/settings");
       setSettings(data.settings ?? DEFAULT_SETTINGS);
       setMemories(data.memories ?? []);
-      setMemorySets(data.memorySets ?? []);
       setMemoryEnabled(data.memoryEnabled !== false);
       setVoiceEnabled(data.voiceEnabled !== false);
       if (data.guidedChatChromeId != null) {
@@ -787,27 +771,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshMemories = refreshSettings;
-
-  const setThreadMemorySet = useCallback(
-    async (setId: string, enabled: boolean) => {
-      if (!activeThreadId) return;
-      const data = await fetchJson<{ memorySets?: ThreadMemorySet[] }>(
-        "/api/threads",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            action: "set_memory",
-            threadId: activeThreadId,
-            setId,
-            enabled,
-          }),
-        }
-      );
-      setThreadMemorySets(data.memorySets ?? []);
-    },
-    [activeThreadId]
-  );
 
   const setBls = useCallback(
     (
@@ -924,8 +887,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages,
       agentTyping,
       restoringSession,
-      memorySets,
-      threadMemorySets,
       memoryEnabled,
       settings,
       bls,
@@ -948,7 +909,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveSettings,
       memories,
       refreshMemories,
-      setThreadMemorySet,
       openUpgradeModal,
       leaseBlsSeconds,
       maybeShowAd,
@@ -968,8 +928,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages,
       agentTyping,
       restoringSession,
-      memorySets,
-      threadMemorySets,
       memoryEnabled,
       voiceEnabled,
       guidedChatChromeId,
@@ -994,7 +952,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveSettings,
       memories,
       refreshMemories,
-      setThreadMemorySet,
       openUpgradeModal,
       leaseBlsSeconds,
       maybeShowAd,

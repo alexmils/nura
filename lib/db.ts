@@ -2,10 +2,8 @@ import { Pool, type PoolClient, type QueryResultRow } from "pg";
 import type {
   AppSettings,
   Memory,
-  MemorySet,
   Message,
   Thread,
-  ThreadMemorySet,
 } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 import {
@@ -110,22 +108,10 @@ async function runSchemaMigrations(db: PoolClient) {
       body TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL
     );
-    CREATE TABLE IF NOT EXISTS memory_sets (
-      id TEXT PRIMARY KEY,
-      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS memory_set_items (
-      set_id TEXT NOT NULL REFERENCES memory_sets(id) ON DELETE CASCADE,
-      memory_id TEXT NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-      PRIMARY KEY (set_id, memory_id)
-    );
-    CREATE TABLE IF NOT EXISTS thread_memory_sets (
-      thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
-      set_id TEXT NOT NULL REFERENCES memory_sets(id) ON DELETE CASCADE,
-      enabled BOOLEAN NOT NULL DEFAULT FALSE,
-      PRIMARY KEY (thread_id, set_id)
-    );
+    -- Retired: memory sets / per-thread toggles (account-scoped flat notes only).
+    DROP TABLE IF EXISTS thread_memory_sets CASCADE;
+    DROP TABLE IF EXISTS memory_set_items CASCADE;
+    DROP TABLE IF EXISTS memory_sets CASCADE;
     CREATE TABLE IF NOT EXISTS app_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       json JSONB NOT NULL
@@ -412,13 +398,11 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS set_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS last_set_outcome TEXT;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
-    ALTER TABLE memory_sets ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
   `);
 
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_threads_user ON threads(user_id);
     CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id);
-    CREATE INDEX IF NOT EXISTS idx_memory_sets_user ON memory_sets(user_id);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub
       ON users(google_sub) WHERE google_sub IS NOT NULL;
   `);
@@ -681,7 +665,6 @@ export async function updateThread(
 
 export async function deleteThread(id: string) {
   await dbQuery("DELETE FROM messages WHERE thread_id = $1", [id]);
-  await dbQuery("DELETE FROM thread_memory_sets WHERE thread_id = $1", [id]);
   await dbQuery("DELETE FROM threads WHERE id = $1", [id]);
 }
 
@@ -864,147 +847,18 @@ export async function deleteMemory(id: string): Promise<boolean> {
   return (rowCount ?? 0) > 0;
 }
 
-export async function listMemorySets(): Promise<MemorySet[]> {
-  const { rows: sets } = await dbQuery<{ id: string; name: string }>(
-    "SELECT * FROM memory_sets ORDER BY name ASC"
-  );
-  if (!sets.length) return [];
-  const setIds = sets.map((s) => s.id);
-  const { rows: items } = await dbQuery<{ set_id: string; memory_id: string }>(
-    "SELECT set_id, memory_id FROM memory_set_items WHERE set_id = ANY($1)",
-    [setIds]
-  );
-  const bySet = new Map<string, string[]>();
-  for (const row of items) {
-    const list = bySet.get(row.set_id) ?? [];
-    list.push(row.memory_id);
-    bySet.set(row.set_id, list);
-  }
-  return sets.map((s) => ({
-    id: s.id,
-    name: s.name,
-    memoryIds: bySet.get(s.id) ?? [],
-  }));
+/** Delete every memory note for the current user (RLS-scoped). Intake profile is unchanged. */
+export async function clearMemories(): Promise<number> {
+  const { rowCount } = await dbQuery("DELETE FROM memories");
+  return rowCount ?? 0;
 }
 
-export async function createMemorySet(name: string): Promise<MemorySet> {
-  const { userId } = getRlsContext();
-  const set: MemorySet = { id: crypto.randomUUID(), name, memoryIds: [] };
-  await dbQuery(
-    "INSERT INTO memory_sets (id, user_id, name) VALUES ($1, $2, $3)",
-    [set.id, userId, set.name]
-  );
-  return set;
-}
-
-export async function updateMemorySet(
-  id: string,
-  name: string
-): Promise<MemorySet | null> {
-  const { rows } = await dbQuery(
-    "UPDATE memory_sets SET name = $1 WHERE id = $2 RETURNING id, name",
-    [name, id]
-  );
-  if (!rows[0]) return null;
-  const sets = await listMemorySets();
-  return sets.find((s) => s.id === id) ?? null;
-}
-
-export async function deleteMemorySet(id: string): Promise<boolean> {
-  const { rowCount } = await dbQuery("DELETE FROM memory_sets WHERE id = $1", [
-    id,
-  ]);
-  return (rowCount ?? 0) > 0;
-}
-
-export async function findMemorySetByName(
-  name: string
-): Promise<MemorySet | null> {
-  const sets = await listMemorySets();
-  return sets.find((s) => s.name === name) ?? null;
-}
-
-export async function addMemoryToSet(setId: string, memoryId: string) {
-  const { userId } = getRlsContext();
-  const { rows: setRows } = await dbQuery<{ id: string }>(
-    "SELECT id FROM memory_sets WHERE id = $1 AND user_id = $2",
-    [setId, userId]
-  );
-  if (!setRows[0]) {
-    throw new Error("Memory set not found");
-  }
-  const { rows: memRows } = await dbQuery<{ id: string }>(
-    "SELECT id FROM memories WHERE id = $1 AND user_id = $2",
-    [memoryId, userId]
-  );
-  if (!memRows[0]) {
-    throw new Error("Memory not found");
-  }
-  await dbQuery(
-    "INSERT INTO memory_set_items (set_id, memory_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-    [setId, memoryId]
-  );
-}
-
-export async function removeMemoryFromSet(setId: string, memoryId: string) {
-  await dbQuery(
-    "DELETE FROM memory_set_items WHERE set_id = $1 AND memory_id = $2",
-    [setId, memoryId]
-  );
-}
-
-export async function getThreadMemorySets(
-  threadId: string
-): Promise<ThreadMemorySet[]> {
-  const { rows } = await dbQuery(
-    "SELECT * FROM thread_memory_sets WHERE thread_id = $1",
-    [threadId]
-  );
-  return rows.map((r) => ({
-    threadId: r.thread_id as string,
-    setId: r.set_id as string,
-    enabled: Boolean(r.enabled),
-  }));
-}
-
-export async function setThreadMemorySet(
-  threadId: string,
-  setId: string,
-  enabled: boolean
-) {
-  await dbQuery(
-    `INSERT INTO thread_memory_sets (thread_id, set_id, enabled) VALUES ($1, $2, $3)
-     ON CONFLICT (thread_id, set_id) DO UPDATE SET enabled = EXCLUDED.enabled`,
-    [threadId, setId, enabled]
-  );
-}
-
-export async function getEnabledMemoryContext(threadId: string): Promise<string> {
-  const { rows } = await dbQuery<{
-    set_name: string;
-    title: string | null;
-    body: string | null;
-  }>(
-    `SELECT ms.name AS set_name, m.title, m.body
-     FROM thread_memory_sets tms
-     INNER JOIN memory_sets ms ON ms.id = tms.set_id
-     LEFT JOIN memory_set_items msi ON msi.set_id = ms.id
-     LEFT JOIN memories m ON m.id = msi.memory_id
-     WHERE tms.thread_id = $1 AND tms.enabled = TRUE
-     ORDER BY ms.name ASC, m.created_at DESC NULLS LAST`,
-    [threadId]
+/** Account-scoped notes for the guided-chat system prompt (newest first, 3k cap). */
+export async function getAccountMemoryContext(): Promise<string> {
+  const { rows } = await dbQuery<{ title: string; body: string }>(
+    `SELECT title, body FROM memories ORDER BY created_at DESC`
   );
   if (!rows.length) return "";
-  const lines: string[] = [];
-  let currentSet: string | null = null;
-  for (const row of rows) {
-    if (row.set_name !== currentSet) {
-      currentSet = row.set_name;
-      lines.push(`[${row.set_name}]`);
-    }
-    if (row.title != null && row.body != null) {
-      lines.push(`- ${row.title}: ${row.body}`);
-    }
-  }
+  const lines = rows.map((row) => `- ${row.title}: ${row.body}`);
   return formatMemoryContext(lines);
 }

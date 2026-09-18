@@ -91,7 +91,7 @@ const NURA_PRIVACY_ADDENDUM = `
     <li>Cloudflare (DNS, CDN, Turnstile bot protection)</li>
     <li>Stripe (payments)</li>
     <li>Email delivery (Brevo; optional Gmail API fallback)</li>
-    <li>LLM providers for agent-guided sessions and related AI features: OpenAI, Anthropic (Claude), and DeepSeek (as configured)</li>
+    <li>LLM providers for AI agent-guided sessions and related AI features: OpenAI, Anthropic (Claude), and DeepSeek (as configured)</li>
     <li>Optional marketing tags (Consent Mode / limited until cookie accept): Google Analytics 4, Google Tag Manager, Microsoft Clarity</li>
   </ul>
   <p>
@@ -101,7 +101,7 @@ const NURA_PRIVACY_ADDENDUM = `
 
   <h3 id="nura-llm">Large language models</h3>
   <p>
-    When you use agent-guided chat or related AI features, relevant prompts and
+    When you use AI agent-guided chat or related AI features, relevant prompts and
     session context are sent to the configured model provider (OpenAI, Anthropic
     (Claude), and/or DeepSeek) so the product can respond. Our product intent is
     that customer content is not used to train foundation models. Where a provider
@@ -131,7 +131,7 @@ const NURA_PRIVACY_ADDENDUM = `
   <p>You can update or delete your account yourself in the app:</p>
   <ul>
     <li><strong>Update profile</strong> — Sign in → Settings → Profile. Change your display name or photo, then Save profile.</li>
-    <li><strong>Delete account</strong> — Sign in → Settings → Profile → Danger zone → Delete account. Type your account email to confirm. This permanently removes your account, sessions, intake notes, and memory sets. If a Stripe subscription is on file, it must cancel successfully before deletion finishes.</li>
+    <li><strong>Delete account</strong> — Sign in → Settings → Profile → Danger zone → Delete account. Type your account email to confirm. This permanently removes your account, sessions, intake notes, and memory notes. If a Stripe subscription is on file, it must cancel successfully before deletion finishes.</li>
   </ul>
   <p>
     Prefer chat help instead? Open ${HELP_CONTROL} while signed in from the

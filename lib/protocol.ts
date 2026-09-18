@@ -40,7 +40,7 @@ export function systemPromptForPhase(
   const language = languageInstruction(languageCode);
   const languageBlock = language ? `\n\nLanguage for this session:\n${language}` : "";
   const memory = memoryContext
-    ? `\n\nEnabled memory sets for this session (user-owned context only):\n${memoryContext}`
+    ? `\n\nAccount memory (user-owned notes across sessions):\n${memoryContext}`
     : "";
   const profile = profileContext
     ? `\n\nClient profile (persistent across sessions — use for continuity):\n${profileContext}`

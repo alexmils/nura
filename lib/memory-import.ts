@@ -269,16 +269,3 @@ export function pickConversationsJsonFromZip(
   }
   return null;
 }
-
-export function setNameForImportSource(source: ImportSource): string {
-  switch (source) {
-    case "chatgpt":
-      return "Imported from ChatGPT";
-    case "claude":
-      return "Imported from Claude";
-    case "nura":
-      return "Imported notes";
-    default:
-      return "Imported notes";
-  }
-}

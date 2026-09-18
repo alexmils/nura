@@ -75,7 +75,7 @@ export function DeleteAccountZone({ email, hasPassword = false }: Props) {
       </h3>
       <p className="settings-help mt-1">
         Permanently delete your account, sessions, intake notes, and memory
-        sets. An active subscription must cancel successfully before deletion
+        notes. An active subscription must cancel successfully before deletion
         finishes. This cannot be undone.
       </p>
 

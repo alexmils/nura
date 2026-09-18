@@ -7,7 +7,6 @@ import {
 import {
   parseImportText,
   pickConversationsJsonFromZip,
-  setNameForImportSource,
 } from "../lib/memory-import";
 
 describe("formatMemoryContext", () => {
@@ -146,12 +145,5 @@ describe("pickConversationsJsonFromZip", () => {
     });
     assert.ok(picked);
     assert.match(picked!.fileName, /conversations\.json$/i);
-  });
-});
-
-describe("setNameForImportSource", () => {
-  it("names sets by source", () => {
-    assert.equal(setNameForImportSource("chatgpt"), "Imported from ChatGPT");
-    assert.equal(setNameForImportSource("claude"), "Imported from Claude");
   });
 });

@@ -31,7 +31,7 @@ type Tab = (typeof TABS)[number];
 const TAB_ITEMS = [
   { id: "brand", label: "Brand" },
   { id: "guided-chat", label: "Guided chat" },
-  { id: "free-session", label: "Free session" },
+  { id: "free-session", label: "Self-guided" },
   { id: "access", label: "Access" },
   { id: "features", label: "Features" },
   { id: "ads", label: "Ads" },
@@ -300,7 +300,7 @@ function AdminPlatformPageInner() {
 
           {tab === "free-session" && (
             <>
-              <h2 className="admin-panel-title">Free session look</h2>
+              <h2 className="admin-panel-title">Self-guided look</h2>
               <p className="admin-panel-sub">
                 Select a look with the radio or title. Click the mockup to view
                 it larger. Save platform settings to apply.
@@ -380,8 +380,8 @@ function AdminPlatformPageInner() {
                   title="Memory"
                   status={
                     settings.flags.memory
-                      ? "On — Memory tab and session set toggles available"
-                      : "Off — Memory tab hidden; guided chat gets no session notes"
+                      ? "On — Memory tab available"
+                      : "Off — Memory tab hidden; guided chat gets no notes"
                   }
                   checked={settings.flags.memory}
                   tone={settings.flags.memory ? "ok" : "neutral"}
@@ -438,7 +438,7 @@ function AdminPlatformPageInner() {
             <>
               <h2 className="admin-panel-title">Ads (free / trial)</h2>
               <p className="admin-panel-sub">
-                Interstitial before a Free session set, plus in-page display on
+                Interstitial before a Self-guided set, plus in-page display on
                 Resources for trial users. Paying users never see ads. Frequency
                 applies to the Free-session interstitial only.
               </p>
@@ -578,7 +578,7 @@ function AdminPlatformPageInner() {
               {(settings.ads?.frequencyMode ?? "per_session") ===
                 "every_n_sets" && (
                 <p className="admin-panel-sub">
-                  Counts completed Free session sets. Example N=3: sets 1–3 free, ad
+                  Counts completed Self-guided sets. Example N=3: sets 1–3 free, ad
                   before set 4, then again after 3 more, and so on.
                 </p>
               )}

@@ -98,6 +98,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Say “again” after a set that was interrupted, or that you were not focused for, and the guide runs the same set again
 - Say “done” to confirm you finished a set, and the guide carries on from there
 - [internal] Threads remember set state (`set_count`, `last_set_outcome`) so the guide knows whether a set actually ran
+- Memory notes live on your account: the agent can use them in every AI agent-guided session
+- Settings → Memory shows your notes in one list, with edit and delete on each one
+- Clear all memory in Settings wipes every note at once; your intake history stays
+- Importing a ChatGPT or Claude export adds notes to that same list, with no sets to arrange
 
 ### Changed
 - [internal] Session path: one H2 above (“A session, start to finish.”), muted sub smaller; right lead “From ground to close — one calm loop.” (≪ H2, not a second title); nav labels ≠ right leads
@@ -334,6 +338,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Session status stays on one line: phase and rating chips sit beside the help button, with the session target reading on the line below
 - The message box hint now comes in the language you are writing in, so it reads in the same language as the guide
 - The first set now starts from the distress rating you give, whatever it is, instead of waiting for the number to come down first
+- [internal] Memory simplified to account-scoped notes: memory sets and per-session toggles removed (`lib/db.ts` drops `memory_sets`, `memory_set_items`, `thread_memory_sets`; `getAccountMemoryContext` replaces `getEnabledMemoryContext`; `/api/settings` gains `clear_memories`, `/api/threads` drops `set_memory`)
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

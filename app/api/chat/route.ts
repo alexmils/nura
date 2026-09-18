@@ -3,7 +3,7 @@ import {
   addMessage,
   clientProfileContextBlock,
   getClientProfile,
-  getEnabledMemoryContext,
+  getAccountMemoryContext,
   getThread,
   listMessages,
   updateMessageContent,
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     const memoryContext =
       platform.flags.memory === false
         ? ""
-        : await getEnabledMemoryContext(threadId);
+        : await getAccountMemoryContext();
     const profile = await getClientProfile(userId);
     const profileContext = clientProfileContextBlock(profile);
     const history = await listMessages(threadId);

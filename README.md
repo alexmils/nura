@@ -1,6 +1,6 @@
 # Nura
 
-Next.js web app for **EMDR Support** with guided sessions, visual sets, and memory sets. Brand: **Nura** · Operator: **Receptly LLC** · Site: [nurahelp.com](https://nurahelp.com). See `docs/brand.md`.
+Next.js web app for **EMDR Support** with guided sessions, visual sets, and account memory notes. Brand: **Nura** · Operator: **Receptly LLC** · Site: [nurahelp.com](https://nurahelp.com). See `docs/brand.md`.
 
 ## Features
 
@@ -8,8 +8,8 @@ Next.js web app for **EMDR Support** with guided sessions, visual sets, and memo
 - Center canvas with AFTL-style ball controls (speed, repeats, sound, animation, vibration, gear)
 - Faded agent overlay at bottom-center with hover history and roll-in animation
 - Space / gamepad to start/stop BLS
-- Settings: Auto voice, DeepSeek/OpenAI/Claude, ElevenLabs, memories & sets
-- Right-click thread → Edit → enable memory sets per session
+- Settings: Auto voice, DeepSeek/OpenAI/Claude, ElevenLabs, memory notes
+- Memory notes are account-wide; edit, delete, or clear all in Settings → Memory
 
 ## Setup
 

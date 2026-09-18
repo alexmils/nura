@@ -5,16 +5,13 @@ import {
   getThread,
   updateThread,
   deleteThread,
+  pruneEmptyThreads,
   listMessages,
-  getThreadMemorySets,
-  setThreadMemorySet,
-  listMemorySets,
 } from "@/lib/db";
 import { withAuth } from "@/lib/api-auth";
 import { isChoosableSessionMode } from "@/lib/session-mode";
 import { consumeGuidedSessionIfNeeded, TrialLimitError } from "@/lib/trial-usage";
 import { getEntitlementForUser, publicEntitlement } from "@/lib/entitlements";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import { hasRequiredConsents } from "@/lib/consents";
 
 export async function GET(request: Request) {
@@ -27,10 +24,10 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: "Not found" }, { status: 404 });
       }
       const messages = await listMessages(id);
-      const memorySets = await getThreadMemorySets(id);
-      const allSets = await listMemorySets();
-      return NextResponse.json({ thread, messages, memorySets, allSets });
+      return NextResponse.json({ thread, messages });
     }
+    const exceptId = searchParams.get("except");
+    await pruneEmptyThreads(exceptId);
     return NextResponse.json({ threads: await listThreads() });
   });
 }
@@ -134,23 +131,6 @@ export async function POST(request: Request) {
     if (body.action === "delete" && body.id) {
       await deleteThread(body.id);
       return NextResponse.json({ ok: true });
-    }
-    if (
-      body.action === "set_memory" &&
-      body.threadId &&
-      body.setId !== undefined
-    ) {
-      const platform = await getPlatformSettings();
-      if (platform.flags.memory === false) {
-        return NextResponse.json(
-          { error: "Memory is turned off" },
-          { status: 403 }
-        );
-      }
-      await setThreadMemorySet(body.threadId, body.setId, Boolean(body.enabled));
-      return NextResponse.json({
-        memorySets: await getThreadMemorySets(body.threadId),
-      });
     }
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   });

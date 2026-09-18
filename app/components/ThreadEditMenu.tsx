@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useApp } from "./AppProvider";
-import { AppleToggle } from "./AppleToggle";
 
 export function ThreadEditMenu({
   threadId,
@@ -12,21 +11,10 @@ export function ThreadEditMenu({
   threadId: string;
   onClose: () => void;
 }) {
-  const {
-    threads,
-    memorySets,
-    threadMemorySets,
-    memoryEnabled,
-    updateThreadLocal,
-    setThreadMemorySet,
-    selectThread,
-    refreshSettings,
-  } = useApp();
+  const { threads, memoryEnabled, updateThreadLocal, selectThread } = useApp();
   const thread = threads.find((t) => t.id === threadId);
   const [title, setTitle] = useState(thread?.title ?? "");
   const [description, setDescription] = useState(thread?.description ?? "");
-  const [newSetName, setNewSetName] = useState("");
-  const [creatingSet, setCreatingSet] = useState(false);
 
   useEffect(() => {
     void selectThread(threadId);
@@ -38,27 +26,6 @@ export function ThreadEditMenu({
   }, [thread?.title, thread?.description, threadId]);
 
   if (!thread) return null;
-
-  const isSetEnabled = (setId: string) =>
-    threadMemorySets.some((t) => t.setId === setId && t.enabled);
-
-  const createSet = async () => {
-    const name = newSetName.trim();
-    if (!name || creatingSet) return;
-    setCreatingSet(true);
-    try {
-      await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "create_set", name }),
-      });
-      setNewSetName("");
-      await refreshSettings();
-      await selectThread(threadId);
-    } finally {
-      setCreatingSet(false);
-    }
-  };
 
   return (
     <div
@@ -91,63 +58,16 @@ export function ThreadEditMenu({
           />
         </label>
         {memoryEnabled && (
-          <>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="settings-body-text">Session sets</p>
-              <Link
-                href="/app/settings?tab=memory"
-                className="settings-muted font-medium text-[var(--accent)] hover:underline"
-                onClick={onClose}
-              >
-                Open Settings
-              </Link>
-            </div>
-            <div className="settings-group mb-3 max-h-52 overflow-y-auto">
-              {memorySets.length === 0 && (
-                <p className="settings-row settings-help">
-                  No sets yet. Create one below, or open Settings.
-                </p>
-              )}
-              {memorySets.map((set) => (
-                <div
-                  key={set.id}
-                  className="settings-row settings-toggle-row items-center"
-                >
-                  <span className="settings-body-text">{set.name}</span>
-                  <AppleToggle
-                    label={`Enable ${set.name}`}
-                    checked={isSetEnabled(set.id)}
-                    onChange={(enabled) =>
-                      void setThreadMemorySet(set.id, enabled)
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="mb-5 flex gap-2">
-              <input
-                className="field flex-1"
-                value={newSetName}
-                placeholder="New set name"
-                maxLength={80}
-                onChange={(e) => setNewSetName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    void createSet();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className="btn-secondary shrink-0"
-                disabled={!newSetName.trim() || creatingSet}
-                onClick={() => void createSet()}
-              >
-                {creatingSet ? "Adding…" : "Add set"}
-              </button>
-            </div>
-          </>
+          <p className="mb-5 settings-help">
+            Memory notes are account-wide.{" "}
+            <Link
+              href="/app/settings?tab=memory"
+              className="settings-muted font-medium text-[var(--accent)] hover:underline"
+              onClick={onClose}
+            >
+              Manage memory
+            </Link>
+          </p>
         )}
         <div className="flex justify-end gap-2">
           <button type="button" className="btn-secondary" onClick={onClose}>

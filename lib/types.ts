@@ -82,18 +82,6 @@ export interface Memory {
   createdAt: string;
 }
 
-export interface MemorySet {
-  id: string;
-  name: string;
-  memoryIds: string[];
-}
-
-export interface ThreadMemorySet {
-  threadId: string;
-  setId: string;
-  enabled: boolean;
-}
-
 export type AiProvider = "deepseek" | "openai" | "claude";
 
 export interface ConnectorConfig {

@@ -120,7 +120,6 @@ export function MemoryImportDropzone({ onImported, toast }: Props) {
         body: JSON.stringify({
           action: "import_memories",
           notes,
-          setName: setNameForImportSource(source),
         }),
       });
       const data = (await res.json()) as { error?: string; imported?: number };

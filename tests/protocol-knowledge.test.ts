@@ -43,9 +43,9 @@ describe("protocol knowledge", () => {
 
   it("includes user memory only when provided", () => {
     const without = systemPromptForPhase("grounding", "");
-    assert.ok(!without.includes("Enabled memory sets"));
-    const withMem = systemPromptForPhase("grounding", "[Safe place]\n- beach");
-    assert.match(withMem, /Enabled memory sets/);
+    assert.ok(!without.includes("Account memory"));
+    const withMem = systemPromptForPhase("grounding", "- Safe place: beach");
+    assert.match(withMem, /Account memory/);
     assert.match(withMem, /beach/);
   });
 });
