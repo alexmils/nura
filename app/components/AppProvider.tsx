@@ -886,9 +886,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // has is a no-op, so the tour does not re-write the thread on every step.
   useGuideHost({
     ensurePendingThread: async () => {
+      // Consent is the one gate the tour cannot work around: without it the
+      // session screen never mounts, so tell the engine to skip the group.
+      const ok = consentOk === true ? true : await refreshConsent();
+      if (!ok) return false;
       clearActiveThread();
       await createThread();
-      return true;
+      // Wait for the picker before the step tries to measure it.
+      for (let i = 0; i < 20; i += 1) {
+        if (document.querySelector('[data-guide="mode-cards"]')) return true;
+        await new Promise((resolve) => window.setTimeout(resolve, 120));
+      }
+      return false;
     },
     chooseSelfGuided: () => {
       const current = threads.find((t) => t.id === activeThreadId);
@@ -903,15 +912,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     startNewChat: () => {
       void createThread();
     },
-    canRunSession: () =>
-      consentOk === true &&
-      entitlement != null &&
-      entitlement.canUseApp &&
-      !(
-        entitlement.isTrialLimited &&
-        (entitlement.guidedRemaining <= 0 ||
-          entitlement.blsSecondsRemaining <= 0)
-      ),
+    // Only a *known* block skips the session steps. Entitlement and consent
+    // arrive a beat after the shell mounts, and treating "still loading" as
+    // "blocked" silently dropped ten steps of the tour.
+    canRunSession: () => {
+      if (!entitlement) return true;
+      if (!entitlement.canUseApp) return false;
+      if (entitlement.isTrialLimited) {
+        const guidedLeft = entitlement.guidedRemaining ?? 0;
+        const selfLeft = entitlement.blsSecondsRemaining ?? 0;
+        if (guidedLeft <= 0 && selfLeft <= 0) return false;
+      }
+      return true;
+    },
   });
 
   const value = useMemo(

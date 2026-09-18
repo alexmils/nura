@@ -316,6 +316,8 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     let timer = 0;
     let attempts = 0;
     const startedAt = Date.now();
+    /** Last measured box, so a 4Hz poll does not re-render the card for nothing. */
+    let lastKey = "";
 
     const attach = (el: Element) => {
       const update = () => {
@@ -325,7 +327,16 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
           setRect(null);
           return;
         }
-        setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
+        const next = {
+          top: r.top,
+          left: r.left,
+          width: r.width,
+          height: r.height,
+        };
+        const key = `${Math.round(next.top)}:${Math.round(next.left)}:${Math.round(next.width)}:${Math.round(next.height)}`;
+        if (key === lastKey) return;
+        lastKey = key;
+        setRect(next);
       };
       update();
 
@@ -335,11 +346,9 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
         observer = new ResizeObserver(update);
         observer.observe(el);
       }
-      detach = () => {
-        window.removeEventListener("scroll", update, true);
-        window.removeEventListener("resize", update);
-        observer?.disconnect();
-      };
+      // Panels that open with a transform (the sidebar drawer, the sheet) move
+      // without firing scroll/resize, so keep a slow poll for the whole step.
+      timer = window.setInterval(update, 250);
 
       if (!isFullyVisible(el)) {
         try {
@@ -352,6 +361,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
           /* older engines: the card still lands in view */
         }
       }
+      detach = () => {
+        window.removeEventListener("scroll", update, true);
+        window.removeEventListener("resize", update);
+        observer?.disconnect();
+        window.clearInterval(timer);
+      };
     };
 
     const poll = () => {
@@ -405,47 +420,69 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       left = (vw - cw) / 2;
       top = (vh - ch) / 2;
     } else {
-      switch (current.placement) {
-        case "top":
-          left = rect.left + rect.width / 2 - cw / 2;
-          top = rect.top - ch - gap;
-          break;
-        case "bottom":
-          left = rect.left + rect.width / 2 - cw / 2;
-          top = rect.top + rect.height + gap;
-          break;
-        case "left":
-          left = rect.left - cw - gap;
-          top = rect.top + rect.height / 2 - ch / 2;
-          break;
-        default:
-          left = rect.left + rect.width + gap;
-          top = rect.top + rect.height / 2 - ch / 2;
-          break;
-      }
+      const centerX = rect.left + rect.width / 2 - cw / 2;
+      const centerY = rect.top + rect.height / 2 - ch / 2;
+      const above = { left: centerX, top: rect.top - ch - gap };
+      const below = { left: centerX, top: rect.top + rect.height + gap };
+      const toLeft = { left: rect.left - cw - gap, top: centerY };
+      const toRight = { left: rect.left + rect.width + gap, top: centerY };
 
-      // Flip to the other side when the preferred side has no room.
-      if (top < m && current.placement === "top") {
-        top = rect.top + rect.height + CARD_GAP;
-      } else if (top + ch > vh - m && current.placement === "bottom") {
-        top = rect.top - ch - gap;
-      }
-      if (left < m && current.placement === "right") {
-        left = rect.left - cw - gap;
-      } else if (left + cw > vw - m && current.placement === "left") {
-        left = rect.left + rect.width + gap;
-      }
-    }
-
-    // A target taller than the viewport (the canvas, a long resource section)
-    // has no room above or below it: pin the card to the bottom of the window
-    // and centered, so it stays readable instead of being clamped over the top.
-    if (rect && (current.placement === "top" || current.placement === "bottom")) {
       const tall = rect.height > vh * 0.45;
-      if (tall) {
-        left = (vw - cw) / 2;
-        top = vh - ch - m - 8;
+      // A target taller than the screen leaves no room on any side. The card is
+      // pinned to the bottom edge (and the dot moves to the target's top edge,
+      // see dotStyle), instead of hunting for the smallest overlap.
+      const pinned = { left: (vw - cw) / 2, top: vh - ch - m - 8 };
+
+      // Preference order per placement, then the other sides as fallbacks.
+      const order =
+        current.placement === "top"
+          ? [above, below, toLeft, toRight]
+          : current.placement === "bottom"
+            ? [below, above, toLeft, toRight]
+            : current.placement === "left"
+              ? [toLeft, toRight, above, below]
+              : [toRight, toLeft, above, below];
+
+      const candidates = tall ? [pinned] : order;
+
+      // The card must never sit on top of the spotlight, or it hides the very
+      // thing the step is about (and the pointer dot with it).
+      const blocked = {
+        left: rect.left - DOT_SIZE - RING_PAD,
+        top: rect.top - DOT_SIZE - RING_PAD,
+        width: rect.width + (DOT_SIZE + RING_PAD) * 2,
+        height: rect.height + (DOT_SIZE + RING_PAD) * 2,
+      };
+
+      const clampBox = (box: { left: number; top: number }) => ({
+        left: Math.min(Math.max(m, box.left), Math.max(m, vw - cw - m)),
+        top: Math.min(Math.max(m, box.top), Math.max(m, vh - ch - m)),
+      });
+
+      let chosen: { left: number; top: number } | null = null;
+      let bestOverlap = Number.POSITIVE_INFINITY;
+      let best = clampBox(candidates[0]);
+
+      for (const candidate of candidates) {
+        const box = clampBox(candidate);
+        const overlapX = Math.min(box.left + cw, blocked.left + blocked.width) -
+          Math.max(box.left, blocked.left);
+        const overlapY = Math.min(box.top + ch, blocked.top + blocked.height) -
+          Math.max(box.top, blocked.top);
+        const area = overlapX > 0 && overlapY > 0 ? overlapX * overlapY : 0;
+        if (area === 0) {
+          chosen = box;
+          break;
+        }
+        if (area < bestOverlap) {
+          bestOverlap = area;
+          best = box;
+        }
       }
+
+      const box = chosen ?? best;
+      left = box.left;
+      top = box.top;
     }
 
     const maxLeft = Math.max(m, vw - cw - m);
@@ -620,7 +657,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
               />
               <div
                 className="pg-dot"
-                style={dotStyle(rect, current.placement)}
+                data-placement={current.placement}
+                style={dotStyle(
+                  rect,
+                  current.placement,
+                  rect.height > window.innerHeight * 0.45
+                )}
                 aria-hidden
               />
             </>
@@ -700,7 +742,8 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
 
 function dotStyle(
   rect: GuideRect,
-  placement: GuideStep["placement"]
+  placement: GuideStep["placement"],
+  tall: boolean
 ): { left: number; top: number } {
   const midX = rect.left + rect.width / 2;
   const midY = rect.top + rect.height / 2;
@@ -710,6 +753,13 @@ function dotStyle(
 
   // Sit on the ring edge, not in the gap: the card is placed in the gap, so a
   // dot pushed further out would be painted over by it.
+  //
+  // A target taller than the screen gets its card pinned to the bottom, so the
+  // dot moves to the top edge to stay clear of it.
+  if (tall && placement !== "left" && placement !== "right") {
+    return { left: clamp(midX - half), top: clamp(rect.top - edge - half) };
+  }
+
   switch (placement) {
     case "top":
       return { left: clamp(midX - half), top: clamp(rect.top - edge - half) };

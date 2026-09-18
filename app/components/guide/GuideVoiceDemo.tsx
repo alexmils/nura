@@ -170,19 +170,19 @@ export function GuideVoiceDemo({ composerSelector }: { composerSelector: string 
   if (!ready) return null;
 
   const vh = window.innerHeight;
+  const vw = window.innerWidth;
   const dockVisible = beat !== "idle" && beat !== "move" && beat !== "click";
-  // On the button while it presses, then it steps out of the way of the dock.
-  const onButton = beat === "move" || beat === "click";
-  const cursor = onButton
-    ? { x: anchor.x + 6, y: anchor.y + 4 }
-    : { x: anchor.x + 96, y: anchor.y + 104 };
+  // The pointer stays where it clicked: resting it further out pushed it off
+  // screen on phones.
+  const cursor = {
+    x: Math.min(Math.max(8, anchor.x + 6), vw - 30),
+    y: Math.min(Math.max(8, anchor.y + 4), vh - 30),
+  };
 
   return (
     <div className="pg-demo-layer" aria-hidden data-guide="voice-demo">
       <span
-        className={`pg-cursor${beat === "click" ? " is-clicking" : ""}${
-          dockVisible ? " is-away" : ""
-        }`}
+        className={`pg-cursor${beat === "click" ? " is-clicking" : ""}`}
         style={{ left: cursor.x, top: cursor.y }}
       >
         <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden>

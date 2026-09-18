@@ -28,6 +28,8 @@
   border-radius: 12px;
   box-shadow: 0 0 0 3px rgba(164, 237, 165, 0.3);
   pointer-events: none;
+  transition: top 140ms ease-out, left 140ms ease-out, width 140ms ease-out,
+    height 140ms ease-out;
   animation: pg-ring-pulse 2.4s ease-in-out infinite;
 }
 
@@ -49,6 +51,7 @@
   border-radius: 999px;
   background: var(--accent);
   pointer-events: none;
+  transition: top 140ms ease-out, left 140ms ease-out;
   animation: pg-dot-pulse 1.6s ease-in-out infinite;
 }
 
@@ -270,10 +273,6 @@
 
 .pg-cursor.is-clicking {
   transform: translate(-2px, -2px) scale(0.86);
-}
-
-.pg-cursor.is-away {
-  opacity: 0;
 }
 
 .pg-ripple {
