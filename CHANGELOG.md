@@ -339,6 +339,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The message box hint now comes in the language you are writing in, so it reads in the same language as the guide
 - The first set now starts from the distress rating you give, whatever it is, instead of waiting for the number to come down first
 - [internal] Memory simplified to account-scoped notes: memory sets and per-session toggles removed (`lib/db.ts` drops `memory_sets`, `memory_set_items`, `thread_memory_sets`; `getAccountMemoryContext` replaces `getEnabledMemoryContext`; `/api/settings` gains `clear_memories`, `/api/threads` drops `set_memory`)
+- [internal] Memory reads and writes are scoped by `user_id` in SQL instead of relying on RLS, which a table-owner connection is exempt from; retired memory-set tables removed from `ensureRlsPolicies` so schema init runs on an empty database
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

@@ -26,9 +26,6 @@ export async function ensureRlsPolicies(client?: SqlClient) {
     "threads",
     "messages",
     "memories",
-    "memory_sets",
-    "memory_set_items",
-    "thread_memory_sets",
     "user_settings",
     "client_profiles",
     "consents",
@@ -66,39 +63,6 @@ export async function ensureRlsPolicies(client?: SqlClient) {
       user_id = app_current_user_id()
     );
 
-    DROP POLICY IF EXISTS memory_sets_all ON memory_sets;
-    CREATE POLICY memory_sets_all ON memory_sets FOR ALL USING (
-      user_id = app_current_user_id()
-    ) WITH CHECK (
-      user_id = app_current_user_id()
-    );
-
-    DROP POLICY IF EXISTS memory_set_items_all ON memory_set_items;
-    CREATE POLICY memory_set_items_all ON memory_set_items FOR ALL USING (
-      EXISTS (
-        SELECT 1 FROM memory_sets ms
-        WHERE ms.id = memory_set_items.set_id AND ms.user_id = app_current_user_id()
-      )
-    ) WITH CHECK (
-      EXISTS (
-        SELECT 1 FROM memory_sets ms
-        WHERE ms.id = memory_set_items.set_id AND ms.user_id = app_current_user_id()
-      )
-    );
-
-    DROP POLICY IF EXISTS thread_memory_sets_all ON thread_memory_sets;
-    CREATE POLICY thread_memory_sets_all ON thread_memory_sets FOR ALL USING (
-      EXISTS (
-        SELECT 1 FROM threads t
-        WHERE t.id = thread_memory_sets.thread_id AND t.user_id = app_current_user_id()
-      )
-    ) WITH CHECK (
-      EXISTS (
-        SELECT 1 FROM threads t
-        WHERE t.id = thread_memory_sets.thread_id AND t.user_id = app_current_user_id()
-      )
-    );
-
     DROP POLICY IF EXISTS user_settings_all ON user_settings;
     CREATE POLICY user_settings_all ON user_settings FOR ALL USING (
       user_id = app_current_user_id()
@@ -129,10 +93,6 @@ export async function migrateOrphanDataToUser(userId: string) {
   );
   await dbQuery(
     "UPDATE memories SET user_id = $1 WHERE user_id IS NULL",
-    [userId]
-  );
-  await dbQuery(
-    "UPDATE memory_sets SET user_id = $1 WHERE user_id IS NULL",
     [userId]
   );
 }

@@ -786,8 +786,10 @@ export async function saveSettings(settings: AppSettings) {
 }
 
 export async function listMemories(): Promise<Memory[]> {
+  const { userId } = getRlsContext();
   const { rows } = await dbQuery(
-    "SELECT * FROM memories ORDER BY created_at DESC"
+    "SELECT * FROM memories WHERE user_id = $1 ORDER BY created_at DESC",
+    [userId]
   );
   return rows.map((r) => ({
     id: r.id as string,
@@ -827,10 +829,11 @@ export async function updateMemory(
   title: string,
   body: string
 ): Promise<Memory | null> {
+  const { userId } = getRlsContext();
   const { rows } = await dbQuery(
-    `UPDATE memories SET title = $1, body = $2 WHERE id = $3
+    `UPDATE memories SET title = $1, body = $2 WHERE id = $3 AND user_id = $4
      RETURNING id, title, body, created_at`,
-    [title, body, id]
+    [title, body, id, userId]
   );
   const r = rows[0];
   if (!r) return null;
@@ -843,20 +846,32 @@ export async function updateMemory(
 }
 
 export async function deleteMemory(id: string): Promise<boolean> {
-  const { rowCount } = await dbQuery("DELETE FROM memories WHERE id = $1", [id]);
+  const { userId } = getRlsContext();
+  const { rowCount } = await dbQuery(
+    "DELETE FROM memories WHERE id = $1 AND user_id = $2",
+    [id, userId]
+  );
   return (rowCount ?? 0) > 0;
 }
 
-/** Delete every memory note for the current user (RLS-scoped). Intake profile is unchanged. */
+/**
+ * Delete every memory note for the current user. Intake profile is unchanged.
+ * Scoped by user_id in SQL: safe even where RLS is not enforced (owner role).
+ */
 export async function clearMemories(): Promise<number> {
-  const { rowCount } = await dbQuery("DELETE FROM memories");
+  const { userId } = getRlsContext();
+  const { rowCount } = await dbQuery("DELETE FROM memories WHERE user_id = $1", [
+    userId,
+  ]);
   return rowCount ?? 0;
 }
 
 /** Account-scoped notes for the guided-chat system prompt (newest first, 3k cap). */
 export async function getAccountMemoryContext(): Promise<string> {
+  const { userId } = getRlsContext();
   const { rows } = await dbQuery<{ title: string; body: string }>(
-    `SELECT title, body FROM memories ORDER BY created_at DESC`
+    `SELECT title, body FROM memories WHERE user_id = $1 ORDER BY created_at DESC`,
+    [userId]
   );
   if (!rows.length) return "";
   const lines = rows.map((row) => `- ${row.title}: ${row.body}`);
