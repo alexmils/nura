@@ -106,6 +106,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The tour also runs once by itself after onboarding
 
 ### Changed
+- Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
 - [internal] Session path: one H2 above (“A session, start to finish.”), muted sub smaller; right lead “From ground to close — one calm loop.” (≪ H2, not a second title); nav labels ≠ right leads
 - [internal] Session path ground duo: side-by-side `.fe-spath-pair` cards below hero media; GSAP flip-in on scroll (hidden until viewport); taller ground panel so duo stays below first fold
 - [internal] Session path intro: Attio-length H2 (ink + 3 muted fade lines); `.fe-spath` margin-top 100px for breathing room under header

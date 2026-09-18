@@ -669,9 +669,13 @@ export async function deleteThread(id: string) {
 }
 
 /**
- * Drop unused session shells: pending picker tabs, or intake with no user
- * message and no Free set started (`intake_complete`).
- * Pass `exceptId` to keep the tab the user is currently on.
+ * Drop session shells that have nothing to come back to: pending picker tabs,
+ * Self-guided sessions (no agent, no chat, nothing but the live set), or intake
+ * with no user message and no set started (`intake_complete`).
+ *
+ * A Self-guided session is deliberately not kept in Recent: its settings are
+ * stored per user (`lib/bls-prefs.ts`), so reopening the tab would restore
+ * nothing. Pass `exceptId` to keep the tab the user is currently on.
  */
 export async function pruneEmptyThreads(
   exceptId?: string | null
@@ -684,6 +688,13 @@ export async function pruneEmptyThreads(
        AND ($2::text IS NULL OR t.id <> $2)
        AND (
          t.mode = 'pending'
+         OR (
+           t.mode = 'free'
+           AND NOT EXISTS (
+             SELECT 1 FROM messages m
+             WHERE m.thread_id = t.id AND m.role = 'user'
+           )
+         )
          OR (
            t.phase = 'intake'
            AND COALESCE(t.intake_complete, FALSE) = FALSE
