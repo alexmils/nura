@@ -327,6 +327,7 @@ export function AgentOverlay({
           <button
             type="button"
             className="agent-composer-voice-mode"
+            data-guide="voice-mode"
             onClick={() => {
               stopDictation();
               onEnterVoice?.();

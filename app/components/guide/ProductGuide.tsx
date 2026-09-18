@@ -14,6 +14,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { APP_BASE } from "@/lib/app-base";
+import { GuideVoiceDemo } from "./GuideVoiceDemo";
 import {
   GUIDE_STEPS,
   clearGuideStepIndex,
@@ -398,6 +399,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
 
     let left: number;
     let top: number;
+    const gap = CARD_GAP + (current.cardOffset ?? 0);
 
     if (!rect || current.placement === "center") {
       left = (vw - cw) / 2;
@@ -406,18 +408,18 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       switch (current.placement) {
         case "top":
           left = rect.left + rect.width / 2 - cw / 2;
-          top = rect.top - ch - CARD_GAP;
+          top = rect.top - ch - gap;
           break;
         case "bottom":
           left = rect.left + rect.width / 2 - cw / 2;
-          top = rect.top + rect.height + CARD_GAP;
+          top = rect.top + rect.height + gap;
           break;
         case "left":
-          left = rect.left - cw - CARD_GAP;
+          left = rect.left - cw - gap;
           top = rect.top + rect.height / 2 - ch / 2;
           break;
         default:
-          left = rect.left + rect.width + CARD_GAP;
+          left = rect.left + rect.width + gap;
           top = rect.top + rect.height / 2 - ch / 2;
           break;
       }
@@ -426,12 +428,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       if (top < m && current.placement === "top") {
         top = rect.top + rect.height + CARD_GAP;
       } else if (top + ch > vh - m && current.placement === "bottom") {
-        top = rect.top - ch - CARD_GAP;
+        top = rect.top - ch - gap;
       }
       if (left < m && current.placement === "right") {
-        left = rect.left - cw - CARD_GAP;
+        left = rect.left - cw - gap;
       } else if (left + cw > vw - m && current.placement === "left") {
-        left = rect.left + rect.width + CARD_GAP;
+        left = rect.left + rect.width + gap;
       }
     }
 
@@ -555,6 +557,9 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       {children}
       {current ? (
         <div className="pg-root" data-guide-root="">
+          {current.demo === "voice" && current.target ? (
+            <GuideVoiceDemo composerSelector={current.target} />
+          ) : null}
           {rect ? (
             <>
               <div

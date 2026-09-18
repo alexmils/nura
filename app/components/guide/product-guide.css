@@ -236,4 +236,131 @@
     animation: none;
     box-shadow: 0 0 0 3px rgba(247, 253, 247, 0.95);
   }
+  .pg-voice-bar {
+    animation: none;
+    transform: scaleY(0.4);
+  }
+  .pg-cursor {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Voice mode simulation (composer step)                               */
+/* ------------------------------------------------------------------ */
+
+.pg-demo-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.pg-cursor {
+  position: fixed;
+  width: 20px;
+  height: 20px;
+  display: block;
+  transform: translate(-2px, -2px) scale(1);
+  transition: left 0.95s cubic-bezier(0.32, 0.72, 0, 1),
+    top 0.95s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease,
+    transform 0.12s ease;
+  filter: drop-shadow(0 2px 3px rgba(32, 38, 22, 0.4));
+}
+
+.pg-cursor.is-clicking {
+  transform: translate(-2px, -2px) scale(0.86);
+}
+
+.pg-cursor.is-away {
+  opacity: 0;
+}
+
+.pg-ripple {
+  position: fixed;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  opacity: 0;
+}
+
+.pg-ripple.is-live {
+  animation: pg-ripple-out 0.75s ease-out 2;
+}
+
+@keyframes pg-ripple-out {
+  0% {
+    opacity: 0.75;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(3.4);
+  }
+}
+
+.pg-voice {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-page);
+  box-shadow: 0 14px 32px rgba(32, 38, 22, 0.2);
+  animation: pg-voice-in 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes pg-voice-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pg-voice .agent-voice-bar {
+  background: var(--bg-elevated);
+}
+
+.pg-voice-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 22px;
+}
+
+.pg-voice-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  opacity: 0.55;
+  transform-origin: bottom center;
+  animation: pg-voice-bar 0.9s ease-in-out infinite alternate;
+}
+
+.pg-voice-bar.is-idle {
+  animation-duration: 2.4s;
+}
+
+@keyframes pg-voice-bar {
+  from {
+    transform: scaleY(0.22);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.pg-voice-fake-end {
+  opacity: 0.75;
+  pointer-events: none;
 }

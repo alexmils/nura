@@ -155,8 +155,25 @@ describe("guide steps", () => {
     }
   });
 
-  it("shows the controller step on the controls bar, at step 12", () => {
-    const joystickIndex = GUIDE_STEPS.findIndex((step) => step.id === "joystick");
+  it("simulates voice mode only on the composer step", () => {
+    const demoSteps = GUIDE_STEPS.filter((step) => step.demo === "voice");
+    assert.equal(demoSteps.length, 1);
+    const [composer] = demoSteps;
+    assert.equal(composer.id, "composer");
+    assert.equal(composer.target, '[data-guide="composer"]');
+    assert.equal(composer.group, "session");
+    // The simulation needs the guided composer mounted.
+    assert.ok(composer.prepare?.includes("chooseGuided"));
+    // A target is required: the demo is anchored to the real composer.
+    assert.ok(composer.target);
+    // The demo panel sits in the gap, so the card needs extra room.
+    assert.ok(
+      (composer.cardOffset ?? 0) >= 90,
+      "the voice demo needs cardOffset so the card clears the panel"
+    );
+  });
+
+  it("shows the controller step on the controls bar, at step 12", () => {    const joystickIndex = GUIDE_STEPS.findIndex((step) => step.id === "joystick");
     assert.ok(joystickIndex >= 0);
     assert.equal(joystickIndex + 1, 12, "the controller step should be step 12");
     const joystick = GUIDE_STEPS[joystickIndex];

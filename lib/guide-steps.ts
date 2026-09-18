@@ -44,6 +44,9 @@ export const GUIDE_GEAR_SECTIONS: readonly GuideGearSection[] = [
   "vibration",
 ];
 
+/** A simulation the engine renders over a real target (see the step card). */
+export type GuideDemo = "voice";
+
 /**
  * Steps that need a real session. They are skipped together when the person
  * cannot start one yet (no consent, trial caps, payment pending).
@@ -63,6 +66,9 @@ export type GuideStep = {
   body: string;
   /** Primary button label. Defaults to "Next" (last step: "Done"). */
   cta?: string;
+  demo?: GuideDemo;
+  /** Extra px between the spotlight edge and the card (room for a demo). */
+  cardOffset?: number;
   group?: GuideStepGroup;
   /** Runs before the step is shown. A falsy result skips the group. */
   prepare?: GuideAction[];
@@ -235,7 +241,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     placement: "top",
     kicker: "AI agent-guided",
     title: "Talk to your guide",
-    body: "In an AI agent-guided session you write here, or use the microphone to dictate. The guide answers in the language you write in, and checks in after each set.",
+    body: "In an AI agent-guided session you write here, or use the microphone to dictate. The guide answers in the language you write in, and checks in after each set. Watch:",
+    demo: "voice",
+    cardOffset: 104,
     group: "session",
     prepare: ["chooseGuided"],
   },
