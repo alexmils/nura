@@ -34,7 +34,8 @@ import {
 import "./product-guide.css";
 
 /** Space kept between the spotlight edge and the card. */
-const CARD_GAP = 16;
+const CARD_GAP = 22;
+const DOT_SIZE = 12;
 const VIEWPORT_MARGIN = 12;
 /** Spotlight padding around the target. */
 const RING_PAD = 6;
@@ -686,18 +687,27 @@ function dotStyle(
 ): { left: number; top: number } {
   const midX = rect.left + rect.width / 2;
   const midY = rect.top + rect.height / 2;
-  const out = 15;
+  const half = DOT_SIZE / 2;
+  const edge = RING_PAD;
+  const clamp = (value: number) => Math.max(2, value);
+
+  // Sit on the ring edge, not in the gap: the card is placed in the gap, so a
+  // dot pushed further out would be painted over by it.
   switch (placement) {
     case "top":
-      return { left: midX - 5, top: rect.top - RING_PAD - out };
+      return { left: clamp(midX - half), top: clamp(rect.top - edge - half) };
     case "bottom":
-      return { left: midX - 5, top: rect.top + rect.height + RING_PAD + out - 10 };
+      return {
+        left: clamp(midX - half),
+        top: clamp(rect.top + rect.height + edge - half),
+      };
     case "left":
-      return { left: rect.left - RING_PAD - out, top: midY - 5 };
-    case "right":
-      return { left: rect.left + rect.width + RING_PAD + out - 10, top: midY - 5 };
+      return { left: clamp(rect.left - edge - half), top: clamp(midY - half) };
     default:
-      return { left: midX - 5, top: midY - 5 };
+      return {
+        left: clamp(rect.left + rect.width + edge - half),
+        top: clamp(midY - half),
+      };
   }
 }
 
