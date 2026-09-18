@@ -308,6 +308,7 @@ function SettingsPageContent() {
             </div>
             <PasswordSettings
               hasPassword={Boolean(user?.hasPassword)}
+              email={user?.email}
               onSaved={refreshUser}
             />
             <DeleteAccountZone

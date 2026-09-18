@@ -8,6 +8,7 @@ export type AuditAction =
   | "user.updated"
   | "user.deleted"
   | "user.password_set"
+  | "user.password_reset_requested"
   | "user.disabled"
   | "user.enabled"
   | "settings.platform_updated"

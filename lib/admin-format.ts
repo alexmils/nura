@@ -41,6 +41,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "user.updated": "Updated",
   "user.deleted": "Deleted",
   "user.password_set": "Password set",
+  "user.password_reset_requested": "Password reset link sent",
   "user.disabled": "Disabled",
   "user.enabled": "Enabled",
   "settings.platform_updated": "Platform settings updated",

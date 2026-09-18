@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  isAuthLinkScreen,
   isAuthPublicPath,
   isFrontendPublicPath,
   isUnauthenticatedPublicPath,
@@ -38,6 +39,15 @@ describe("isFrontendPublicPath", () => {
 });
 
 describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
+  it("keeps email link screens open while signed in", () => {
+    assert.equal(isAuthLinkScreen("/app/reset-password"), true);
+    assert.equal(isAuthLinkScreen("/app/create-password"), true);
+    assert.equal(isAuthLinkScreen("/app/login"), false);
+    assert.equal(isAuthLinkScreen("/app/create-account"), false);
+    assert.equal(isAuthLinkScreen("/app/forgot-password"), false);
+    assert.equal(isAuthLinkScreen("/app/settings"), false);
+  });
+
   it("allows auth screens under /app", () => {
     assert.equal(isAuthPublicPath("/app/login"), true);
     assert.equal(isUnauthenticatedPublicPath("/app/login"), true);

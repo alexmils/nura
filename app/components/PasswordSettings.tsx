@@ -6,10 +6,11 @@ import { notifyUserUpdated } from "@/app/components/useCurrentUser";
 
 type Props = {
   hasPassword: boolean;
+  email?: string | null;
   onSaved?: () => void | Promise<void>;
 };
 
-export function PasswordSettings({ hasPassword, onSaved }: Props) {
+export function PasswordSettings({ hasPassword, email, onSaved }: Props) {
   const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -17,6 +18,7 @@ export function PasswordSettings({ hasPassword, onSaved }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
 
   const resetForm = () => {
     setCurrentPassword("");
@@ -63,6 +65,31 @@ export function PasswordSettings({ hasPassword, onSaved }: Props) {
       toast(msg, "error");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const sendResetLink = async () => {
+    setError(null);
+    setMessage(null);
+    setResetBusy(true);
+    try {
+      const res = await fetch("/api/auth/request-password-reset", {
+        method: "POST",
+      });
+      const data = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) {
+        throw new Error(data.error || "Could not send the reset email");
+      }
+      const done = data.message ?? "Reset link sent";
+      setMessage(done);
+      toast(done);
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Could not send the reset email";
+      setError(msg);
+      toast(msg, "error");
+    } finally {
+      setResetBusy(false);
     }
   };
 
@@ -143,6 +170,22 @@ export function PasswordSettings({ hasPassword, onSaved }: Props) {
             : hasPassword
               ? "Change password"
               : "Set password"}
+        </button>
+      </div>
+
+      <div className="settings-row flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="settings-help min-w-0 break-words">
+          {hasPassword
+            ? "Forgot your current password? We can email you a reset link."
+            : "You can also set your password from an email link instead."}
+        </p>
+        <button
+          type="button"
+          className="btn-secondary w-full shrink-0 sm:w-auto"
+          disabled={resetBusy}
+          onClick={() => void sendResetLink()}
+        >
+          {resetBusy ? "Sending…" : "Email me a reset link"}
         </button>
       </div>
     </div>

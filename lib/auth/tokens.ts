@@ -36,6 +36,22 @@ export async function createAuthToken(
   return raw;
 }
 
+/** Newest still-usable token of a type, for throttling repeat emails. */
+export async function latestAuthTokenAt(
+  userId: string,
+  type: AuthTokenType
+): Promise<string | null> {
+  await ensureSchemaReady();
+  const { rows } = await getPool().query<{ created_at: string }>(
+    `SELECT created_at FROM auth_tokens
+     WHERE user_id = $1 AND type = $2 AND used_at IS NULL AND expires_at > NOW()
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, type]
+  );
+  return rows[0] ? new Date(rows[0].created_at).toISOString() : null;
+}
+
 export async function consumeAuthToken(
   raw: string,
   type: AuthTokenType

@@ -39,6 +39,22 @@ const AUTH_PUBLIC_PREFIXES = [
   `${APP_BASE}/create-account`,
 ] as const;
 
+/**
+ * Security screens opened from an email link (reset / invite). A session must
+ * never redirect these away: someone signed in with Google still needs to set a
+ * password from the reset link, and the token in the URL is what authorises it.
+ */
+const AUTH_LINK_SCREENS = [
+  `${APP_BASE}/reset-password`,
+  `${APP_BASE}/create-password`,
+] as const;
+
+export function isAuthLinkScreen(pathname: string): boolean {
+  return AUTH_LINK_SCREENS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  );
+}
+
 const API_PUBLIC_PREFIXES = [
   "/api/auth/login",
   "/api/auth/logout",

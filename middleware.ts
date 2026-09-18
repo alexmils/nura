@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/role-sync";
 import { NOINDEX_ROBOTS, shouldNoindexPath } from "@/lib/crawl-headers";
 import {
+  isAuthLinkScreen,
   isAuthPublicPath,
   isUnauthenticatedPublicPath,
   legacyConsolePath,
@@ -19,6 +20,13 @@ import {
 } from "@/lib/roles";
 
 const SYNC_SESSION_PATH = "/api/auth/sync-session";
+
+/**
+ * TEMPORARY: sink for public/voice-diagnostic.html. Left unauthenticated so a
+ * phone can report even when the app session is missing. Delete together with
+ * the page once the iOS voice investigation is closed.
+ */
+const VOICE_DIAG_PATH = "/api/voice-diagnostic-log";
 
 /**
  * Internal origin for middleware → route fetches.
@@ -162,6 +170,11 @@ export async function middleware(request: NextRequest) {
   // Frontend + auth screens + public APIs: never require login.
   if (isUnauthenticatedPublicPath(pathname)) {
     if (isAuthPublicPath(pathname)) {
+      // Reset / invite links must open even when a session exists, otherwise a
+      // Google-signed-in user can never open the link to set a password.
+      if (isAuthLinkScreen(pathname)) {
+        return applyCrawlHeaders(pathname, NextResponse.next());
+      }
       const session = await getSessionFromRequest(request);
       if (session) {
         const { role, setCookies, synced } = await resolveRoleFromDb(request);
@@ -199,7 +212,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname === SYNC_SESSION_PATH || pathname === "/api/auth/access") {
+  if (
+    pathname === SYNC_SESSION_PATH ||
+    pathname === "/api/auth/access" ||
+    pathname === VOICE_DIAG_PATH
+  ) {
     return NextResponse.next();
   }
 
