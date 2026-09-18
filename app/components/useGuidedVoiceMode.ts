@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  browserSpeechUsesContinuous,
   isBrowserSpeechSupported,
   startBrowserSpeech,
   type BrowserSpeechSession,
@@ -44,6 +45,13 @@ type UseGuidedVoiceModeOpts = {
 
 const SILENCE_MS = 1400;
 
+/**
+ * After the guide finishes speaking, recognition may still deliver the tail of
+ * its own voice. Hold the buffer for a moment so those words cannot land in the
+ * person's turn.
+ */
+const TTS_SETTLE_MS = 500;
+
 export function useGuidedVoiceMode({
   voiceFeatureOn,
   sessionKind,
@@ -71,6 +79,8 @@ export function useGuidedVoiceMode({
   /** Latest interim text; used if the engine dies before it becomes final. */
   const interimBufRef = useRef("");
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Ignore results until this timestamp (the guide's own voice tail). */
+  const ignoreUntilRef = useRef(0);
   const activeRef = useRef(false);
   const phaseRef = useRef<VoicePhase>("off");
   const turnBusyRef = useRef(false);
@@ -108,11 +118,32 @@ export function useGuidedVoiceMode({
     sessionRef.current = null;
   }, [clearSilence]);
 
+  /**
+   * iOS WebKit and desktop Chromium keep one session alive across utterances, so
+   * the whole voice conversation runs on a single instance. Ending it between
+   * turns forces a fresh `start()` that iOS will not honour without a new tap,
+   * which is what made listening die after the first reply. Chrome for Android
+   * has no continuous sessions at all, so it still rebuilds every turn.
+   */
+  const keepSessionAlive = useCallback(
+    () => browserSpeechUsesContinuous(),
+    []
+  );
+
+  /** Stop the engine for this turn; a no-op when one session carries the dialogue. */
+  const releaseForTurn = useCallback(() => {
+    if (keepSessionAlive()) {
+      clearSilence();
+      return;
+    }
+    stopRecognition();
+  }, [clearSilence, keepSessionAlive, stopRecognition]);
+
   const finishTurn = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || turnBusyRef.current || !activeRef.current) return;
     turnBusyRef.current = true;
-    stopRecognition();
+    releaseForTurn();
     setInterim("");
     finalBufRef.current = "";
     interimBufRef.current = "";
@@ -129,6 +160,8 @@ export function useGuidedVoiceMode({
       if (agentText) {
         setPhaseVoice("speaking");
         await optsRef.current.onPlayLine(agentText);
+        // Drop the tail of the guide's own voice before the person's turn.
+        ignoreUntilRef.current = Date.now() + TTS_SETTLE_MS;
       }
       if (!activeRef.current) return;
 
@@ -155,7 +188,7 @@ export function useGuidedVoiceMode({
     } finally {
       turnBusyRef.current = false;
     }
-  }, [stopRecognition]);
+  }, [releaseForTurn]);
 
   const scheduleSilenceCommit = useCallback(() => {
     clearSilence();
@@ -170,6 +203,19 @@ export function useGuidedVoiceMode({
     if (phaseRef.current === "thinking" || phaseRef.current === "speaking") {
       return;
     }
+
+    // One session already carries the conversation: reuse it instead of
+    // calling start() again, which iOS would refuse without a fresh tap.
+    if (keepSessionAlive() && sessionRef.current) {
+      clearSilence();
+      finalBufRef.current = "";
+      interimBufRef.current = "";
+      setInterim("");
+      setStalled(false);
+      setPhaseVoice("listening");
+      return;
+    }
+
     stopRecognition();
     finalBufRef.current = "";
     interimBufRef.current = "";
@@ -180,6 +226,7 @@ export function useGuidedVoiceMode({
     const session = startBrowserSpeech({
       onInterim: (t) => {
         if (phaseRef.current !== "listening") return;
+        if (Date.now() < ignoreUntilRef.current) return;
         interimBufRef.current = t;
         setInterim(t);
         // Keep the turn open while the person is still talking.
@@ -187,6 +234,7 @@ export function useGuidedVoiceMode({
       },
       onFinal: (chunk) => {
         if (phaseRef.current !== "listening") return;
+        if (Date.now() < ignoreUntilRef.current) return;
         interimBufRef.current = "";
         finalBufRef.current = `${finalBufRef.current} ${chunk}`.trim();
         setInterim("");
@@ -208,12 +256,11 @@ export function useGuidedVoiceMode({
           setStalled(false);
           return;
         }
-        // The engine gave up while the person still expects to be heard.
-        if (
-          status === "stopped" &&
-          activeRef.current &&
-          phaseRef.current === "listening"
-        ) {
+        if (status !== "stopped") return;
+        // Drop the dead session so the reuse path cannot skip a real restart.
+        sessionRef.current = null;
+        // Only surface it when the person expects to be heard right now.
+        if (activeRef.current && phaseRef.current === "listening") {
           setStalled(true);
         }
       },
@@ -227,7 +274,13 @@ export function useGuidedVoiceMode({
       return;
     }
     sessionRef.current = session;
-  }, [running, scheduleSilenceCommit, stopRecognition]);
+  }, [
+    running,
+    scheduleSilenceCommit,
+    stopRecognition,
+    keepSessionAlive,
+    clearSilence,
+  ]);
 
   const startListeningRef = useRef(startListening);
   startListeningRef.current = startListening;
@@ -273,7 +326,7 @@ export function useGuidedVoiceMode({
   useEffect(() => {
     if (!active) return;
     if (running) {
-      stopRecognition();
+      releaseForTurn();
       setPhaseVoice("bls");
       setInterim("");
       return;
@@ -289,7 +342,7 @@ export function useGuidedVoiceMode({
     ) {
       startListeningRef.current();
     }
-  }, [active, running, sessionMode, phaseVoice, stopRecognition]);
+  }, [active, running, sessionMode, phaseVoice, releaseForTurn]);
 
   // Speak new agent lines that arrive outside a user turn (bootstrap / check-in).
   useEffect(() => {
@@ -305,10 +358,11 @@ export function useGuidedVoiceMode({
     spokenAgentIdRef.current = lastAgentId;
     let cancelled = false;
     void (async () => {
-      stopRecognition();
+      releaseForTurn();
       setPhaseVoice("speaking");
       await onPlayLine(lastAgentContent);
       if (cancelled || !activeRef.current) return;
+      ignoreUntilRef.current = Date.now() + TTS_SETTLE_MS;
       if (running) {
         setPhaseVoice("bls");
         return;
@@ -325,7 +379,7 @@ export function useGuidedVoiceMode({
     running,
     phaseVoice,
     onPlayLine,
-    stopRecognition,
+    releaseForTurn,
   ]);
 
   // Restart listening when entering listening phase without an active session.

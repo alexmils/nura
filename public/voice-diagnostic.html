@@ -127,24 +127,29 @@
       <button id="btn-after" class="ghost">C. loop after a sound</button>
     </div>
     <div class="row">
+      <button id="btn-app" class="ghost">F. app pattern: continuous ON + agent turns</button>
       <button id="btn-stop" class="stop">Stop</button>
-      <button id="btn-gum" class="ghost">D. Mic level loop</button>
     </div>
     <div class="row">
+      <button id="btn-gum" class="ghost">D. Mic level loop</button>
       <button id="btn-copy" class="ghost">Copy log</button>
+    </div>
+    <div class="row">
       <button id="btn-clear" class="ghost">Clear log</button>
     </div>
 
-    <div class="counts">
-      <span>onstart <b id="c-start">0</b></span>
-      <span>audiostart <b id="c-audio">0</b></span>
-      <span>speechstart <b id="c-speech">0</b></span>
-      <span>results <b id="c-res">0</b></span>
-      <span>finals <b id="c-fin">0</b></span>
-      <span>errors <b id="c-err">0</b></span>
-      <span>onend <b id="c-end">0</b></span>
-      <span>instances <b id="c-inst">0</b></span>
-    </div>
+      <div class="counts">
+        <span>onstart <b id="c-start">0</b></span>
+        <span>audiostart <b id="c-audio">0</b></span>
+        <span>speechstart <b id="c-speech">0</b></span>
+        <span>results <b id="c-res">0</b></span>
+        <span>finals <b id="c-fin">0</b></span>
+        <span>errors <b id="c-err">0</b></span>
+        <span>onend <b id="c-end">0</b></span>
+        <span>instances <b id="c-inst">0</b></span>
+        <span>ignored <b id="c-ign">0</b></span>
+        <span>turns <b id="c-turn">0</b></span>
+      </div>
 
     <pre id="log" aria-live="polite"></pre>
 
@@ -231,8 +236,10 @@
           err: 0,
           end: 0,
           inst: 0,
+          ign: 0,
+          turn: 0,
         };
-        var label = { start: "c-start", audio: "c-audio", speech: "c-speech", res: "c-res", fin: "c-fin", err: "c-err", end: "c-end", inst: "c-inst" };
+        var label = { start: "c-start", audio: "c-audio", speech: "c-speech", res: "c-res", fin: "c-fin", err: "c-err", end: "c-end", inst: "c-inst", ign: "c-ign", turn: "c-turn" };
 
         function bump(key) {
           counts[key] += 1;
@@ -386,6 +393,9 @@
           loop: { continuous: false, restart: true },
           single: { continuous: true, restart: false },
           continuous: { continuous: true, restart: true },
+          // What the app does now: never rebuild the session, keep it hot
+          // through a simulated agent turn, and ignore what it hears then.
+          app: { continuous: true, restart: true, agentTurns: true },
         };
 
         function attach(rec, mode) {
@@ -394,6 +404,26 @@
           rec.interimResults = true;
           rec.lang = navigator.language || "en-US";
           var startedAt = Date.now();
+          var resumeAt = 0; // swallow the engine's tail right after a turn
+
+          function ignored() {
+            if (Date.now() < resumeAt) {
+              bump("ign");
+              return true;
+            }
+            return false;
+          }
+
+          function startAgentTurn() {
+            bump("turn");
+            resumeAt = Date.now() + 3000;
+            queue("simulated agent turn " + counts.turn + ": ignoring the mic for 3s");
+            ship(true);
+            playTone(function () {
+              queue("simulated agent turn " + counts.turn + " done, listening again");
+              ship(true);
+            });
+          }
 
           rec.onstart = function () { bump("start"); line("onstart"); };
           rec.onaudiostart = function () { bump("audio"); line("onaudiostart", "ok"); };
@@ -404,6 +434,7 @@
           rec.onspeechend = function () { line("onspeechend"); };
           rec.onnomatch = function () { line("onnomatch", "warn"); };
           rec.onresult = function (ev) {
+            if (ignored()) return;
             bump("res");
             var interim = "";
             var finalChunk = "";
@@ -413,7 +444,17 @@
               if (r.isFinal) finalChunk += piece;
               else interim += piece;
             }
-            if (finalChunk) { bump("fin"); line("RESULT final: " + finalChunk, "ok"); }
+            if (finalChunk) {
+              bump("fin");
+              line("RESULT final: " + finalChunk, "ok");
+              if (cfg.agentTurns) {
+                // The app commits a turn 1.4s after the last final result and
+                // then the guide speaks. Mimic that here.
+                setTimeout(function () {
+                  if (active) startAgentTurn();
+                }, 1400);
+              }
+            }
             if (interim) line("RESULT interim: " + interim, "ok");
           };
           rec.onerror = function (ev) {
@@ -553,6 +594,7 @@
         document.getElementById("btn-loop").onclick = function () { start("loop", false); };
         document.getElementById("btn-single").onclick = function () { start("single", false); };
         document.getElementById("btn-ios").onclick = function () { start("continuous", false); };
+        document.getElementById("btn-app").onclick = function () { start("app", false); };
         document.getElementById("btn-after").onclick = function () { start("loop", true); };
         document.getElementById("btn-stop").onclick = function () { stopAll("tap"); };
         document.getElementById("btn-gum").onclick = micLoop;
