@@ -12,9 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Gamepad2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { APP_BASE } from "@/lib/app-base";
-import { useGamepadConnected } from "@/lib/useGamepadConnected";
 import {
   GUIDE_STEPS,
   clearGuideStepIndex,
@@ -127,25 +126,6 @@ function isFullyVisible(el: Element): boolean {
     parent = parent.parentElement;
   }
   return true;
-}
-
-/** Live controller status, shown only inside the tour. */
-function GamepadDemo() {
-  const connected = useGamepadConnected();
-
-  return (
-    <div className="pg-demo" data-guide="joystick-demo">
-      <span className={`pg-chip${connected ? " is-on" : " is-off"}`}>
-        <Gamepad2 size={17} strokeWidth={2.1} aria-hidden />
-        {connected ? "Connected" : "Disconnected"}
-      </span>
-      <p className="pg-demo-hint">
-        {connected
-          ? "Connected. The rumble control appears in the controls bar, so you can pick soft or hard."
-          : "Nothing is connected right now. Plug in a controller and this chip turns to Connected."}
-      </p>
-    </div>
-  );
 }
 
 export function ProductGuideProvider({ children }: { children: ReactNode }) {
@@ -463,7 +443,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     });
   }, [active, rect, sizeTick, stepIndex]);
 
-  /* Card height can change with the step (demo chip, wrapping copy). */
+  /* Card height can change with the step (longer copy, different buttons). */
   useEffect(() => {
     if (!active) return;
     const card = cardRef.current;
@@ -664,8 +644,6 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
             <p id="pg-body" className="pg-body">
               {current.body}
             </p>
-
-            {current.demo === "gamepad" ? <GamepadDemo /> : null}
 
             <div className="pg-foot">
               <button type="button" className="pg-link" onClick={stop}>

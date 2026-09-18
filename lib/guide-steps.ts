@@ -44,9 +44,6 @@ export const GUIDE_GEAR_SECTIONS: readonly GuideGearSection[] = [
   "vibration",
 ];
 
-/** An inline live demo the card renders itself (no app target needed). */
-export type GuideDemo = "gamepad";
-
 /**
  * Steps that need a real session. They are skipped together when the person
  * cannot start one yet (no consent, trial caps, payment pending).
@@ -66,7 +63,6 @@ export type GuideStep = {
   body: string;
   /** Primary button label. Defaults to "Next" (last step: "Done"). */
   cta?: string;
-  demo?: GuideDemo;
   group?: GuideStepGroup;
   /** Runs before the step is shown. A falsy result skips the group. */
   prepare?: GuideAction[];
@@ -200,6 +196,17 @@ export const GUIDE_STEPS: GuideStep[] = [
     prepare: ["chooseSelfGuided"],
   },
   {
+    id: "joystick",
+    surface: APP_BASE,
+    target: '[data-guide-field="vibration"]',
+    placement: "top",
+    kicker: "Controller",
+    title: "Joystick and tappers",
+    body: "Connect a joystick, tappers, or a gamepad and this control turns on: Off, Soft, or Hard rumble when the visual guide reaches each edge. Until then it reads Disconnected. The main button starts and pauses, and the stick or D-pad moves between controls.",
+    group: "session",
+    prepare: ["chooseSelfGuided"],
+  },
+  {
     id: "dock-adjustments",
     surface: APP_BASE,
     target: '[data-guide-field="adjustments"]',
@@ -222,16 +229,6 @@ export const GUIDE_STEPS: GuideStep[] = [
     gearSection: "look",
     prepare: ["openGearSection"],
     cleanup: ["closeGear"],
-  },
-  {
-    id: "joystick",
-    surface: APP_BASE,
-    placement: "center",
-    kicker: "Controller",
-    title: "Joystick and tappers",
-    body: "If you use a joystick, tappers, or a gamepad, connect it before the set. The main button starts and pauses, the stick or D-pad moves between controls, and rumble fires when the visual guide reaches each edge. Rumble strength is in the controls bar once it is connected.",
-    demo: "gamepad",
-    group: "session",
   },
   {
     id: "composer",

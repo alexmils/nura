@@ -28,7 +28,7 @@ import {
 } from "@/lib/bls-toolbar-nav";
 import { getActiveSpeedHz } from "@/lib/bls-speed";
 import { useGamepadConnected } from "@/lib/useGamepadConnected";
-import { useGuideHost } from "./guide/ProductGuide";
+import { useGuideHost, useGuideOptional } from "./guide/ProductGuide";
 import {
   canRepeatGuidedSet,
   canStartBls,
@@ -133,6 +133,11 @@ export function SessionWorkspace() {
       setGearOpen(true);
     },
   });
+
+  // The controller step shows the real vibration control, which the bar hides
+  // until a gamepad is connected.
+  const guide = useGuideOptional();
+  const previewVibration = guide?.active === true && guide.step?.id === "joystick";
 
   const thread = threads.find((t) => t.id === activeThreadId);
   const hasUserMessage = messages.some((m) => m.role === "user");
@@ -895,6 +900,7 @@ export function SessionWorkspace() {
             onOpenGear={() => setGearOpen(true)}
             focusedField={focusedField}
             onFocusField={setFocusedField}
+            previewVibration={previewVibration}
           />
         )}
       </div>

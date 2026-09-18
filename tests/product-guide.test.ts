@@ -116,6 +116,7 @@ describe("guide steps", () => {
     assert.ok(anchors.includes('[data-guide="composer"]'));
     assert.ok(anchors.includes('[data-guide-field="sound"]'));
     assert.ok(anchors.includes('[data-guide-field="adjustments"]'));
+    assert.ok(anchors.includes('[data-guide-field="vibration"]'));
     // The adjustments step points at a section body that only renders expanded.
     assert.ok(
       anchors.includes('.gear-section-body[data-section="look"]'),
@@ -144,10 +145,18 @@ describe("guide steps", () => {
     assert.ok(last.cta);
   });
 
-  it("shows the controller demo on exactly one step", () => {
-    const demoSteps = GUIDE_STEPS.filter((step) => step.demo === "gamepad");
-    assert.equal(demoSteps.length, 1);
-    assert.equal(demoSteps[0].id, "joystick");
+  it("shows the controller step on the controls bar, at step 12", () => {
+    const joystickIndex = GUIDE_STEPS.findIndex((step) => step.id === "joystick");
+    assert.ok(joystickIndex >= 0);
+    assert.equal(joystickIndex + 1, 12, "the controller step should be step 12");
+    const joystick = GUIDE_STEPS[joystickIndex];
+    // It must point at the real control, not at a card illustration.
+    assert.equal(joystick.target, '[data-guide-field="vibration"]');
+    assert.equal(joystick.placement, "top");
+    // The bar hides that control until a gamepad is connected, so the step
+    // still has to ask for the session the controls live in.
+    assert.equal(joystick.group, "session");
+    assert.ok(joystick.prepare?.includes("chooseSelfGuided"));
   });
 
   it("skips outside a group instead of looping", () => {

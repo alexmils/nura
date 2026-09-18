@@ -41,6 +41,8 @@ interface BlsToolbarProps {
   dimmed?: boolean;
   focusedField: BlsToolbarField;
   onFocusField: (field: BlsToolbarField) => void;
+  /** Product tour: show the vibration group even with no controller on. */
+  previewVibration?: boolean;
 }
 
 const SPEED_FIELDS: BlsToolbarField[] = ["speed0", "speed1", "speed2"];
@@ -88,12 +90,15 @@ function BlsGroup({
   focused,
   children,
   field,
+  flag,
 }: {
   label: string;
   focused?: boolean;
   children: ReactNode;
   /** Tour anchor for this control group. */
   field?: string;
+  /** Small status chip next to the label (e.g. Disconnected). */
+  flag?: ReactNode;
 }) {
   return (
     <div
@@ -103,7 +108,10 @@ function BlsGroup({
       <div className="bls-seg" role="group" aria-label={label}>
         {children}
       </div>
-      <span className="bls-group-label">{label}</span>
+      <span className="bls-group-meta">
+        <span className="bls-group-label">{label}</span>
+        {flag}
+      </span>
     </div>
   );
 }
@@ -150,10 +158,12 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
       dimmed,
       focusedField,
       onFocusField,
+      previewVibration = false,
     },
     ref
   ) {
     const gamepadConnected = useGamepadConnected();
+    const showVibration = gamepadConnected || previewVibration;
     const [repeatsDraft, setRepeatsDraft] = useState(
       typeof bls.repeats === "number" ? bls.repeats : BLS_REPEATS_DEFAULT
     );
@@ -355,11 +365,16 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
               ))}
             </BlsGroup>
 
-            {gamepadConnected ? (
+            {showVibration ? (
               <BlsGroup
                 label="Vibrations"
                 field="vibration"
                 focused={focusedField === "vibration"}
+                flag={
+                  gamepadConnected ? null : (
+                    <span className="bls-group-flag">Disconnected</span>
+                  )
+                }
               >
                 {VIBRATION_OPTIONS.map((opt) => (
                   <SegBtn
