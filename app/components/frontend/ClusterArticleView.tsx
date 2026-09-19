@@ -30,26 +30,24 @@ export function ClusterArticleView({
       <div className="fe-cluster-inner">
         <header className="fe-post-head">
           <div className="fe-post-meta">
-            {article.categories.length
-              ? article.categories.map((slug) => (
-                  <Link
-                    key={slug}
-                    href={`/blog/category/${slug}`}
-                    className="fe-post-pill"
-                  >
-                    {blogCategoryName(slug)}
-                  </Link>
-                ))
-              : (
-                  <span className="fe-post-pill">
-                    {CLUSTER_TOPIC_LABEL[article.topic]}
-                  </span>
-                )}
-            {date ? (
-              <time className="fe-post-date" dateTime={article.publishedAt}>
-                Published {date}
-              </time>
-            ) : null}
+            {article.categories.length ? (
+              article.categories.map((slug) => (
+                <Link
+                  key={slug}
+                  href={`/blog/category/${slug}`}
+                  className="fe-post-pill"
+                >
+                  {blogCategoryName(slug)}
+                </Link>
+              ))
+            ) : (
+              // A guide with no clinical category still needs a clickable
+              // section link, so it points at the blog index rather than
+              // showing a topic label that looks like a category.
+              <Link href="/blog" className="fe-post-pill">
+                Blog
+              </Link>
+            )}
           </div>
 
           <h1 className="fe-post-title">{article.title}</h1>
@@ -63,15 +61,22 @@ export function ClusterArticleView({
               height={40}
               className="fe-post-avatar"
             />
-            <p className="fe-post-author">
-              {BRAND_SPOKEN}
-              <span className="fe-post-author-sep" aria-hidden>
-                ·
-              </span>
-              <Link href="/editorial" className="fe-post-author-link">
-                How we write
-              </Link>
-            </p>
+            <div className="fe-post-byline-text">
+              <p className="fe-post-author">
+                {BRAND_SPOKEN}
+                <span className="fe-post-author-sep" aria-hidden>
+                  ·
+                </span>
+                <Link href="/editorial" className="fe-post-author-link">
+                  How we write
+                </Link>
+              </p>
+              {date ? (
+                <time className="fe-post-date" dateTime={article.publishedAt}>
+                  Published {date}
+                </time>
+              ) : null}
+            </div>
           </div>
         </header>
 

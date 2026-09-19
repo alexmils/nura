@@ -185,7 +185,10 @@ a.fe-post-pill:hover {
 }
 
 .fe-post-date {
+  display: block;
+  margin: 0;
   font-size: 0.875rem;
+  line-height: 1.35;
   color: var(--fe-muted);
 }
 
@@ -221,6 +224,13 @@ a.fe-post-pill:hover {
   margin: 2.5rem 0 0;
   font-size: 1rem;
   color: var(--fe-muted);
+}
+
+.fe-post-byline-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .fe-post-avatar {

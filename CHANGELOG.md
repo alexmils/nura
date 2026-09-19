@@ -645,6 +645,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Blog covers are limited to site paths plus the image hosts configured in `next.config.ts`; an unconfigured remote URL used to make `next/image` throw and 500 the page, so it is now rejected on write and swapped for the fallback on read
 - [internal] Blog post header restyled to match the Receptly article layout: category pills plus “Published <date>” on top, larger title (up to 3rem), lead capped at 38rem, round Nura avatar with a byline, then the full-width featured image
 - [internal] Admin → MCP: generate, disable, and revoke the blog MCP token from the admin UI instead of editing `NURA_MCP_TOKEN` by hand. The token is stored as a SHA-256 hash, shown once on generation, and an admin token takes precedence over the environment variable so revoking really revokes
+- [internal] Blog post top row is the post’s own category as a link (guides with no clinical category link to `/blog` instead of showing a topic label that looked like a category), and the date moved below the author name under the round logo
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
