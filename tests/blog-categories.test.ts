@@ -52,13 +52,27 @@ describe("blog categories", () => {
     assert.equal(blogCategoryBySlug("PTSD")?.name, "PTSD");
   });
 
-  it("sanitizes unknown slugs and keeps canonical order", () => {
+  it("sanitizes unknown slugs and preserves the caller's order", () => {
+    // Order is editorial: the first slug is the chip shown on the card.
     assert.deepEqual(
       sanitizeBlogCategorySlugs(["anxiety", "not-a-category", "trauma", "anxiety"]),
-      ["trauma", "anxiety"]
+      ["anxiety", "trauma"]
     );
+    assert.deepEqual(sanitizeBlogCategorySlugs(["ptsd", "trauma"]), [
+      "ptsd",
+      "trauma",
+    ]);
     assert.deepEqual(sanitizeBlogCategorySlugs("trauma"), []);
     assert.deepEqual(sanitizeBlogCategorySlugs([1, null, "panic"]), ["panic"]);
+  });
+
+  it("keeps the authoured order of the built-in seed map", () => {
+    const ptsd = CLUSTER_ARTICLES.find((a) => a.slug === "emdr-for-ptsd");
+    const grounding = CLUSTER_ARTICLES.find(
+      (a) => a.slug === "grounding-before-a-set"
+    );
+    assert.deepEqual(ptsd?.categories, ["ptsd", "trauma"]);
+    assert.deepEqual(grounding?.categories, ["panic", "anxiety"]);
   });
 
   it("only assigns known categories to built-in guides", () => {

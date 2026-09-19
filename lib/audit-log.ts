@@ -16,7 +16,10 @@ export type AuditAction =
   | "settings.stripe_updated"
   | "settings.stripe_synced"
   | "email.test_sent"
-  | "email.broadcast_sent";
+  | "email.broadcast_sent"
+  | "blog.post_created"
+  | "blog.post_updated"
+  | "blog.post_deleted";
 
 export type AuditEvent = {
   id: string;

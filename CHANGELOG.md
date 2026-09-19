@@ -627,6 +627,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Voice mode keeps listening on phones: the mic visualiser no longer holds the microphone away from speech recognition, and the engine now restarts after every utterance instead of dying silently while the screen still said “Listening…”. If the browser does hand the microphone back, the voice bar says “Mic paused” with a **Resume** button instead of pretending
 - Voice mode on iPhone: speech recognition now runs as one continuous session, which WebKit supports, instead of being restarted after every sentence. A restart on iOS was what ended listening for good, and the app now only falls back to a restart if the session really stops. Chrome for Android keeps the restart approach, since it does not support continuous sessions at all
 - Voice mode holds one listening session open for the whole conversation on iPhone and desktop, so the guide can answer and the person can simply keep talking. The mic is left running while the guide speaks and anything it hears then is discarded, so the guide's own voice never lands in the person's turn
+- [internal] Blog seeding is now per-row and idempotent with an inflight guard: a crashed or concurrent first seed used to freeze a truncated corpus, permanently 404ing the missing guides with `/blog` still up
+- [internal] Blog category order is stored and editorial: the first category you pick is the chip on the card and the order on the article page and in RSS (previously re-sorted into a fixed order, so a PTSD guide showed “Trauma”)
+- [internal] Blog copy is validated on write (unit-tested in `lib/blog-post-input.ts`): em dashes are rewritten, the BLS acronym is rejected, the body is capped at 200k characters, sections/paragraphs are bounded, and new posts must supply `emdrAnchor`
+- [internal] A post with no cover no longer renders an empty `img`; cards fall back to a deterministic landing image
+- [internal] `featured` survives unpublishing (it was silently reset to false and could not be restored)
+- [internal] `update_blog_post` can rename a slug via `newSlug`; blog writes are recorded in `audit_events`
+- [internal] Sitemap gives each category hub its own `lastmod` (its newest guide) instead of the blog-wide newest date
+- [internal] Blog fallback reads log the underlying error every time instead of going quiet after one warning
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

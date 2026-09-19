@@ -1,11 +1,11 @@
 /**
  * Public blog store — Postgres source of truth for `/blog`.
  *
- * The built-in corpus in `lib/content-cluster.ts` seeds the tables on first
- * run and stays as a read fallback when Postgres is unreachable, so the
- * public blog never 500s on a cold or missing database.
+ * The built-in corpus in `lib/content-cluster.ts` seeds the tables and stays as
+ * a read fallback when Postgres is unreachable, so the public blog never 500s
+ * on a cold or missing database.
  *
- * Writes are used by the admin API (`/api/admin/blog`) and the MCP endpoint
+ * Writes come from the admin API (`/api/admin/blog`) and the MCP endpoint
  * (`/api/mcp`), where the agent picks the category it writes in.
  */
 
@@ -16,6 +16,21 @@ import {
   sanitizeBlogCategorySlugs,
 } from "@/lib/blog-categories";
 import {
+  BLOG_ANCHOR_MAX,
+  BLOG_BODY_MAX_CHARS,
+  BLOG_DEK_MAX,
+  BLOG_DESCRIPTION_MAX,
+  BLOG_KICKER_MAX,
+  BLOG_TITLE_MAX,
+  blogBodyLength,
+  cleanCopy,
+  defaultBlogCover,
+  findBlsAcronym,
+  isValidCoverUrl,
+  parseSections,
+  type BlogSectionInput,
+} from "@/lib/blog-post-input";
+import {
   CLUSTER_ARTICLES,
   CLUSTER_TOPICS,
   type ClusterArticle,
@@ -24,17 +39,8 @@ import {
 } from "@/lib/content-cluster";
 import { ensureSchemaReady, getPool } from "@/lib/db";
 
-export const BLOG_TITLE_MAX = 200;
-export const BLOG_DESCRIPTION_MAX = 400;
-export const BLOG_DEK_MAX = 400;
-export const BLOG_ANCHOR_MAX = 300;
-export const BLOG_SECTIONS_MAX = 40;
-export const BLOG_PARAGRAPHS_MAX = 40;
-
 let blogSchemaDone = false;
-
-/** One warning is enough — the fallback keeps serving the seeds. */
-let blogFallbackWarned = false;
+let blogSchemaInflight: Promise<void> | null = null;
 
 export type BlogCategoryRecord = {
   slug: string;
@@ -50,11 +56,13 @@ export type BlogPostRecord = ClusterArticle & {
   updatedAt: string;
 };
 
-function warnFallback(err: unknown): void {
-  if (blogFallbackWarned) return;
-  blogFallbackWarned = true;
+/**
+ * Fallback reads must never hide a broken database. Every failure is logged
+ * with its cause; the fallback keeps the public site up in the meantime.
+ */
+function warnFallback(where: string, err: unknown): void {
   console.warn(
-    "[blog] Postgres unavailable or not migrated, serving built-in guides:",
+    `[blog] ${where} failed, serving built-in guides:`,
     err instanceof Error ? err.message : err
   );
 }
@@ -64,8 +72,25 @@ function warnFallback(err: unknown): void {
 /* ------------------------------------------------------------------ */
 
 export async function ensureBlogSchema(): Promise<void> {
-  await ensureSchemaReady();
   if (blogSchemaDone) return;
+  if (!blogSchemaInflight) {
+    // Same inflight pattern as lib/db.ts: concurrent cold requests on a fresh
+    // deploy must not race each other into duplicate-key failures.
+    blogSchemaInflight = runBlogSchema()
+      .then(() => {
+        blogSchemaDone = true;
+      })
+      .catch((err) => {
+        // Reset so the next request retries instead of caching the failure.
+        blogSchemaInflight = null;
+        throw err;
+      });
+  }
+  return blogSchemaInflight;
+}
+
+async function runBlogSchema(): Promise<void> {
+  await ensureSchemaReady();
   const db = getPool();
 
   await db.query(`
@@ -101,14 +126,15 @@ export async function ensureBlogSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS blog_post_categories (
       post_id TEXT NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
       category_id TEXT NOT NULL REFERENCES blog_categories(id) ON DELETE CASCADE,
+      sort_order INT NOT NULL DEFAULT 0,
       PRIMARY KEY (post_id, category_id)
     );
     CREATE INDEX IF NOT EXISTS idx_blog_post_categories_category
       ON blog_post_categories(category_id);
+    ALTER TABLE blog_post_categories
+      ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0;
   `);
 
-  // Built-in categories first (editorial set from the home topics grid).
-  let order = 0;
   for (const category of BLOG_CATEGORIES) {
     await db.query(
       `INSERT INTO blog_categories (id, slug, name, description, sort_order)
@@ -123,38 +149,126 @@ export async function ensureBlogSchema(): Promise<void> {
         category.slug,
         category.name,
         category.description,
-        category.sortOrder || order * 10,
+        category.sortOrder,
       ]
     );
-    order += 1;
   }
 
-  const { rows } = await db.query<{ count: string }>(
-    `SELECT COUNT(*)::text AS count FROM blog_posts`
+  // Per-row and idempotent: a crashed or concurrent seed repairs itself on the
+  // next request instead of freezing a truncated corpus forever.
+  for (const article of CLUSTER_ARTICLES) {
+    const postId = await insertSeedPost(db, article);
+    const id =
+      postId ?? (await findPostIdBySlug(db, article.slug));
+    if (!id) continue;
+    await ensurePostCategories(db, id, article.categories);
+  }
+
+  await backfillSeedCategoryOrder(db);
+}
+
+async function findPostIdBySlug(
+  db: ReturnType<typeof getPool>,
+  slug: string
+): Promise<string | null> {
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT id FROM blog_posts WHERE slug = $1`,
+    [slug]
   );
-  if (Number(rows[0]?.count ?? 0) === 0) {
-    for (const article of CLUSTER_ARTICLES) {
-      const postId = await insertPostRow(db, {
-        id: crypto.randomUUID(),
-        slug: article.slug,
-        title: article.title,
-        description: article.description,
-        kicker: article.kicker,
-        dek: article.dek,
-        topic: article.topic,
-        featured: article.featured,
-        published: true,
-        coverUrl: article.coverUrl,
-        emdrAnchor: article.emdrAnchor,
-        publishedAt: article.publishedAt,
-        sections: article.sections,
-        related: article.related,
-      });
-      await replacePostCategories(db, postId, article.categories);
+  return rows[0]?.id ?? null;
+}
+
+/** Insert a built-in guide, or return null when another worker won the race. */
+async function insertSeedPost(
+  db: ReturnType<typeof getPool>,
+  article: ClusterArticle
+): Promise<string | null> {
+  const id = crypto.randomUUID();
+  const { rows } = await db.query<{ id: string }>(
+    `INSERT INTO blog_posts (
+       id, slug, title, description, kicker, dek, topic, featured, published,
+       cover_url, emdr_anchor, published_at, sections, related
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE,$9,$10,$11,$12::jsonb,$13::jsonb)
+     ON CONFLICT (slug) DO NOTHING
+     RETURNING id`,
+    [
+      id,
+      article.slug,
+      article.title,
+      article.description,
+      article.kicker,
+      article.dek,
+      article.topic,
+      article.featured,
+      article.coverUrl,
+      article.emdrAnchor,
+      article.publishedAt,
+      JSON.stringify(article.sections),
+      JSON.stringify(article.related),
+    ]
+  );
+  return rows[0]?.id ?? null;
+}
+
+/** Add missing seed links without touching an editor's category changes. */
+async function ensurePostCategories(
+  db: ReturnType<typeof getPool>,
+  postId: string,
+  categorySlugs: string[]
+): Promise<void> {
+  const slugs = sanitizeBlogCategorySlugs(categorySlugs);
+  for (let i = 0; i < slugs.length; i++) {
+    await db.query(
+      `INSERT INTO blog_post_categories (post_id, category_id, sort_order)
+       SELECT $1, c.id, $3
+       FROM blog_categories c
+       WHERE c.slug = $2
+       ON CONFLICT (post_id, category_id) DO NOTHING`,
+      [postId, slugs[i], i]
+    );
+  }
+}
+
+/**
+ * One-time repair: posts seeded before category order was stored got
+ * `sort_order = 0` and rendered in canonical instead of editorial order.
+ */
+async function backfillSeedCategoryOrder(
+  db: ReturnType<typeof getPool>
+): Promise<void> {
+  const { rows: applied } = await db.query<{ id: string }>(
+    `SELECT id FROM schema_migrations WHERE id = 'blog_category_order_v1'`
+  );
+  if (applied.length) return;
+
+  for (const article of CLUSTER_ARTICLES) {
+    if (article.categories.length < 2) continue;
+    const { rows } = await db.query<{ id: string; slugs: string[] }>(
+      `SELECT p.id,
+              COALESCE(array_agg(c.slug) FILTER (WHERE c.slug IS NOT NULL), '{}') AS slugs
+       FROM blog_posts p
+       LEFT JOIN blog_post_categories pc ON pc.post_id = p.id
+       LEFT JOIN blog_categories c ON c.id = pc.category_id
+       WHERE p.slug = $1
+       GROUP BY p.id`,
+      [article.slug]
+    );
+    const row = rows[0];
+    if (!row) continue;
+    const stored = [...row.slugs].sort();
+    const seed = [...article.categories].sort();
+    const sameSet =
+      stored.length === seed.length && stored.every((s, i) => s === seed[i]);
+    // Only rewrite when the editor has not changed which categories apply.
+    if (sameSet) {
+      await replacePostCategories(db, row.id, article.categories);
     }
   }
 
-  blogSchemaDone = true;
+  await db.query(
+    `INSERT INTO schema_migrations (id) VALUES ('blog_category_order_v1')
+     ON CONFLICT DO NOTHING`
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,9 +297,10 @@ function rowToRecord(r: Record<string, unknown>): BlogPostRecord {
   const topic = CLUSTER_TOPICS.includes(r.topic as ClusterTopic)
     ? (r.topic as ClusterTopic)
     : "understand";
+  const slug = r.slug as string;
   return {
     id: r.id as string,
-    slug: r.slug as string,
+    slug,
     title: r.title as string,
     description: (r.description as string) ?? "",
     kicker: (r.kicker as string) ?? "",
@@ -196,7 +311,8 @@ function rowToRecord(r: Record<string, unknown>): BlogPostRecord {
       Array.isArray(r.category_slugs) ? r.category_slugs : []
     ),
     featured: Boolean(r.featured),
-    coverUrl: (r.cover_url as string) ?? "",
+    // Never hand an empty src to next/image.
+    coverUrl: (r.cover_url as string)?.trim() || defaultBlogCover(slug),
     emdrAnchor: (r.emdr_anchor as string) ?? "",
     related: asRelated(r.related),
     sections: asSections(r.sections),
@@ -205,13 +321,25 @@ function rowToRecord(r: Record<string, unknown>): BlogPostRecord {
   };
 }
 
-const POST_SELECT = `
-  SELECT p.*,
-         COALESCE(array_agg(c.slug) FILTER (WHERE c.slug IS NOT NULL), '{}') AS category_slugs
+const CATEGORY_AGG = `
+  COALESCE(
+    array_agg(c.slug ORDER BY pc.sort_order ASC, c.sort_order ASC)
+      FILTER (WHERE c.slug IS NOT NULL),
+    '{}'
+  ) AS category_slugs`;
+
+const POST_FROM = `
   FROM blog_posts p
   LEFT JOIN blog_post_categories pc ON pc.post_id = p.id
-  LEFT JOIN blog_categories c ON c.id = pc.category_id
-`;
+  LEFT JOIN blog_categories c ON c.id = pc.category_id`;
+
+const POST_SELECT_FULL = `SELECT p.*, ${CATEGORY_AGG} ${POST_FROM}`;
+
+/** Card/feed shape: skips the `sections` JSONB, which lists never render. */
+const POST_SELECT_CARD = `SELECT
+  p.id, p.slug, p.title, p.description, p.kicker, p.dek, p.topic,
+  p.featured, p.published, p.cover_url, p.emdr_anchor, p.published_at,
+  p.updated_at, p.related, '[]'::jsonb AS sections, ${CATEGORY_AGG} ${POST_FROM}`;
 
 /* ------------------------------------------------------------------ */
 /* Public reads (with built-in fallback)                               */
@@ -260,7 +388,7 @@ export async function listBlogCategories(): Promise<BlogCategoryRecord[]> {
       postCount: Number(r.post_count ?? 0),
     }));
   } catch (err) {
-    warnFallback(err);
+    warnFallback("listBlogCategories", err);
     return seedCategories();
   }
 }
@@ -278,7 +406,7 @@ export async function listPublishedBlogPosts(opts?: {
     const params: unknown[] = [];
     const where = ["p.published = TRUE"];
     if (category) {
-      // Category filter must not multiply rows from the LEFT JOIN above.
+      // Filter via EXISTS so it cannot multiply rows from the category join.
       where.push(`EXISTS (
         SELECT 1 FROM blog_post_categories fpc
         JOIN blog_categories fc ON fc.id = fpc.category_id
@@ -287,7 +415,7 @@ export async function listPublishedBlogPosts(opts?: {
       params.push(category);
     }
     if (opts?.featuredOnly) where.push("p.featured = TRUE");
-    let sql = `${POST_SELECT}
+    let sql = `${POST_SELECT_CARD}
       WHERE ${where.join(" AND ")}
       GROUP BY p.id
       ORDER BY p.published_at DESC`;
@@ -298,7 +426,7 @@ export async function listPublishedBlogPosts(opts?: {
     const { rows } = await getPool().query<Record<string, unknown>>(sql, params);
     return rows.map(rowToRecord);
   } catch (err) {
-    warnFallback(err);
+    warnFallback("listPublishedBlogPosts", err);
     let posts = seedRecords();
     if (category) posts = posts.filter((p) => p.categories.includes(category));
     if (opts?.featuredOnly) posts = posts.filter((p) => p.featured);
@@ -315,15 +443,17 @@ export async function getPublishedBlogPost(
   try {
     await ensureBlogSchema();
     const { rows } = await getPool().query<Record<string, unknown>>(
-      `${POST_SELECT}
+      `${POST_SELECT_FULL}
        WHERE p.slug = $1 AND p.published = TRUE
        GROUP BY p.id
        LIMIT 1`,
       [clean]
     );
+    // No seed fallback here on purpose: the seed is idempotent, so a missing
+    // row means an editor deleted it and it must stay deleted.
     return rows[0] ? rowToRecord(rows[0]) : null;
   } catch (err) {
-    warnFallback(err);
+    warnFallback("getPublishedBlogPost", err);
     return seedRecords().find((p) => p.slug === clean) ?? null;
   }
 }
@@ -336,7 +466,7 @@ export async function listPublishedBlogPostsBySlugs(
   try {
     await ensureBlogSchema();
     const { rows } = await getPool().query<Record<string, unknown>>(
-      `${POST_SELECT}
+      `${POST_SELECT_CARD}
        WHERE p.published = TRUE AND p.slug = ANY($1::text[])
        GROUP BY p.id
        ORDER BY p.published_at DESC`,
@@ -345,7 +475,7 @@ export async function listPublishedBlogPostsBySlugs(
     const bySlug = new Map(rows.map((r) => [r.slug as string, rowToRecord(r)]));
     return slugs.map((slug) => bySlug.get(slug)).filter(Boolean) as ClusterArticle[];
   } catch (err) {
-    warnFallback(err);
+    warnFallback("listPublishedBlogPostsBySlugs", err);
     const seeds = seedRecords();
     return slugs
       .map((slug) => seeds.find((p) => p.slug === slug))
@@ -360,7 +490,7 @@ export async function listPublishedBlogPostsBySlugs(
 export async function listAllBlogPosts(): Promise<BlogPostRecord[]> {
   await ensureBlogSchema();
   const { rows } = await getPool().query<Record<string, unknown>>(
-    `${POST_SELECT} GROUP BY p.id ORDER BY p.published_at DESC`
+    `${POST_SELECT_FULL} GROUP BY p.id ORDER BY p.published_at DESC`
   );
   return rows.map(rowToRecord);
 }
@@ -370,7 +500,7 @@ export async function getBlogPostBySlugOrId(
 ): Promise<BlogPostRecord | null> {
   await ensureBlogSchema();
   const { rows } = await getPool().query<Record<string, unknown>>(
-    `${POST_SELECT}
+    `${POST_SELECT_FULL}
      WHERE p.slug = $1 OR p.id = $1
      GROUP BY p.id
      LIMIT 1`,
@@ -379,66 +509,22 @@ export async function getBlogPostBySlugOrId(
   return rows[0] ? rowToRecord(rows[0]) : null;
 }
 
-async function insertPostRow(
-  db: ReturnType<typeof getPool>,
-  input: {
-    id: string;
-    slug: string;
-    title: string;
-    description: string;
-    kicker: string;
-    dek: string;
-    topic: ClusterTopic;
-    featured: boolean;
-    published: boolean;
-    coverUrl: string;
-    emdrAnchor: string;
-    publishedAt: string;
-    sections: ClusterSection[];
-    related: string[];
-  }
-): Promise<string> {
-  await db.query(
-    `INSERT INTO blog_posts (
-       id, slug, title, description, kicker, dek, topic, featured, published,
-       cover_url, emdr_anchor, published_at, sections, related
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb)`,
-    [
-      input.id,
-      input.slug,
-      input.title,
-      input.description,
-      input.kicker,
-      input.dek,
-      input.topic,
-      input.featured,
-      input.published,
-      input.coverUrl,
-      input.emdrAnchor,
-      input.publishedAt,
-      JSON.stringify(input.sections),
-      JSON.stringify(input.related),
-    ]
-  );
-  return input.id;
-}
-
 async function replacePostCategories(
   db: ReturnType<typeof getPool>,
   postId: string,
   categorySlugs: string[]
 ): Promise<void> {
   await db.query(`DELETE FROM blog_post_categories WHERE post_id = $1`, [postId]);
-  for (const slug of sanitizeBlogCategorySlugs(categorySlugs)) {
-    const { rows } = await db.query<{ id: string }>(
-      `SELECT id FROM blog_categories WHERE slug = $1`,
-      [slug]
-    );
-    if (!rows[0]) continue;
+  const slugs = sanitizeBlogCategorySlugs(categorySlugs);
+  // Array position is the editor's order (first slug = card chip).
+  for (let i = 0; i < slugs.length; i++) {
     await db.query(
-      `INSERT INTO blog_post_categories (post_id, category_id) VALUES ($1,$2)
-       ON CONFLICT DO NOTHING`,
-      [postId, rows[0].id]
+      `INSERT INTO blog_post_categories (post_id, category_id, sort_order)
+       SELECT $1, c.id, $3
+       FROM blog_categories c
+       WHERE c.slug = $2
+       ON CONFLICT (post_id, category_id) DO NOTHING`,
+      [postId, slugs[i], i]
     );
   }
 }
@@ -465,50 +551,9 @@ export type BlogWriteResult =
   | { ok: true; post: BlogPostRecord }
   | { ok: false; error: string };
 
-/** Em dash reads as AI copy; new posts get a separator instead. */
-function stripEmDash(value: string, separator: string): string {
-  return value.replace(/\s*—\s*/g, separator).replace(/\s+/g, " ").trim();
-}
-
-function cleanCopy(value: string, mode: "title" | "body"): string {
-  return stripEmDash(value, mode === "title" ? ": " : ", ");
-}
-
-function parseSections(value: unknown): ClusterSection[] | null {
-  if (!Array.isArray(value) || value.length === 0) return null;
-  if (value.length > BLOG_SECTIONS_MAX) return null;
-  const out: ClusterSection[] = [];
-  for (const raw of value) {
-    if (!raw || typeof raw !== "object") return null;
-    const section = raw as { heading?: unknown; paragraphs?: unknown };
-    const heading = typeof section.heading === "string" ? cleanCopy(section.heading, "body") : "";
-    if (!heading) return null;
-    const paragraphs = Array.isArray(section.paragraphs)
-      ? section.paragraphs
-          .filter((p): p is string => typeof p === "string")
-          .map((p) => cleanCopy(p, "body"))
-          .filter(Boolean)
-      : [];
-    if (paragraphs.length === 0) return null;
-    if (paragraphs.length > BLOG_PARAGRAPHS_MAX) return null;
-    out.push({ heading, paragraphs });
-  }
-  return out;
-}
-
-function isValidCover(value: string): boolean {
-  if (!value) return true;
-  if (value.startsWith("/")) return !value.startsWith("//");
-  try {
-    return new URL(value).protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Create or update one post. On create, `categories` must name at least one
- * known clinical category, so every published post lands on a category page.
+ * Create or update one post. On create, `categories`, `emdrAnchor`, and
+ * `sections` are required so a published post cannot render empty slots.
  */
 export async function upsertBlogPost(
   input: BlogPostInput
@@ -516,7 +561,7 @@ export async function upsertBlogPost(
   try {
     await ensureBlogSchema();
   } catch (err) {
-    warnFallback(err);
+    warnFallback("upsertBlogPost/schema", err);
     return { ok: false, error: "Blog storage is unavailable" };
   }
 
@@ -537,9 +582,7 @@ export async function upsertBlogPost(
     return { ok: false, error: `Title must be ≤ ${BLOG_TITLE_MAX} characters` };
   }
 
-  const slug = normalizeBlogCategorySlug(
-    input.slug ?? existing?.slug ?? title
-  );
+  const slug = normalizeBlogCategorySlug(input.slug ?? existing?.slug ?? title);
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length < 2) {
     return { ok: false, error: "Invalid slug" };
   }
@@ -560,6 +603,11 @@ export async function upsertBlogPost(
   if (!dek) return { ok: false, error: "Dek is required" };
   if (dek.length > BLOG_DEK_MAX) {
     return { ok: false, error: `Dek must be ≤ ${BLOG_DEK_MAX} characters` };
+  }
+
+  const kicker = cleanCopy((input.kicker ?? existing?.kicker ?? "").trim(), "body");
+  if (kicker.length > BLOG_KICKER_MAX) {
+    return { ok: false, error: `Kicker must be ≤ ${BLOG_KICKER_MAX} characters` };
   }
 
   const topicRaw = input.topic ?? existing?.topic ?? "understand";
@@ -583,14 +631,21 @@ export async function upsertBlogPost(
     };
   }
 
-  const sections =
-    input.sections === undefined
-      ? existing?.sections ?? []
-      : parseSections(input.sections);
-  if (!sections || sections.length === 0) {
+  let sections: BlogSectionInput[];
+  if (input.sections === undefined) {
+    sections = existing?.sections ?? [];
+    if (sections.length === 0) {
+      return { ok: false, error: "Sections are required" };
+    }
+  } else {
+    const parsed = parseSections(input.sections);
+    if (!parsed.ok) return { ok: false, error: parsed.error };
+    sections = parsed.sections;
+  }
+  if (blogBodyLength(sections) > BLOG_BODY_MAX_CHARS) {
     return {
       ok: false,
-      error: "Sections are required (at least one heading with paragraphs)",
+      error: `Body is too long (max ${BLOG_BODY_MAX_CHARS} characters)`,
     };
   }
 
@@ -598,15 +653,44 @@ export async function upsertBlogPost(
     (input.emdrAnchor ?? existing?.emdrAnchor ?? "").trim(),
     "body"
   );
+  const anchorProvided = input.emdrAnchor !== undefined;
+  // Required for new posts: the article page links to /emdr with this text.
+  if (!existing && !anchor) {
+    return {
+      ok: false,
+      error:
+        "emdrAnchor is required: the descriptive link text back to /emdr (e.g. \"how a guided session is structured in Nura\")",
+    };
+  }
+  if (anchorProvided && !anchor) {
+    return { ok: false, error: "emdrAnchor cannot be empty" };
+  }
   if (anchor.length > BLOG_ANCHOR_MAX) {
     return { ok: false, error: `Anchor must be ≤ ${BLOG_ANCHOR_MAX} characters` };
+  }
+
+  // Brand rule: BLS is internal jargon and must never reach a public page.
+  const offending = findBlsAcronym({
+    title,
+    description,
+    dek,
+    kicker,
+    emdrAnchor: anchor,
+    sections,
+  });
+  if (offending) {
+    return {
+      ok: false,
+      error:
+        "Copy must not use the acronym BLS. Say self-guided set time or session set instead.",
+    };
   }
 
   const coverUrlRaw =
     input.coverUrl === undefined
       ? existing?.coverUrl ?? ""
       : (input.coverUrl ?? "").trim();
-  if (!isValidCover(coverUrlRaw)) {
+  if (!isValidCoverUrl(coverUrlRaw)) {
     return { ok: false, error: "Cover must be a site path or https URL" };
   }
 
@@ -631,10 +715,11 @@ export async function upsertBlogPost(
     input.published === undefined
       ? existing?.published ?? false
       : input.published === true;
+  // Unpublishing must not silently drop the home-grid flag.
   const featured =
     input.featured === undefined
-      ? (existing?.featured ?? false) && published
-      : input.featured === true && published;
+      ? existing?.featured ?? false
+      : input.featured === true;
 
   const id = existing?.id ?? input.id?.trim() ?? crypto.randomUUID();
   const db = getPool();
@@ -644,7 +729,7 @@ export async function upsertBlogPost(
     slug,
     title,
     description,
-    kicker: cleanCopy((input.kicker ?? existing?.kicker ?? "").trim(), "body"),
+    kicker,
     dek,
     topic,
     featured,
@@ -683,7 +768,28 @@ export async function upsertBlogPost(
         ]
       );
     } else {
-      await insertPostRow(db, payload);
+      await db.query(
+        `INSERT INTO blog_posts (
+           id, slug, title, description, kicker, dek, topic, featured, published,
+           cover_url, emdr_anchor, published_at, sections, related
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14::jsonb)`,
+        [
+          id,
+          payload.slug,
+          payload.title,
+          payload.description,
+          payload.kicker,
+          payload.dek,
+          payload.topic,
+          payload.featured,
+          payload.published,
+          payload.coverUrl,
+          payload.emdrAnchor,
+          payload.publishedAt,
+          JSON.stringify(payload.sections),
+          JSON.stringify(payload.related),
+        ]
+      );
     }
     await replacePostCategories(db, id, categories);
   } catch (err) {
@@ -707,50 +813,6 @@ export async function deleteBlogPost(value: string): Promise<boolean> {
   await getPool().query(`DELETE FROM blog_posts WHERE id = $1`, [post.id]);
   revalidateBlogPost(post.slug, post.categories);
   return true;
-}
-
-export type BlogCategoryInput = {
-  slug?: string;
-  name?: string;
-  description?: string;
-  sortOrder?: number;
-};
-
-export async function upsertBlogCategory(
-  input: BlogCategoryInput
-): Promise<{ ok: true; category: BlogCategoryRecord } | { ok: false; error: string }> {
-  try {
-    await ensureBlogSchema();
-  } catch (err) {
-    warnFallback(err);
-    return { ok: false, error: "Blog storage is unavailable" };
-  }
-  const slug = normalizeBlogCategorySlug(input.slug ?? input.name ?? "");
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length < 2) {
-    return { ok: false, error: "Invalid category slug" };
-  }
-  const name = (input.name ?? slug).trim();
-  if (!name) return { ok: false, error: "Category name is required" };
-  const description = cleanCopy((input.description ?? "").trim(), "body");
-  const sortOrder = Number.isFinite(input.sortOrder)
-    ? Math.max(0, Math.round(Number(input.sortOrder)))
-    : 999;
-
-  await getPool().query(
-    `INSERT INTO blog_categories (id, slug, name, description, sort_order)
-     VALUES ($1,$2,$3,$4,$5)
-     ON CONFLICT (slug) DO UPDATE SET
-       name = EXCLUDED.name,
-       description = EXCLUDED.description,
-       sort_order = EXCLUDED.sort_order,
-       updated_at = NOW()`,
-    [`cat_${slug}`, slug, name, description, sortOrder]
-  );
-  const all = await listBlogCategories();
-  const category = all.find((c) => c.slug === slug);
-  if (!category) return { ok: false, error: "Category could not be saved" };
-  revalidatePath("/blog");
-  return { ok: true, category };
 }
 
 /** Refresh every cached surface a blog post can appear on. */

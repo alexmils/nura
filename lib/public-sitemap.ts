@@ -28,8 +28,8 @@ function atUtc(isoDate: string): Date {
 
 /** Live blog data, when available. Falls back to the built-in guides. */
 export type PublicSitemapBlogInput = {
-  posts?: { slug: string; publishedAt: string }[];
-  categories?: { slug: string; postCount: number }[];
+  posts?: { slug: string; publishedAt: string; categories: string[] }[];
+  categories?: { slug: string; postCount: number; lastModified?: string }[];
 };
 
 /**
@@ -99,7 +99,10 @@ export function buildPublicSitemap(
     .filter((category) => category.postCount > 0)
     .map((category) => ({
       url: `${base}/blog/category/${category.slug}`,
-      lastModified: clusterLatest,
+      // Each hub is as fresh as its own newest guide, not the whole blog.
+      lastModified: category.lastModified
+        ? new Date(category.lastModified)
+        : clusterLatest,
     }));
 
   return [...pages, ...articles, ...categoryPages];

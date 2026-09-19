@@ -662,6 +662,19 @@
     padding-bottom: 0.35rem;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    /* Fade the right edge so the row reads as scrollable, not cut off. */
+    mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 2.5rem),
+      transparent 100%
+    );
+    -webkit-mask-image: linear-gradient(
+      to right,
+      #000 0,
+      #000 calc(100% - 2.5rem),
+      transparent 100%
+    );
   }
 
   .fe-blog-cats::-webkit-scrollbar {

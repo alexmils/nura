@@ -105,13 +105,23 @@ export function blogCategoryName(slug: string): string {
   return blogCategoryBySlug(slug)?.name ?? slug;
 }
 
-/** Keep only known slugs, deduped, in canonical order. */
+/**
+ * Keep only known slugs, deduped, preserving the caller's order.
+ *
+ * Order is editorial: it decides the chip on the blog card, the order on the
+ * article page, and the RSS `<category>` order. The first slug is the one the
+ * card shows, so it must not be re-sorted into canonical order.
+ */
 export function sanitizeBlogCategorySlugs(values: unknown): string[] {
   if (!Array.isArray(values)) return [];
-  const wanted = new Set(
-    values
-      .filter((v): v is string => typeof v === "string")
-      .map(normalizeBlogCategorySlug)
-  );
-  return BLOG_CATEGORIES.filter((c) => wanted.has(c.slug)).map((c) => c.slug);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const slug = normalizeBlogCategorySlug(value);
+    if (!BLOG_CATEGORY_SLUGS.includes(slug) || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push(slug);
+  }
+  return out;
 }

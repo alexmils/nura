@@ -14,6 +14,7 @@
 
 import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { writeAuditEvent } from "@/lib/audit-log";
 import {
   deleteBlogPost,
   getBlogPostBySlugOrId,
@@ -138,10 +139,17 @@ const TOOLS = [
   {
     name: "create_blog_post",
     description:
-      "Create a guide. `categories` is required: choose the theme it is written for so it appears on that category page. Saves as draft unless published=true. Copy must not use an em dash or the acronym BLS.",
+      "Create a guide. `categories` is required: choose the theme it is written for so it appears on that category page. `emdrAnchor` is required too (the descriptive link back to /emdr). Saves as draft unless published=true. Copy must not use an em dash or the acronym BLS.",
     inputSchema: {
       type: "object",
-      required: ["title", "description", "dek", "sections", "categories"],
+      required: [
+        "title",
+        "description",
+        "dek",
+        "sections",
+        "categories",
+        "emdrAnchor",
+      ],
       properties: POST_FIELDS,
       additionalProperties: false,
     },
@@ -149,11 +157,17 @@ const TOOLS = [
   {
     name: "update_blog_post",
     description:
-      "Update an existing guide by slug (or id). Only the fields you pass change; passing categories replaces the category set.",
+      "Update an existing guide. `slug` selects the post; pass `newSlug` to rename it. Only the fields you pass change; passing categories replaces the category set.",
     inputSchema: {
       type: "object",
       required: ["slug"],
-      properties: { ...POST_FIELDS },
+      properties: {
+        ...POST_FIELDS,
+        newSlug: {
+          type: "string",
+          description: "Rename the post to this slug (optional).",
+        },
+      },
       additionalProperties: false,
     },
   },
@@ -270,6 +284,15 @@ async function callTool(
         published: input.published === true,
       });
       if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.post_created",
+        detail: {
+          source: "mcp",
+          slug: result.post.slug,
+          categories: result.post.categories,
+          published: result.post.published,
+        },
+      });
       return text({
         ok: true,
         post: postSummary(result.post),
@@ -280,13 +303,28 @@ async function callTool(
 
     case "update_blog_post": {
       const slug = String(args.slug ?? "").trim();
+      const newSlug = typeof args.newSlug === "string" ? args.newSlug.trim() : "";
       const existing = await getBlogPostBySlugOrId(slug);
       if (!existing) return toolError(`No post with slug "${slug}".`);
-      const patch = { ...args } as BlogPostInput;
-      delete patch.slug;
+      // `slug` selected the post; `newSlug` is the rename. `id` would let the
+      // caller address a different row, so it is stripped.
+      const patch = { ...args } as BlogPostInput & { newSlug?: string };
       delete patch.id;
+      delete patch.newSlug;
+      delete patch.slug;
+      if (newSlug) patch.slug = newSlug;
       const result = await upsertBlogPost({ ...patch, id: existing.id });
       if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.post_updated",
+        detail: {
+          source: "mcp",
+          slug: result.post.slug,
+          previousSlug: existing.slug,
+          categories: result.post.categories,
+          published: result.post.published,
+        },
+      });
       return text({
         ok: true,
         post: postSummary(result.post),
@@ -298,6 +336,10 @@ async function callTool(
       const slug = String(args.slug ?? "").trim();
       const removed = await deleteBlogPost(slug);
       if (!removed) return toolError(`No post with slug "${slug}".`);
+      await writeAuditEvent({
+        action: "blog.post_deleted",
+        detail: { source: "mcp", slug },
+      });
       return text({ ok: true, deleted: slug });
     }
 

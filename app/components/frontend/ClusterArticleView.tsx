@@ -79,10 +79,12 @@ export function ClusterArticleView({
           </section>
         ) : null}
 
-        <p className="fe-cluster-emdr">
-          In the app:{" "}
-          <Link href="/emdr">{article.emdrAnchor}</Link>.
-        </p>
+        {article.emdrAnchor ? (
+          <p className="fe-cluster-emdr">
+            In the app:{" "}
+            <Link href="/emdr">{article.emdrAnchor}</Link>.
+          </p>
+        ) : null}
 
         <p className="fe-cluster-note">
           {BRAND_LIMITS_LINE}{" "}

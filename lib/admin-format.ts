@@ -50,6 +50,9 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "settings.stripe_synced": "Stripe prices synced",
   "email.test_sent": "Test email sent",
   "email.broadcast_sent": "Broadcast sent",
+  "blog.post_created": "Blog guide created",
+  "blog.post_updated": "Blog guide updated",
+  "blog.post_deleted": "Blog guide deleted",
 };
 
 export function actionLabel(action: AuditAction | string) {

@@ -17,5 +17,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listBlogCategories(),
   ]);
 
-  return buildPublicSitemap(siteOrigin(publicUrl), { posts, categories });
+  // Newest guide per category, so each hub reports its own freshness.
+  const newestByCategory = new Map<string, string>();
+  for (const post of posts) {
+    for (const slug of post.categories) {
+      const current = newestByCategory.get(slug);
+      if (!current || Date.parse(post.publishedAt) > Date.parse(current)) {
+        newestByCategory.set(slug, post.publishedAt);
+      }
+    }
+  }
+
+  return buildPublicSitemap(siteOrigin(publicUrl), {
+    posts,
+    categories: categories.map((category) => ({
+      slug: category.slug,
+      postCount: category.postCount,
+      lastModified: newestByCategory.get(category.slug),
+    })),
+  });
 }
