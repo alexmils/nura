@@ -21,11 +21,13 @@ import {
   BLOG_DEK_MAX,
   BLOG_DESCRIPTION_MAX,
   BLOG_KICKER_MAX,
+  BLOG_REMOTE_IMAGE_HOSTS,
   BLOG_TITLE_MAX,
   blogBodyLength,
   cleanCopy,
   defaultBlogCover,
   findBlsAcronym,
+  isOptimizableBlogCover,
   isValidCoverUrl,
   parseSections,
   type BlogSectionInput,
@@ -311,8 +313,10 @@ function rowToRecord(r: Record<string, unknown>): BlogPostRecord {
       Array.isArray(r.category_slugs) ? r.category_slugs : []
     ),
     featured: Boolean(r.featured),
-    // Never hand an empty src to next/image.
-    coverUrl: (r.cover_url as string)?.trim() || defaultBlogCover(slug),
+    // Never hand next/image an empty or unconfigured src.
+    coverUrl: isOptimizableBlogCover((r.cover_url as string) ?? "")
+      ? ((r.cover_url as string) ?? "").trim()
+      : defaultBlogCover(slug),
     emdrAnchor: (r.emdr_anchor as string) ?? "",
     related: asRelated(r.related),
     sections: asSections(r.sections),
@@ -692,6 +696,13 @@ export async function upsertBlogPost(
       : (input.coverUrl ?? "").trim();
   if (!isValidCoverUrl(coverUrlRaw)) {
     return { ok: false, error: "Cover must be a site path or https URL" };
+  }
+  // next/image throws on unconfigured hosts, which would 500 the article page.
+  if (coverUrlRaw && !isOptimizableBlogCover(coverUrlRaw)) {
+    return {
+      ok: false,
+      error: `Cover https URLs must be on: ${BLOG_REMOTE_IMAGE_HOSTS.join(", ")} (or use a site path such as /marketing/landing/calm-water.jpg)`,
+    };
   }
 
   const related =

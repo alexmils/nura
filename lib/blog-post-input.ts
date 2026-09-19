@@ -140,6 +140,35 @@ export function isValidCoverUrl(value: string): boolean {
   }
 }
 
+/**
+ * Remote hosts allowed in `next.config.ts` → `images.remotePatterns`.
+ * A cover from any other host makes `next/image` throw at render time, which
+ * would take the whole page down, so those URLs are rejected on write and
+ * swapped for the fallback on read.
+ */
+export const BLOG_REMOTE_IMAGE_HOSTS = [
+  "images.unsplash.com",
+  "images.pexels.com",
+] as const;
+
+/** Can this cover be rendered by `next/image`? */
+export function isOptimizableBlogCover(value: string): boolean {
+  const t = value.trim();
+  if (!t) return false;
+  if (t.startsWith("/")) return !t.startsWith("//");
+  try {
+    const u = new URL(t);
+    return (
+      u.protocol === "https:" &&
+      (BLOG_REMOTE_IMAGE_HOSTS as readonly string[]).includes(
+        u.hostname.toLowerCase()
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** Deterministic fallback so a post without a cover never renders an empty src. */
 const FALLBACK_COVERS = [
   "/marketing/landing/reading.jpg",

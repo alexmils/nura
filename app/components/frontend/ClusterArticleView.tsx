@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
 import { blogCategoryName } from "@/lib/blog-categories";
@@ -54,6 +55,21 @@ export function ClusterArticleView({
             {" · "}
             <Link href="/editorial">How we write</Link>
           </p>
+        ) : null}
+
+        {article.coverUrl ? (
+          <div className="fe-cluster-hero">
+            <Image
+              src={article.coverUrl}
+              // Decorative editorial still: an invented description would be fake
+              // specificity, so the image is skipped by assistive tech.
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 900px) 100vw, 1156px"
+              className="fe-cluster-hero-image"
+            />
+          </div>
         ) : null}
 
         <div className="fe-cluster-body">

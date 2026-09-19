@@ -135,6 +135,29 @@
   color: var(--fe-muted);
 }
 
+/* Featured image on the article page — full column, editorial banner crop. */
+.fe-cluster-hero {
+  position: relative;
+  display: block;
+  margin: 0 0 2.5rem;
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--fe-muted) 12%, #fff);
+}
+
+.fe-cluster-hero-image {
+  object-fit: cover;
+}
+
+@media (min-width: 900px) {
+  .fe-cluster-hero {
+    /* Wider crop once the column is full width, so it reads as a banner
+       instead of a very tall block. */
+    aspect-ratio: 21 / 9;
+  }
+}
+
 .fe-cluster-body h2 {
   margin: 2rem 0 0.75rem;
   font-family: var(--font-sans);

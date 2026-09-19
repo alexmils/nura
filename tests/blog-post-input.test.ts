@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   BLOG_BODY_MAX_CHARS,
+  BLOG_REMOTE_IMAGE_HOSTS,
   BLOG_TITLE_MAX,
   blogBodyLength,
   cleanCopy,
   defaultBlogCover,
   findBlsAcronym,
   hasBlsAcronym,
+  isOptimizableBlogCover,
   isValidCoverUrl,
   parseSections,
   stripEmDash,
@@ -95,6 +97,20 @@ describe("blog post input", () => {
     assert.equal(isValidCoverUrl("//evil.example/a.jpg"), false);
     assert.equal(isValidCoverUrl("http://example.com/a.jpg"), false);
     assert.equal(isValidCoverUrl("javascript:alert(1)"), false);
+  });
+
+  it("only optimizes covers next/image can actually render", () => {
+    // Site paths always work.
+    assert.equal(isOptimizableBlogCover("/marketing/landing/calm-rest.jpg"), true);
+    // Allowlisted remote hosts come from next.config.ts remotePatterns.
+    for (const host of BLOG_REMOTE_IMAGE_HOSTS) {
+      assert.equal(isOptimizableBlogCover(`https://${host}/photo.jpg`), true, host);
+    }
+    // An unconfigured host would make next/image throw at render time.
+    assert.equal(isOptimizableBlogCover("https://example.com/a.jpg"), false);
+    assert.equal(isOptimizableBlogCover("//evil.example/a.jpg"), false);
+    assert.equal(isOptimizableBlogCover(""), false);
+    assert.equal(isOptimizableBlogCover("not a url"), false);
   });
 
   it("always produces a usable fallback cover", () => {

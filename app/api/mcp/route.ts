@@ -89,7 +89,8 @@ const POST_FIELDS = {
   },
   coverUrl: {
     type: "string",
-    description: "Site path (/marketing/...) or https image URL.",
+    description:
+      "Featured image shown on the card and at the top of the guide. Site path (/marketing/landing/calm-water.jpg) or an https URL on images.unsplash.com / images.pexels.com. Omit to use a fallback image.",
   },
   emdrAnchor: {
     type: "string",
