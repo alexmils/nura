@@ -1,10 +1,11 @@
 import { ClusterArticleView } from "@/app/components/frontend/ClusterArticleView";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
-import { BRAND_SPOKEN } from "@/lib/brand";
 import {
-  getClusterArticle,
-  listClusterArticles,
-} from "@/lib/content-cluster";
+  getPublishedBlogPost,
+  listPublishedBlogPostsBySlugs,
+} from "@/lib/blog-db";
+import { BRAND_SPOKEN } from "@/lib/brand";
+import { listClusterArticles } from "@/lib/content-cluster";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { dynamicOgImageUrl } from "@/lib/seo-og-image";
 import {
@@ -29,7 +30,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = getClusterArticle(slug);
+  const article = await getPublishedBlogPost(slug);
   if (!article) return { title: "Guide not found" };
 
   let publicUrl: string | undefined;
@@ -71,7 +72,7 @@ export default async function BlogArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getClusterArticle(slug);
+  const article = await getPublishedBlogPost(slug);
   if (!article) notFound();
 
   let publicUrl: string | undefined;
@@ -82,6 +83,7 @@ export default async function BlogArticlePage({
   }
   const origin = siteOrigin(publicUrl);
   const jsonLd = buildClusterArticleJsonLd(origin, article);
+  const related = await listPublishedBlogPostsBySlugs(article.related);
 
   return (
     <FrontendShell>
@@ -91,7 +93,7 @@ export default async function BlogArticlePage({
           __html: stringifyJsonLd(jsonLd),
         }}
       />
-      <ClusterArticleView article={article} />
+      <ClusterArticleView article={article} related={related} />
     </FrontendShell>
   );
 }

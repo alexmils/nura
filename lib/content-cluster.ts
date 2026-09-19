@@ -1,3 +1,8 @@
+import {
+  blogCategoryName,
+  normalizeBlogCategorySlug,
+  sanitizeBlogCategorySlugs,
+} from "@/lib/blog-categories";
 import type { LandingBlogPost } from "@/lib/landing-blog";
 
 export const CLUSTER_TOPICS = ["understand", "practice", "safety"] as const;
@@ -22,6 +27,8 @@ export type ClusterArticle = {
   dek: string;
   publishedAt: string;
   topic: ClusterTopic;
+  /** Clinical blog categories (see `lib/blog-categories.ts`); may be empty. */
+  categories: string[];
   featured: boolean;
   coverUrl: string;
   /** Descriptive in-copy link back to the money page. */
@@ -29,6 +36,9 @@ export type ClusterArticle = {
   related: string[];
   sections: ClusterSection[];
 };
+
+/** Seed shape before the editorial category mapping is applied. */
+type ClusterArticleSeed = Omit<ClusterArticle, "categories">;
 
 /** Distinct landing stills so /blog masonry does not read as one repeated crop. */
 const COVER = {
@@ -49,7 +59,7 @@ const COVER = {
   sofa: "/marketing/landing/warm-sofa.jpg",
 } as const;
 
-export const CLUSTER_ARTICLES: ClusterArticle[] = [
+const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
   {
     slug: "what-is-emdr",
     title: "What Is EMDR? How EMDR Therapy Works",
@@ -746,6 +756,41 @@ export const CLUSTER_ARTICLES: ClusterArticle[] = [
   },
 ];
 
+/**
+ * Editorial category map for the built-in guides. Slugs come from
+ * `lib/blog-categories.ts`; order sets the primary chip on cards.
+ */
+const SEED_ARTICLE_CATEGORIES: Record<string, string[]> = {
+  "what-is-emdr": ["trauma", "ptsd"],
+  "what-is-bilateral-stimulation": ["trauma"],
+  "visual-sets-and-the-moving-ball": [],
+  "emdr-vs-cbt": ["trauma", "anxiety"],
+  "emdr-between-sessions": ["trauma"],
+  "can-you-do-emdr-alone": [],
+  "how-long-does-emdr-take": [],
+  "emdr-for-anxiety": ["anxiety", "panic"],
+  "emdr-for-ptsd": ["ptsd", "trauma"],
+  "emdr-online-what-to-expect": [],
+  "guided-vs-free-mode": [],
+  "grounding-before-a-set": ["panic", "anxiety"],
+  "when-to-pause-or-stop": ["panic"],
+  "emdr-session-structure": [],
+  "self-help-emdr-vs-a-therapist": [],
+  "eye-movements-and-online-emdr": [],
+  "emdr-check-ins-after-sets": [],
+  "what-happens-in-an-emdr-set": [],
+};
+
+/** Built-in corpus. The blog DB seeds from this and falls back to it. */
+export const CLUSTER_ARTICLES: ClusterArticle[] = CLUSTER_ARTICLE_SEEDS.map(
+  (seed) => ({
+    ...seed,
+    categories: sanitizeBlogCategorySlugs(
+      SEED_ARTICLE_CATEGORIES[seed.slug] ?? []
+    ),
+  })
+);
+
 const BY_SLUG = new Map(CLUSTER_ARTICLES.map((a) => [a.slug, a]));
 
 export type ClusterFaq = { q: string; a: string };
@@ -868,6 +913,12 @@ export function relatedClusterArticles(article: ClusterArticle): ClusterArticle[
     .filter((a): a is ClusterArticle => Boolean(a));
 }
 
+/** Built-in guides in one clinical category (seed fallback / tests). */
+export function clusterArticlesByCategory(slug: string): ClusterArticle[] {
+  const wanted = normalizeBlogCategorySlug(slug);
+  return listClusterArticles().filter((a) => a.categories.includes(wanted));
+}
+
 /** Rough reading time for blog cards (~200 wpm). */
 export function estimateClusterReadMinutes(article: ClusterArticle): number {
   const words = article.sections.reduce((sum, section) => {
@@ -906,7 +957,9 @@ export function clusterToLandingPost(article: ClusterArticle): LandingBlogPost {
     title: article.title,
     summary: article.dek,
     kind: article.topic === "safety" ? "safety" : "article",
-    tag: CLUSTER_TOPIC_LABEL[article.topic],
+    tag: article.categories.length
+      ? blogCategoryName(article.categories[0]!)
+      : CLUSTER_TOPIC_LABEL[article.topic],
     coverUrl: article.coverUrl,
     createdAt: article.publishedAt,
     readMinutes: estimateClusterReadMinutes(article),

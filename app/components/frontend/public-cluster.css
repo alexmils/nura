@@ -555,3 +555,120 @@
     padding: 0 0.25rem;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Category chips + category hubs                                      */
+/* ------------------------------------------------------------------ */
+
+.fe-blog-cats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.fe-blog-cat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--fe-line);
+  border-radius: 999px;
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--fe-fg);
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.fe-blog-cat:hover {
+  border-color: var(--fe-accent);
+  background: color-mix(in srgb, var(--fe-accent) 12%, var(--fe-bg));
+}
+
+.fe-blog-cat:focus-visible {
+  outline: 2px solid #c6d67e;
+  outline-offset: 2px;
+}
+
+.fe-blog-cat[aria-current="page"] {
+  border-color: var(--fe-accent);
+  background: color-mix(in srgb, var(--fe-accent) 20%, var(--fe-bg));
+}
+
+.fe-blog-cat-count {
+  font-family: var(--font-alt);
+  font-size: 0.75rem;
+  color: var(--fe-muted);
+}
+
+.fe-blog-cat[aria-current="page"] .fe-blog-cat-count {
+  color: var(--fe-fg);
+}
+
+.fe-blog-empty {
+  margin: 2.75rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--fe-muted);
+}
+
+.fe-blog-empty a {
+  color: var(--fe-fg);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+/* Article page: clinical categories under the dek */
+.fe-cluster-cats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0 0 0.6rem;
+  font-family: var(--font-alt);
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fe-muted);
+}
+
+.fe-cluster-cats a {
+  color: var(--fe-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.fe-cluster-cats a:hover {
+  color: var(--fe-fg);
+  border-color: var(--fe-accent);
+}
+
+@media (max-width: 540px) {
+  .fe-blog-cats {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .fe-blog-cats::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fe-blog-cat {
+    flex: 0 0 auto;
+  }
+}

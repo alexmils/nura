@@ -29,6 +29,12 @@ const SYNC_SESSION_PATH = "/api/auth/sync-session";
 const VOICE_DIAG_PATH = "/api/voice-diagnostic-log";
 
 /**
+ * Blog MCP endpoint. Authenticates with its own bearer token
+ * (`NURA_MCP_TOKEN`), so it must bypass session middleware.
+ */
+const MCP_PATH = "/api/mcp";
+
+/**
  * Internal origin for middleware → route fetches.
  * Must NOT use the public tunnel host (dev.nurahelp.com) — Cloudflare Access
  * would intercept and cause redirect loops.
@@ -215,7 +221,8 @@ export async function middleware(request: NextRequest) {
   if (
     pathname === SYNC_SESSION_PATH ||
     pathname === "/api/auth/access" ||
-    pathname === VOICE_DIAG_PATH
+    pathname === VOICE_DIAG_PATH ||
+    pathname === MCP_PATH
   ) {
     return NextResponse.next();
   }

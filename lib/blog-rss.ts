@@ -1,5 +1,10 @@
 import { BRAND_SPOKEN, BRAND_TAGLINE } from "@/lib/brand";
-import { listClusterArticles } from "@/lib/content-cluster";
+import { blogCategoryName } from "@/lib/blog-categories";
+import {
+  CLUSTER_TOPIC_LABEL,
+  listClusterArticles,
+  type ClusterArticle,
+} from "@/lib/content-cluster";
 
 function xmlEscape(value: string): string {
   return value
@@ -11,22 +16,30 @@ function xmlEscape(value: string): string {
 }
 
 /** RSS 2.0 for /blog guides (newest first). */
-export function buildBlogRssXml(origin: string): string {
+export function buildBlogRssXml(
+  origin: string,
+  articles: ClusterArticle[] = listClusterArticles()
+): string {
   const base = origin.replace(/\/$/, "");
-  const articles = listClusterArticles();
   const lastBuild =
     articles[0]?.publishedAt ?? new Date().toISOString();
 
   const items = articles
     .map((article) => {
       const link = `${base}/blog/${article.slug}`;
+      const categories = (article.categories.length
+        ? article.categories.map(blogCategoryName)
+        : [CLUSTER_TOPIC_LABEL[article.topic]]
+      )
+        .map((name) => `      <category>${xmlEscape(name)}</category>`)
+        .join("\n");
       return `    <item>
       <title>${xmlEscape(article.title)}</title>
       <link>${xmlEscape(link)}</link>
       <guid isPermaLink="true">${xmlEscape(link)}</guid>
       <pubDate>${new Date(article.publishedAt).toUTCString()}</pubDate>
       <description>${xmlEscape(article.description)}</description>
-      <category>${xmlEscape(article.topic)}</category>
+${categories}
     </item>`;
     })
     .join("\n");

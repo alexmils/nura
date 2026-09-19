@@ -106,6 +106,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The tour also runs once by itself after onboarding
 - Settings → Profile has a Password section: add a password to a Google account, or change the one you have
 - Forgot your password? Settings → Profile can email you a reset link to your own address, so a Google account can get a password without signing out
+- [internal] Blog categories: Trauma, PTSD, Anxiety, Panic, Grief, Phobias, Childhood memories, and Self-worth are now the `/blog` filter, each with a hub at `/blog/category/[slug]` (mirrors the home “Why people start” grid)
+- [internal] Blog is now Postgres-backed (`blog_posts`, `blog_categories`, `blog_post_categories`, `lib/blog-db.ts`), seeded from the built-in 18 guides, and falls back to them when Postgres is unreachable; `/blog`, article pages, RSS, sitemap, and `llms.txt` read the live set
+- [internal] Blog MCP at `POST /api/mcp` (bearer `NURA_MCP_TOKEN`, bypasses session middleware) plus `GET/POST /api/admin/blog`: the editorial agent lists categories, then publishes with an explicit `categories` choice
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

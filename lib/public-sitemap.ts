@@ -26,12 +26,32 @@ function atUtc(isoDate: string): Date {
   return new Date(`${isoDate}T00:00:00.000Z`);
 }
 
+/** Live blog data, when available. Falls back to the built-in guides. */
+export type PublicSitemapBlogInput = {
+  posts?: { slug: string; publishedAt: string }[];
+  categories?: { slug: string; postCount: number }[];
+};
+
 /**
  * Public sitemap. Google uses lastmod; changefreq/priority are omitted.
  */
-export function buildPublicSitemap(origin: string): MetadataRoute.Sitemap {
+export function buildPublicSitemap(
+  origin: string,
+  blog?: PublicSitemapBlogInput
+): MetadataRoute.Sitemap {
   const base = origin.replace(/\/$/, "");
-  const clusterLatest = latestClusterModified();
+  const posts = blog?.posts;
+  const clusterLatest = posts?.length
+    ? new Date(
+        posts.reduce(
+          (latest, post) =>
+            Date.parse(post.publishedAt) > latest
+              ? Date.parse(post.publishedAt)
+              : latest,
+          0
+        )
+      )
+    : latestClusterModified();
 
   const staticPaths = [
     "/",
@@ -65,12 +85,22 @@ export function buildPublicSitemap(origin: string): MetadataRoute.Sitemap {
     };
   });
 
-  const articles: MetadataRoute.Sitemap = clusterSitemapPaths().map(
-    ({ path, lastModified }) => ({
-      url: `${base}${path}`,
-      lastModified,
-    })
-  );
+  const articles: MetadataRoute.Sitemap = posts?.length
+    ? posts.map((post) => ({
+        url: `${base}/blog/${post.slug}`,
+        lastModified: new Date(post.publishedAt),
+      }))
+    : clusterSitemapPaths().map(({ path, lastModified }) => ({
+        url: `${base}${path}`,
+        lastModified,
+      }));
 
-  return [...pages, ...articles];
+  const categoryPages: MetadataRoute.Sitemap = (blog?.categories ?? [])
+    .filter((category) => category.postCount > 0)
+    .map((category) => ({
+      url: `${base}/blog/category/${category.slug}`,
+      lastModified: clusterLatest,
+    }));
+
+  return [...pages, ...articles, ...categoryPages];
 }

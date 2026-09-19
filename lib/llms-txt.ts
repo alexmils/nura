@@ -1,13 +1,26 @@
 import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
-import { listClusterArticles } from "@/lib/content-cluster";
+import { blogCategoryName } from "@/lib/blog-categories";
+import { listClusterArticles, type ClusterArticle } from "@/lib/content-cluster";
 import { legalEntityDisplayName } from "@/lib/legal-entity";
 
-export function buildLlmsTxt(origin: string): string {
+export function buildLlmsTxt(
+  origin: string,
+  articles: ClusterArticle[] = listClusterArticles()
+): string {
   const base = origin.replace(/\/$/, "");
-  const articles = listClusterArticles()
+  const guides = articles
     .map(
       (a) =>
         `- [${a.title}](${base}/blog/${a.slug}): ${a.description.slice(0, 120).trim()}${a.description.length > 120 ? "…" : ""}`
+    )
+    .join("\n");
+
+  const usedCategories = [
+    ...new Set(articles.flatMap((a) => a.categories)),
+  ].sort();
+  const categoryLines = usedCategories
+    .map(
+      (slug) => `- [${blogCategoryName(slug)}](${base}/blog/category/${slug})`
     )
     .join("\n");
 
@@ -38,8 +51,8 @@ Do not fetch /app, /admin, /api, or /health — those are the signed-in product 
 
 ## EMDR guides
 
-${articles}
-
+${guides}
+${categoryLines ? `\n## Blog categories\n\n${categoryLines}\n` : ""}
 ## Also
 
 - [Sitemap](${base}/sitemap.xml)

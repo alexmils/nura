@@ -1,6 +1,7 @@
 ﻿import { BlogIndex } from "@/app/components/frontend/BlogIndex";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
+import { listBlogCategories, listPublishedBlogPosts } from "@/lib/blog-db";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { buildBlogIndexJsonLd } from "@/lib/seo-jsonld";
 import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
@@ -33,10 +34,15 @@ export default async function BlogPage() {
     publicUrl = undefined;
   }
 
+  const [posts, categories] = await Promise.all([
+    listPublishedBlogPosts(),
+    listBlogCategories(),
+  ]);
+
   return (
     <FrontendShell>
-      <JsonLd data={buildBlogIndexJsonLd(siteOrigin(publicUrl))} />
-      <BlogIndex />
+      <JsonLd data={buildBlogIndexJsonLd(siteOrigin(publicUrl), posts)} />
+      <BlogIndex posts={posts} categories={categories} />
     </FrontendShell>
   );
 }

@@ -1,4 +1,5 @@
-﻿import { PUBLIC_PAGE_REVALIDATE_SECONDS } from "@/lib/public-page-cache";
+﻿import { listPublishedBlogPosts } from "@/lib/blog-db";
+import { PUBLIC_PAGE_REVALIDATE_SECONDS } from "@/lib/public-page-cache";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { buildLlmsTxt } from "@/lib/llms-txt";
 import { siteOrigin } from "@/lib/site-seo";
@@ -12,7 +13,8 @@ export async function GET() {
   } catch {
     publicUrl = undefined;
   }
-  const body = buildLlmsTxt(siteOrigin(publicUrl));
+  const articles = await listPublishedBlogPosts();
+  const body = buildLlmsTxt(siteOrigin(publicUrl), articles);
   return new Response(body, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

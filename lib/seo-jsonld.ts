@@ -144,13 +144,13 @@ export const KNOWLEDGE_JSON_LD = {
 
 /** Visible H1 + dek on `/blog` (dek without the Learn link markup). */
 export const BLOG_INDEX_JSON_LD = {
-  name: "EMDR articles — newest first",
+  name: "EMDR articles, newest first",
   description:
-    "Every public guide with a date. New here? Start on Learn for curated reading paths.",
+    "Pick a theme, or read the newest guides. New here? Start on Learn for curated reading paths.",
 } as const;
 
-function articleListItems() {
-  return listClusterArticles().map((article) => ({
+function articleListItems(posts: ClusterArticle[] = listClusterArticles()) {
+  return posts.map((article) => ({
     name: article.title,
     path: `/blog/${article.slug}`,
   }));
@@ -209,7 +209,10 @@ export function buildKnowledgeJsonLd(origin: string, faq: FaqItem[]) {
   };
 }
 
-export function buildBlogIndexJsonLd(origin: string) {
+export function buildBlogIndexJsonLd(
+  origin: string,
+  posts: ClusterArticle[] = listClusterArticles()
+) {
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -220,11 +223,38 @@ export function buildBlogIndexJsonLd(origin: string) {
         name: BLOG_INDEX_JSON_LD.name,
         description: BLOG_INDEX_JSON_LD.description,
         types: ["CollectionPage", "Blog"],
-        items: articleListItems(),
+        items: articleListItems(posts),
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
         { name: "Blog", path: "/blog" },
+      ]),
+    ],
+  };
+}
+
+/** Category hub: CollectionPage of the guides in one clinical category. */
+export function buildBlogCategoryJsonLd(
+  origin: string,
+  category: { slug: string; name: string; description: string },
+  posts: ClusterArticle[]
+) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      organizationJsonLd(origin),
+      collectionPageJsonLd({
+        origin,
+        path: `/blog/category/${category.slug}`,
+        name: `${category.name} — EMDR guides`,
+        description: category.description,
+        types: ["CollectionPage", "Blog"],
+        items: articleListItems(posts),
+      }),
+      breadcrumbJsonLd(origin, [
+        { name: "Home", path: "/" },
+        { name: "Blog", path: "/blog" },
+        { name: category.name, path: `/blog/category/${category.slug}` },
       ]),
     ],
   };

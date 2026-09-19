@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
+import { blogCategoryName } from "@/lib/blog-categories";
 import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import {
   CLUSTER_TOPIC_LABEL,
@@ -11,8 +12,14 @@ import {
 import { formatBlogDate } from "@/lib/landing-blog";
 import "./public-cluster.css";
 
-export function ClusterArticleView({ article }: { article: ClusterArticle }) {
-  const related = relatedClusterArticles(article);
+export function ClusterArticleView({
+  article,
+  related: relatedProp,
+}: {
+  article: ClusterArticle;
+  related?: ClusterArticle[];
+}) {
+  const related = relatedProp ?? relatedClusterArticles(article);
   const date = formatBlogDate(article.publishedAt);
   const learnHref = learnTopicHref(article.topic);
   const faqs = clusterArticleFaqs(article);
@@ -27,6 +34,18 @@ export function ClusterArticleView({ article }: { article: ClusterArticle }) {
         </p>
         <h1>{article.title}</h1>
         <p className="fe-cluster-dek">{article.dek}</p>
+        {article.categories.length ? (
+          <p className="fe-cluster-cats">
+            {article.categories.map((slug, i) => (
+              <span key={slug}>
+                {i > 0 ? " · " : null}
+                <Link href={`/blog/category/${slug}`}>
+                  {blogCategoryName(slug)}
+                </Link>
+              </span>
+            ))}
+          </p>
+        ) : null}
         {date ? (
           <p className="fe-cluster-meta">
             <time dateTime={article.publishedAt}>{date}</time>
@@ -78,7 +97,9 @@ export function ClusterArticleView({ article }: { article: ClusterArticle }) {
             title: item.title,
             dek: item.dek,
             coverUrl: item.coverUrl,
-            tag: CLUSTER_TOPIC_LABEL[item.topic],
+            tag: item.categories.length
+              ? blogCategoryName(item.categories[0]!)
+              : CLUSTER_TOPIC_LABEL[item.topic],
           }))}
           indexHref={learnHref}
           indexLabel={`More in ${CLUSTER_TOPIC_LABEL[article.topic]}`}
