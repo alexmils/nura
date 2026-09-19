@@ -1,6 +1,13 @@
 /** Public-site SEO + marketing tags — Admin → SEO (`app_settings.seo`). */
 
-export const SEO_PAGE_IDS = [
+import {
+  BLOG_CATEGORY_SLUGS,
+  isKnownBlogCategorySlug,
+  normalizeBlogCategorySlug,
+  type BlogCategorySlug,
+} from "@/lib/blog-categories";
+
+const BASE_SEO_PAGE_IDS = [
   "home",
   "about",
   "clinical-team",
@@ -19,10 +26,41 @@ export const SEO_PAGE_IDS = [
   "limits",
 ] as const;
 
-export type SeoPageId = (typeof SEO_PAGE_IDS)[number];
+export type BaseSeoPageId = (typeof BASE_SEO_PAGE_IDS)[number];
+
+/**
+ * One Admin → SEO row per blog category hub, so each `/blog/category/[slug]`
+ * page owns its title, description, and share image instead of inheriting the
+ * home Open Graph copy. Derived from `BLOG_CATEGORIES` — never hand-listed.
+ */
+export type BlogSeoPageId = `blog-${BlogCategorySlug}`;
+
+export const BLOG_SEO_PAGE_IDS: readonly BlogSeoPageId[] =
+  BLOG_CATEGORY_SLUGS.map((slug) => `blog-${slug}` as BlogSeoPageId);
+
+export const SEO_PAGE_IDS = [...BASE_SEO_PAGE_IDS, ...BLOG_SEO_PAGE_IDS];
+
+export type SeoPageId = BaseSeoPageId | BlogSeoPageId;
 
 export function isSeoPageId(value: string): value is SeoPageId {
   return (SEO_PAGE_IDS as readonly string[]).includes(value);
+}
+
+/** `/blog/category/trauma` → `blog-trauma` (null when the slug is unknown). */
+export function blogCategorySeoPageId(slug: string): BlogSeoPageId | null {
+  const clean = normalizeBlogCategorySlug(slug);
+  if (!isKnownBlogCategorySlug(clean)) return null;
+  return `blog-${clean}` as BlogSeoPageId;
+}
+
+/** `blog-trauma` → `trauma` (null for every other SEO page id). */
+export function blogCategoryFromSeoPageId(
+  id: SeoPageId
+): BlogCategorySlug | null {
+  if (!id.startsWith("blog-")) return null;
+  const slug = normalizeBlogCategorySlug(id.slice("blog-".length));
+  if (!isKnownBlogCategorySlug(slug)) return null;
+  return slug as BlogCategorySlug;
 }
 
 export type SeoPageOverride = {

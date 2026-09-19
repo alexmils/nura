@@ -28,9 +28,24 @@ function atUtc(isoDate: string): Date {
 
 /** Live blog data, when available. Falls back to the built-in guides. */
 export type PublicSitemapBlogInput = {
-  posts?: { slug: string; publishedAt: string; categories: string[] }[];
+  posts?: {
+    slug: string;
+    publishedAt: string;
+    /** Last edit — preferred for `lastmod` when present. */
+    updatedAt?: string;
+    categories: string[];
+  }[];
   categories?: { slug: string; postCount: number; lastModified?: string }[];
 };
+
+/** Newest content timestamp for a post: its last edit, else publication. */
+function postStamp(post: { publishedAt: string; updatedAt?: string }): number {
+  const modified = post.updatedAt ? Date.parse(post.updatedAt) : NaN;
+  const published = Date.parse(post.publishedAt);
+  if (Number.isNaN(modified)) return published;
+  if (Number.isNaN(published)) return modified;
+  return Math.max(modified, published);
+}
 
 /**
  * Public sitemap. Google uses lastmod; changefreq/priority are omitted.
@@ -42,15 +57,7 @@ export function buildPublicSitemap(
   const base = origin.replace(/\/$/, "");
   const posts = blog?.posts;
   const clusterLatest = posts?.length
-    ? new Date(
-        posts.reduce(
-          (latest, post) =>
-            Date.parse(post.publishedAt) > latest
-              ? Date.parse(post.publishedAt)
-              : latest,
-          0
-        )
-      )
+    ? new Date(posts.reduce((latest, post) => Math.max(latest, postStamp(post)), 0))
     : latestClusterModified();
 
   const staticPaths = [
@@ -88,7 +95,8 @@ export function buildPublicSitemap(
   const articles: MetadataRoute.Sitemap = posts?.length
     ? posts.map((post) => ({
         url: `${base}/blog/${post.slug}`,
-        lastModified: new Date(post.publishedAt),
+        // A guide that was edited should not keep its publication date.
+        lastModified: new Date(postStamp(post)),
       }))
     : clusterSitemapPaths().map(({ path, lastModified }) => ({
         url: `${base}${path}`,

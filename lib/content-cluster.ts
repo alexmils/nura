@@ -26,6 +26,8 @@ export type ClusterArticle = {
   kicker: string;
   dek: string;
   publishedAt: string;
+  /** Last edit — drives `dateModified` and `article:modified_time`. */
+  updatedAt?: string;
   topic: ClusterTopic;
   /** Clinical blog categories (see `lib/blog-categories.ts`); may be empty. */
   categories: string[];
@@ -36,6 +38,14 @@ export type ClusterArticle = {
   related: string[];
   sections: ClusterSection[];
 };
+
+/** Last edit, falling back to publication for never-edited guides. */
+export function articleModifiedAt(article: {
+  publishedAt: string;
+  updatedAt?: string;
+}): string {
+  return article.updatedAt ?? article.publishedAt;
+}
 
 /** Seed shape before the editorial category mapping is applied. */
 type ClusterArticleSeed = Omit<ClusterArticle, "categories">;
@@ -919,9 +929,9 @@ export function clusterArticlesByCategory(slug: string): ClusterArticle[] {
   return listClusterArticles().filter((a) => a.categories.includes(wanted));
 }
 
-/** Rough reading time for blog cards (~200 wpm). */
-export function estimateClusterReadMinutes(article: ClusterArticle): number {
-  const words = article.sections.reduce((sum, section) => {
+/** Total words shown to the reader (headings + body + dek). */
+export function clusterWordCount(article: ClusterArticle): number {
+  return article.sections.reduce((sum, section) => {
     const heading = section.heading.split(/\s+/).length;
     const body = section.paragraphs.reduce(
       (n, p) => n + p.split(/\s+/).filter(Boolean).length,
@@ -929,7 +939,17 @@ export function estimateClusterReadMinutes(article: ClusterArticle): number {
     );
     return sum + heading + body;
   }, article.dek.split(/\s+/).filter(Boolean).length);
+}
+
+/** Rough reading time for blog cards (~200 wpm). */
+export function estimateClusterReadMinutes(article: ClusterArticle): number {
+  const words = clusterWordCount(article);
   return Math.max(2, Math.min(12, Math.ceil(words / 200)));
+}
+
+/** ISO 8601 duration for schema `timeRequired`, from the displayed read time. */
+export function clusterTimeRequired(article: ClusterArticle): string {
+  return `PT${estimateClusterReadMinutes(article)}M`;
 }
 
 export function clusterSitemapPaths(): {

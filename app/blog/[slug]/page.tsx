@@ -5,7 +5,10 @@ import {
   listPublishedBlogPostsBySlugs,
 } from "@/lib/blog-db";
 import { BRAND_SPOKEN } from "@/lib/brand";
-import { listClusterArticles } from "@/lib/content-cluster";
+import {
+  articleModifiedAt,
+  listClusterArticles,
+} from "@/lib/content-cluster";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { dynamicOgImageUrl } from "@/lib/seo-og-image";
 import {
@@ -42,6 +45,7 @@ export async function generateMetadata({
   const origin = siteOrigin(publicUrl);
   const canonical = `${origin}/blog/${article.slug}`;
   const ogImage = dynamicOgImageUrl(origin, article.title, "Blog");
+  const modifiedAt = articleModifiedAt(article);
 
   return {
     title: article.title,
@@ -54,7 +58,7 @@ export async function generateMetadata({
       type: "article",
       locale: "en",
       publishedTime: article.publishedAt,
-      modifiedTime: article.publishedAt,
+      modifiedTime: modifiedAt,
       images: [{ url: ogImage, width: 1200, height: 630 }],
     },
     twitter: {

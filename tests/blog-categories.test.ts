@@ -5,6 +5,7 @@ import {
   BLOG_CATEGORY_SLUGS,
   blogCategoryBySlug,
   blogCategoryName,
+  isKnownBlogCategorySlug,
   normalizeBlogCategorySlug,
   sanitizeBlogCategorySlugs,
 } from "../lib/blog-categories.ts";
@@ -78,10 +79,7 @@ describe("blog categories", () => {
   it("only assigns known categories to built-in guides", () => {
     for (const article of CLUSTER_ARTICLES) {
       for (const slug of article.categories) {
-        assert.ok(
-          BLOG_CATEGORY_SLUGS.includes(slug),
-          `${article.slug}: ${slug}`
-        );
+        assert.ok(isKnownBlogCategorySlug(slug), `${article.slug}: ${slug}`);
       }
     }
     assert.ok(clusterArticlesByCategory("anxiety").some((a) => a.slug === "emdr-for-anxiety"));

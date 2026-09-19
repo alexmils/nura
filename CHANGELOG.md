@@ -635,6 +635,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] `update_blog_post` can rename a slug via `newSlug`; blog writes are recorded in `audit_events`
 - [internal] Sitemap gives each category hub its own `lastmod` (its newest guide) instead of the blog-wide newest date
 - [internal] Blog fallback reads log the underlying error every time instead of going quiet after one warning
+- [internal] Every blog category hub now has its own row in Admin → SEO (`blog-<slug>`), so `/blog/category/[slug]` owns its title, description, share image, and canonical instead of inheriting the home Open Graph copy
+- [internal] Blog article schema carries `articleSection`, `keywords`, `wordCount`, and `timeRequired`; `dateModified` and `article:modified_time` follow the post's last edit instead of its publication date
+- [internal] Sitemap `lastmod` for guides and category hubs now reflects the last edit, not just publication
+- [internal] Category hubs link on to `/learn`; `PUBLIC_ISR_PATHS` covers every category path so an Admin → SEO save refreshes them
+- [internal] Added the missing `settings.seo_updated` audit action so the Admin → SEO write is typed
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

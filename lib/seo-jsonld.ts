@@ -11,11 +11,16 @@ import {
 } from "@/lib/clinical-authorities";
 import {
   CLUSTER_TOPICS,
+  CLUSTER_TOPIC_LABEL,
+  articleModifiedAt,
   clusterArticleFaqs,
   clusterArticlesByTopic,
+  clusterTimeRequired,
+  clusterWordCount,
   listClusterArticles,
   type ClusterArticle,
 } from "@/lib/content-cluster";
+import { blogCategoryName } from "@/lib/blog-categories";
 import {
   CLINICAL_ADVISOR,
   hasClinicalAdvisorConfigured,
@@ -300,11 +305,22 @@ export function buildClusterArticleJsonLd(
         headline: article.title,
         description: article.description,
         datePublished: article.publishedAt,
-        dateModified: article.publishedAt,
+        dateModified: articleModifiedAt(article),
         inLanguage: SITE_CONTENT_LANGUAGE,
         url,
         mainEntityOfPage: url,
         isPartOf: { "@id": `${url}#page` },
+        // Section + keywords let Google tie the guide to its category hub.
+        articleSection: article.categories.length
+          ? article.categories.map(blogCategoryName)
+          : [CLUSTER_TOPIC_LABEL[article.topic]],
+        keywords: [
+          ...article.categories.map(blogCategoryName),
+          CLUSTER_TOPIC_LABEL[article.topic],
+          "EMDR",
+        ].join(", "),
+        wordCount: clusterWordCount(article),
+        timeRequired: clusterTimeRequired(article),
         author: {
           "@type": "Organization",
           name: BRAND_SPOKEN,

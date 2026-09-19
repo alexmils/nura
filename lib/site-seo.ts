@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
   BRAND_DESCRIPTION,
   BRAND_DOMAIN,
@@ -140,7 +141,7 @@ function effectiveSeoText(
   return t;
 }
 
-export const SITE_SEO_DEFAULTS: PageDefault[] = [
+const BASE_SITE_SEO_DEFAULTS: PageDefault[] = [
   {
     id: "home",
     path: "/",
@@ -266,6 +267,29 @@ export const SITE_SEO_DEFAULTS: PageDefault[] = [
     description:
       "An honest list of what Nura does not do: no diagnosis, no treatment, no clinical judgment, no crisis care. What a self-help tool can and cannot do alone.",
   },
+];
+
+/**
+ * Blog category hubs, one Admin → SEO row each. Copy comes from the category
+ * definition so the hub, its meta, and the admin table cannot drift apart.
+ */
+const BLOG_CATEGORY_SEO_DEFAULTS: PageDefault[] = BLOG_CATEGORIES.map(
+  (category) => ({
+    id: `blog-${category.slug}`,
+    path: `/blog/category/${category.slug}`,
+    label: `Blog · ${category.name}`,
+    title: `${category.name}: EMDR guides`,
+    description: category.description,
+  })
+);
+
+/**
+ * Every public page with editable meta, in the same order as
+ * `PUBLIC_ISR_PATHS` (asserted by tests/public-page-cache.test.ts).
+ */
+export const SITE_SEO_DEFAULTS: PageDefault[] = [
+  ...BASE_SITE_SEO_DEFAULTS,
+  ...BLOG_CATEGORY_SEO_DEFAULTS,
 ];
 
 export { isSeoPageId } from "@/lib/seo-config";

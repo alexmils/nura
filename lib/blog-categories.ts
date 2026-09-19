@@ -14,7 +14,7 @@ export type BlogCategoryDef = {
   sortOrder: number;
 };
 
-export const BLOG_CATEGORIES: readonly BlogCategoryDef[] = [
+export const BLOG_CATEGORIES = [
   {
     slug: "trauma",
     name: "Trauma",
@@ -71,11 +71,15 @@ export const BLOG_CATEGORIES: readonly BlogCategoryDef[] = [
       "The sentences you believe about yourself, and how they show up during a set.",
     sortOrder: 80,
   },
-] as const;
+] as const satisfies readonly BlogCategoryDef[];
 
-export const BLOG_CATEGORY_SLUGS: readonly string[] = BLOG_CATEGORIES.map(
-  (c) => c.slug
-);
+/** Literal slugs, so SEO page ids and routes can be derived without a second list. */
+export type BlogCategorySlug = (typeof BLOG_CATEGORIES)[number]["slug"];
+
+export const BLOG_CATEGORY_SLUGS: readonly BlogCategorySlug[] =
+  BLOG_CATEGORIES.map((c) => c.slug);
+
+const SLUG_SET: ReadonlySet<string> = new Set(BLOG_CATEGORY_SLUGS);
 
 /** Lowercase slug: letters, digits, hyphens; 2–80 chars. */
 export function normalizeBlogCategorySlug(raw: string): string {
@@ -87,17 +91,22 @@ export function normalizeBlogCategorySlug(raw: string): string {
     .slice(0, 80);
 }
 
-export function isBlogCategorySlug(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    BLOG_CATEGORY_SLUGS.includes(normalizeBlogCategorySlug(value))
-  );
+/** Is this (possibly messy) string one of the known category slugs? */
+export function isKnownBlogCategorySlug(
+  value: string
+): value is BlogCategorySlug {
+  return SLUG_SET.has(normalizeBlogCategorySlug(value));
+}
+
+export function isBlogCategorySlug(value: unknown): value is BlogCategorySlug {
+  return typeof value === "string" && isKnownBlogCategorySlug(value);
 }
 
 const BY_SLUG = new Map(BLOG_CATEGORIES.map((c) => [c.slug, c]));
 
 export function blogCategoryBySlug(slug: string): BlogCategoryDef | null {
-  return BY_SLUG.get(normalizeBlogCategorySlug(slug)) ?? null;
+  const key = normalizeBlogCategorySlug(slug);
+  return isKnownBlogCategorySlug(key) ? BY_SLUG.get(key) ?? null : null;
 }
 
 /** Display name for a stored slug; unknown slugs fall back to the raw slug. */
@@ -119,7 +128,7 @@ export function sanitizeBlogCategorySlugs(values: unknown): string[] {
   for (const value of values) {
     if (typeof value !== "string") continue;
     const slug = normalizeBlogCategorySlug(value);
-    if (!BLOG_CATEGORY_SLUGS.includes(slug) || seen.has(slug)) continue;
+    if (!isKnownBlogCategorySlug(slug) || seen.has(slug)) continue;
     seen.add(slug);
     out.push(slug);
   }

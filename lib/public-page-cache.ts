@@ -7,9 +7,12 @@ export const PUBLIC_PAGE_REVALIDATE_SECONDS = 3600;
 
 /**
  * Public marketing routes that were `force-dynamic` (no-store HTML).
- * Keep in sync with `SITE_SEO_DEFAULTS` paths in `lib/site-seo.ts`.
+ * Keep in sync with `SITE_SEO_DEFAULTS` paths in `lib/site-seo.ts`
+ * (same order — asserted by tests/public-page-cache.test.ts).
  */
-export const PUBLIC_ISR_PATHS = [
+import { BLOG_CATEGORIES } from "@/lib/blog-categories";
+
+const BASE_ISR_PATHS = [
   "/",
   "/about",
   "/about/clinical-team",
@@ -28,4 +31,9 @@ export const PUBLIC_ISR_PATHS = [
   "/limits",
 ] as const;
 
-export type PublicIsrPath = (typeof PUBLIC_ISR_PATHS)[number];
+export const PUBLIC_ISR_PATHS: readonly string[] = [
+  ...BASE_ISR_PATHS,
+  ...BLOG_CATEGORIES.map((category) => `/blog/category/${category.slug}`),
+];
+
+export type PublicIsrPath = string;

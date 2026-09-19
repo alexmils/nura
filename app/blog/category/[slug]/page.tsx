@@ -15,10 +15,12 @@ import {
   type BlogCategoryRecord,
 } from "@/lib/blog-db";
 import { getPublicAppUrl } from "@/lib/platform-settings";
+import { blogCategorySeoPageId } from "@/lib/seo-config";
 import {
   buildBlogCategoryJsonLd,
   localeAlternates,
 } from "@/lib/seo-jsonld";
+import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
 import { siteOrigin } from "@/lib/site-seo";
 import "./category.css";
 
@@ -59,23 +61,23 @@ export async function generateMetadata({
   const def = blogCategoryBySlug(slug);
   if (!def) return { title: "Category not found" };
 
-  let publicUrl: string | undefined;
-  try {
-    publicUrl = await getPublicAppUrl();
-  } catch {
-    publicUrl = undefined;
-  }
-  const canonical = `${siteOrigin(publicUrl)}/blog/category/${def.slug}`;
   const { posts } = (await loadCategory(def.slug)) ?? { posts: [] };
 
+  // Registered in Admin → SEO, so the hub owns its title, description, share
+  // image, and canonical instead of inheriting the home Open Graph copy.
+  const seoPageId = blogCategorySeoPageId(def.slug);
+  const meta = seoPageId ? await buildCachedPageMetadata(seoPageId) : null;
+
   return {
-    title: `${def.name}: EMDR guides`,
-    description: def.description,
-    alternates: localeAlternates(canonical),
+    ...(meta ?? {
+      title: `${def.name}: EMDR guides`,
+      description: def.description,
+      alternates: localeAlternates(
+        `${siteOrigin(undefined)}/blog/category/${def.slug}`
+      ),
+    }),
     // Thin until the first guide lands in this category.
-    robots: posts.length
-      ? undefined
-      : { index: false, follow: true },
+    robots: posts.length ? undefined : { index: false, follow: true },
   };
 }
 
@@ -143,9 +145,14 @@ export default async function BlogCategoryPage({
                 is sets you run yourself.
               </p>
             </div>
-            <Link href="/app/create-account" className="fe-blog-cat-cta-btn">
-              Get started
-            </Link>
+            <div className="fe-blog-cat-cta-actions">
+              <Link href="/learn" className="fe-blog-cat-cta-ghost">
+                Learn
+              </Link>
+              <Link href="/app/create-account" className="fe-blog-cat-cta-btn">
+                Get started
+              </Link>
+            </div>
           </aside>
         </div>
       </div>

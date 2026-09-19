@@ -17,14 +17,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listBlogCategories(),
   ]);
 
-  // Newest guide per category, so each hub reports its own freshness.
-  const newestByCategory = new Map<string, string>();
+  // Newest content per category, so each hub reports its own freshness.
+  const newestByCategory = new Map<string, number>();
   for (const post of posts) {
+    const stamp = Math.max(
+      Date.parse(post.publishedAt),
+      post.updatedAt ? Date.parse(post.updatedAt) : 0
+    );
     for (const slug of post.categories) {
-      const current = newestByCategory.get(slug);
-      if (!current || Date.parse(post.publishedAt) > Date.parse(current)) {
-        newestByCategory.set(slug, post.publishedAt);
-      }
+      newestByCategory.set(
+        slug,
+        Math.max(newestByCategory.get(slug) ?? 0, stamp)
+      );
     }
   }
 
@@ -33,7 +37,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     categories: categories.map((category) => ({
       slug: category.slug,
       postCount: category.postCount,
-      lastModified: newestByCategory.get(category.slug),
+      lastModified: newestByCategory.get(category.slug)
+        ? new Date(newestByCategory.get(category.slug)!).toISOString()
+        : undefined,
     })),
   });
 }
