@@ -4,16 +4,17 @@ import { join } from "node:path";
 import { describe, it } from "node:test";
 import {
   A11Y_ATTRIBUTES,
-  A11Y_FAB_SIZE,
   A11Y_TEXT_STEPS,
+  DEFAULT_A11Y_DOCK,
   DEFAULT_A11Y_PREFERENCES,
   a11yAttributeValues,
   a11yBootstrapScript,
+  a11yEdgeForX,
   activeA11yCount,
-  clampA11yFabPosition,
+  clampA11yCenterY,
   isA11yReduceMotionPreferred,
   isDefaultA11yPreferences,
-  parseA11yFabPosition,
+  parseA11yDock,
   parseA11yPreferences,
 } from "../lib/a11y-preferences.ts";
 
@@ -101,34 +102,41 @@ describe("accessibility preferences", () => {
     );
   });
 
-  it("validates a stored floating button position", () => {
-    assert.equal(parseA11yFabPosition(null), null);
-    assert.equal(parseA11yFabPosition("nope"), null);
-    assert.deepEqual(parseA11yFabPosition({ x: 12, y: 900 }), { x: 12, y: 900 });
-    assert.equal(parseA11yFabPosition({ x: "a", y: 1 }), null);
-  });
-
-  it("clamps a dragged button back into the viewport", () => {
-    const viewport = { width: 390, height: 844 };
-    assert.deepEqual(clampA11yFabPosition({ x: -80, y: -80 }, viewport), {
-      x: 10,
-      y: 10,
-    });
-    const bottomRight = clampA11yFabPosition(
-      { x: 9999, y: 9999 },
-      viewport
+  it("validates a stored dock state", () => {
+    assert.deepEqual(parseA11yDock(null), DEFAULT_A11Y_DOCK);
+    assert.deepEqual(parseA11yDock("nope"), DEFAULT_A11Y_DOCK);
+    assert.equal(parseA11yDock("{not json").collapsed, true);
+    assert.deepEqual(
+      parseA11yDock({ edge: "left", centerY: 300, collapsed: false }),
+      { edge: "left", centerY: 300, collapsed: false }
     );
-    assert.equal(bottomRight.x, 390 - A11Y_FAB_SIZE - 10);
-    assert.equal(bottomRight.y, 844 - A11Y_FAB_SIZE - 10);
+    // Junk edge/center falls back to the surface default, not a crash.
+    assert.deepEqual(parseA11yDock({ edge: "top", centerY: "a" }), {
+      edge: null,
+      centerY: null,
+      collapsed: true,
+    });
+    // Folded is the default state, so only an explicit false unfolds.
+    assert.equal(parseA11yDock({ edge: "right" }).collapsed, true);
+    assert.equal(parseA11yDock({ collapsed: 0 }).collapsed, true);
   });
 
-  it("keeps the button on screen on a tiny viewport", () => {
-    const clamped = clampA11yFabPosition({ x: 200, y: 200 }, {
-      width: 40,
-      height: 40,
-    });
-    assert.equal(clamped.x, 10);
-    assert.equal(clamped.y, 10);
+  it("clamps the docked center into the viewport", () => {
+    const h = 844;
+    // Never off the top or bottom, allowing for the ribbon half-height.
+    assert.equal(clampA11yCenterY(-500, h), 54);
+    assert.equal(clampA11yCenterY(9999, h), h - 54);
+    // A bottom bar reserves room so the widget cannot sit under it.
+    assert.equal(clampA11yCenterY(9999, h, undefined, 120), h - 54 - 120);
+    // A viewport shorter than the widget stays centered instead of flipping.
+    assert.equal(clampA11yCenterY(200, 40), 20);
+  });
+
+  it("picks the nearest edge so a folded ribbon can be re-docked", () => {
+    assert.equal(a11yEdgeForX(10, 390), "left");
+    assert.equal(a11yEdgeForX(194, 390), "left");
+    assert.equal(a11yEdgeForX(196, 390), "right");
+    assert.equal(a11yEdgeForX(380, 390), "right");
   });
 });
 
@@ -158,14 +166,31 @@ describe("accessibility CSS contract", () => {
     assert.match(css, /html\[data-a11y-motion="reduced"\]\s*\{/);
   });
 
-  it("keeps the floating button clear of the other bottom-right chrome", () => {
+  it("keeps the widget clear of the other floating chrome", () => {
     const widget = readFileSync(
       join(process.cwd(), "app/components/accessibility-widget.css"),
       "utf8"
     );
-    // Marketing rests it bottom-left; /app stacks it above the Help pill.
-    assert.match(widget, /\.frontend-home \.a11y-fab\s*\{[^}]*--a11y-fab-left/);
-    assert.match(widget, /body:has\(\.app-shell\) \.a11y-fab\s*\{[^}]*3\.4rem/);
+    const widgetTsx = readFileSync(
+      join(process.cwd(), "app/components/AccessibilityWidget.tsx"),
+      "utf8"
+    );
+    // A set in progress hides the ribbon and its fold control.
     assert.match(widget, /session-immersive\) \.a11y-fab/);
+    assert.match(widget, /session-immersive\) \.a11y-fold/);
+    // Both edges must be dockable, folded and open.
+    assert.match(widget, /data-edge="right"\] \.a11y-fab\s*\{[^}]*right: var\(--a11y-inset\)/);
+    assert.match(widget, /data-edge="left"\] \.a11y-fab\s*\{[^}]*left: var\(--a11y-inset\)/);
+    // The folded ribbon is flush to the edge, so the inset collapses to zero.
+    assert.match(widget, /\.a11y-widget\[data-collapsed\]\s*\{[^}]*--a11y-inset: 0px/);
+    // Each shell passes its default edge instead of the CSS guessing it.
+    assert.match(widgetTsx, /defaultEdge\?: A11yDockEdge/);
+    const marketing = readFileSync(
+      join(process.cwd(), "app/components/frontend/FrontendShellClient.tsx"),
+      "utf8"
+    );
+    const app = readFileSync(join(process.cwd(), "app/app/layout.tsx"), "utf8");
+    assert.match(marketing, /AccessibilityWidget defaultEdge="left"/);
+    assert.match(app, /AccessibilityWidget defaultEdge="right"/);
   });
 });

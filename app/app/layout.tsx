@@ -29,7 +29,8 @@ export default function AppConsoleLayout({
             {children}
             <FeedbackPromptHost />
             <HelpChatWidget showFab />
-            <AccessibilityWidget />
+            {/* /app docks the ribbon right, clear of the Help pill. */}
+            <AccessibilityWidget defaultEdge="right" />
           </ProductGuideProvider>
         </ToastProvider>
       </AppAccessGate>

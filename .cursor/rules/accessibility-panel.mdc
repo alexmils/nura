@@ -14,9 +14,9 @@ shell and under `/app`. Read this before touching it or the CSS it depends on.
 
 | Job | Path |
 |---|---|
-| Types, validation, attributes, bootstrap script, FAB clamping | `lib/a11y-preferences.ts` |
-| Button + panel, drag, storage | `app/components/AccessibilityWidget.tsx` |
-| Widget styling (resting position per surface) | `app/components/accessibility-widget.css` |
+| Types, validation, attributes, bootstrap script, edge dock | `lib/a11y-preferences.ts` |
+| Ribbon + panel, drag, storage | `app/components/AccessibilityWidget.tsx` |
+| Widget styling (ribbon, edges, panel) | `app/components/accessibility-widget.css` |
 | The effects on the page | `app/globals.css` → last block, **Accessibility preferences** |
 | Pre-paint apply | inline script in `app/layout.tsx` (`a11yBootstrapScript()`) |
 | Tests | `tests/a11y-preferences.test.ts` |
@@ -42,15 +42,28 @@ shell and under `/app`. Read this before touching it or the CSS it depends on.
   attribute loses its styling block.
 - The effects block must stay **last** in `globals.css`: it is an override layer, so
   source order decides against the base tokens.
-- The button is **draggable and remembers where it was put**. Inline `left/top` (from a
-  drag) always wins over the per-surface CSS default. Clamp through
-  `clampA11yFabPosition`, never by hand.
-- Bottom bars (`.fe-cookie-banner`, or add `data-a11y-lift` to a new one) push the button
-  up: the widget measures the tallest visible one into `--a11y-lift`. A new full-width
-  bottom bar must be added to `BOTTOM_BANNER_SELECTOR` or it will cover the button.
-- Resting positions: marketing rests bottom-left (help pill and back-to-top own the
-  right), `/app` stacks above the Help pill via `body:has(.app-shell)`. Keep it that way
-  when adding more floating chrome.
+- The widget is an **edge-docked ribbon**, not a free-floating button. Folded it is a
+  30×88 half-pill flush to the edge with a chevron; open it is the 52px Nura mark plus a
+  small fold control that pushes it back into the edge. It is **folded by default**.
+- **One click on the folded ribbon unfolds it and opens the settings** — do not add a
+  second step. Accessibility controls must stay one tap away.
+- The folded ribbon is **draggable**: drag along the edge to move it, drag past the
+  middle to re-dock on the other edge. Arrow keys do the same (up/down move, left/right
+  re-dock). Persist through `saveDock`; clamp the vertical center with
+  `clampA11yCenterY`, never by hand, and never write to storage on every pointermove
+  (write on the pointerup that ends the gesture).
+- The default edge is a **prop** (`<AccessibilityWidget defaultEdge="left" />`): marketing
+  docks left (help pill and back-to-top own the right), `/app` docks right. Do not move
+  that decision into CSS — `data-edge` is always set by JS.
+- Bottom bars (`.fe-cookie-banner`, or add `data-a11y-lift` to a new one) reserve room so
+  a dragged widget cannot sit under them: the widget measures the tallest visible one and
+  passes it as the `bottomInset` of `clampA11yCenterY`. A new full-width bottom bar must
+  be added to `BOTTOM_BANNER_SELECTOR` or the widget can overlap it.
+- **Place the panel from the target box, not a measured rect.** The ribbon morphs
+  (width/height/top transition), so `getBoundingClientRect()` mid-transition reports the
+  collapsed ribbon and the panel lands on top of the button. Take the stable used value
+  of `left`/`right`, add `A11Y_FAB_SIZE`, and read the saved center from the inline
+  `--a11y-center`.
 - The button is hidden while a set runs (`body:has(.app-shell.session-immersive)`), same
   as the Help FAB. The settings themselves always stay applied.
 - Accessibility controls are not decoration: do not hide the widget behind consent,

@@ -1,29 +1,41 @@
 /*
- * Floating accessibility widget — Nura mark button (draggable) + panel.
+ * Accessibility widget — an edge-docked ribbon that opens into the Nura mark
+ * button and the settings panel.
  *
- * Position: the button defaults to a free corner per surface and switches to
- * inline left/top once the person drags it (see AccessibilityWidget.tsx).
+ * Folded (default): a tall half-pill peeking out of the screen edge with a
+ * chevron. Open: the round mark button, plus a small fold control that pushes
+ * it back into the edge. Vertical center and edge come from the widget
+ * (`--a11y-center`, `data-edge`), so the ribbon can be dragged and re-docked.
  */
 
 .a11y-widget {
-  /* Inline values on the button win once it has been dragged. */
   --a11y-fab-size: 52px;
+  --a11y-ribbon-w: 30px;
+  --a11y-ribbon-h: 88px;
+  /* Vertical center of the widget; overridden inline once dragged. */
+  --a11y-center: 50%;
+  /* Flush when folded, a small inset when open. Safe-area covers both edges. */
+  --a11y-inset: max(
+    0.35rem,
+    env(safe-area-inset-left, 0px),
+    env(safe-area-inset-right, 0px)
+  );
   --a11y-panel-w: 21rem;
+}
+
+.a11y-widget[data-collapsed] {
+  --a11y-inset: 0px;
 }
 
 .a11y-fab {
   position: fixed;
   z-index: 65;
-  left: var(--a11y-fab-left, max(1rem, env(safe-area-inset-left, 0px)));
-  right: var(--a11y-fab-right, auto);
-  /* --a11y-lift is measured from bottom banners (cookie consent) by the widget. */
-  bottom: calc(
-    var(--a11y-fab-bottom, max(1.25rem, env(safe-area-inset-bottom, 0px))) +
-      var(--a11y-lift, 0px)
-  );
+  top: calc(var(--a11y-center) - var(--a11y-h) / 2);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Height of the current shape: the ribbon when folded, the mark when open. */
+  --a11y-h: var(--a11y-fab-size);
   width: var(--a11y-fab-size);
   height: var(--a11y-fab-size);
   padding: 0;
@@ -35,7 +47,57 @@
   touch-action: none;
   transition:
     transform 0.2s var(--ease, ease),
-    box-shadow 0.2s var(--ease, ease);
+    box-shadow 0.2s var(--ease, ease),
+    width 0.22s var(--ease, ease),
+    height 0.22s var(--ease, ease),
+    background 0.22s var(--ease, ease);
+}
+
+/* —— Edge docking —— */
+
+.a11y-widget[data-edge="right"] .a11y-fab {
+  right: var(--a11y-inset);
+  left: auto;
+}
+
+.a11y-widget[data-edge="left"] .a11y-fab {
+  left: var(--a11y-inset);
+  right: auto;
+}
+
+/* —— Folded ribbon —— */
+
+.a11y-widget[data-collapsed] .a11y-fab {
+  --a11y-h: var(--a11y-ribbon-h);
+  width: var(--a11y-ribbon-w);
+  height: var(--a11y-ribbon-h);
+  border: 1px solid var(--border-strong, #84b067);
+  border-radius: 999px 0 0 999px;
+  border-right: none;
+  background: var(--bg-elevated, #f7fdf7);
+  color: var(--text-secondary, #5e7048);
+  box-shadow: -6px 0 18px rgba(42, 48, 32, 0.16);
+}
+
+.a11y-widget[data-edge="left"][data-collapsed] .a11y-fab {
+  border-radius: 0 999px 999px 0;
+  border: 1px solid var(--border-strong, #84b067);
+  border-left: none;
+  box-shadow: 6px 0 18px rgba(42, 48, 32, 0.16);
+}
+
+.a11y-widget[data-collapsed] .a11y-fab:hover {
+  background: var(--accent-subtle, rgba(132, 176, 103, 0.16));
+}
+
+.a11y-ribbon-chevron {
+  display: block;
+  pointer-events: none;
+}
+
+/* Left edge reads as "pull out to the right". */
+.a11y-widget[data-edge="left"] .a11y-ribbon-chevron {
+  transform: rotate(180deg);
 }
 
 .a11y-fab img {
@@ -69,6 +131,57 @@
   outline-offset: 3px;
 }
 
+/* —— Fold control: pushes the mark back into the edge —— */
+
+.a11y-fold {
+  position: fixed;
+  z-index: 65;
+  top: calc(var(--a11y-center) - 0.6875rem);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  padding: 0;
+  border: 1px solid var(--border, #b8d4a8);
+  border-radius: 999px;
+  background: var(--bg-elevated, #f7fdf7);
+  color: var(--text-secondary, #5e7048);
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease;
+}
+
+.a11y-widget[data-edge="right"] .a11y-fold {
+  right: calc(var(--a11y-inset) + var(--a11y-fab-size) + 0.35rem);
+  left: auto;
+}
+
+.a11y-widget[data-edge="left"] .a11y-fold {
+  left: calc(var(--a11y-inset) + var(--a11y-fab-size) + 0.35rem);
+  right: auto;
+}
+
+.a11y-fold:hover {
+  background: var(--accent-subtle, rgba(132, 176, 103, 0.16));
+  color: var(--text, #2a3020);
+}
+
+.a11y-fold:focus-visible {
+  outline: 2px solid var(--gold, #c6d67e);
+  outline-offset: 2px;
+}
+
+.a11y-fold-chevron {
+  display: block;
+}
+
+/* On the right edge the chevron points right, into the edge. */
+.a11y-widget[data-edge="right"] .a11y-fold-chevron {
+  transform: rotate(180deg);
+}
+
 /* Count of active settings, so the panel is discoverable after a change. */
 .a11y-fab-count {
   position: absolute;
@@ -89,6 +202,19 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+}
+
+/* Folded, the badge rides the inner edge of the thin ribbon. */
+.a11y-widget[data-collapsed][data-edge="right"] .a11y-fab-count {
+  top: -4px;
+  right: auto;
+  left: -0.6rem;
+}
+
+.a11y-widget[data-collapsed][data-edge="left"] .a11y-fab-count {
+  top: -4px;
+  right: -0.6rem;
+  left: auto;
 }
 
 /* —— Panel —— */
@@ -412,26 +538,15 @@
   color: var(--fe-fg, #2a3020);
 }
 
-/* —— Surfaces: where the button rests before anyone drags it —— */
-
-/* Marketing: bottom-right is busy (help pill + back to top), so rest left. */
-.frontend-home .a11y-fab {
-  --a11y-fab-left: max(1rem, env(safe-area-inset-left, 0px));
-  --a11y-fab-right: auto;
-  --a11y-fab-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
-}
-
-/* /app: stack above the Help pill on the right. */
-body:has(.app-shell) .a11y-fab {
-  --a11y-fab-left: auto;
-  --a11y-fab-right: max(1rem, env(safe-area-inset-right, 0px));
-  --a11y-fab-bottom: calc(
-    max(1rem, env(safe-area-inset-bottom, 0px)) + 3.4rem
-  );
-}
+/* —— Surfaces ——
+ * The default docking edge is passed by each shell (`defaultEdge`), so the
+ * marketing site docks left (the help pill and back-to-top own the right) and
+ * `/app` docks right.
+ */
 
 /* Keep the canvas clear while a set is running (same rule as the Help FAB). */
-body:has(.app-shell.session-immersive) .a11y-fab {
+body:has(.app-shell.session-immersive) .a11y-fab,
+body:has(.app-shell.session-immersive) .a11y-fold {
   display: none !important;
 }
 
@@ -442,6 +557,7 @@ body:has(.app-shell.session-immersive) .a11y-fab {
   }
 
   .a11y-fab,
+  .a11y-fold,
   .a11y-step,
   .a11y-switch,
   .a11y-switch::after {

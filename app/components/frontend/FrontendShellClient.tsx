@@ -32,7 +32,8 @@ export function FrontendShellClient({
       <FrontendFooter />
       <FrontendBackToTop />
       <HelpChatWidget showFab />
-      <AccessibilityWidget />
+      {/* Marketing docks the ribbon left: the help pill and back-to-top own the right. */}
+      <AccessibilityWidget defaultEdge="left" />
       {marketingExtras}
     </div>
   );

@@ -9,8 +9,8 @@
  */
 
 export const A11Y_STORAGE_KEY = "nura.a11y.v1";
-/** Saved position of the floating button, in viewport pixels. */
-export const A11Y_FAB_STORAGE_KEY = "nura.a11y.fab.v1";
+/** Saved dock state of the floating widget (edge, vertical center, folded). */
+export const A11Y_DOCK_STORAGE_KEY = "nura.a11y.dock.v1";
 
 /** Text size steps, smallest first. Index is what we store. */
 export const A11Y_TEXT_STEPS = [0, 1, 2, 3] as const;
@@ -168,10 +168,77 @@ export function a11yBootstrapScript(): string {
   ].join("");
 }
 
-/** Floating button position in viewport pixels (top-left corner). */
-export interface A11yFabPosition {
-  x: number;
-  y: number;
+/** Floating button edge-dock state (replaces the old free-float x/y). */
+export type A11yDockEdge = "left" | "right";
+
+export interface A11yDock {
+  /** Docked edge. null = follow the surface default passed by the shell. */
+  edge: A11yDockEdge | null;
+  /** Vertical center in viewport px. null = centered. */
+  centerY: number | null;
+  /** True = folded to a ribbon peeking out of the screen edge. */
+  collapsed: boolean;
+}
+
+export const DEFAULT_A11Y_DOCK: A11yDock = {
+  edge: null,
+  centerY: null,
+  // Folded by default: the widget is a quiet ribbon until it is asked for.
+  collapsed: true,
+};
+
+/**
+ * Size of the mark button, and of the folded ribbon it sits behind.
+ * The ribbon is a tall half-pill peeking out of the edge.
+ */
+export const A11Y_FAB_SIZE = 52;
+export const A11Y_RIBBON_W = 30;
+export const A11Y_RIBBON_H = 88;
+const A11Y_EDGE_MARGIN = 10;
+
+/** Validate anything from storage; malformed input falls back to defaults. */
+export function parseA11yDock(raw: unknown): A11yDock {
+  if (!raw) return { ...DEFAULT_A11Y_DOCK };
+  let value: unknown = raw;
+  if (typeof raw === "string") {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return { ...DEFAULT_A11Y_DOCK };
+    }
+  }
+  if (!value || typeof value !== "object") return { ...DEFAULT_A11Y_DOCK };
+  const o = value as Record<string, unknown>;
+  const edge = o.edge === "left" || o.edge === "right" ? o.edge : null;
+  const centerY =
+    typeof o.centerY === "number" && Number.isFinite(o.centerY)
+      ? o.centerY
+      : null;
+  return { edge, centerY, collapsed: o.collapsed !== false };
+}
+
+/**
+ * Keep the widget's vertical center inside the viewport. Clamped against the
+ * ribbon height (the taller of the two states) so the mark button can never
+ * end up off screen when the widget expands. `bottomInset` reserves room for a
+ * full-width bottom bar (cookie consent) when one is on screen.
+ */
+export function clampA11yCenterY(
+  centerY: number,
+  viewportHeight: number,
+  size = A11Y_RIBBON_H,
+  bottomInset = 0
+): number {
+  const half = size / 2;
+  const min = half + A11Y_EDGE_MARGIN;
+  const max = viewportHeight - half - A11Y_EDGE_MARGIN - Math.max(0, bottomInset);
+  if (max <= min) return Math.round(viewportHeight / 2);
+  return Math.min(Math.max(centerY, min), max);
+}
+
+/** Which edge a pointer x is closer to, so a folded ribbon can be re-docked. */
+export function a11yEdgeForX(x: number, viewportWidth: number): A11yDockEdge {
+  return x < viewportWidth / 2 ? "left" : "right";
 }
 
 /**
@@ -186,43 +253,4 @@ export function isA11yReduceMotionPreferred(
     root ?? (typeof document === "undefined" ? null : document.documentElement);
   if (!target) return false;
   return target.getAttribute(A11Y_ATTRIBUTES.reduceMotion) === "reduced";
-}
-
-/** Button box used when clamping a dragged position. */
-export const A11Y_FAB_SIZE = 52;
-const A11Y_FAB_MARGIN = 10;
-
-export function parseA11yFabPosition(raw: unknown): A11yFabPosition | null {
-  if (!raw) return null;
-  let value: unknown = raw;
-  if (typeof raw === "string") {
-    try {
-      value = JSON.parse(raw);
-    } catch {
-      return null;
-    }
-  }
-  if (!value || typeof value !== "object") return null;
-  const o = value as Record<string, unknown>;
-  const x = Number(o.x);
-  const y = Number(o.y);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return { x, y };
-}
-
-/**
- * Keep the button fully on screen. The bottom edge is clamped harder so it
- * never lands on the phone home indicator.
- */
-export function clampA11yFabPosition(
-  position: A11yFabPosition,
-  viewport: { width: number; height: number },
-  size = A11Y_FAB_SIZE
-): A11yFabPosition {
-  const maxX = Math.max(A11Y_FAB_MARGIN, viewport.width - size - A11Y_FAB_MARGIN);
-  const maxY = Math.max(A11Y_FAB_MARGIN, viewport.height - size - A11Y_FAB_MARGIN);
-  return {
-    x: Math.min(Math.max(position.x, A11Y_FAB_MARGIN), maxX),
-    y: Math.min(Math.max(position.y, A11Y_FAB_MARGIN), maxY),
-  };
 }
