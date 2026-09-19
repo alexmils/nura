@@ -115,6 +115,21 @@ export function blogCategoryName(slug: string): string {
 }
 
 /**
+ * Frontend-facing filter: only categories that have at least one published
+ * guide, so the blog never renders a chip with a "0" badge or links to a hub
+ * with nothing in it.
+ *
+ * Do **not** use this for Admin → SEO, the admin blog table, or the blog MCP
+ * tool — those must see empty categories so an editor or the agent can pick
+ * the next theme to write for.
+ */
+export function categoriesWithPosts<T extends { postCount: number }>(
+  categories: readonly T[]
+): T[] {
+  return categories.filter((category) => category.postCount > 0);
+}
+
+/**
  * Keep only known slugs, deduped, preserving the caller's order.
  *
  * Order is editorial: it decides the chip on the blog card, the order on the

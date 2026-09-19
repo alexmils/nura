@@ -640,6 +640,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Sitemap `lastmod` for guides and category hubs now reflects the last edit, not just publication
 - [internal] Category hubs link on to `/learn`; `PUBLIC_ISR_PATHS` covers every category path so an Admin → SEO save refreshes them
 - [internal] Added the missing `settings.seo_updated` audit action so the Admin → SEO write is typed
+- [internal] Blog category chips only show categories that have a guide: Grief, Phobias, Childhood memories, and Self-worth are hidden until their first post instead of rendering a “0” badge and linking to an empty hub (`categoriesWithPosts`)
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

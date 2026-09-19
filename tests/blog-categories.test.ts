@@ -5,6 +5,7 @@ import {
   BLOG_CATEGORY_SLUGS,
   blogCategoryBySlug,
   blogCategoryName,
+  categoriesWithPosts,
   isKnownBlogCategorySlug,
   normalizeBlogCategorySlug,
   sanitizeBlogCategorySlugs,
@@ -74,6 +75,29 @@ describe("blog categories", () => {
     );
     assert.deepEqual(ptsd?.categories, ["ptsd", "trauma"]);
     assert.deepEqual(grounding?.categories, ["panic", "anxiety"]);
+  });
+
+  it("hides categories with no posts from the frontend", () => {
+    // The blog nav must never render a chip with a "0" badge.
+    const fromSeed = BLOG_CATEGORIES.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      postCount: clusterArticlesByCategory(c.slug).length,
+    }));
+    const visible = categoriesWithPosts(fromSeed);
+    assert.ok(visible.every((c) => c.postCount > 0));
+    assert.equal(visible.length, 4);
+    assert.deepEqual(
+      visible.map((c) => c.slug),
+      ["trauma", "ptsd", "anxiety", "panic"]
+    );
+    // Empty themes stay available to admin/MCP, just not on the public page.
+    assert.ok(fromSeed.some((c) => c.slug === "grief" && c.postCount === 0));
+    assert.equal(categoriesWithPosts([]).length, 0);
+    assert.deepEqual(
+      categoriesWithPosts([{ slug: "x", postCount: 0 }]).length,
+      0
+    );
   });
 
   it("only assigns known categories to built-in guides", () => {

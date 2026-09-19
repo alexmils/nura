@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { blogCategoryName } from "@/lib/blog-categories";
+import { categoriesWithPosts, blogCategoryName } from "@/lib/blog-categories";
 import {
   CLUSTER_TOPIC_LABEL,
   estimateClusterReadMinutes,
@@ -32,7 +32,20 @@ function splitIntoColumns(articles: ClusterArticle[], cols: number) {
   return columns;
 }
 
-/** Category chips: All plus every clinical category, with post counts. */
+/**
+ * Category chips: All plus every category that has at least one guide.
+ *
+ * Empty categories are hidden rather than shown with a "0" badge — a chip
+ * nobody can click through to is noise. `listBlogCategories()` still returns
+ * them, so Admin → SEO and the blog MCP can see which themes need a post.
+ */
+/**
+ * Category chips: All plus every category that has at least one guide.
+ *
+ * Empty categories are hidden rather than shown with a "0" badge — a chip
+ * nobody can click through to is noise. `listBlogCategories()` still returns
+ * them, so Admin → SEO and the blog MCP can see which themes need a post.
+ */
 export function BlogCategoryNav({
   categories,
   activeSlug,
@@ -40,6 +53,8 @@ export function BlogCategoryNav({
   categories: BlogCategoryNavItem[];
   activeSlug?: string;
 }) {
+  const withPosts = categoriesWithPosts(categories);
+
   return (
     <nav className="fe-blog-cats" aria-label="Blog categories">
       <Link
@@ -49,7 +64,7 @@ export function BlogCategoryNav({
       >
         All
       </Link>
-      {categories.map((category) => (
+      {withPosts.map((category) => (
         <Link
           key={category.slug}
           href={`/blog/category/${category.slug}`}
