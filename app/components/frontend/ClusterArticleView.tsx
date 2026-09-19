@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
 import { blogCategoryName } from "@/lib/blog-categories";
-import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
+import { BRAND_CIRCLE_AVATAR, BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import {
   CLUSTER_TOPIC_LABEL,
   clusterArticleFaqs,
@@ -26,36 +26,54 @@ export function ClusterArticleView({
   const faqs = clusterArticleFaqs(article);
 
   return (
-    <article className="fe-cluster">
+    <article className="fe-cluster fe-cluster--post">
       <div className="fe-cluster-inner">
-        <p className="fe-cluster-kicker">
-          <Link href={learnHref}>{CLUSTER_TOPIC_LABEL[article.topic]}</Link>
-          {" · "}
-          <Link href="/learn">Learn</Link>
-        </p>
-        <h1>{article.title}</h1>
-        <p className="fe-cluster-dek">{article.dek}</p>
-        {article.categories.length ? (
-          <p className="fe-cluster-cats">
-            {article.categories.map((slug, i) => (
-              <span key={slug}>
-                {i > 0 ? " · " : null}
-                <Link href={`/blog/category/${slug}`}>
-                  {blogCategoryName(slug)}
-                </Link>
+        <header className="fe-post-head">
+          <div className="fe-post-meta">
+            {article.categories.length
+              ? article.categories.map((slug) => (
+                  <Link
+                    key={slug}
+                    href={`/blog/category/${slug}`}
+                    className="fe-post-pill"
+                  >
+                    {blogCategoryName(slug)}
+                  </Link>
+                ))
+              : (
+                  <span className="fe-post-pill">
+                    {CLUSTER_TOPIC_LABEL[article.topic]}
+                  </span>
+                )}
+            {date ? (
+              <time className="fe-post-date" dateTime={article.publishedAt}>
+                Published {date}
+              </time>
+            ) : null}
+          </div>
+
+          <h1 className="fe-post-title">{article.title}</h1>
+          <p className="fe-cluster-dek fe-post-dek">{article.dek}</p>
+
+          <div className="fe-post-byline">
+            <Image
+              src={BRAND_CIRCLE_AVATAR}
+              alt=""
+              width={40}
+              height={40}
+              className="fe-post-avatar"
+            />
+            <p className="fe-post-author">
+              {BRAND_SPOKEN}
+              <span className="fe-post-author-sep" aria-hidden>
+                ·
               </span>
-            ))}
-          </p>
-        ) : null}
-        {date ? (
-          <p className="fe-cluster-meta">
-            <time dateTime={article.publishedAt}>{date}</time>
-            {" · "}
-            {BRAND_SPOKEN} editorial
-            {" · "}
-            <Link href="/editorial">How we write</Link>
-          </p>
-        ) : null}
+              <Link href="/editorial" className="fe-post-author-link">
+                How we write
+              </Link>
+            </p>
+          </div>
+        </header>
 
         {article.coverUrl ? (
           <div className="fe-cluster-hero">
@@ -66,7 +84,7 @@ export function ClusterArticleView({
               alt=""
               fill
               priority
-              sizes="(max-width: 900px) 100vw, 1156px"
+              sizes="(max-width: 1100px) 100vw, 1156px"
               className="fe-cluster-hero-image"
             />
           </div>

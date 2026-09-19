@@ -113,8 +113,7 @@
 .fe-cluster-body a,
 .fe-cluster-emdr a,
 .fe-cluster-list a,
-.fe-cluster-related a,
-.fe-cluster-meta a {
+.fe-cluster-related a {
   color: var(--fe-accent);
   text-decoration: underline;
   text-underline-offset: 0.15em;
@@ -124,24 +123,17 @@
 .fe-cluster-body a:hover,
 .fe-cluster-emdr a:hover,
 .fe-cluster-list a:hover,
-.fe-cluster-related a:hover,
-.fe-cluster-meta a:hover {
+.fe-cluster-related a:hover {
   color: var(--fe-fg);
-}
-
-.fe-cluster-meta {
-  margin: 0 0 2rem;
-  font-size: 0.9375rem;
-  color: var(--fe-muted);
 }
 
 /* Featured image on the article page — full column, editorial banner crop. */
 .fe-cluster-hero {
   position: relative;
   display: block;
-  margin: 0 0 2.5rem;
-  aspect-ratio: 16 / 9;
-  border-radius: 1rem;
+  margin: 3rem 0 3rem;
+  aspect-ratio: 16 / 10;
+  border-radius: 22px;
   overflow: hidden;
   background: color-mix(in srgb, var(--fe-muted) 12%, #fff);
 }
@@ -150,12 +142,124 @@
   object-fit: cover;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .fe-cluster-hero {
-    /* Wider crop once the column is full width, so it reads as a banner
-       instead of a very tall block. */
-    aspect-ratio: 21 / 9;
+    margin: 3.5rem 0 3.5rem;
+    border-radius: 28px;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Post layout: category pill + date, title, dek, byline, then the image */
+/* ------------------------------------------------------------------ */
+
+.fe-post-head {
+  max-width: 45rem;
+}
+
+.fe-post-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 0.9rem;
+}
+
+.fe-post-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.375rem;
+  background: color-mix(in srgb, var(--fe-fg) 7%, transparent);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--fe-fg);
+  text-decoration: none;
+}
+
+/* Linked pills read as clickable, plain ones stay static. */
+a.fe-post-pill:hover {
+  background: color-mix(in srgb, var(--fe-accent) 22%, transparent);
+}
+
+.fe-post-date {
+  font-size: 0.875rem;
+  color: var(--fe-muted);
+}
+
+.fe-post-title,
+.fe-cluster--post h1 {
+  margin: 2rem 0 0;
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 4.2vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: var(--fe-fg);
+}
+
+.fe-post-dek {
+  margin: 1.5rem 0 0;
+  max-width: 38rem;
+  font-size: 1.125rem;
+  line-height: 2rem;
+}
+
+@media (min-width: 640px) {
+  .fe-post-dek {
+    font-size: 1.25rem;
+    line-height: 2rem;
+  }
+}
+
+.fe-post-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 2.5rem 0 0;
+  font-size: 1rem;
+  color: var(--fe-muted);
+}
+
+.fe-post-avatar {
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.fe-post-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fe-fg);
+}
+
+.fe-post-author-sep {
+  color: var(--fe-muted);
+}
+
+.fe-post-author-link {
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--fe-muted);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.fe-post-author-link:hover {
+  color: var(--fe-fg);
+}
+
+/* The image sits below the header, full column, like the reference post. */
+.fe-cluster--post .fe-cluster-hero {
+  margin-top: 3rem;
 }
 
 .fe-cluster-body h2 {
@@ -650,33 +754,7 @@
   text-underline-offset: 0.15em;
 }
 
-/* Article page: clinical categories under the dek */
-.fe-cluster-cats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem 0.6rem;
-  margin: 0 0 0.6rem;
-  font-family: var(--font-alt);
-  font-size: 0.8125rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fe-muted);
-}
-
-.fe-cluster-cats a {
-  color: var(--fe-muted);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition:
-    color 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.fe-cluster-cats a:hover {
-  color: var(--fe-fg);
-  border-color: var(--fe-accent);
-}
+/* Article page: clinical category pills live in the post header (.fe-post-pill) */
 
 @media (max-width: 540px) {
   .fe-blog-cats {

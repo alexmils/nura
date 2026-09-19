@@ -643,6 +643,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Blog category chips only show categories that have a guide: Grief, Phobias, Childhood memories, and Self-worth are hidden until their first post instead of rendering a “0” badge and linking to an empty hub (`categoriesWithPosts`)
 - [internal] A guide’s featured image now appears at the top of the article page (16:9 on phones, 21:9 from 900px), preloaded as the LCP image
 - [internal] Blog covers are limited to site paths plus the image hosts configured in `next.config.ts`; an unconfigured remote URL used to make `next/image` throw and 500 the page, so it is now rejected on write and swapped for the fallback on read
+- [internal] Blog post header restyled to match the Receptly article layout: category pills plus “Published <date>” on top, larger title (up to 3rem), lead capped at 38rem, round Nura avatar with a byline, then the full-width featured image
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
