@@ -647,6 +647,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin → MCP: generate, disable, and revoke the blog MCP token from the admin UI instead of editing `NURA_MCP_TOKEN` by hand. The token is stored as a SHA-256 hash, shown once on generation, and an admin token takes precedence over the environment variable so revoking really revokes
 - [internal] Blog post top row is the post’s own category as a link (guides with no clinical category link to `/blog` instead of showing a topic label that looked like a category), and the date moved below the author name under the round logo
 - [internal] Accessibility widget is now an edge-docked ribbon: folded by default (30×88, flush to the edge, chevron), one click unfolds it and opens the settings, and a fold control hides it again. Drag it along the edge or across to the other edge, even while folded, and it remembers where it was docked
+- [internal] Rebuilt the accessibility widget interaction: the ribbon is now pull-out only (clicking it shows the circle without opening the settings), the circle can be dragged anywhere on screen again, and hovering it reveals a control that sends it to the nearest edge. Pinning animates as a short travel, and the panel also offers the same action without hover
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

@@ -42,28 +42,34 @@ shell and under `/app`. Read this before touching it or the CSS it depends on.
   attribute loses its styling block.
 - The effects block must stay **last** in `globals.css`: it is an override layer, so
   source order decides against the base tokens.
-- The widget is an **edge-docked ribbon**, not a free-floating button. Folded it is a
-  30×88 half-pill flush to the edge with a chevron; open it is the 52px Nura mark plus a
-  small fold control that pushes it back into the edge. It is **folded by default**.
-- **One click on the folded ribbon unfolds it and opens the settings** — do not add a
-  second step. Accessibility controls must stay one tap away.
-- The folded ribbon is **draggable**: drag along the edge to move it, drag past the
-  middle to re-dock on the other edge. Arrow keys do the same (up/down move, left/right
-  re-dock). Persist through `saveDock`; clamp the vertical center with
-  `clampA11yCenterY`, never by hand, and never write to storage on every pointermove
-  (write on the pointerup that ends the gesture).
+- The widget is a **draggable circle** that can be **pinned to a screen edge** as a ribbon.
+  Pinned it is a 30×88 half-pill, flush to the edge. Free it is the 52px Nura mark and can
+  be dragged anywhere on screen. It starts **pinned**.
+- **Pinned → click pulls the circle out; the settings stay closed.** Do not make the ribbon
+  click open the panel as well: the person asked for the circle to sit there until it is
+  clicked again. Free → click toggles the panel.
+- **Attaching is a hover affordance.** While free, hovering (or focusing, or a no-hover
+  device) shows a small control beside the button that sends it to the **nearest** edge,
+  chosen from the middle of the button (`nearestA11yEdge`). The panel foot also carries a
+  "Move to the nearest edge" button, so the action is always reachable without hover.
+- **Geometry is computed in JS and rendered as inline left/top/width/height** on
+  `.a11y-widget`, which is why pinning animates as a short travel. Add `is-dragging` to
+  kill the transition while a pointer is down. Never read `window` during render (SSR):
+  take the size from the `viewport` state and render nothing until it is measured.
+- Clamp with `clampA11yFabPosition` (free) / `clampA11yCenterY` (pinned), never by hand, and
+  never write to storage on every pointermove — write on the pointerup that ends the drag.
+- **Suppress the click that follows a drag by time** (`dragEndedAtRef`), not with a boolean
+  flag: a flag has to be cleared by a click the browser may never fire, which then swallows
+  the next real click.
 - The default edge is a **prop** (`<AccessibilityWidget defaultEdge="left" />`): marketing
-  docks left (help pill and back-to-top own the right), `/app` docks right. Do not move
-  that decision into CSS — `data-edge` is always set by JS.
-- Bottom bars (`.fe-cookie-banner`, or add `data-a11y-lift` to a new one) reserve room so
-  a dragged widget cannot sit under them: the widget measures the tallest visible one and
-  passes it as the `bottomInset` of `clampA11yCenterY`. A new full-width bottom bar must
-  be added to `BOTTOM_BANNER_SELECTOR` or the widget can overlap it.
-- **Place the panel from the target box, not a measured rect.** The ribbon morphs
-  (width/height/top transition), so `getBoundingClientRect()` mid-transition reports the
-  collapsed ribbon and the panel lands on top of the button. Take the stable used value
-  of `left`/`right`, add `A11Y_FAB_SIZE`, and read the saved center from the inline
-  `--a11y-center`.
+  docks left (help pill and back-to-top own the right), `/app` docks right.
+- Bottom bars (`.fe-cookie-banner`, or add `data-a11y-lift` to a new one) reserve room so a
+  pinned widget cannot sit under them: the widget measures the tallest visible one and
+  passes it as the `bottomInset` of `a11yAttachedBox` / `clampA11yCenterY`. A new full-width
+  bottom bar must be added to `BOTTOM_BANNER_SELECTOR` or the widget can overlap it.
+- **Place the panel from the inline box, not a measured rect.** The widget animates its
+  size and position, so `getBoundingClientRect()` mid-transition reports the old shape and
+  the panel lands on top of the button. Read `el.style.left/top/width/height` instead.
 - The button is hidden while a set runs (`body:has(.app-shell.session-immersive)`), same
   as the Help FAB. The settings themselves always stay applied.
 - Accessibility controls are not decoration: do not hide the widget behind consent,

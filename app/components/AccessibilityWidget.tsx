@@ -9,21 +9,25 @@ import {
   useState,
 } from "react";
 import {
-  A11Y_DOCK_STORAGE_KEY,
   A11Y_FAB_SIZE,
+  A11Y_FAB_STORAGE_KEY,
+  A11Y_RIBBON_H,
+  A11Y_RIBBON_W,
   A11Y_STORAGE_KEY,
   A11Y_TEXT_STEPS,
-  DEFAULT_A11Y_DOCK,
+  DEFAULT_A11Y_FAB,
   DEFAULT_A11Y_PREFERENCES,
+  a11yAttachedBox,
   activeA11yCount,
-  a11yEdgeForX,
   applyA11yPreferences,
   clampA11yCenterY,
+  clampA11yFabPosition,
   isDefaultA11yPreferences,
-  parseA11yDock,
+  nearestA11yEdge,
+  parseA11yFabState,
   parseA11yPreferences,
-  type A11yDock,
   type A11yDockEdge,
+  type A11yFabState,
   type A11yPreferences,
 } from "@/lib/a11y-preferences";
 import "./accessibility-widget.css";
@@ -82,32 +86,37 @@ function readStoredPreferences(): A11yPreferences {
   }
 }
 
-function readStoredDock(): A11yDock {
+function readStoredFab(): A11yFabState {
   try {
-    return parseA11yDock(localStorage.getItem(A11Y_DOCK_STORAGE_KEY));
+    return parseA11yFabState(localStorage.getItem(A11Y_FAB_STORAGE_KEY));
   } catch {
-    return { ...DEFAULT_A11Y_DOCK };
+    return { ...DEFAULT_A11Y_FAB };
   }
 }
 
 /**
- * Edge-docked accessibility widget: a ribbon peeking out of the screen edge
- * that opens into the Nura mark and the settings panel.
+ * Accessibility widget. A circle you can drag anywhere on screen, which can be
+ * pinned to a screen edge as a quiet ribbon.
  *
- * Folded, it can be dragged along the edge or across to the other one, and it
- * remembers where it was docked. Preferences are stored on the device, not the
- * account, so guests get them too.
+ * - Pinned: a half-pill with a chevron. Clicking it pulls the circle out; the
+ *   settings stay closed until the circle itself is clicked.
+ * - Free: drag it anywhere. Hovering shows an attach control that sends it to
+ *   the nearest edge.
+ *
+ * Preferences are stored on the device, not the account, so guests get them too.
  */
 export function AccessibilityWidget({
   defaultEdge = "right",
 }: {
-  /** Edge used until the person drags the ribbon somewhere else. */
+  /** Edge used when pinned, until the person moves it. */
   defaultEdge?: A11yDockEdge;
 } = {}) {
   const [prefs, setPrefs] = useState<A11yPreferences>(DEFAULT_A11Y_PREFERENCES);
-  const [dock, setDock] = useState<A11yDock>(DEFAULT_A11Y_DOCK);
+  const [fab, setFab] = useState<A11yFabState>(DEFAULT_A11Y_FAB);
   const [open, setOpen] = useState(false);
   const [sheet, setSheet] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [viewport, setViewport] = useState({ width: 0, height: 0 });
   const [panelPos, setPanelPos] = useState<{ left: number; top: number } | null>(
     null
   );
@@ -115,22 +124,20 @@ export function AccessibilityWidget({
   /** Height of the tallest visible full-width bottom bar, in px. */
   const [lift, setLift] = useState(0);
 
-  const fabRef = useRef<HTMLButtonElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
+    offsetX: number;
     offsetY: number;
-    startX: number;
-    startY: number;
     moved: boolean;
   } | null>(null);
-  const movedRef = useRef(false);
+  const dragEndedAtRef = useRef(0);
   const panelId = useId();
   const titleId = useId();
 
-  const collapsed = dock.collapsed;
-  const edge: A11yDockEdge = dock.edge ?? defaultEdge;
+  const attached = fab.attached;
+  const edge: A11yDockEdge = fab.edge ?? defaultEdge;
 
   /* ---------------------------------------------------------------- */
   /* Persisted preferences                                             */
@@ -140,7 +147,7 @@ export function AccessibilityWidget({
     const stored = readStoredPreferences();
     setPrefs(stored);
     applyA11yPreferences(stored, document.documentElement);
-    setDock(readStoredDock());
+    setFab(readStoredFab());
     setHydrated(true);
   }, []);
 
@@ -167,11 +174,11 @@ export function AccessibilityWidget({
     setPrefs({ ...DEFAULT_A11Y_PREFERENCES });
   }, []);
 
-  /** Fold/unfold and re-dock are deliberate choices, so they persist. */
-  const saveDock = useCallback((next: A11yDock) => {
-    setDock(next);
+  /** Position/attachment changes are deliberate, so they persist. */
+  const saveFab = useCallback((next: A11yFabState) => {
+    setFab(next);
     try {
-      localStorage.setItem(A11Y_DOCK_STORAGE_KEY, JSON.stringify(next));
+      localStorage.setItem(A11Y_FAB_STORAGE_KEY, JSON.stringify(next));
     } catch {
       /* ignore */
     }
@@ -182,10 +189,13 @@ export function AccessibilityWidget({
   /* ---------------------------------------------------------------- */
 
   useEffect(() => {
-    const syncSheet = () => setSheet(window.innerWidth <= SHEET_MAX_WIDTH);
-    syncSheet();
-    window.addEventListener("resize", syncSheet);
-    return () => window.removeEventListener("resize", syncSheet);
+    const sync = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+      setSheet(window.innerWidth <= SHEET_MAX_WIDTH);
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
   }, []);
 
   /**
@@ -244,36 +254,46 @@ export function AccessibilityWidget({
     };
   }, []);
 
-  // A saved drag position must stay reachable after the window shrinks or the
-  // phone rotates.
+  // A saved position must stay reachable after the window shrinks or a phone
+  // rotates.
   useEffect(() => {
-    if (!hydrated) return;
-    const onResize = () => {
-      setDock((prev) => {
+    if (!hydrated || viewport.width === 0) return;
+    setFab((prev) => {
+      if (prev.attached) {
         if (prev.centerY === null) return prev;
         const centerY = clampA11yCenterY(
           prev.centerY,
-          window.innerHeight,
-          undefined,
+          viewport.height,
+          A11Y_RIBBON_H,
           lift
         );
         if (centerY === prev.centerY) return prev;
         const next = { ...prev, centerY };
         try {
-          localStorage.setItem(A11Y_DOCK_STORAGE_KEY, JSON.stringify(next));
+          localStorage.setItem(A11Y_FAB_STORAGE_KEY, JSON.stringify(next));
         } catch {
           /* ignore */
         }
         return next;
-      });
-    };
-    window.addEventListener("resize", onResize);
-    onResize();
-    return () => window.removeEventListener("resize", onResize);
-  }, [hydrated, lift]);
+      }
+      if (prev.x === null || prev.y === null) return prev;
+      const clamped = clampA11yFabPosition(
+        { x: prev.x, y: prev.y },
+        viewport
+      );
+      if (clamped.x === prev.x && clamped.y === prev.y) return prev;
+      const next = { ...prev, x: clamped.x, y: clamped.y };
+      try {
+        localStorage.setItem(A11Y_FAB_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, [hydrated, viewport, lift]);
 
   /* ---------------------------------------------------------------- */
-  /* Drag along/cross the edge + keyboard nudge                        */
+  /* Drag anywhere on screen                                           */
   /* ---------------------------------------------------------------- */
 
   const onPointerDown = useCallback(
@@ -282,15 +302,13 @@ export function AccessibilityWidget({
       const rect = event.currentTarget.getBoundingClientRect();
       dragRef.current = {
         pointerId: event.pointerId,
-        offsetY: event.clientY - (rect.top + rect.height / 2),
-        startX: event.clientX,
-        startY: event.clientY,
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
         moved: false,
       };
-      movedRef.current = false;
+      dragEndedAtRef.current = 0;
       try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
+        event.currentTarget.setPointerCapture(event.pointerId);      } catch {
         /* capture unsupported */
       }
     },
@@ -301,32 +319,28 @@ export function AccessibilityWidget({
     (event: React.PointerEvent<HTMLButtonElement>) => {
       const drag = dragRef.current;
       if (!drag || drag.pointerId !== event.pointerId) return;
-      if (!drag.moved) {
-        const travelled = Math.hypot(
-          event.clientX - drag.startX,
-          event.clientY - drag.startY
-        );
-        if (travelled < DRAG_THRESHOLD) return;
-        drag.moved = true;
-        movedRef.current = true;
-      }
-      // Dragging works folded or open: it slides along the edge and snaps to
-      // whichever half of the screen the pointer is in, so the ribbon can be
-      // re-docked on the other side.
-      const centerY = clampA11yCenterY(
-        event.clientY - drag.offsetY,
-        window.innerHeight,
-        undefined,
-        lift
+      const target = clampA11yFabPosition(
+        { x: event.clientX - drag.offsetX, y: event.clientY - drag.offsetY },
+        { width: window.innerWidth, height: window.innerHeight }
       );
-      const nextEdge = a11yEdgeForX(event.clientX, window.innerWidth);
-      setDock((prev) =>
-        prev.centerY === centerY && prev.edge === nextEdge
+      if (!drag.moved) {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const distance = Math.hypot(
+          target.x - rect.left,
+          target.y - rect.top
+        );
+        if (distance < DRAG_THRESHOLD) return;
+        drag.moved = true;
+        setDragging(true);
+      }
+      // Dragging detaches: you are placing the circle, not the ribbon.
+      setFab((prev) =>
+        prev.x === target.x && prev.y === target.y && !prev.attached
           ? prev
-          : { ...prev, centerY, edge: nextEdge }
+          : { ...prev, x: target.x, y: target.y, attached: false }
       );
     },
-    [lift]
+    []
   );
 
   const endDrag = useCallback(
@@ -339,11 +353,13 @@ export function AccessibilityWidget({
       } catch {
         /* capture already gone */
       }
+      setDragging(false);
       if (!drag.moved) return;
+      dragEndedAtRef.current = Date.now();
       // Persist once, at the end of the gesture.
-      setDock((prev) => {
+      setFab((prev) => {
         try {
-          localStorage.setItem(A11Y_DOCK_STORAGE_KEY, JSON.stringify(prev));
+          localStorage.setItem(A11Y_FAB_STORAGE_KEY, JSON.stringify(prev));
         } catch {
           /* ignore */
         }
@@ -353,62 +369,120 @@ export function AccessibilityWidget({
     []
   );
 
+  /**
+   * Pinned: pull the circle out and stop there (the settings stay closed).
+   * Free: toggle the settings.
+   */
   const onFabClick = useCallback(() => {
-    // A drag must not also toggle.
-    if (movedRef.current) {
-      movedRef.current = false;
-      return;
-    }
-    if (collapsed) {
-      // Folded ribbon: one click unfolds it and brings the settings straight up.
-      saveDock({ ...dock, collapsed: false });
-      setOpen(true);
+    // A drag must not also toggle the settings (or pull the ribbon out).
+    if (Date.now() - dragEndedAtRef.current < 350) return;
+    if (fab.attached) {
+      const box = a11yAttachedBox({
+        edge,
+        centerY: fab.centerY,
+        viewportWidth: viewport.width,
+        viewportHeight: viewport.height,
+        bottomInset: lift,
+      });
+      const detached = clampA11yFabPosition(
+        {
+          x: edge === "left" ? 0 : viewport.width - A11Y_FAB_SIZE,
+          y: box.top + box.height / 2 - A11Y_FAB_SIZE / 2,
+        },
+        viewport
+      );
+      saveFab({
+        ...fab,
+        attached: false,
+        x: detached.x,
+        y: detached.y,
+        centerY: box.top + box.height / 2,
+      });
       return;
     }
     setOpen((v) => !v);
-  }, [collapsed, dock, saveDock]);
+  }, [edge, fab, lift, saveFab, viewport]);
 
-  const fold = useCallback(() => {
+  /** Hover control: travel to the nearest edge and pin there. */
+  const attachToNearestEdge = useCallback(() => {
     setOpen(false);
-    saveDock({ ...dock, collapsed: true });
-  }, [dock, saveDock]);
-
-  const resetDock = useCallback(() => {
-    saveDock({ ...dock, edge: null, centerY: null });
-  }, [dock, saveDock]);
+    const box = widgetRef.current?.getBoundingClientRect();
+    const centerX = box ? box.left + box.width / 2 : viewport.width / 2;
+    const centerYAt = box ? box.top + box.height / 2 : viewport.height / 2;
+    saveFab({
+      x: fab.x,
+      y: fab.y,
+      attached: true,
+      edge: nearestA11yEdge(
+        centerX - A11Y_FAB_SIZE / 2,
+        viewport.width || window.innerWidth
+      ),
+      centerY: clampA11yCenterY(
+        centerYAt,
+        viewport.height || window.innerHeight,
+        A11Y_RIBBON_H,
+        lift
+      ),
+    });
+  }, [fab.x, fab.y, lift, saveFab, viewport]);
 
   const moveBy = useCallback(
-    (dy: number) => {
-      const rect = fabRef.current?.getBoundingClientRect();
-      const base =
-        dock.centerY ?? (rect ? rect.top + rect.height / 2 : window.innerHeight / 2);
-      saveDock({
-        ...dock,
-        centerY: clampA11yCenterY(base + dy, window.innerHeight, undefined, lift),
+    (dx: number, dy: number) => {
+      if (fab.attached) {
+        // Pinned: up/down slides along the edge, left/right picks the edge.
+        if (dx !== 0) {
+          saveFab({
+            ...fab,
+            edge: dx < 0 ? "left" : "right",
+          });
+          return;
+        }
+        const box = widgetRef.current?.getBoundingClientRect();
+        const base =
+          fab.centerY ??
+          (box ? box.top + box.height / 2 : window.innerHeight / 2);
+        saveFab({
+          ...fab,
+          centerY: clampA11yCenterY(
+            base + dy,
+            window.innerHeight,
+            A11Y_RIBBON_H,
+            lift
+          ),
+        });
+        return;
+      }
+      const box = widgetRef.current?.getBoundingClientRect();
+      const base = {
+        x: fab.x ?? (box ? box.left : window.innerWidth - A11Y_FAB_SIZE - 10),
+        y: fab.y ?? (box ? box.top : window.innerHeight - A11Y_FAB_SIZE - 10),
+      };
+      saveFab({
+        ...fab,
+        attached: false,
+        ...clampA11yFabPosition(
+          { x: base.x + dx, y: base.y + dy },
+          { width: window.innerWidth, height: window.innerHeight }
+        ),
       });
     },
-    [dock, lift, saveDock]
+    [fab, lift, saveFab]
   );
 
   const onFabKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>) => {
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        moveBy(-KEYBOARD_STEP);
-        return;
-      }
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        moveBy(KEYBOARD_STEP);
-        return;
-      }
-      // Left/right re-dock the widget to that edge.
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        event.preventDefault();
-        saveDock({ ...dock, edge: event.key === "ArrowLeft" ? "left" : "right" });
-      }
+      const moves: Record<string, [number, number]> = {
+        ArrowUp: [0, -KEYBOARD_STEP],
+        ArrowDown: [0, KEYBOARD_STEP],
+        ArrowLeft: [-KEYBOARD_STEP, 0],
+        ArrowRight: [KEYBOARD_STEP, 0],
+      };
+      const move = moves[event.key];
+      if (!move) return;
+      event.preventDefault();
+      moveBy(move[0], move[1]);
     },
-    [dock, moveBy, saveDock]
+    [moveBy]
   );
 
   /* ---------------------------------------------------------------- */
@@ -416,10 +490,9 @@ export function AccessibilityWidget({
   /* ---------------------------------------------------------------- */
 
   /**
-   * Place the panel from the *target* box of the opened mark button, not from
-   * a measured rect: the ribbon morphs (width/height/top transition), so
-   * measuring mid-transition reports the collapsed ribbon and the panel lands
-   * on top of the button.
+   * Place the panel from the widget's *current* box, which is set by inline
+   * left/top/width/height. Measuring mid-morph used to report the collapsed
+   * ribbon and land the panel on top of the button, so read the inline box.
    */
   useLayoutEffect(() => {
     if (!open || sheet) {
@@ -427,41 +500,27 @@ export function AccessibilityWidget({
       return;
     }
     const place = () => {
-      const fab = fabRef.current;
+      const el = widgetRef.current;
       const panel = panelRef.current?.getBoundingClientRect();
-      if (!fab || !panel) return;
+      if (!el || !panel) return;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
 
-      // `left`/`right` are not transitioned, so their used values are stable.
-      const fabStyle = getComputedStyle(fab);
-      const onRightEdge = edge === "right";
-      const inset = parseFloat(onRightEdge ? fabStyle.right : fabStyle.left) || 0;
-      const fabLeft = onRightEdge
-        ? vw - inset - A11Y_FAB_SIZE
-        : inset;
-      const fabRight = fabLeft + A11Y_FAB_SIZE;
+      const boxLeft = parseFloat(el.style.left) || 0;
+      const boxTop = parseFloat(el.style.top) || 0;
+      const boxWidth = parseFloat(el.style.width) || A11Y_FAB_SIZE;
+      const boxHeight = parseFloat(el.style.height) || A11Y_FAB_SIZE;
 
-      // Same source the CSS positions from: the saved center, else centered.
-      const centerRaw =
-        widgetRef.current?.style
-          .getPropertyValue("--a11y-center")
-          .trim() ?? "";
-      const centerY = centerRaw.endsWith("px")
-        ? parseFloat(centerRaw)
-        : centerRaw.endsWith("%")
-          ? (parseFloat(centerRaw) / 100) * vh
-          : vh / 2;
-
-      // Open on the inner side of the docked edge.
-      let left = onRightEdge
-        ? fabLeft - PANEL_GAP - panel.width
-        : fabRight + PANEL_GAP;
+      // Open toward the middle of the screen.
+      const opensRight = boxLeft + boxWidth / 2 < vw / 2;
+      let left = opensRight
+        ? boxLeft + boxWidth + PANEL_GAP
+        : boxLeft - PANEL_GAP - panel.width;
       left = Math.min(
         Math.max(left, PANEL_GAP),
         Math.max(PANEL_GAP, vw - panel.width - PANEL_GAP)
       );
-      let top = centerY - panel.height / 2;
+      let top = boxTop + boxHeight / 2 - panel.height / 2;
       top = Math.min(
         Math.max(top, PANEL_GAP),
         Math.max(PANEL_GAP, vh - panel.height - PANEL_GAP)
@@ -471,21 +530,21 @@ export function AccessibilityWidget({
     place();
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
-  }, [open, sheet, dock, edge]);
+  }, [open, sheet, fab]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
-        fabRef.current?.focus();
+        widgetRef.current?.querySelector("button")?.focus();
       }
     };
     const onPointer = (event: MouseEvent) => {
       const target = event.target as Node;
       if (
         panelRef.current?.contains(target) ||
-        fabRef.current?.contains(target)
+        widgetRef.current?.contains(target)
       ) {
         return;
       }
@@ -501,35 +560,69 @@ export function AccessibilityWidget({
 
   const customised = !isDefaultA11yPreferences(prefs);
   const activeCount = activeA11yCount(prefs);
-  const docked = dock.edge !== null || dock.centerY !== null;
 
-  // Vertical position: the saved center, else the CSS default (centered).
-  const widgetStyle =
-    dock.centerY !== null
-      ? ({ "--a11y-center": `${dock.centerY}px` } as React.CSSProperties)
-      : undefined;
+  /* Geometry: pinned ribbon vs free circle, both as inline left/top.
+   * Read only from `viewport` state: touching `window` during render breaks SSR. */
+  const vw = viewport.width;
+  const vh = viewport.height;
+  const defaultCorner = clampA11yFabPosition(
+    edge === "left"
+      ? { x: 0, y: vh - A11Y_FAB_SIZE - 24 }
+      : { x: vw - A11Y_FAB_SIZE, y: vh - A11Y_FAB_SIZE - 24 },
+    { width: vw, height: vh }
+  );
+  const geometry = attached
+    ? a11yAttachedBox({
+        edge,
+        centerY: fab.centerY,
+        viewportWidth: vw,
+        viewportHeight: vh,
+        bottomInset: lift,
+      })
+    : {
+        left: fab.x ?? defaultCorner.x,
+        top: fab.y ?? defaultCorner.y,
+        width: A11Y_FAB_SIZE,
+        height: A11Y_FAB_SIZE,
+      };
+
+  // Room on the inner side of the button, for the hover attach control.
+  const side =
+    geometry.left + geometry.width / 2 < vw / 2 ? "right" : "left";
+
+  // Geometry is measured, so there is nothing correct to draw on the server.
+  // Render nothing for the first client frame instead of flashing the widget
+  // at a guessed position.
+  if (!hydrated || vw === 0 || vh === 0) return null;
 
   return (
     <div
       ref={widgetRef}
-      className="a11y-widget"
+      className={`a11y-widget${dragging ? " is-dragging" : ""}`}
+      data-attached={attached ? "" : undefined}
       data-edge={edge}
-      data-collapsed={collapsed ? "" : undefined}
-      style={widgetStyle}
+      data-side={side}
+      style={{
+        left: `${geometry.left}px`,
+        top: `${geometry.top}px`,
+        width: `${geometry.width}px`,
+        height: `${geometry.height}px`,
+      }}
     >
       <button
-        ref={fabRef}
         type="button"
         className={`a11y-fab${open ? " is-open" : ""}`}
         aria-label={
-          collapsed ? "Open accessibility settings" : "Accessibility settings"
+          attached
+            ? "Take accessibility settings out of the screen edge"
+            : "Accessibility settings"
         }
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         title={
-          collapsed
-            ? "Accessibility settings. Drag along the edge to move it."
-            : "Accessibility settings. Drag along the edge, or fold it away."
+          attached
+            ? "Accessibility settings. Click to pull it out of the edge."
+            : "Accessibility settings. Drag anywhere, or use the attach control."
         }
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -538,8 +631,8 @@ export function AccessibilityWidget({
         onKeyDown={onFabKeyDown}
         onClick={onFabClick}
       >
-        {collapsed ? (
-          // Folded: a quiet ribbon with a chevron pointing into the page.
+        {attached ? (
+          // Pinned: a quiet ribbon with a chevron pointing into the page.
           <svg
             className="a11y-ribbon-chevron"
             viewBox="0 0 24 24"
@@ -571,27 +664,30 @@ export function AccessibilityWidget({
         ) : null}
       </button>
 
-      {!collapsed ? (
+      {!attached ? (
         <button
           type="button"
-          className="a11y-fold"
-          onClick={fold}
-          aria-label="Hide accessibility settings in the screen edge"
-          title="Hide in the screen edge"
+          className="a11y-attach"
+          onClick={attachToNearestEdge}
+          aria-label="Attach to the nearest screen edge"
+          title="Attach to the nearest screen edge"
         >
           <svg
-            className="a11y-fold-chevron"
+            className="a11y-attach-icon"
             viewBox="0 0 24 24"
             width="14"
             height="14"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2.4"
+            strokeWidth="2.2"
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
           >
-            <path d="m15 18-6-6 6-6" />
+            <path d="M9 3v12" />
+            <path d="m5 8 4-4 4 4" />
+            <path d="M15 21V9" />
+            <path d="m19 16-4 4-4-4" />
           </svg>
         </button>
       ) : null}
@@ -628,7 +724,7 @@ export function AccessibilityWidget({
                 className="a11y-panel-close"
                 onClick={() => {
                   setOpen(false);
-                  fabRef.current?.focus();
+                  widgetRef.current?.querySelector("button")?.focus();
                 }}
               >
                 Close
@@ -714,21 +810,19 @@ export function AccessibilityWidget({
               >
                 Reset settings
               </button>
-              {docked ? (
-                <button
-                  type="button"
-                  className="a11y-link-btn"
-                  onClick={resetDock}
-                >
-                  Reset position
-                </button>
-              ) : (
-                <span className="a11y-panel-note">
-                  Drag the ribbon along the edge to move it, or across to the
-                  other side. Arrow keys work too.
-                </span>
-              )}
+              <button
+                type="button"
+                className="a11y-link-btn"
+                onClick={attachToNearestEdge}
+              >
+                Move to the nearest edge
+              </button>
             </div>
+
+            <p className="a11y-panel-note">
+              Drag the circle anywhere on screen. On hover it offers to attach
+              itself to the nearest edge.
+            </p>
           </div>
         </>
       ) : null}

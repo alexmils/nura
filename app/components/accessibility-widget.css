@@ -1,43 +1,36 @@
 /*
- * Accessibility widget — an edge-docked ribbon that opens into the Nura mark
- * button and the settings panel.
+ * Accessibility widget — a circle you can drag anywhere, which can be pinned
+ * to a screen edge as a ribbon.
  *
- * Folded (default): a tall half-pill peeking out of the screen edge with a
- * chevron. Open: the round mark button, plus a small fold control that pushes
- * it back into the edge. Vertical center and edge come from the widget
- * (`--a11y-center`, `data-edge`), so the ribbon can be dragged and re-docked.
+ * The container carries the geometry (inline left/top/width/height from the
+ * widget), so switching between the two shapes animates as a short travel to
+ * the nearest edge. The button fills the container.
  */
 
 .a11y-widget {
-  --a11y-fab-size: 52px;
-  --a11y-ribbon-w: 30px;
-  --a11y-ribbon-h: 88px;
-  /* Vertical center of the widget; overridden inline once dragged. */
-  --a11y-center: 50%;
-  /* Flush when folded, a small inset when open. Safe-area covers both edges. */
-  --a11y-inset: max(
-    0.35rem,
-    env(safe-area-inset-left, 0px),
-    env(safe-area-inset-right, 0px)
-  );
+  position: fixed;
+  z-index: 65;
   --a11y-panel-w: 21rem;
+  transition:
+    left 0.32s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    top 0.32s var(--ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    width 0.22s var(--ease, ease),
+    height 0.22s var(--ease, ease);
 }
 
-.a11y-widget[data-collapsed] {
-  --a11y-inset: 0px;
+/* While dragging there is nothing to animate; follow the pointer exactly. */
+.a11y-widget.is-dragging {
+  transition: none;
 }
 
 .a11y-fab {
-  position: fixed;
-  z-index: 65;
-  top: calc(var(--a11y-center) - var(--a11y-h) / 2);
+  position: absolute;
+  inset: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Height of the current shape: the ribbon when folded, the mark when open. */
-  --a11y-h: var(--a11y-fab-size);
-  width: var(--a11y-fab-size);
-  height: var(--a11y-fab-size);
+  width: 100%;
+  height: 100%;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -45,48 +38,29 @@
   box-shadow: 0 10px 26px rgba(42, 48, 32, 0.24);
   cursor: grab;
   touch-action: none;
-  transition:
-    transform 0.2s var(--ease, ease),
-    box-shadow 0.2s var(--ease, ease),
-    width 0.22s var(--ease, ease),
-    height 0.22s var(--ease, ease),
-    background 0.22s var(--ease, ease);
 }
 
-/* —— Edge docking —— */
+/* —— Pinned to the edge: ribbon with a chevron —— */
 
-.a11y-widget[data-edge="right"] .a11y-fab {
-  right: var(--a11y-inset);
-  left: auto;
-}
-
-.a11y-widget[data-edge="left"] .a11y-fab {
-  left: var(--a11y-inset);
-  right: auto;
-}
-
-/* —— Folded ribbon —— */
-
-.a11y-widget[data-collapsed] .a11y-fab {
-  --a11y-h: var(--a11y-ribbon-h);
-  width: var(--a11y-ribbon-w);
-  height: var(--a11y-ribbon-h);
+.a11y-widget[data-attached] .a11y-fab {
   border: 1px solid var(--border-strong, #84b067);
-  border-radius: 999px 0 0 999px;
-  border-right: none;
   background: var(--bg-elevated, #f7fdf7);
   color: var(--text-secondary, #5e7048);
+}
+
+.a11y-widget[data-attached][data-edge="right"] .a11y-fab {
+  border-radius: 999px 0 0 999px;
+  border-right: none;
   box-shadow: -6px 0 18px rgba(42, 48, 32, 0.16);
 }
 
-.a11y-widget[data-edge="left"][data-collapsed] .a11y-fab {
+.a11y-widget[data-attached][data-edge="left"] .a11y-fab {
   border-radius: 0 999px 999px 0;
-  border: 1px solid var(--border-strong, #84b067);
   border-left: none;
   box-shadow: 6px 0 18px rgba(42, 48, 32, 0.16);
 }
 
-.a11y-widget[data-collapsed] .a11y-fab:hover {
+.a11y-widget[data-attached] .a11y-fab:hover {
   background: var(--accent-subtle, rgba(132, 176, 103, 0.16));
 }
 
@@ -110,12 +84,16 @@
   user-select: none;
 }
 
-.a11y-fab:hover {
+.a11y-widget:not([data-attached]) .a11y-fab:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 32px rgba(42, 48, 32, 0.28);
 }
 
 .a11y-fab:active {
+  cursor: grabbing;
+}
+
+.a11y-widget.is-dragging .a11y-fab {
   cursor: grabbing;
   transform: none;
 }
@@ -131,55 +109,66 @@
   outline-offset: 3px;
 }
 
-/* —— Fold control: pushes the mark back into the edge —— */
+/* —— Attach control: appears on hover, sends the circle to the nearest edge —— */
 
-.a11y-fold {
-  position: fixed;
-  z-index: 65;
-  top: calc(var(--a11y-center) - 0.6875rem);
+.a11y-attach {
+  position: absolute;
+  top: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.7rem;
+  height: 1.7rem;
   padding: 0;
   border: 1px solid var(--border, #b8d4a8);
   border-radius: 999px;
   background: var(--bg-elevated, #f7fdf7);
   color: var(--text-secondary, #5e7048);
   cursor: pointer;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
   transition:
+    opacity 0.16s ease,
     background 0.16s ease,
     color 0.16s ease;
 }
 
-.a11y-widget[data-edge="right"] .a11y-fold {
-  right: calc(var(--a11y-inset) + var(--a11y-fab-size) + 0.35rem);
-  left: auto;
+/* Toward the middle of the screen, where there is always room for it. */
+.a11y-widget[data-side="right"] .a11y-attach {
+  left: calc(100% + 0.4rem);
 }
 
-.a11y-widget[data-edge="left"] .a11y-fold {
-  left: calc(var(--a11y-inset) + var(--a11y-fab-size) + 0.35rem);
-  right: auto;
+.a11y-widget[data-side="left"] .a11y-attach {
+  right: calc(100% + 0.4rem);
 }
 
-.a11y-fold:hover {
+.a11y-widget:hover .a11y-attach,
+.a11y-widget:focus-within .a11y-attach {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.a11y-attach:hover {
   background: var(--accent-subtle, rgba(132, 176, 103, 0.16));
   color: var(--text, #2a3020);
 }
 
-.a11y-fold:focus-visible {
+.a11y-attach:focus-visible {
   outline: 2px solid var(--gold, #c6d67e);
   outline-offset: 2px;
 }
 
-.a11y-fold-chevron {
+.a11y-attach-icon {
   display: block;
 }
 
-/* On the right edge the chevron points right, into the edge. */
-.a11y-widget[data-edge="right"] .a11y-fold-chevron {
-  transform: rotate(180deg);
+/* Touch devices have no hover: keep the control reachable. */
+@media (hover: none), (pointer: coarse) {
+  .a11y-widget:not([data-attached]) .a11y-attach {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 /* Count of active settings, so the panel is discoverable after a change. */
@@ -205,13 +194,13 @@
 }
 
 /* Folded, the badge rides the inner edge of the thin ribbon. */
-.a11y-widget[data-collapsed][data-edge="right"] .a11y-fab-count {
+.a11y-widget[data-attached][data-edge="right"] .a11y-fab-count {
   top: -4px;
   right: auto;
   left: -0.6rem;
 }
 
-.a11y-widget[data-collapsed][data-edge="left"] .a11y-fab-count {
+.a11y-widget[data-attached][data-edge="left"] .a11y-fab-count {
   top: -4px;
   right: -0.6rem;
   left: auto;
@@ -545,8 +534,7 @@
  */
 
 /* Keep the canvas clear while a set is running (same rule as the Help FAB). */
-body:has(.app-shell.session-immersive) .a11y-fab,
-body:has(.app-shell.session-immersive) .a11y-fold {
+body:has(.app-shell.session-immersive) .a11y-widget {
   display: none !important;
 }
 
@@ -556,15 +544,15 @@ body:has(.app-shell.session-immersive) .a11y-fold {
     animation: none;
   }
 
-  .a11y-fab,
-  .a11y-fold,
+  .a11y-widget,
+  .a11y-attach,
   .a11y-step,
   .a11y-switch,
   .a11y-switch::after {
     transition: none;
   }
 
-  .a11y-fab:hover {
+  .a11y-widget:not([data-attached]) .a11y-fab:hover {
     transform: none;
   }
 }

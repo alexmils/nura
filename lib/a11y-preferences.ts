@@ -9,8 +9,8 @@
  */
 
 export const A11Y_STORAGE_KEY = "nura.a11y.v1";
-/** Saved dock state of the floating widget (edge, vertical center, folded). */
-export const A11Y_DOCK_STORAGE_KEY = "nura.a11y.dock.v1";
+/** Saved floating button state (free position or edge attachment). */
+export const A11Y_FAB_STORAGE_KEY = "nura.a11y.fab.v2";
 
 /** Text size steps, smallest first. Index is what we store. */
 export const A11Y_TEXT_STEPS = [0, 1, 2, 3] as const;
@@ -168,53 +168,99 @@ export function a11yBootstrapScript(): string {
   ].join("");
 }
 
-/** Floating button edge-dock state (replaces the old free-float x/y). */
+/** Which screen edge the button can be pinned to. */
 export type A11yDockEdge = "left" | "right";
 
-export interface A11yDock {
-  /** Docked edge. null = follow the surface default passed by the shell. */
+/**
+ * Floating button state.
+ *
+ * Two modes:
+ * - `attached` — pinned to a screen edge as the ribbon (30×88 half-pill).
+ * - free — a circle at `x`/`y` that can be dragged anywhere on screen.
+ *
+ * `x`/`y`, `edge`, and `centerY` are all nullable so each surface keeps its
+ * own default (marketing rests left, /app rests right) until someone moves it.
+ */
+export interface A11yFabState {
+  /** Free position, top-left in viewport px. */
+  x: number | null;
+  y: number | null;
+  /** True = pinned to the screen edge as the ribbon. */
+  attached: boolean;
+  /** Edge when attached. null = the shell's default edge. */
   edge: A11yDockEdge | null;
-  /** Vertical center in viewport px. null = centered. */
+  /** Vertical center when attached. null = centered. */
   centerY: number | null;
-  /** True = folded to a ribbon peeking out of the screen edge. */
-  collapsed: boolean;
 }
 
-export const DEFAULT_A11Y_DOCK: A11yDock = {
+/**
+ * Attached by default: the widget is a quiet ribbon peeking out of the edge
+ * until someone pulls it out.
+ */
+export const DEFAULT_A11Y_FAB: A11yFabState = {
+  x: null,
+  y: null,
+  attached: true,
   edge: null,
   centerY: null,
-  // Folded by default: the widget is a quiet ribbon until it is asked for.
-  collapsed: true,
 };
 
-/**
- * Size of the mark button, and of the folded ribbon it sits behind.
- * The ribbon is a tall half-pill peeking out of the edge.
- */
 export const A11Y_FAB_SIZE = 52;
 export const A11Y_RIBBON_W = 30;
 export const A11Y_RIBBON_H = 88;
 const A11Y_EDGE_MARGIN = 10;
 
 /** Validate anything from storage; malformed input falls back to defaults. */
-export function parseA11yDock(raw: unknown): A11yDock {
-  if (!raw) return { ...DEFAULT_A11Y_DOCK };
+export function parseA11yFabState(raw: unknown): A11yFabState {
+  if (!raw) return { ...DEFAULT_A11Y_FAB };
   let value: unknown = raw;
   if (typeof raw === "string") {
     try {
       value = JSON.parse(raw);
     } catch {
-      return { ...DEFAULT_A11Y_DOCK };
+      return { ...DEFAULT_A11Y_FAB };
     }
   }
-  if (!value || typeof value !== "object") return { ...DEFAULT_A11Y_DOCK };
+  if (!value || typeof value !== "object") return { ...DEFAULT_A11Y_FAB };
   const o = value as Record<string, unknown>;
-  const edge = o.edge === "left" || o.edge === "right" ? o.edge : null;
-  const centerY =
-    typeof o.centerY === "number" && Number.isFinite(o.centerY)
-      ? o.centerY
-      : null;
-  return { edge, centerY, collapsed: o.collapsed !== false };
+  const num = (v: unknown) =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+  return {
+    x: num(o.x),
+    y: num(o.y),
+    attached: o.attached !== false,
+    edge: o.edge === "left" || o.edge === "right" ? o.edge : null,
+    centerY: num(o.centerY),
+  };
+}
+
+/** Keep a free-floating button fully on screen. */
+export function clampA11yFabPosition(
+  position: { x: number; y: number },
+  viewport: { width: number; height: number },
+  size = A11Y_FAB_SIZE
+): { x: number; y: number } {
+  const maxX = Math.max(
+    A11Y_EDGE_MARGIN,
+    viewport.width - size - A11Y_EDGE_MARGIN
+  );
+  const maxY = Math.max(
+    A11Y_EDGE_MARGIN,
+    viewport.height - size - A11Y_EDGE_MARGIN
+  );
+  return {
+    x: Math.min(Math.max(position.x, A11Y_EDGE_MARGIN), maxX),
+    y: Math.min(Math.max(position.y, A11Y_EDGE_MARGIN), maxY),
+  };
+}
+
+/** Which edge is nearest, judged from the middle of the button. */
+export function nearestA11yEdge(
+  x: number,
+  viewportWidth: number,
+  size = A11Y_FAB_SIZE
+): A11yDockEdge {
+  return x + size / 2 < viewportWidth / 2 ? "left" : "right";
 }
 
 /**
@@ -236,9 +282,30 @@ export function clampA11yCenterY(
   return Math.min(Math.max(centerY, min), max);
 }
 
-/** Which edge a pointer x is closer to, so a folded ribbon can be re-docked. */
-export function a11yEdgeForX(x: number, viewportWidth: number): A11yDockEdge {
-  return x < viewportWidth / 2 ? "left" : "right";
+/** Where the ribbon sits when attached to an edge (top-left corner). */
+export function a11yAttachedBox(opts: {
+  edge: A11yDockEdge;
+  centerY: number | null;
+  viewportWidth: number;
+  viewportHeight: number;
+  bottomInset?: number;
+  width?: number;
+  height?: number;
+}): { left: number; top: number; width: number; height: number } {
+  const width = opts.width ?? A11Y_RIBBON_W;
+  const height = opts.height ?? A11Y_RIBBON_H;
+  const center = clampA11yCenterY(
+    opts.centerY ?? opts.viewportHeight / 2,
+    opts.viewportHeight,
+    height,
+    opts.bottomInset ?? 0
+  );
+  return {
+    left: opts.edge === "left" ? 0 : Math.max(0, opts.viewportWidth - width),
+    top: Math.round(center - height / 2),
+    width,
+    height,
+  };
 }
 
 /**
