@@ -20,7 +20,10 @@ export type AuditAction =
   | "email.broadcast_sent"
   | "blog.post_created"
   | "blog.post_updated"
-  | "blog.post_deleted";
+  | "blog.post_deleted"
+  | "mcp.token_generated"
+  | "mcp.token_revoked"
+  | "mcp.settings_updated";
 
 export type AuditEvent = {
   id: string;

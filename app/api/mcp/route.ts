@@ -12,9 +12,17 @@
  * with an explicit `categories` choice so every post lands on a category page.
  */
 
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { writeAuditEvent } from "@/lib/audit-log";
+import {
+  bearerFromRequest,
+  getMcpAuthState,
+  mcpRequestAuthorized,
+  recordMcpTokenUse,
+  type McpAuthState,
+} from "@/lib/mcp-auth";
+import { getPlatformSettings } from "@/lib/platform-settings";
+import type { PlatformMcpConfig } from "@/lib/mcp-settings";
 import {
   deleteBlogPost,
   getBlogPostBySlugOrId,
@@ -229,15 +237,13 @@ function postSummary(post: BlogPostRecord) {
   };
 }
 
-function tokenAuthorized(request: Request): boolean {
-  const expected = process.env.NURA_MCP_TOKEN?.trim();
-  if (!expected) return false;
-  const header = request.headers.get("authorization") ?? "";
-  const provided = header.toLowerCase().startsWith("bearer ")
-    ? header.slice(7).trim()
-    : "";
-  if (provided.length !== expected.length) return false;
-  return timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+async function authorized(
+  request: Request
+): Promise<{ ok: boolean; state: McpAuthState; config: PlatformMcpConfig }> {
+  const settings = await getPlatformSettings();
+  const state = await getMcpAuthState(settings.mcp);
+  const ok = mcpRequestAuthorized(bearerFromRequest(request), state);
+  return { ok, state, config: settings.mcp };
 }
 
 async function callTool(
@@ -350,18 +356,21 @@ async function callTool(
 }
 
 export async function POST(request: Request) {
-  if (!process.env.NURA_MCP_TOKEN?.trim()) {
+  const auth = await authorized(request);
+  if (auth.state.source === "none") {
     return NextResponse.json(
       {
         error:
-          "MCP is not configured. Set NURA_MCP_TOKEN in the environment, then reconnect the nura-blog MCP server.",
+          "MCP has no token. Generate one in Admin → MCP (or set NURA_MCP_TOKEN), then reconnect the nura-blog MCP server.",
       },
       { status: 503 }
     );
   }
-  if (!tokenAuthorized(request)) {
+  if (!auth.ok) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  // Stamped at most hourly; failure here must not fail the call.
+  void recordMcpTokenUse(auth.config);
 
   let payload: unknown;
   try {

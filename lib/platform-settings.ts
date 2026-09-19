@@ -42,6 +42,11 @@ import {
   normalizeSeoConfig,
   type PlatformSeoConfig,
 } from "@/lib/seo-config";
+import {
+  DEFAULT_PLATFORM_MCP,
+  normalizeMcpConfig,
+  type PlatformMcpConfig,
+} from "@/lib/mcp-settings";
 import { normalizeBrandAssetUrl } from "@/lib/brand-assets";
 
 export type { HelpSettings };
@@ -65,6 +70,8 @@ export {
   DEFAULT_PLATFORM_SEO,
   normalizeSeoConfig,
 } from "@/lib/seo-config";
+export type { PlatformMcpConfig } from "@/lib/mcp-settings";
+export { DEFAULT_PLATFORM_MCP, normalizeMcpConfig } from "@/lib/mcp-settings";
 
 export type PlatformFeatureFlags = {
   voice: boolean;
@@ -106,6 +113,8 @@ export type PlatformSettings = {
   email: PlatformEmailConfig;
   /** Public-site SEO + marketing tags — Admin → SEO. */
   seo: PlatformSeoConfig;
+  /** Blog MCP access token — Admin → MCP. */
+  mcp: PlatformMcpConfig;
   /**
    * Browser tab icon (jpeg/png/webp data URL, https, or path).
    * Empty → built-in `/icon.png`.
@@ -170,6 +179,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   },
   email: { ...DEFAULT_PLATFORM_EMAIL },
   seo: { ...DEFAULT_PLATFORM_SEO, pages: {} },
+  mcp: { ...DEFAULT_PLATFORM_MCP },
   faviconUrl: "",
   appLogoUrl: "",
   guidedChatChromeId: DEFAULT_GUIDED_CHAT_CHROME_ID,
@@ -311,6 +321,7 @@ function normalizeSettings(raw: unknown): PlatformSettings {
     stripe: normalizeStripeConfig((r as Partial<PlatformSettings>).stripe),
     email: normalizeEmailConfig((r as Partial<PlatformSettings>).email),
     seo: normalizeSeoConfig((r as Partial<PlatformSettings>).seo),
+    mcp: normalizeMcpConfig((r as Partial<PlatformSettings>).mcp),
     faviconUrl: normalizeBrandAssetUrl(r.faviconUrl),
     appLogoUrl: normalizeBrandAssetUrl(r.appLogoUrl),
     guidedChatChromeId: clampGuidedChatChromeId(r.guidedChatChromeId),

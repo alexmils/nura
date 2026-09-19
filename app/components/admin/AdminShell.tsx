@@ -13,6 +13,7 @@ import {
   LifeBuoy,
   Mail,
   MessageSquareQuote,
+  Plug,
   Search,
   Settings2,
   Sparkles,
@@ -62,6 +63,7 @@ const NAV_ICONS: Record<AdminNavIcon, LucideIcon> = {
   ai: Sparkles,
   platform: Settings2,
   seo: Search,
+  mcp: Plug,
 };
 
 const USER_UPDATED = "emdr-user-updated";

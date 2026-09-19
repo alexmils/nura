@@ -19,7 +19,8 @@ export type AdminNavIcon =
   | "email"
   | "ai"
   | "platform"
-  | "seo";
+  | "seo"
+  | "mcp";
 
 export type AdminNavItem = {
   href: string;
@@ -170,6 +171,12 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
           },
           { href: "/admin/seo?tab=cookies", label: "Cookies", tab: "cookies" },
         ],
+      },
+      {
+        href: "/admin/mcp",
+        label: "MCP",
+        icon: "mcp",
+        adminOnly: true,
       },
     ],
   },

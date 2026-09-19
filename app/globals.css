@@ -7749,6 +7749,18 @@ body:has(.app-shell.session-immersive) .help-fab {
   background: var(--bg-muted, rgba(0, 0, 0, 0.04));
 }
 
+/* Wrapping config block on Admin → MCP (token snippet to paste). */
+.admin-mcp-pre {
+  display: block;
+  margin: 0.5rem 0 0;
+  padding: 0.85rem 1rem;
+  overflow-x: auto;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre;
+}
+
 .admin-kv-list {
   margin: 0.85rem 0 0;
   display: flex;

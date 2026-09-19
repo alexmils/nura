@@ -114,7 +114,16 @@ describe("admin search index", () => {
       index.some((e) => e.href.startsWith("/admin/platform")),
       false
     );
+    assert.equal(index.some((e) => e.href === "/admin/mcp"), false);
     assert.ok(index.some((e) => e.href === "/admin/users"));
+  });
+
+  it("exposes the MCP token page to platform admin", () => {
+    const index = buildAdminSearchIndex(true);
+    assert.ok(
+      index.some((e) => e.href === "/admin/mcp" && e.title === "MCP"),
+      "MCP page should be searchable for platform admin"
+    );
   });
 
   it("filters by page and tab labels", () => {

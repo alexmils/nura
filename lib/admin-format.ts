@@ -54,6 +54,9 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "blog.post_created": "Blog guide created",
   "blog.post_updated": "Blog guide updated",
   "blog.post_deleted": "Blog guide deleted",
+  "mcp.token_generated": "MCP token generated",
+  "mcp.token_revoked": "MCP token revoked",
+  "mcp.settings_updated": "MCP settings updated",
 };
 
 export function actionLabel(action: AuditAction | string) {
