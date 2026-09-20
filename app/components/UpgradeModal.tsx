@@ -13,6 +13,7 @@ import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
 } from "@/lib/meta-pixel";
+import { useToast } from "@/app/components/Toast";
 
 type UpgradeReason = "trial_limit_reached" | "bls_limit_reached" | "generic";
 
@@ -23,6 +24,8 @@ type Props = {
   guidedLimit?: number;
   blsSecondsUsed?: number;
   blsSecondsLimit?: number;
+  /** Called after the trial ends and billing starts, so usage limits refresh. */
+  onActivated?: () => void;
   onClose: () => void;
 };
 
@@ -33,11 +36,15 @@ export function UpgradeModal({
   guidedLimit = 3,
   blsSecondsUsed = 0,
   blsSecondsLimit = 600,
+  onActivated,
   onClose,
 }: Props) {
+  const { toast } = useToast();
   const [plan, setPlan] = useState<BillingPlanId>("yearly");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** True once the trial has been ended and the subscription is billing. */
+  const [activated, setActivated] = useState(false);
   const [plans, setPlans] =
     useState<Record<BillingPlanId, BillingPlanMeta>>(BILLING_PLANS);
   /** End trial on the current Stripe price instead of opening a new Checkout. */
@@ -54,6 +61,9 @@ export function UpgradeModal({
 
   useEffect(() => {
     if (!open) return;
+    // Re-opening the modal starts a fresh upgrade attempt.
+    setActivated(false);
+    setError("");
     void (async () => {
       try {
         const res = await fetch("/api/billing/status");
@@ -81,20 +91,24 @@ export function UpgradeModal({
     })();
   }, [open]);
 
-  const headline =
-    reason === "bls_limit_reached"
+  const planLabel = plans[plan]?.label ?? plan;
+
+  const headline = activated
+    ? "You’re all set"
+    : reason === "bls_limit_reached"
       ? "You’ve used your self-guided set time"
       : reason === "trial_limit_reached"
         ? "You’ve used your trial AI agent-guided sessions"
         : "Upgrade for unlimited sessions";
 
-  const detail =
-    reason === "bls_limit_reached"
+  const detail = activated
+    ? `Payment successful. Your ${planLabel} plan is active — your trial limits are lifted.`
+    : reason === "bls_limit_reached"
       ? `Trial includes ${Math.floor(blsSecondsLimit / 60)} minutes of self-guided set time (${blsSecondsUsed}s used). Upgrade for unlimited Self-guided sessions.`
       : reason === "trial_limit_reached"
         ? `Trial includes ${guidedLimit} AI agent-guided sessions (${guidedUsed} used). Upgrade to continue without limits.`
         : activateCurrent
-          ? `End your trial and start billing on your ${plans[plan]?.label ?? plan} plan.`
+          ? `End your trial and start billing on your ${planLabel} plan.`
           : "Get unlimited AI agent-guided and Self-guided sessions.";
 
   const upgrade = useCallback(async () => {
@@ -108,8 +122,17 @@ export function UpgradeModal({
         const activateData = (await activateRes.json()) as {
           error?: string;
           code?: string;
+          entitlement?: { status?: string };
         };
         if (activateRes.ok) {
+          // Stripe can return an ended trial that still needs to collect.
+          const nextStatus = activateData.entitlement?.status;
+          if (nextStatus && nextStatus !== "active") {
+            setError(
+              "Your trial has ended but the payment has not cleared yet. Open Manage billing to check your card."
+            );
+            return;
+          }
           trackMetaEvent(
             "Purchase",
             {
@@ -118,7 +141,9 @@ export function UpgradeModal({
             },
             { onceKey: "purchase_activate" }
           );
-          window.location.href = "/app/billing?activated=1";
+          setActivated(true);
+          toast("Payment successful — your subscription is active.");
+          onActivated?.();
           return;
         }
         if (
@@ -158,7 +183,7 @@ export function UpgradeModal({
     } finally {
       setBusy(false);
     }
-  }, [plan, activateCurrent, plans]);
+  }, [plan, activateCurrent, plans, onActivated, toast]);
 
   if (!open) return null;
 
@@ -180,9 +205,14 @@ export function UpgradeModal({
         <h2 id="upgrade-modal-title" className="admin-page-title">
           {headline}
         </h2>
-        <p className="admin-panel-sub mt-2">{detail}</p>
+        <p
+          className="admin-panel-sub mt-2"
+          role={activated ? "status" : undefined}
+        >
+          {detail}
+        </p>
 
-        {!activateCurrent && (
+        {!activateCurrent && !activated && (
           <div
             className="upgrade-plan-list mt-4"
             role="radiogroup"
@@ -216,9 +246,9 @@ export function UpgradeModal({
           </div>
         )}
 
-        {activateCurrent && (
+        {activateCurrent && !activated && (
           <p className="admin-panel-sub mt-4">
-            Billing continues on <strong>{plans[plan]?.label ?? plan}</strong>
+            Billing continues on <strong>{planLabel}</strong>
             {plans[plan]?.displayPrice
               ? ` (${plans[plan].displayPrice}${plans[plan].displayPeriod})`
               : ""}
@@ -259,22 +289,30 @@ export function UpgradeModal({
         {error && <p className="admin-invite-msg mt-3">{error}</p>}
 
         <div className="admin-modal-actions upgrade-modal-actions">
-          <button
-            type="button"
-            className="btn-secondary"
-            disabled={busy}
-            onClick={onClose}
-          >
-            Not now
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={busy}
-            onClick={() => void upgrade()}
-          >
-            {busy ? "Loading…" : "Pay now"}
-          </button>
+          {activated ? (
+            <button type="button" className="btn-primary" onClick={onClose}>
+              Continue
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={onClose}
+              >
+                Not now
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy}
+                onClick={() => void upgrade()}
+              >
+                {busy ? "Loading…" : "Pay now"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

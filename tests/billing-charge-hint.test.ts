@@ -51,11 +51,9 @@ describe("resolveChargeHint", () => {
       status: "trialing",
       accessTier: "trialing",
       trialEndsAt: "2026-09-13T12:00:00.000Z",
-      renewsAt: "2026-10-13T12:00:00.000Z",
       now,
     });
     assert.ok(hint);
-    assert.equal(hint.kind, "trial");
     assert.equal(hint.days, 3);
     assert.equal(hint.label, "Charges in 3 days");
   });
@@ -79,15 +77,32 @@ describe("resolveChargeHint", () => {
     );
   });
 
-  it("shows renew copy for active subscribers", () => {
-    const hint = resolveChargeHint({
-      status: "active",
-      accessTier: "active",
-      renewsAt: "2026-09-17T12:00:00.000Z",
-      now,
-    });
-    assert.ok(hint);
-    assert.equal(hint.kind, "renew");
-    assert.equal(hint.label, "Renews in 7 days");
+  it("stays quiet for paying subscribers", () => {
+    // A renewal countdown after payment reads like the charge never went through.
+    assert.equal(
+      resolveChargeHint({
+        status: "active",
+        accessTier: "active",
+        trialEndsAt: "2026-09-10T10:00:00.000Z",
+        now,
+      }),
+      null
+    );
+  });
+
+  it("stays quiet for unpaid or undated accounts", () => {
+    assert.equal(
+      resolveChargeHint({
+        status: "past_due",
+        accessTier: "blocked",
+        trialEndsAt: "2026-09-13T12:00:00.000Z",
+        now,
+      }),
+      null
+    );
+    assert.equal(
+      resolveChargeHint({ status: "trialing", trialEndsAt: "not-a-date", now }),
+      null
+    );
   });
 });

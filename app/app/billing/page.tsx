@@ -81,6 +81,9 @@ function BillingPageInner() {
     }
     if (checkout === "canceled") setMsg("Checkout canceled.");
     if (activated === "1") {
+      // Legacy trial-activation return link; the Upgrade modal now confirms
+      // in place, but old links must still say the payment went through.
+      setMsg("Payment successful. Your subscription is active.");
       trackMetaEvent(
         "Purchase",
         { content_category: "subscription", content_name: "activate_trial" },
@@ -243,7 +246,8 @@ function BillingPageInner() {
                     {status.status.replace(/_/g, " ")}
                   </strong>
                 </div>
-                {status.trialEndsAt && (
+                {/* Once billing starts the trial end is history, not status. */}
+                {status.trialEndsAt && status.status === "trialing" && (
                   <div className="settings-row settings-kv">
                     <span>Trial ends</span>
                     <strong>
@@ -366,6 +370,9 @@ function BillingPageInner() {
         guidedLimit={status?.guidedLimit}
         blsSecondsUsed={status?.blsSecondsUsed}
         blsSecondsLimit={status?.blsSecondsLimit}
+        onActivated={() => {
+          void refresh();
+        }}
         onClose={() => {
           setCardFlipping(false);
           setUpgradeOpen(false);

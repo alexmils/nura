@@ -1056,6 +1056,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         guidedLimit={entitlement?.guidedLimit}
         blsSecondsUsed={entitlement?.blsSecondsUsed}
         blsSecondsLimit={entitlement?.blsSecondsLimit}
+        onActivated={() => {
+          void refreshEntitlement();
+        }}
         onClose={() => setUpgrade((u) => ({ ...u, open: false }))}
       />
       <AdInterstitial

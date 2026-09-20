@@ -349,6 +349,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The first set now starts from the distress rating you give, whatever it is, instead of waiting for the number to come down first
 - [internal] Memory simplified to account-scoped notes: memory sets and per-session toggles removed (`lib/db.ts` drops `memory_sets`, `memory_set_items`, `thread_memory_sets`; `getAccountMemoryContext` replaces `getEnabledMemoryContext`; `/api/settings` gains `clear_memories`, `/api/threads` drops `set_memory`)
 - [internal] Memory reads and writes are scoped by `user_id` in SQL instead of relying on RLS, which a table-owner connection is exempt from; retired memory-set tables removed from `ensureRlsPolicies` so schema init runs on an empty database
+- The /app header countdown is trial-only now: paying subscribers no longer see “Renews in N days” up there, which read like the payment had not landed, and the renewal date stays on `/app/billing`. That page also drops its **Trial ends** row once billing has started, so an active weekly plan shows Plan / Status / Renews instead of a trial date in the past (`lib/billing-charge-hint.ts`, `BillingChargeHint`)
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -648,6 +649,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Blog post top row is the post’s own category as a link (guides with no clinical category link to `/blog` instead of showing a topic label that looked like a category), and the date moved below the author name under the round logo
 - [internal] Accessibility widget is now an edge-docked ribbon: folded by default (30×88, flush to the edge, chevron), one click unfolds it and opens the settings, and a fold control hides it again. Drag it along the edge or across to the other edge, even while folded, and it remembers where it was docked
 - [internal] Rebuilt the accessibility widget interaction: the ribbon is now pull-out only (clicking it shows the circle without opening the settings), the circle can be dragged anywhere on screen again, and hovering it reveals a control that sends it to the nearest edge. Pinning animates as a short travel, and the panel also offers the same action without hover
+- Upgrading from the trial now confirms the payment in place: ending the trial early shows “You’re all set / Payment successful” in the upgrade dialog with a toast, and the session limits lift immediately. Previously the click bounced to `/app/billing`, which showed only **Manage billing** and never a confirmation. If Stripe reports the trial ended but the charge has not cleared, the dialog says so instead of claiming success; `/app/billing?activated=1` still confirms for older links
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
