@@ -7,15 +7,7 @@ import {
   getEmailTemplate,
   saveEmailTemplate,
 } from "@/lib/email-templates-db";
-import type { EmailTemplateId } from "@/lib/email/templates";
-
-const VALID: EmailTemplateId[] = [
-  "password_reset",
-  "welcome_invite",
-  "password_changed",
-  "welcome",
-  "account_deleted",
-];
+import { isEmailTemplateId } from "@/lib/email/template-labels";
 
 export async function GET(
   _request: Request,
@@ -25,12 +17,12 @@ export async function GET(
   if (!isAuthContext(auth)) return auth;
 
   const { id } = await params;
-  if (!VALID.includes(id as EmailTemplateId)) {
+  if (!isEmailTemplateId(id)) {
     return NextResponse.json({ error: "Unknown template" }, { status: 404 });
   }
 
   try {
-    const template = await getEmailTemplate(id as EmailTemplateId);
+    const template = await getEmailTemplate(id);
     return NextResponse.json({ template });
   } catch (err) {
     console.error("[admin/email/templates/id GET]", err);
@@ -46,7 +38,7 @@ export async function PUT(
   if (!isAuthContext(auth)) return auth;
 
   const { id } = await params;
-  if (!VALID.includes(id as EmailTemplateId)) {
+  if (!isEmailTemplateId(id)) {
     return NextResponse.json({ error: "Unknown template" }, { status: 404 });
   }
 
@@ -62,7 +54,7 @@ export async function PUT(
         { status: 400 }
       );
     }
-    const template = await saveEmailTemplate(id as EmailTemplateId, {
+    const template = await saveEmailTemplate(id, {
       subject: body.subject,
       html: body.html,
       text: body.text,

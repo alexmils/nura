@@ -5,15 +5,8 @@ import {
 } from "@/lib/api-auth";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import type { EmailTemplateId } from "@/lib/email/templates";
+import { isEmailTemplateId } from "@/lib/email/template-labels";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
-
-const VALID: EmailTemplateId[] = [
-  "password_reset",
-  "welcome_invite",
-  "password_changed",
-  "welcome",
-  "account_deleted",
-];
 
 export async function POST(request: Request) {
   const auth = await requirePlatformSettingsAccess();
@@ -29,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Recipient is required" }, { status: 400 });
     }
 
-    const id = templateId && VALID.includes(templateId) ? templateId : "welcome";
+    const id = templateId && isEmailTemplateId(templateId) ? templateId : "welcome";
     const sample = {
       name: "Test User",
       resetUrl: await getAppUrl("/app/reset-password?token=test"),
@@ -63,6 +56,15 @@ export async function POST(request: Request) {
         supportEmail: sample.supportEmail,
         homeUrl: sample.homeUrl,
         billingNote: "Your subscription was canceled.",
+      });
+    } else if (id === "payment_receipt") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        paidAt: new Date().toISOString().slice(0, 10),
+        manageBillingUrl: await getAppUrl("/app/billing"),
+        supportEmail: sample.supportEmail,
       });
     } else {
       await sendTemplateEmail(to.trim(), "welcome", {

@@ -21,6 +21,7 @@ import {
   dispatchConversion,
   isFirstPaidCharge,
 } from "@/lib/conversions/dispatch";
+import { sendPurchaseReceipt } from "@/lib/email/purchase-receipt";
 
 function verifyStripeEvent(
   body: string,
@@ -293,6 +294,17 @@ export async function POST(request: Request) {
             currency: invoice.currency ?? mapped.currency,
             plan: mapped.plan,
             occurredAt: new Date(event.created * 1000),
+          });
+
+          // The customer's only confirmation that money moved: checkout stored
+          // a card, nothing was charged then, and no email is sent elsewhere.
+          await sendPurchaseReceipt({
+            userId,
+            plan: mapped.plan,
+            amountCents,
+            currency: invoice.currency ?? mapped.currency,
+            paidAt: new Date(event.created * 1000),
+            livemode: event.livemode,
           });
         }
       }

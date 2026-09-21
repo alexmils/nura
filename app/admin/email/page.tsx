@@ -5,7 +5,7 @@ import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import type { EmailEvent } from "@/lib/email-events";
-import { emailTemplateLabel, keepEmailTemplateId, type EmailTemplateId } from "@/lib/email/template-labels";
+import { EMAIL_TEMPLATE_IDS, emailTemplateLabel, keepEmailTemplateId, type EmailTemplateId } from "@/lib/email/template-labels";
 import type { EmailAdminView } from "@/lib/email-admin-settings";
 import type { EmailAdminStatus } from "@/lib/email-admin-settings";
 import { fetchJson } from "@/lib/fetch-json";
@@ -20,13 +20,7 @@ const TAB_ITEMS = [
   { id: "log", label: "Log" },
 ] as const;
 
-const TEMPLATE_IDS: EmailTemplateId[] = [
-  "password_reset",
-  "welcome_invite",
-  "password_changed",
-  "welcome",
-  "account_deleted",
-];
+const TEMPLATE_IDS = EMAIL_TEMPLATE_IDS;
 
 type EmailFormState = EmailAdminView;
 

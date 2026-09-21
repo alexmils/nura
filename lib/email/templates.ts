@@ -29,6 +29,16 @@ export type EmailTemplateData = {
     /** Pre-built sentence about subscription cancel outcome */
     billingNote: string;
   };
+  payment_receipt: {
+    name: string;
+    /** Plan as the customer knows it, e.g. "Monthly". */
+    planLabel: string;
+    /** Already formatted for the recipient, e.g. "$14.99". */
+    amount: string;
+    paidAt: string;
+    manageBillingUrl: string;
+    supportEmail: string;
+  };
 };
 
 const brandColor = BRAND_COLORS.earth;
@@ -168,6 +178,47 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Questions? Email <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>
          ${ctaButton(d.homeUrl, "Back to home")}`,
         `If you did not delete this account, contact ${safeSupport} right away.`
+      );
+      return { subject, html, text };
+    }
+    case "payment_receipt": {
+      const d = data as EmailTemplateData["payment_receipt"];
+      const safeName = escapeEmailHtml(d.name);
+      const safePlan = escapeEmailHtml(d.planLabel);
+      const safeAmount = escapeEmailHtml(d.amount);
+      const safePaidAt = escapeEmailHtml(d.paidAt);
+      const safeSupport = escapeEmailHtml(d.supportEmail);
+      const subject = "Thank you for your purchase";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        `Thank you — your ${d.planLabel} plan is active and your sessions are unlimited.`,
+        "",
+        `Amount charged: ${d.amount}`,
+        `Date: ${d.paidAt}`,
+        "",
+        `Manage your subscription: ${d.manageBillingUrl}`,
+        "",
+        `Questions about this charge? Reply to this email or write to ${d.supportEmail}.`,
+      ].join("\n");
+      const html = layout(
+        siteName,
+        "Thank you for your purchase",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Thank you — your <strong>${safePlan}</strong> plan is active and your sessions are unlimited.</p>
+         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 4px;font-size:14px;color:${inkColor};">
+           <tr>
+             <td style="padding:6px 0;color:${mutedColor};">Amount charged</td>
+             <td align="right" style="padding:6px 0;font-weight:600;">${safeAmount}</td>
+           </tr>
+           <tr>
+             <td style="padding:6px 0;color:${mutedColor};">Date</td>
+             <td align="right" style="padding:6px 0;">${safePaidAt}</td>
+           </tr>
+         </table>
+         ${ctaButton(d.manageBillingUrl, "Manage billing")}
+         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions about this charge? Reply to this email or write to <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>`,
+        `This is a receipt for a charge on your ${escapeEmailHtml(siteName)} subscription. Manage it any time from Billing.`
       );
       return { subject, html, text };
     }

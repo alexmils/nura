@@ -1,19 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  EMAIL_TEMPLATE_IDS,
   EMAIL_TEMPLATE_LABELS,
   emailTemplateLabel,
   keepEmailTemplateId,
   type EmailTemplateId,
 } from "../lib/email/template-labels.ts";
 
-const IDS: EmailTemplateId[] = [
-  "password_reset",
-  "welcome_invite",
-  "password_changed",
-  "welcome",
-  "account_deleted",
-];
+const IDS: readonly EmailTemplateId[] = EMAIL_TEMPLATE_IDS;
 
 describe("emailTemplateLabel", () => {
   it("uses sentence-case names without underscores", () => {

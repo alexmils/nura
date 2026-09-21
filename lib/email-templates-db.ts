@@ -1,5 +1,6 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import type { EmailTemplateId } from "@/lib/email/templates";
+import { EMAIL_TEMPLATE_IDS } from "@/lib/email/template-labels";
 import { renderEmailTemplate } from "@/lib/email/templates";
 import { getPlatformSettings } from "@/lib/platform-settings";
 
@@ -12,13 +13,7 @@ export type EmailTemplateRecord = {
   isCustom: boolean;
 };
 
-const ALL_TEMPLATE_IDS: EmailTemplateId[] = [
-  "password_reset",
-  "welcome_invite",
-  "password_changed",
-  "welcome",
-  "account_deleted",
-];
+const ALL_TEMPLATE_IDS = EMAIL_TEMPLATE_IDS;
 
 export async function ensureEmailTemplatesSchema() {
   await ensureSchemaReady();
@@ -66,6 +61,15 @@ function sampleData(id: EmailTemplateId) {
         supportEmail: base.supportEmail,
         homeUrl: base.homeUrl,
         billingNote: "Your subscription was canceled.",
+      };
+    case "payment_receipt":
+      return {
+        name: base.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        paidAt: "21 September 2026",
+        manageBillingUrl: "https://example.com/app/billing",
+        supportEmail: base.supportEmail,
       };
   }
 }
