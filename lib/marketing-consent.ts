@@ -45,6 +45,38 @@ export function isGtmAllowedPath(pathname: string): boolean {
   return funnels.some((p) => path === p || path.startsWith(`${p}/`));
 }
 
+/**
+ * Consent Mode v2 bootstrap for the document head — emitted before any Google
+ * tag exists in the page.
+ *
+ * Google requires `consent default` to run before the tag loads. When a React
+ * client component emits it, it is always too late: that component waits on
+ * `/api/marketing/tags` first, which is what Google reports as "consent mode
+ * installation out of order". The stored choice becomes the default here so a
+ * returning visitor who accepted is not measured as denied.
+ *
+ * Kept beside `consentToMode` because the two must keep mapping the same keys.
+ */
+export function consentDefaultScript(): string {
+  return [
+    "window.dataLayer=window.dataLayer||[];",
+    "function gtag(){dataLayer.push(arguments);}",
+    "window.gtag=gtag;",
+    "(function(){try{",
+    "var mode={analytics_storage:'denied',ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',wait_for_update:500};",
+    `var raw=localStorage.getItem(${JSON.stringify(CONSENT_STORAGE_KEY)});`,
+    "if(raw){var c=JSON.parse(raw);",
+    "if(c&&typeof c.analytics==='boolean'&&typeof c.marketing==='boolean'){",
+    "mode.analytics_storage=c.analytics?'granted':'denied';",
+    "var ads=c.marketing?'granted':'denied';",
+    "mode.ad_storage=ads;mode.ad_user_data=ads;mode.ad_personalization=ads;",
+    "}}",
+    "}catch(e){}",
+    "gtag('consent','default',mode);",
+    "})();",
+  ].join("");
+}
+
 export function consentToMode(choice: ConsentChoice | null): ConsentModeState {
   const analytics = choice?.analytics === true;
   const marketing = choice?.marketing === true;

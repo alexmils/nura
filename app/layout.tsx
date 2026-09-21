@@ -8,6 +8,7 @@ import {
   brandMetadataBase,
 } from "@/lib/brand";
 import { a11yBootstrapScript } from "@/lib/a11y-preferences";
+import { consentDefaultScript } from "@/lib/marketing-consent";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -63,6 +64,15 @@ export default function RootLayout({
       className={`${sourceSans.variable} ${fraunces.variable} ${robotoMono.variable}`}
     >
       <head>
+        {/*
+          Consent Mode default must run before any Google tag exists, or Google
+          reports "consent mode installation out of order". Emitting it from a
+          client component that waits on an API call is always too late, so it
+          lives here, ahead of everything.
+        */}
+        <script
+          dangerouslySetInnerHTML={{ __html: consentDefaultScript() }}
+        />
         {/*
           Saved accessibility choices (text size, contrast, motion) must apply
           before first paint, otherwise the page flashes at the wrong size.

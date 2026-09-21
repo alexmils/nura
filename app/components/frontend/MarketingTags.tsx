@@ -108,19 +108,12 @@ export function MarketingTags({ tags }: { tags: PublicMarketingTags }) {
 
   return (
     <>
-      <Script id="nura-consent-default" strategy="afterInteractive">{`
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        window.gtag = gtag;
-        gtag('consent', 'default', {
-          analytics_storage: 'denied',
-          ad_storage: 'denied',
-          ad_user_data: 'denied',
-          ad_personalization: 'denied',
-          wait_for_update: 500
-        });
-      `}</Script>
-
+      {/*
+        The `consent default` call is NOT here: it is emitted from the document
+        head (see `app/layout.tsx`) so it runs before any Google tag. Emitting it
+        from this component, which waits on two API calls first, is what Google
+        reports as "consent mode installation out of order".
+      */}
       {liveTags.ga4MeasurementId ? (
         <>
           <Script
