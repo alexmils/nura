@@ -74,11 +74,20 @@ function brandHeader(brand: EmailBrand): string {
   if (!origin) {
     return `<p style="margin:0 0 8px;font-size:13px;font-weight:500;color:${mutedColor};">${safeName}</p>`;
   }
-  return `<a href="${origin}" style="display:inline-block;margin:0 0 14px;text-decoration:none;border:0;">
-                <img src="${origin}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${Math.round(
-                  (EMAIL_LOGO_WIDTH * 363) / 1600
-                )}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
-              </a>`;
+  const height = Math.round((EMAIL_LOGO_WIDTH * 363) / 1600);
+  // A fixed-width cell is the only thing every client agrees on: it holds the
+  // logo to size even where inline styles are stripped, and `align="left"`
+  // keeps it flush with the copy below instead of floating off-centre. The
+  // bottom padding does the spacing, because table `margin` is unreliable.
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="left" style="border-collapse:collapse;">
+                <tr>
+                  <td width="${EMAIL_LOGO_WIDTH}" align="left" style="width:${EMAIL_LOGO_WIDTH}px;padding:0 0 16px;">
+                    <a href="${origin}" style="display:block;text-decoration:none;border:0;">
+                      <img src="${origin}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${height}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;max-width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
+                    </a>
+                  </td>
+                </tr>
+              </table>`;
 }
 
 function layout(

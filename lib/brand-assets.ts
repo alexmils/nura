@@ -21,8 +21,12 @@ export const DEFAULT_FAVICON_PATH = "/icon.png";
  */
 export const EMAIL_LOGO_PATH = "/brand/nura-wave-logo.png";
 
-/** Display width for the email lockup; the source is 1600×363 (≈4.4:1). */
-export const EMAIL_LOGO_WIDTH = 168;
+/**
+ * Display width for the email lockup; the source is 1600×363 (≈4.4:1).
+ * Deliberately modest — the card can shrink to ~260px in a narrow preview, and
+ * the lockup should sit under the copy rather than dominate it.
+ */
+export const EMAIL_LOGO_WIDTH = 132;
 
 export function isAllowedBrandAssetUrl(url: string): boolean {
   return isAllowedOgImageUrl(url);

@@ -8,7 +8,7 @@ import {
   type EmailTemplateId,
 } from "../lib/email/template-labels.ts";
 import { renderEmailTemplate } from "../lib/email/templates.ts";
-import { EMAIL_LOGO_PATH } from "../lib/brand-assets.ts";
+import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH } from "../lib/brand-assets.ts";
 import { BRAND_SUPPORT_EMAIL } from "../lib/brand.ts";
 
 const IDS: readonly EmailTemplateId[] = EMAIL_TEMPLATE_IDS;
@@ -79,6 +79,16 @@ describe("email brand header", () => {
       assert.match(html, new RegExp(`<a href="${ORIGIN}"`), `${id} must link it`);
       // Images blocked is the common case, so the alt carries the brand.
       assert.match(html, /alt="Nura"/);
+      // Size and alignment are pinned: a client that ignores inline styles must
+      // still get the fixed-width cell, or the lockup grows to the card width.
+      assert.match(html, new RegExp(`width="${EMAIL_LOGO_WIDTH}"`));
+      assert.match(html, new RegExp(`max-width:${EMAIL_LOGO_WIDTH}px`));
+      assert.match(html, /align="left"/);
+      assert.equal(
+        html.includes(`max-width:100%`),
+        false,
+        `${id} lets the logo stretch`
+      );
       // The old plain-text wordmark must be gone.
       assert.equal(
         html.includes(`>Nura</p>`),
