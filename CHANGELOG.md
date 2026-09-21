@@ -663,6 +663,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Purchase receipt email: amount and date sit in a bordered receipt box, with clearer spacing around the lockup and Manage billing button
 - [internal] Dropped a leftover `setNameForImportSource` import after memory notes went account-scoped (export was already gone)
 - [internal] Guided chat chrome themes 4, 15, and 19 passed a logo path into `withVoice` and spread a border string as theme keys; outline Voice CTAs now get the right colors
+- [internal] Coolify deploys were marked failed while the site stayed up: `nura-edge` docker-watch restored the app mid healthcheck and deleted the container Coolify was waiting on. Health start period is 15s, watch debounce 90s, and ensure/restore no longer reset the gate to 60s
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
