@@ -16,8 +16,9 @@ export function clearGoogleAdsTokenCache(): void {
   tokenCache = null;
 }
 
-function apiVersion(): string {
-  return (process.env.GOOGLE_ADS_API_VERSION || "").trim() || DEFAULT_API_VERSION;
+/** `v21`, `v22`, … — pinned in Admin so a deprecation is a settings change. */
+function apiVersion(config: GoogleAdsConversionConfig): string {
+  return (config.apiVersion || "").trim() || DEFAULT_API_VERSION;
 }
 
 /**
@@ -87,9 +88,9 @@ export async function uploadClickConversion(input: {
     return failed("google_ads", `auth failed: ${auth.error}`);
   }
 
-  const url = `https://googleads.googleapis.com/${apiVersion()}/customers/${
-    input.config.customerId
-  }:uploadClickConversions`;
+  const url = `https://googleads.googleapis.com/${apiVersion(
+    input.config
+  )}/customers/${input.config.customerId}:uploadClickConversions`;
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${auth.token}`,

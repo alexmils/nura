@@ -72,7 +72,8 @@ type ConnId =
   | "gtm"
   | "bing"
   | "meta"
-  | "linkedin";
+  | "linkedin"
+  | "conversions";
 
 type ConnFormState = {
   ga4MeasurementId: string;
@@ -84,16 +85,104 @@ type ConnFormState = {
   gscVerification: string;
   bingVerification: string;
   googleServiceAccountJson: string;
+  /** Server-side conversions — stored identifiers, echoed into the form. */
+  metaPixelId: string;
+  metaTestEventCode: string;
+  googleAdsCustomerId: string;
+  googleAdsConversionActionId: string;
+  googleAdsLoginCustomerId: string;
+  googleAdsOAuthClientId: string;
+  googleAdsApiVersion: string;
+  /** Server-side conversions — write-only, blank keeps, `off` clears. */
+  ga4ApiSecret: string;
+  metaCapiAccessToken: string;
+  googleAdsDeveloperToken: string;
+  googleAdsOAuthClientSecret: string;
+  googleAdsOAuthRefreshToken: string;
 };
 
 function emptySecretFields(): Pick<
   ConnFormState,
-  "gscVerification" | "bingVerification" | "googleServiceAccountJson"
+  | "gscVerification"
+  | "bingVerification"
+  | "googleServiceAccountJson"
+  | "ga4ApiSecret"
+  | "metaCapiAccessToken"
+  | "googleAdsDeveloperToken"
+  | "googleAdsOAuthClientSecret"
+  | "googleAdsOAuthRefreshToken"
 > {
   return {
     gscVerification: "",
     bingVerification: "",
     googleServiceAccountJson: "",
+    ga4ApiSecret: "",
+    metaCapiAccessToken: "",
+    googleAdsDeveloperToken: "",
+    googleAdsOAuthClientSecret: "",
+    googleAdsOAuthRefreshToken: "",
+  };
+}
+
+type ConversionPlainKey =
+  | "metaPixelId"
+  | "metaTestEventCode"
+  | "googleAdsCustomerId"
+  | "googleAdsConversionActionId"
+  | "googleAdsLoginCustomerId"
+  | "googleAdsOAuthClientId"
+  | "googleAdsApiVersion";
+
+/**
+ * Stored (non-secret) conversion fields, read from either the server view or
+ * the local draft, so the initial state and the reload path cannot drift.
+ */
+function conversionPlainFields(
+  source?: Partial<Record<ConversionPlainKey, string>>
+): Pick<ConnFormState, ConversionPlainKey> {
+  return {
+    metaPixelId: source?.metaPixelId ?? "",
+    metaTestEventCode: source?.metaTestEventCode ?? "",
+    googleAdsCustomerId: source?.googleAdsCustomerId ?? "",
+    googleAdsConversionActionId: source?.googleAdsConversionActionId ?? "",
+    googleAdsLoginCustomerId: source?.googleAdsLoginCustomerId ?? "",
+    googleAdsOAuthClientId: source?.googleAdsOAuthClientId ?? "",
+    googleAdsApiVersion: source?.googleAdsApiVersion ?? "",
+  };
+}
+
+/** Suffix shown on a credential field that already holds a stored value. */
+function secretHint(has: boolean): string {
+  return has ? " (leave blank to keep; type off to clear)" : "";
+}
+
+function emptyConnDraft(): ConnFormState {
+  return {
+    ga4MeasurementId: "",
+    gtmId: "",
+    clarityId: "",
+    gscProperty: "",
+    ga4PropertyId: "",
+    ignoreIps: "",
+    ...conversionPlainFields(),
+    ...emptySecretFields(),
+  };
+}
+
+/**
+ * One builder for every path that opens the modal. Credentials are always
+ * blank: the server never sends them down, and blank means "keep stored".
+ */
+function connDraftFromSeo(seo: SeoAdminView): ConnFormState {
+  return {
+    ...emptyConnDraft(),
+    ga4MeasurementId: seo.ga4MeasurementId,
+    gtmId: seo.gtmId,
+    clarityId: seo.clarityId,
+    gscProperty: seo.gscProperty,
+    ga4PropertyId: seo.ga4PropertyId,
+    ignoreIps: seo.ignoreIps,
+    ...conversionPlainFields(seo),
   };
 }
 
@@ -176,6 +265,7 @@ function ConnectionConnectModal({
     bing: "Bing Webmaster Tools",
     meta: "Meta Pixel",
     linkedin: "LinkedIn Insight",
+    conversions: "Server-side conversions",
   };
 
   useEffect(() => {
@@ -266,6 +356,15 @@ function ConnectionConnectModal({
       patch = { gtmId: draft.gtmId };
     } else if (connId === "bing") {
       patch = { bingVerification: draft.bingVerification };
+    } else if (connId === "conversions") {
+      patch = {
+        ...conversionPlainFields(draft),
+        ga4ApiSecret: draft.ga4ApiSecret,
+        metaCapiAccessToken: draft.metaCapiAccessToken,
+        googleAdsDeveloperToken: draft.googleAdsDeveloperToken,
+        googleAdsOAuthClientSecret: draft.googleAdsOAuthClientSecret,
+        googleAdsOAuthRefreshToken: draft.googleAdsOAuthRefreshToken,
+      };
     }
     const ok = await onSave(patch);
     if (!ok) return;
@@ -287,7 +386,9 @@ function ConnectionConnectModal({
       role="presentation"
     >
       <div
-        className={`admin-modal${connId === "ga4" ? " admin-modal-wide" : ""}`}
+        className={`admin-modal${
+          connId === "ga4" || connId === "conversions" ? " admin-modal-wide" : ""
+        }`}
         role="dialog"
         aria-labelledby="admin-seo-conn-modal-title"
         onClick={(e) => e.stopPropagation()}
@@ -532,6 +633,212 @@ function ConnectionConnectModal({
                     }
                   />
                 </label>
+              </>
+            ) : null}
+
+            {connId === "conversions" ? (
+              <>
+                <p className="admin-panel-sub">
+                  Reports the first real Stripe charge to GA4, Meta, and Google
+                  Ads. Checkout only saves a card — the money moves days later on
+                  Stripe&apos;s servers, so nothing in the browser can see it.
+                  Saved values take effect immediately, with no redeploy. Leave a
+                  credential blank to keep the stored one, or type off to clear
+                  it.
+                </p>
+
+                <h3 className="admin-field-label">GA4 · Measurement Protocol</h3>
+                <label className="admin-field-label">
+                  API secret{secretHint(seo.hasGa4ApiSecret)}
+                  <input
+                    className="field"
+                    placeholder="Admin → Data streams → Measurement Protocol API secrets"
+                    value={draft.ga4ApiSecret}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, ga4ApiSecret: e.target.value }))
+                    }
+                  />
+                </label>
+                <p className="admin-panel-sub">
+                  Measurement ID comes from the Google Analytics card — one
+                  source, so the browser and the server always agree.
+                </p>
+
+                <h3 className="admin-field-label">Meta · Conversions API</h3>
+                <label className="admin-field-label">
+                  Pixel ID
+                  <input
+                    className="field"
+                    placeholder="1120650977294654"
+                    value={draft.metaPixelId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({ ...d, metaPixelId: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Access token{secretHint(seo.hasMetaCapiAccessToken)}
+                  <input
+                    className="field"
+                    placeholder="Events Manager → Settings → Conversions API"
+                    value={draft.metaCapiAccessToken}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        metaCapiAccessToken: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Test event code (optional)
+                  <input
+                    className="field"
+                    placeholder="TEST12345"
+                    value={draft.metaTestEventCode}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        metaTestEventCode: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <h3 className="admin-field-label">Google Ads · offline conversions</h3>
+                <p className="admin-panel-sub">
+                  The only channel that credits the exact click. Needs a
+                  developer token, an OAuth client, and a refresh token with the
+                  adwords scope.
+                </p>
+                <label className="admin-field-label">
+                  Customer ID
+                  <input
+                    className="field"
+                    placeholder="352-258-1611"
+                    value={draft.googleAdsCustomerId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsCustomerId: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Conversion action ID
+                  <input
+                    className="field"
+                    placeholder="123456789"
+                    value={draft.googleAdsConversionActionId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsConversionActionId: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Developer token{secretHint(seo.hasGoogleAdsDeveloperToken)}
+                  <input
+                    className="field"
+                    value={draft.googleAdsDeveloperToken}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsDeveloperToken: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Manager account ID (optional)
+                  <input
+                    className="field"
+                    placeholder="Only when the action lives under an MCC"
+                    value={draft.googleAdsLoginCustomerId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsLoginCustomerId: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  OAuth client ID
+                  <input
+                    className="field"
+                    value={draft.googleAdsOAuthClientId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsOAuthClientId: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  OAuth client secret{secretHint(seo.hasGoogleAdsOAuthClientSecret)}
+                  <input
+                    className="field"
+                    value={draft.googleAdsOAuthClientSecret}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsOAuthClientSecret: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  OAuth refresh token{secretHint(seo.hasGoogleAdsOAuthRefreshToken)}
+                  <input
+                    className="field"
+                    value={draft.googleAdsOAuthRefreshToken}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsOAuthRefreshToken: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  API version (optional)
+                  <input
+                    className="field"
+                    placeholder="v21"
+                    value={draft.googleAdsApiVersion}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        googleAdsApiVersion: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <p className="admin-panel-sub">
+                  Verify setup at any time: GET /api/admin/conversions lists what
+                  parsed and the recent delivery log, POST it with{" "}
+                  <span className="admin-seo-mono">
+                    {`{"channel":"ga4"}`}
+                  </span>{" "}
+                  to send one probe.
+                </p>
               </>
             ) : null}
 
@@ -1004,15 +1311,7 @@ function AdminSeoPageInner() {
   const [draftDefaultOg, setDraftDefaultOg] = useState("");
   const [ogBusy, setOgBusy] = useState(false);
 
-  const [connDraft, setConnDraft] = useState<ConnFormState>({
-    ga4MeasurementId: "",
-    gtmId: "",
-    clarityId: "",
-    gscProperty: "",
-    ga4PropertyId: "",
-    ignoreIps: "",
-    ...emptySecretFields(),
-  });
+  const [connDraft, setConnDraft] = useState<ConnFormState>(emptyConnDraft);
   const [connModal, setConnModal] = useState<ConnId | null>(null);
 
   const load = useCallback(async () => {
@@ -1026,15 +1325,7 @@ function AdminSeoPageInner() {
     setPages(res.pages);
     setStatus(res.status);
     setCanEdit(res.canEdit);
-    setConnDraft({
-      ga4MeasurementId: res.seo.ga4MeasurementId,
-      gtmId: res.seo.gtmId,
-      clarityId: res.seo.clarityId,
-      gscProperty: res.seo.gscProperty,
-      ga4PropertyId: res.seo.ga4PropertyId,
-      ignoreIps: res.seo.ignoreIps,
-      ...emptySecretFields(),
-    });
+    setConnDraft(connDraftFromSeo(res.seo));
     setDraftDefaultOg(res.seo.defaultOgImageUrl || "");
   }, []);
 
@@ -1350,15 +1641,7 @@ function AdminSeoPageInner() {
                             className="admin-seo-connect-btn"
                             disabled={busy}
                             onClick={() => {
-                              setConnDraft({
-                                ga4MeasurementId: seo.ga4MeasurementId,
-                                gtmId: seo.gtmId,
-                                clarityId: seo.clarityId,
-                                gscProperty: seo.gscProperty,
-                                ga4PropertyId: seo.ga4PropertyId,
-                                ignoreIps: seo.ignoreIps,
-                                ...emptySecretFields(),
-                              });
+                              setConnDraft(connDraftFromSeo(seo));
                               setConnModal(id);
                             }}
                           >

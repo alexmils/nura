@@ -53,6 +53,17 @@ seven days and one session away.
 Click ids are first-touch for 90 days; `_ga` client_id, `_fbp`, and the consent
 decision refresh on every capture.
 
+## Where the credentials live
+
+**Admin → SEO → Connections → Server-side conversions.** They are stored in
+`app_settings.seo` and read from there alone — there is no environment fallback,
+deliberately: a second source would make "cleared in Admin" indistinguishable
+from "never set", so the environment would keep sending through a credential you
+had removed. Blank keeps the stored value, `off` clears it.
+
+The card shows which channels are currently live, derived from the same builder
+the webhook uses, so it cannot claim a channel that would in fact be skipped.
+
 ## Channels
 
 Each channel is skipped — never fatal — when its credentials are missing or the
@@ -69,9 +80,9 @@ logged, recorded on the dispatch row, and the webhook still returns 200.
 
 1. GA4 → **Admin → Data streams** → your web stream →
    **Measurement Protocol API secrets** → **Create** → copy the secret value.
-2. Set `GA4_API_SECRET`. The measurement id is reused from
-   **Admin → SEO → Connections**, so there is nothing else to paste
-   (`GA4_MEASUREMENT_ID` only overrides it for preview environments).
+2. Paste it into **Admin → SEO → Connections → Server-side conversions →
+   GA4 API secret**. The measurement id comes from the Google Analytics card on
+   the same tab — one source, so the browser and the server always agree.
 3. Optional: `GA4_MP_DEBUG=1` switches the send to Google's
    `/debug/mp/collect`, which validates the payload and returns why it would be
    rejected. Note what it does **not** do: the debug endpoint answers 200 even
@@ -87,9 +98,10 @@ precise one.
 ### Meta Conversions API
 
 1. Events Manager → **Data sources** → the Nura dataset → **Settings** →
-   **Conversions API** → **Generate access token** → `META_CAPI_ACCESS_TOKEN`.
-2. `META_PIXEL_ID=1120650977294654`.
-3. Optional `META_TEST_EVENT_CODE` (Test Events tab) to route probes there.
+   **Conversions API** → **Generate access token**.
+2. Paste the token, and the pixel id `1120650977294654`, into the same
+   Conversions card.
+3. Optional test event code (Test Events tab) to route probes there.
 4. Email and user id are SHA-256 hashed before sending. Deduplication with the
    browser pixel uses `event_id` = the Stripe invoice id.
 
@@ -98,21 +110,19 @@ precise one.
 This is the only channel that credits the exact click, and it is the one that
 needs the most setup.
 
-1. Google Ads → **Tools → API Center** → apply for a **developer token** →
-   `GOOGLE_ADS_DEVELOPER_TOKEN` (basic access).
-2. Google Cloud Console → create an **OAuth client** →
-   `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`, then mint a refresh
-   token for the `https://www.googleapis.com/auth/adwords` scope (the OAuth
-   Playground is the quickest route) → `GOOGLE_OAUTH_REFRESH_TOKEN`.
+1. Google Ads → **Tools → API Center** → apply for a **developer token**
+   (basic access) → *Developer token*.
+2. Google Cloud Console → create an **OAuth client** → *OAuth client ID* and
+   *OAuth client secret*, then mint a refresh token for the
+   `https://www.googleapis.com/auth/adwords` scope (the OAuth Playground is the
+   quickest route) → *OAuth refresh token*.
 3. Google Ads → **Goals → Conversions** → create a conversion action for
    imported click conversions, then take the trailing number from
-   `customers/X/conversionActions/Y` → `GOOGLE_ADS_CONVERSION_ACTION_ID`.
-4. `GOOGLE_ADS_CUSTOMER_ID` = the serving account, digits only
-   (`3522581611327832`, dashes are stripped automatically).
-5. Only when the conversion action lives under a manager account:
-   `GOOGLE_ADS_LOGIN_CUSTOMER_ID`.
-6. If the default API version (`v21`) is ever deprecated, set
-   `GOOGLE_ADS_API_VERSION`.
+   `customers/X/conversionActions/Y` → *Conversion action ID*.
+4. *Customer ID* is the serving account; dashes are stripped, so
+   `352-258-1611` is fine.
+5. *Manager account ID* only when the conversion action lives under an MCC.
+6. *API version* only if the default (`v21`) is ever deprecated.
 
 Service accounts are rejected by the Ads API unless they use domain-wide
 delegation, which is why this uses a refresh token from a real user.
@@ -180,4 +190,7 @@ The GA4 link exists (Admin → Product links → Google Ads links), so once
 - `lib/conversions/` — `config` (credentials), `payloads` (wire formats),
   `ga4` / `meta` / `google-ads` (transports), `dispatch` (orchestration).
 - `lib/meta-pixel.ts` — browser Meta event + its GA4 twin.
+- `lib/seo-config.ts` + `lib/seo-admin-settings.ts` — where the credentials are
+  stored and validated.
+- `app/admin/seo/page.tsx` — the Connections card that edits them.
 - `app/api/webhooks/stripe/route.ts` — where the charge is reported.

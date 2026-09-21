@@ -12,7 +12,6 @@
  */
 
 import { ensureSchemaReady, getPool } from "@/lib/db";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import {
   googleClickId,
   type AttributionSnapshot,
@@ -258,20 +257,9 @@ export async function dispatchConversion(
     };
   }
 
-  // The GA4 measurement id is configured once in Admin → SEO. Failing to read
-  // it must not take down Meta or Google Ads, which never needed it — an env
-  // override stands in on its own.
-  let ga4MeasurementId: string | null = null;
-  try {
-    const settings = await getPlatformSettings();
-    ga4MeasurementId = settings.seo.ga4MeasurementId;
-  } catch (err) {
-    console.warn(
-      "[conversions] platform settings unreadable, GA4 falls back to env",
-      err
-    );
-  }
-  const config: ConversionConfig = loadConversionConfig({ ga4MeasurementId });
+  // Reads Admin → SEO → Connections, falling back to env per field. It never
+  // throws: an unreadable settings row must not silence a charge.
+  const config: ConversionConfig = await loadConversionConfig();
 
   // Per-user inputs. Missing either one only skips the channels that use it,
   // so one unreadable row cannot silence a charge.

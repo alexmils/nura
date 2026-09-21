@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
+  buildConversionConfig,
+  describeConversionChannels,
+} from "@/lib/conversions/config";
+import {
   BRAND_DESCRIPTION,
   BRAND_DOMAIN,
   BRAND_LEGAL,
@@ -445,6 +449,9 @@ export function buildMarketingSeoStatus(
   const gscVer = seo.gscVerification.trim();
   const bing = seo.bingVerification.trim();
   const ignoreList = parseAnalyticsIgnoreIps(seo.ignoreIps);
+  const conversionChannels = describeConversionChannels(
+    buildConversionConfig(seo)
+  );
   const gtmOn = isValidGtmId(gtm);
   const ga4On = isValidGa4Id(ga4);
   const clarityOn = isValidClarityId(clarity);
@@ -518,6 +525,16 @@ export function buildMarketingSeoStatus(
       publicIdMasked: null,
       detail: null,
       hint: "Add the LinkedIn tag inside Google Tag Manager. Nura does not load a separate LinkedIn script.",
+    },
+    {
+      id: "conversions",
+      name: "Server-side conversions",
+      status: conversionChannels === "none" ? "not_connected" : "connected",
+      publicIdMasked: null,
+      // Derived from the same builder the dispatcher uses, so the card can never
+      // claim a channel is live that the webhook would skip.
+      detail: conversionChannels === "none" ? null : conversionChannels,
+      hint: "Reports the first real Stripe charge to GA4, Meta, and Google Ads — the browser is gone by then, so nothing else can. Credentials are stored here and take effect immediately. Verify with GET or POST /api/admin/conversions.",
     },
   ];
 

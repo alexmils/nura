@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformSettingsAccess } from "@/lib/api-auth";
-import { getPlatformSettings } from "@/lib/platform-settings";
 import {
   conversionChannelStatus,
   loadConversionConfig,
@@ -27,10 +26,7 @@ export async function GET() {
   const auth = await requirePlatformSettingsAccess();
   if (!isAuthContext(auth)) return auth;
 
-  const settings = await getPlatformSettings();
-  const config = loadConversionConfig({
-    ga4MeasurementId: settings.seo.ga4MeasurementId,
-  });
+  const config = await loadConversionConfig();
 
   return NextResponse.json(
     {

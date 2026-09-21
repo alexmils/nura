@@ -1,11 +1,17 @@
 /**
  * Server-side conversion delivery credentials.
  *
- * These are long-lived service tokens (not per-user secrets), so they live in
- * the environment rather than `app_settings`. Every channel degrades to
- * "skipped" when its credentials are absent, so a missing token can never block
- * checkout or the Stripe webhook.
+ * They live in `app_settings.seo` (Admin → SEO → Connections) and are read from
+ * there alone — no environment fallback. A second source would make "cleared in
+ * Admin" indistinguishable from "never set", and the environment would quietly
+ * keep sending through a credential the admin had removed.
+ *
+ * Every channel degrades to "skipped" when its credentials are incomplete, so a
+ * half-filled form can never block checkout or the Stripe webhook.
  */
+
+import { getPlatformSettings } from "@/lib/platform-settings";
+import type { PlatformSeoConfig } from "@/lib/seo-config";
 
 export type Ga4ConversionConfig = {
   measurementId: string;
@@ -15,7 +21,7 @@ export type Ga4ConversionConfig = {
 export type MetaConversionConfig = {
   pixelId: string;
   accessToken: string;
-  /** Meta Events Manager test code — routes events to Test Events. */
+  /** Meta Events Manager test code — routes probe events to Test Events. */
   testEventCode?: string;
 };
 
@@ -27,10 +33,12 @@ export type GoogleAdsConversionConfig = {
   developerToken: string;
   /** Manager account id, only when the conversion action lives under an MCC. */
   loginCustomerId?: string;
-  /** Separately-created OAuth client used to mint an access token from a refresh token. */
+  /** OAuth client used to mint an access token from the refresh token. */
   clientId: string;
   clientSecret: string;
   refreshToken: string;
+  /** Ads API version override, e.g. `v21`. */
+  apiVersion?: string;
 };
 
 export type ConversionConfig = {
@@ -39,62 +47,68 @@ export type ConversionConfig = {
   googleAds: GoogleAdsConversionConfig | null;
 };
 
-/** Documented in `docs/conversions.md` — keep the two in sync. */
-export const CONVERSION_ENV_KEYS = {
-  ga4: ["GA4_API_SECRET", "GA4_MEASUREMENT_ID"],
-  meta: ["META_PIXEL_ID", "META_CAPI_ACCESS_TOKEN", "META_TEST_EVENT_CODE"],
-  googleAds: [
-    "GOOGLE_ADS_CUSTOMER_ID",
-    "GOOGLE_ADS_CONVERSION_ACTION_ID",
-    "GOOGLE_ADS_DEVELOPER_TOKEN",
-    "GOOGLE_ADS_LOGIN_CUSTOMER_ID",
-    "GOOGLE_OAUTH_CLIENT_ID",
-    "GOOGLE_OAUTH_CLIENT_SECRET",
-    "GOOGLE_OAUTH_REFRESH_TOKEN",
-  ],
-} as const;
+/** The settings fields this module owns — one list, so nothing drifts. */
+export const CONVERSION_SETTING_KEYS = [
+  "ga4ApiSecret",
+  "metaPixelId",
+  "metaCapiAccessToken",
+  "metaTestEventCode",
+  "googleAdsCustomerId",
+  "googleAdsConversionActionId",
+  "googleAdsDeveloperToken",
+  "googleAdsLoginCustomerId",
+  "googleAdsOAuthClientId",
+  "googleAdsOAuthClientSecret",
+  "googleAdsOAuthRefreshToken",
+  "googleAdsApiVersion",
+] as const satisfies readonly (keyof PlatformSeoConfig)[];
 
-function env(key: string): string {
-  return (process.env[key] || "").trim();
+export type ConversionSeoFields = Pick<
+  PlatformSeoConfig,
+  (typeof CONVERSION_SETTING_KEYS)[number]
+>;
+
+function value(seo: Partial<PlatformSeoConfig> | null | undefined, key: keyof PlatformSeoConfig): string {
+  const raw = seo?.[key];
+  return typeof raw === "string" ? raw.trim() : "";
 }
 
-function digitsOnly(value: string): string {
-  return value.replace(/[^0-9]/g, "");
+function digitsOnly(input: string): string {
+  return input.replace(/[^0-9]/g, "");
 }
 
 /**
- * GA4 measurement id is already configured for the client tags (Admin → SEO),
- * so only the Measurement Protocol API secret is new setup. The env override
- * exists for preview environments pointing at a different property.
+ * Pure builder so the completeness rules stay testable without a database.
+ * `seo` may be a stored config, a partial, or null when it cannot be read.
  */
-export function resolveGa4MeasurementId(
-  fromSettings: string | null | undefined
-): string {
-  return env("GA4_MEASUREMENT_ID") || (fromSettings || "").trim();
-}
+export function buildConversionConfig(
+  seo: Partial<PlatformSeoConfig> | null | undefined
+): ConversionConfig {
+  // The measurement id is the public tag id, shared with the browser tags
+  // rather than duplicated under the conversions fields.
+  const measurementId = value(seo, "ga4MeasurementId");
+  const ga4Secret = value(seo, "ga4ApiSecret");
 
-export function loadConversionConfig(input: {
-  ga4MeasurementId?: string | null;
-}): ConversionConfig {
-  const measurementId = resolveGa4MeasurementId(input.ga4MeasurementId);
-  const ga4Secret = env("GA4_API_SECRET");
-  const pixelId = digitsOnly(env("META_PIXEL_ID"));
-  const metaToken = env("META_CAPI_ACCESS_TOKEN");
+  const pixelId = digitsOnly(value(seo, "metaPixelId"));
+  const metaToken = value(seo, "metaCapiAccessToken");
+  const testEventCode = value(seo, "metaTestEventCode");
 
-  const googleCustomerId = digitsOnly(env("GOOGLE_ADS_CUSTOMER_ID"));
-  const googleActionId = digitsOnly(env("GOOGLE_ADS_CONVERSION_ACTION_ID"));
-  const developerToken = env("GOOGLE_ADS_DEVELOPER_TOKEN");
-  const oauthClientId = env("GOOGLE_OAUTH_CLIENT_ID");
-  const oauthClientSecret = env("GOOGLE_OAUTH_CLIENT_SECRET");
-  const oauthRefreshToken = env("GOOGLE_OAUTH_REFRESH_TOKEN");
+  const customerId = digitsOnly(value(seo, "googleAdsCustomerId"));
+  const conversionActionId = digitsOnly(value(seo, "googleAdsConversionActionId"));
+  const developerToken = value(seo, "googleAdsDeveloperToken");
+  const loginCustomerId = digitsOnly(value(seo, "googleAdsLoginCustomerId"));
+  const clientId = value(seo, "googleAdsOAuthClientId");
+  const clientSecret = value(seo, "googleAdsOAuthClientSecret");
+  const refreshToken = value(seo, "googleAdsOAuthRefreshToken");
+  const apiVersion = value(seo, "googleAdsApiVersion");
 
   const googleAdsComplete = Boolean(
-    googleCustomerId &&
-      googleActionId &&
+    customerId &&
+      conversionActionId &&
       developerToken &&
-      oauthClientId &&
-      oauthClientSecret &&
-      oauthRefreshToken
+      clientId &&
+      clientSecret &&
+      refreshToken
   );
 
   return {
@@ -107,23 +121,36 @@ export function loadConversionConfig(input: {
         ? {
             pixelId,
             accessToken: metaToken,
-            ...(env("META_TEST_EVENT_CODE")
-              ? { testEventCode: env("META_TEST_EVENT_CODE") }
-              : {}),
+            ...(testEventCode ? { testEventCode } : {}),
           }
         : null,
     googleAds: googleAdsComplete
       ? {
-          customerId: googleCustomerId,
-          conversionActionId: googleActionId,
+          customerId,
+          conversionActionId,
           developerToken,
-          loginCustomerId: digitsOnly(env("GOOGLE_ADS_LOGIN_CUSTOMER_ID")),
-          clientId: oauthClientId,
-          clientSecret: oauthClientSecret,
-          refreshToken: oauthRefreshToken,
+          loginCustomerId: loginCustomerId || undefined,
+          clientId,
+          clientSecret,
+          refreshToken,
+          apiVersion: apiVersion || undefined,
         }
       : null,
   };
+}
+
+/**
+ * Read the stored credentials. Never throws: an unreadable settings row leaves
+ * every channel skipped rather than failing the caller, so the Stripe webhook
+ * still returns 200 and the charge is not retried forever.
+ */
+export async function loadConversionConfig(): Promise<ConversionConfig> {
+  try {
+    return buildConversionConfig((await getPlatformSettings()).seo);
+  } catch (err) {
+    console.warn("[conversions] platform settings unreadable", err);
+    return buildConversionConfig(null);
+  }
 }
 
 /** Which channels are ready, for the admin status view. Never exposes secrets. */
@@ -133,11 +160,24 @@ export function conversionChannelStatus(config: ConversionConfig) {
       configured: Boolean(config.ga4),
       measurementId: config.ga4?.measurementId ?? null,
     },
-    meta: { configured: Boolean(config.meta), pixelId: config.meta?.pixelId ?? null },
+    meta: {
+      configured: Boolean(config.meta),
+      pixelId: config.meta?.pixelId ?? null,
+    },
     googleAds: {
       configured: Boolean(config.googleAds),
       customerId: config.googleAds?.customerId ?? null,
       conversionActionId: config.googleAds?.conversionActionId ?? null,
     },
   };
+}
+
+/** One-line summary of what the stored credentials currently enable. */
+export function describeConversionChannels(config: ConversionConfig): string {
+  const ready = [
+    config.ga4 ? "GA4" : null,
+    config.meta ? "Meta" : null,
+    config.googleAds ? "Google Ads" : null,
+  ].filter(Boolean);
+  return ready.length ? ready.join(", ") : "none";
 }

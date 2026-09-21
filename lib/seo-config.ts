@@ -92,6 +92,39 @@ export type PlatformSeoConfig = {
    * Empty → `/brand/lockup.png`.
    */
   defaultOgImageUrl: string;
+
+  /*
+   * Server-side conversion tracking (docs/conversions.md). These report the
+   * first real charge from the Stripe webhook, days after the ad click, when no
+   * browser is present. They live here rather than in the environment so they
+   * can be changed from Admin without a redeploy — an env var of the same name
+   * only fills in when the field is empty.
+   */
+
+  /** GA4 Measurement Protocol secret — Admin → Data streams → API secrets. */
+  ga4ApiSecret: string;
+
+  /** Meta dataset (pixel) id. */
+  metaPixelId: string;
+  /** Meta Conversions API access token. */
+  metaCapiAccessToken: string;
+  /** Routes probe events to Events Manager → Test Events. */
+  metaTestEventCode: string;
+
+  /** Google Ads account that owns the conversion action. */
+  googleAdsCustomerId: string;
+  /** Conversion action id from `customers/X/conversionActions/Y`. */
+  googleAdsConversionActionId: string;
+  /** Google Ads API developer token. */
+  googleAdsDeveloperToken: string;
+  /** Manager account id — only when the action lives under an MCC. */
+  googleAdsLoginCustomerId: string;
+  googleAdsOAuthClientId: string;
+  googleAdsOAuthClientSecret: string;
+  /** Refresh token minted with the `https://www.googleapis.com/auth/adwords` scope. */
+  googleAdsOAuthRefreshToken: string;
+  /** Ads API version override, e.g. `v21`. */
+  googleAdsApiVersion: string;
 };
 
 export const DEFAULT_PLATFORM_SEO: PlatformSeoConfig = {
@@ -106,6 +139,18 @@ export const DEFAULT_PLATFORM_SEO: PlatformSeoConfig = {
   googleServiceAccountJson: "",
   ga4PropertyId: "",
   defaultOgImageUrl: "",
+  ga4ApiSecret: "",
+  metaPixelId: "",
+  metaCapiAccessToken: "",
+  metaTestEventCode: "",
+  googleAdsCustomerId: "",
+  googleAdsConversionActionId: "",
+  googleAdsDeveloperToken: "",
+  googleAdsLoginCustomerId: "",
+  googleAdsOAuthClientId: "",
+  googleAdsOAuthClientSecret: "",
+  googleAdsOAuthRefreshToken: "",
+  googleAdsApiVersion: "",
 };
 
 function str(raw: unknown, max = 500): string {
@@ -162,6 +207,19 @@ export function normalizeSeoConfig(raw: unknown): PlatformSeoConfig {
       const t = str(r.defaultOgImageUrl, SEO_OG_IMAGE_MAX_CHARS);
       return t && isAllowedOgImageUrl(t) ? t : "";
     })(),
+    ga4ApiSecret: str(r.ga4ApiSecret, 200),
+    metaPixelId: str(r.metaPixelId, 40),
+    // Meta access tokens run long; the cap only stops a paste of something else.
+    metaCapiAccessToken: str(r.metaCapiAccessToken, 2000),
+    metaTestEventCode: str(r.metaTestEventCode, 40),
+    googleAdsCustomerId: str(r.googleAdsCustomerId, 40),
+    googleAdsConversionActionId: str(r.googleAdsConversionActionId, 40),
+    googleAdsDeveloperToken: str(r.googleAdsDeveloperToken, 200),
+    googleAdsLoginCustomerId: str(r.googleAdsLoginCustomerId, 40),
+    googleAdsOAuthClientId: str(r.googleAdsOAuthClientId, 300),
+    googleAdsOAuthClientSecret: str(r.googleAdsOAuthClientSecret, 300),
+    googleAdsOAuthRefreshToken: str(r.googleAdsOAuthRefreshToken, 1000),
+    googleAdsApiVersion: str(r.googleAdsApiVersion, 10),
   };
 }
 
@@ -177,7 +235,19 @@ export function isSeoConfigEmpty(seo: PlatformSeoConfig): boolean {
     !seo.ignoreIps &&
     !seo.googleServiceAccountJson &&
     !seo.ga4PropertyId &&
-    !seo.defaultOgImageUrl
+    !seo.defaultOgImageUrl &&
+    !seo.ga4ApiSecret &&
+    !seo.metaPixelId &&
+    !seo.metaCapiAccessToken &&
+    !seo.metaTestEventCode &&
+    !seo.googleAdsCustomerId &&
+    !seo.googleAdsConversionActionId &&
+    !seo.googleAdsDeveloperToken &&
+    !seo.googleAdsLoginCustomerId &&
+    !seo.googleAdsOAuthClientId &&
+    !seo.googleAdsOAuthClientSecret &&
+    !seo.googleAdsOAuthRefreshToken &&
+    !seo.googleAdsApiVersion
   );
 }
 

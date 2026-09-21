@@ -11,8 +11,9 @@ import {
   GA4_MAX_BACKDATE_MS,
 } from "@/lib/conversions/payloads";
 import {
+  buildConversionConfig,
   conversionChannelStatus,
-  loadConversionConfig,
+  describeConversionChannels,
 } from "@/lib/conversions/config";
 import { ga4ValidationMessages } from "@/lib/conversions/ga4";
 
@@ -185,113 +186,118 @@ describe("centsToUnits", () => {
 });
 
 describe("conversion channel configuration", () => {
-  const KEYS = [
-    "GA4_MEASUREMENT_ID",
-    "GA4_API_SECRET",
-    "META_PIXEL_ID",
-    "META_CAPI_ACCESS_TOKEN",
-    "META_TEST_EVENT_CODE",
-    "GOOGLE_ADS_CUSTOMER_ID",
-    "GOOGLE_ADS_CONVERSION_ACTION_ID",
-    "GOOGLE_ADS_DEVELOPER_TOKEN",
-    "GOOGLE_ADS_LOGIN_CUSTOMER_ID",
-    "GOOGLE_OAUTH_CLIENT_ID",
-    "GOOGLE_OAUTH_CLIENT_SECRET",
-    "GOOGLE_OAUTH_REFRESH_TOKEN",
-  ];
-  let saved: Record<string, string | undefined> = {};
-
-  beforeEach(() => {
-    saved = {};
-    for (const key of KEYS) {
-      saved[key] = process.env[key];
-      delete process.env[key];
-    }
-  });
-
-  afterEach(() => {
-    for (const key of KEYS) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
-    }
-  });
-
   it("skips every channel when nothing is configured", () => {
-    const config = loadConversionConfig({ ga4MeasurementId: null });
+    const config = buildConversionConfig(null);
     assert.equal(config.ga4, null);
     assert.equal(config.meta, null);
     assert.equal(config.googleAds, null);
   });
 
-  it("pairs the stored measurement id with the env api secret", () => {
-    process.env.GA4_API_SECRET = "secret-value";
-    const config = loadConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" });
+  it("pairs the stored measurement id with the stored api secret", () => {
+    const config = buildConversionConfig({
+      ga4MeasurementId: "G-66YC11GTZE",
+      ga4ApiSecret: "stored-secret",
+    });
     assert.deepEqual(config.ga4, {
       measurementId: "G-66YC11GTZE",
-      apiSecret: "secret-value",
+      apiSecret: "stored-secret",
     });
-    assert.equal(config.meta, null);
-  });
-
-  it("lets an env measurement id override the stored one", () => {
-    process.env.GA4_API_SECRET = "secret-value";
-    process.env.GA4_MEASUREMENT_ID = "G-ENVOVERRIDE";
-    const config = loadConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" });
-    assert.equal(config.ga4?.measurementId, "G-ENVOVERRIDE");
   });
 
   it("never treats a half-configured GA4 as ready", () => {
-    const config = loadConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" });
-    assert.equal(config.ga4, null);
+    assert.equal(
+      buildConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" }).ga4,
+      null
+    );
+    assert.equal(buildConversionConfig({ ga4ApiSecret: "stored-secret" }).ga4, null);
   });
 
-  it("stands alone on env when Admin → SEO cannot be read", () => {
-    // The dispatcher falls back to an env-only id rather than failing the
-    // whole charge when platform settings are unreadable.
-    process.env.GA4_API_SECRET = "secret-value";
-    process.env.GA4_MEASUREMENT_ID = "G-66YC11GTZE";
-    const config = loadConversionConfig({ ga4MeasurementId: null });
-    assert.deepEqual(config.ga4, {
-      measurementId: "G-66YC11GTZE",
-      apiSecret: "secret-value",
+  it("ignores the environment: Admin is the only source", () => {
+    // A fallback would make "cleared in Admin" indistinguishable from "never
+    // set", and the env value would keep sending through a removed credential.
+    const prev = process.env.GA4_API_SECRET;
+    process.env.GA4_API_SECRET = "from-env";
+    try {
+      const config = buildConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" });
+      assert.equal(config.ga4, null);
+    } finally {
+      if (prev === undefined) delete process.env.GA4_API_SECRET;
+      else process.env.GA4_API_SECRET = prev;
+    }
+  });
+
+  it("normalises a formatted Meta pixel id and keeps the test code", () => {
+    const config = buildConversionConfig({
+      metaPixelId: "1120 6509 7729 4654",
+      metaCapiAccessToken: "token",
+      metaTestEventCode: "TEST123",
     });
-  });
-
-  it("normalises a formatted Meta pixel id", () => {
-    process.env.META_PIXEL_ID = "1120 6509 7729 4654";
-    process.env.META_CAPI_ACCESS_TOKEN = "token";
-    process.env.META_TEST_EVENT_CODE = "TEST123";
-    const config = loadConversionConfig({ ga4MeasurementId: null });
     assert.equal(config.meta?.pixelId, "1120650977294654");
     assert.equal(config.meta?.testEventCode, "TEST123");
   });
 
-  it("requires all seven Google credentials before enabling the channel", () => {
-    process.env.GOOGLE_ADS_CUSTOMER_ID = "352-258-1611";
-    process.env.GOOGLE_ADS_CONVERSION_ACTION_ID = "12345";
-    process.env.GOOGLE_ADS_DEVELOPER_TOKEN = "dev";
-    process.env.GOOGLE_OAUTH_CLIENT_ID = "cid";
-    process.env.GOOGLE_OAUTH_CLIENT_SECRET = "csecret";
-    // Refresh token still missing — the channel must stay off.
-    assert.equal(loadConversionConfig({ ga4MeasurementId: null }).googleAds, null);
+  it("requires a pixel id and a token together", () => {
+    assert.equal(
+      buildConversionConfig({ metaPixelId: "1120650977294654" }).meta,
+      null
+    );
+    assert.equal(buildConversionConfig({ metaCapiAccessToken: "token" }).meta, null);
+  });
 
-    process.env.GOOGLE_OAUTH_REFRESH_TOKEN = "refresh";
-    const complete = loadConversionConfig({ ga4MeasurementId: null });
-    assert.equal(complete.googleAds?.customerId, "3522581611");
-    assert.equal(complete.googleAds?.conversionActionId, "12345");
-    assert.equal(complete.googleAds?.loginCustomerId, "");
+  it("omits the Meta test code when it is blank", () => {
+    const config = buildConversionConfig({
+      metaPixelId: "1120650977294654",
+      metaCapiAccessToken: "token",
+      metaTestEventCode: "   ",
+    });
+    assert.equal("testEventCode" in (config.meta ?? {}), false);
+  });
+
+  it("requires every Google field before enabling the channel", () => {
+    const complete = {
+      googleAdsCustomerId: "352-258-1611",
+      googleAdsConversionActionId: "12345",
+      googleAdsDeveloperToken: "dev-token",
+      googleAdsOAuthClientId: "cid",
+      googleAdsOAuthClientSecret: "csecret",
+      googleAdsOAuthRefreshToken: "refresh",
+    };
+    const { googleAdsOAuthRefreshToken: _missing, ...incomplete } = complete;
+    assert.equal(buildConversionConfig(incomplete).googleAds, null);
+
+    const config = buildConversionConfig({ ...complete, googleAdsApiVersion: "v22" });
+    assert.equal(config.googleAds?.customerId, "3522581611");
+    assert.equal(config.googleAds?.conversionActionId, "12345");
+    // An absent manager id stays absent rather than becoming an empty header.
+    assert.equal(config.googleAds?.loginCustomerId, undefined);
+    assert.equal(config.googleAds?.apiVersion, "v22");
   });
 
   it("reports readiness without leaking secrets", () => {
-    process.env.GA4_API_SECRET = "super-secret";
-    process.env.META_PIXEL_ID = "1120650977294654";
-    process.env.META_CAPI_ACCESS_TOKEN = "super-secret-2";
     const status = conversionChannelStatus(
-      loadConversionConfig({ ga4MeasurementId: "G-66YC11GTZE" })
+      buildConversionConfig({
+        ga4MeasurementId: "G-66YC11GTZE",
+        ga4ApiSecret: "super-secret",
+        metaPixelId: "1120650977294654",
+        metaCapiAccessToken: "super-secret-2",
+      })
     );
     assert.equal(status.ga4.configured, true);
     assert.equal(status.meta.configured, true);
     assert.equal(status.googleAds.configured, false);
     assert.equal(JSON.stringify(status).includes("super-secret"), false);
+  });
+
+  it("describes which channels are live", () => {
+    assert.equal(describeConversionChannels(buildConversionConfig(null)), "none");
+    assert.equal(
+      describeConversionChannels(
+        buildConversionConfig({
+          ga4MeasurementId: "G-66YC11GTZE",
+          ga4ApiSecret: "stored-secret",
+        })
+      ),
+      "GA4"
+    );
   });
 });
