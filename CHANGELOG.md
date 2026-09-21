@@ -654,6 +654,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Accessibility widget is now an edge-docked ribbon: folded by default (30×88, flush to the edge, chevron), one click unfolds it and opens the settings, and a fold control hides it again. Drag it along the edge or across to the other edge, even while folded, and it remembers where it was docked
 - [internal] Rebuilt the accessibility widget interaction: the ribbon is now pull-out only (clicking it shows the circle without opening the settings), the circle can be dragged anywhere on screen again, and hovering it reveals a control that sends it to the nearest edge. Pinning animates as a short travel, and the panel also offers the same action without hover
 - Upgrading from the trial now confirms the payment in place: ending the trial early shows “You’re all set / Payment successful” in the upgrade dialog with a toast, and the session limits lift immediately. Previously the click bounced to `/app/billing`, which showed only **Manage billing** and never a confirmation. If Stripe reports the trial ended but the charge has not cleared, the dialog says so instead of claiming success; `/app/billing?activated=1` still confirms for older links
+- [internal] Windows Docker Postgres: `DATABASE_URL` with `localhost` timed out / ECONNRESET (IPv6 `::1`); `getPool` rewrites to `127.0.0.1` on win32, and `.env.example` uses IPv4
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

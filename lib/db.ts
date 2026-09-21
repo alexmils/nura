@@ -27,15 +27,31 @@ function isConcurrentCatalogError(err: unknown): boolean {
   return msg.includes("tuple concurrently updated");
 }
 
+/**
+ * Docker Desktop on Windows: published ports via IPv6 `localhost` / `::1` often
+ * hang for node-pg (ECONNRESET / timeout). Force IPv4 loopback for local URLs.
+ * Non-Windows and remote hosts are left unchanged.
+ */
+export function resolveDatabaseUrl(url: string): string {
+  if (process.platform !== "win32") return url;
+  return url
+    .replace(/@localhost(?=[:/])/gi, "@127.0.0.1")
+    .replace(/@\[::1\](?=[:/])/gi, "@127.0.0.1");
+}
+
 export function getPool(): Pool {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
+  const raw = process.env.DATABASE_URL;
+  if (!raw) {
     throw new Error(
       "DATABASE_URL is not set. Start Postgres (docker compose up -d) or set a connection string in .env"
     );
   }
+  const url = resolveDatabaseUrl(raw);
   if (!pool) {
-    pool = new Pool({ connectionString: url });
+    pool = new Pool({
+      connectionString: url,
+      connectionTimeoutMillis: 10_000,
+    });
   }
   return pool;
 }

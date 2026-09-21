@@ -16,11 +16,11 @@ Next.js web app for **EMDR Support** with guided sessions, visual sets, and acco
 ```bash
 npm install
 cp .env.example .env
-npm run db:up    # Postgres on localhost:5434 (5432/5433 often already in use)
+npm run db:up    # Postgres on 127.0.0.1:5434 (5432/5433 often already in use)
 npm run dev      # http://localhost:3471
 ```
 
-Add API keys in `.env` or via Settings.
+Add API keys in `.env` or via Settings. On Windows, keep `DATABASE_URL` on `127.0.0.1` (not `localhost`) so Docker Desktop’s IPv6 port publish does not hang node-pg.
 
 ### Ports
 
