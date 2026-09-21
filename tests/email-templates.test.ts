@@ -94,6 +94,30 @@ describe("email brand header", () => {
     assert.match(html, />Nura<\/p>/);
   });
 
+  it("survives a missing name or origin instead of returning a 500", () => {
+    // The admin template list renders every template: a non-string name used to
+    // throw inside the escaper and blank the whole page.
+    const { html } = renderEmailTemplate(
+      "welcome",
+      FIXTURES.welcome as never,
+      undefined as never,
+      undefined as never
+    );
+    assert.match(html, />Nura<\/p>/);
+    assert.equal(html.includes("<img"), false);
+  });
+
+  it("replaces a retired brand name with the current one", () => {
+    const { html } = renderEmailTemplate(
+      "welcome",
+      FIXTURES.welcome as never,
+      "NuraHelp",
+      ORIGIN
+    );
+    assert.match(html, /alt="Nura"/);
+    assert.equal(html.includes("NuraHelp"), false);
+  });
+
   it("does not double the slash when the origin ends with one", () => {
     const { html } = renderEmailTemplate(
       "welcome",

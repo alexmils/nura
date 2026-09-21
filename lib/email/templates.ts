@@ -1,4 +1,4 @@
-import { BRAND_COLORS } from "@/lib/brand";
+import { BRAND_COLORS, BRAND_SPOKEN, chromeBrandName } from "@/lib/brand";
 import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH } from "@/lib/brand-assets";
 import type { EmailTemplateId } from "@/lib/email/template-labels";
 
@@ -64,12 +64,18 @@ type EmailBrand = {
  * jumping while the image loads.
  */
 function brandHeader(brand: EmailBrand): string {
-  const safeName = escapeEmailHtml(brand.name);
-  if (!brand.url) {
+  // Total, because this header is reachable from the admin template list: an
+  // exception here returns a 500 that hides every template. `chromeBrandName`
+  // is the same normalisation the rest of the app applies to a display name, so
+  // a missing or retired name lands on the brand instead of on a stack trace.
+  const safeName = escapeEmailHtml(chromeBrandName(brand.name));
+  const origin =
+    typeof brand.url === "string" ? brand.url.replace(/\/$/, "") : "";
+  if (!origin) {
     return `<p style="margin:0 0 8px;font-size:13px;font-weight:500;color:${mutedColor};">${safeName}</p>`;
   }
-  return `<a href="${brand.url}" style="display:inline-block;margin:0 0 14px;text-decoration:none;border:0;">
-                <img src="${brand.url}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${Math.round(
+  return `<a href="${origin}" style="display:inline-block;margin:0 0 14px;text-decoration:none;border:0;">
+                <img src="${origin}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${Math.round(
                   (EMAIL_LOGO_WIDTH * 363) / 1600
                 )}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
               </a>`;
@@ -121,8 +127,9 @@ function ctaButton(href: string, label: string): string {
 </p>`;
 }
 
-function escapeEmailHtml(value: string): string {
-  return value
+/** Total on purpose: a missing value must degrade, never throw mid-render. */
+function escapeEmailHtml(value: unknown): string {
+  return String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -132,13 +139,14 @@ function escapeEmailHtml(value: string): string {
 export function renderEmailTemplate<T extends EmailTemplateId>(
   id: T,
   data: EmailTemplateData[T],
-  siteName = "Nura",
+  siteName = BRAND_SPOKEN,
   /** Public origin — the logo and its link need an absolute URL. */
   siteUrl = ""
 ): { subject: string; html: string; text: string } {
+  // Normalised once here so every path below can assume a usable name.
   const brand: EmailBrand = {
-    name: siteName,
-    url: siteUrl.replace(/\/$/, ""),
+    name: chromeBrandName(siteName),
+    url: (typeof siteUrl === "string" ? siteUrl : "").replace(/\/$/, ""),
   };
   switch (id) {
     case "password_reset": {
