@@ -21,6 +21,7 @@ import {
   dispatchConversion,
   isFirstPaidCharge,
 } from "@/lib/conversions/dispatch";
+import { notifyAdminsOfPayment } from "@/lib/email/admin-payment-notify";
 import { sendPurchaseReceipt } from "@/lib/email/purchase-receipt";
 
 function verifyStripeEvent(
@@ -282,6 +283,19 @@ export async function POST(request: Request) {
           livemode: event.livemode,
           occurredAt: event.created,
         });
+
+        if (event.type === "invoice.paid" && amountCents > 0) {
+          // Operator ping on every live charge (first payment and renewals).
+          // Customer receipt + conversion stay first-charge only below.
+          await notifyAdminsOfPayment({
+            userId,
+            plan: mapped.plan,
+            amountCents,
+            currency: invoice.currency ?? mapped.currency,
+            paidAt: new Date(event.created * 1000),
+            livemode: event.livemode,
+          });
+        }
 
         if (firstPaidCharge && invoice.id) {
           // Nobody else can see this charge: the browser is long gone, so the
