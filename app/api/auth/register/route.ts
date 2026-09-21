@@ -18,6 +18,7 @@ import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { LOGIN_PATH } from "@/lib/app-base";
 import { ensureUserAccessStub } from "@/lib/user-access";
+import { persistAttributionFromCookie } from "@/lib/attribution-server";
 import {
   getEntitlementForUser,
   publicEntitlement,
@@ -84,6 +85,11 @@ export async function POST(request: Request) {
     const passwordHash = await hashPassword(password);
     await setUserPassword(user.id, passwordHash);
     await ensureUserAccessStub(user.id);
+    // Stash the ad click that brought them here; the charge lands days later.
+    await persistAttributionFromCookie(
+      user.id,
+      request.headers.get("cookie")
+    );
 
     try {
       await sendTemplateEmail(user.email, "welcome", {

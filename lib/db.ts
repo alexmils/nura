@@ -256,6 +256,42 @@ async function runSchemaMigrations(db: PoolClient) {
       ON llm_usage_events(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_llm_usage_created
       ON llm_usage_events(created_at DESC);
+    CREATE TABLE IF NOT EXISTS user_attribution (
+      user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      gclid TEXT,
+      gbraid TEXT,
+      wbraid TEXT,
+      fbclid TEXT,
+      fbc TEXT,
+      fbp TEXT,
+      ga_client_id TEXT,
+      landing_page TEXT,
+      referrer TEXT,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      utm_term TEXT,
+      utm_content TEXT,
+      consent_analytics BOOLEAN,
+      consent_marketing BOOLEAN,
+      captured_at TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS conversion_dispatches (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      channel TEXT NOT NULL,
+      event_name TEXT NOT NULL,
+      transaction_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      detail TEXT,
+      value_cents INTEGER,
+      currency TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (channel, transaction_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_conversion_dispatches_created
+      ON conversion_dispatches(created_at DESC);
   `);
 
   // One-time only — never re-run on every boot (that falsely marked new

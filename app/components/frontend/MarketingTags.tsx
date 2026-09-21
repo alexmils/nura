@@ -8,6 +8,7 @@ import {
   isGtmAllowedPath,
   readConsent,
 } from "@/lib/marketing-consent";
+import { captureAttribution } from "@/lib/attribution";
 import type { PublicMarketingTags } from "@/lib/site-seo-types";
 
 function isPublicMarketingTags(value: unknown): value is PublicMarketingTags {
@@ -57,6 +58,21 @@ export function MarketingTags({ tags }: { tags: PublicMarketingTags }) {
 
   useEffect(() => {
     applyConsentToGtag(readConsent());
+  }, []);
+
+  // Keep the ad click alive past this page load. `_ga` is written a moment
+  // after gtag.js boots, and that client_id is what lets the Stripe webhook
+  // report a purchase days later, so capture twice.
+  useEffect(() => {
+    const capture = () => {
+      const choice = readConsent();
+      captureAttribution(
+        choice ? { analytics: choice.analytics, marketing: choice.marketing } : undefined
+      );
+    };
+    capture();
+    const timer = setTimeout(capture, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

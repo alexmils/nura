@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth, isAuthContext } from "@/lib/api-auth";
+import { persistAttributionFromCookie } from "@/lib/attribution-server";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import {
   isBillingPlanId,
@@ -39,6 +40,13 @@ export async function POST(request: Request) {
       { status: 503 }
     );
   }
+
+  // Last chance to keep the ad click: the next thing that happens is a redirect
+  // to Stripe, and the charge itself lands on their servers days after that.
+  await persistAttributionFromCookie(
+    auth.user.id,
+    request.headers.get("cookie")
+  );
 
   let plan: BillingPlanId = "yearly";
   let source = "billing";

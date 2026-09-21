@@ -17,6 +17,10 @@ import {
   recordBillingEvent,
 } from "@/lib/billing-events";
 import { getUserByEmail, getUserById, markOnboardingCompleted } from "@/lib/users";
+import {
+  dispatchConversion,
+  isFirstPaidCharge,
+} from "@/lib/conversions/dispatch";
 
 function verifyStripeEvent(
   body: string,
@@ -242,6 +246,22 @@ export async function POST(request: Request) {
           event.type === "invoice.paid"
             ? (invoice.amount_paid ?? 0)
             : (invoice.amount_due ?? invoice.amount_paid ?? 0);
+        const subscriptionId =
+          typeof invoice.subscription === "string"
+            ? invoice.subscription
+            : mapped.stripeSubscriptionId;
+
+        // Must be read before this invoice is recorded, and only when money
+        // actually moved: a trial's $0 `subscription_create` invoice is not a
+        // purchase, the `subscription_cycle` charge seven days later is.
+        const firstPaidCharge =
+          event.type === "invoice.paid" && amountCents > 0
+            ? await isFirstPaidCharge({
+                subscriptionId,
+                invoiceId: invoice.id ?? null,
+              })
+            : false;
+
         await recordBillingEvent({
           userId,
           stripeEventId: event.id,
@@ -257,13 +277,24 @@ export async function POST(request: Request) {
             billingReason: invoice.billing_reason,
           }),
           invoiceId: invoice.id ?? null,
-          subscriptionId:
-            typeof invoice.subscription === "string"
-              ? invoice.subscription
-              : mapped.stripeSubscriptionId,
+          subscriptionId,
           livemode: event.livemode,
           occurredAt: event.created,
         });
+
+        if (firstPaidCharge && invoice.id) {
+          // Nobody else can see this charge: the browser is long gone, so the
+          // ad platforms are told here or not at all.
+          await dispatchConversion({
+            kind: "purchase",
+            userId,
+            transactionId: invoice.id,
+            valueCents: amountCents,
+            currency: invoice.currency ?? mapped.currency,
+            plan: mapped.plan,
+            occurredAt: new Date(event.created * 1000),
+          });
+        }
       }
     }
 

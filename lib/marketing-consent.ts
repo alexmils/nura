@@ -1,3 +1,6 @@
+import { captureAttribution } from "@/lib/attribution";
+import { isFrontendPublicPath } from "@/lib/public-paths";
+
 export const CONSENT_STORAGE_KEY = "nura_consent";
 export const OPEN_COOKIE_SETTINGS_EVENT = "nura:open-cookie-settings";
 export const CONSENT_UPDATE_EVENT = "nura_consent_update";
@@ -15,35 +18,19 @@ export type ConsentModeState = {
   ad_personalization: "granted" | "denied";
 };
 
-const PUBLIC_EXACT = new Set(["/", ""]);
-
-const PUBLIC_PREFIXES = [
-  "/about",
-  "/editorial",
-  "/emdr",
-  "/learn",
-  "/knowledge",
-  "/blog",
-  "/changelog",
-  "/privacy",
-  "/terms",
-  "/safety",
-  "/limits",
-] as const;
-
 export function normalizePathname(pathname: string): string {
   return (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";
 }
 
-function matchesPrefix(path: string, prefixes: readonly string[]): boolean {
-  return prefixes.some((p) => path === p || path.startsWith(`${p}/`));
-}
-
-/** Public marketing pages — never the logged-in console or admin. */
+/**
+ * Public marketing pages — never the logged-in console or admin.
+ *
+ * Delegates to the canonical frontend list: a locally kept copy drifted and
+ * silently dropped `/pricing`, `/faq`, and `/support`, so an ad landing there
+ * got no tags and no captured click.
+ */
 export function isMarketingPublicPath(pathname: string): boolean {
-  const path = normalizePathname(pathname);
-  if (PUBLIC_EXACT.has(path)) return true;
-  return matchesPrefix(path, PUBLIC_PREFIXES);
+  return isFrontendPublicPath(normalizePathname(pathname));
 }
 
 /** Where GTM / Clarity / GA4 may load (marketing + conversion funnels). */
@@ -136,6 +123,9 @@ export function writeConsent(partial: {
     }
   }
   applyConsentToGtag(choice, { previous });
+  // Mirror the decision into the attribution cookie: the Stripe webhook decides
+  // which platforms to notify days later, with no browser to ask.
+  captureAttribution({ analytics: choice.analytics, marketing: choice.marketing });
   return choice;
 }
 

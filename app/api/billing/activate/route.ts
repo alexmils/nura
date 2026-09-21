@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth, isAuthContext } from "@/lib/api-auth";
 import { resolveStripeClient } from "@/lib/stripe";
+import { persistAttributionFromCookie } from "@/lib/attribution-server";
 import {
   getSubscriptionByUserId,
   mapStripeSubscriptionWithConfig,
@@ -15,9 +16,16 @@ import {
  * End an active trial early so usage limits lift and billing starts.
  * Used by the in-app Upgrade modal when the user already has a Checkout subscription.
  */
-export async function POST() {
+export async function POST(request: Request) {
   const auth = await requireAuth();
   if (!isAuthContext(auth)) return auth;
+
+  // Refresh the stored snapshot: consent may have changed since checkout, and
+  // the invoice this call triggers is reported by the webhook, not the browser.
+  await persistAttributionFromCookie(
+    auth.user.id,
+    request.headers.get("cookie")
+  );
 
   const sub = await getSubscriptionByUserId(auth.user.id);
   if (!sub?.stripe_subscription_id) {
