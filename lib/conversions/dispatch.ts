@@ -235,26 +235,49 @@ export async function dispatchConversion(
   const channels = input.channels?.length ? input.channels : ALL_CHANNELS;
   const results: ChannelResult[] = [];
 
-  let attribution: AttributionSnapshot | null = null;
-  let config: ConversionConfig;
-  let email: string | null = null;
   try {
     await ensureSchemaReady();
-    const settings = await getPlatformSettings();
-    config = loadConversionConfig({
-      ga4MeasurementId: settings.seo.ga4MeasurementId,
-    });
-    attribution = await getUserAttribution(input.userId);
-    const user = await getUserById(input.userId);
-    email = user?.email ?? null;
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    console.error("[conversions] setup failed", detail);
+    console.error("[conversions] schema unavailable", detail);
     return {
       transactionId: input.transactionId,
       kind: input.kind,
-      channels: channels.map((channel) => failed(channel, `setup failed: ${detail}`)),
+      channels: channels.map((channel) =>
+        failed(channel, `schema unavailable: ${detail}`)
+      ),
     };
+  }
+
+  // The GA4 measurement id is configured once in Admin → SEO. Failing to read
+  // it must not take down Meta or Google Ads, which never needed it — an env
+  // override stands in on its own.
+  let ga4MeasurementId: string | null = null;
+  try {
+    const settings = await getPlatformSettings();
+    ga4MeasurementId = settings.seo.ga4MeasurementId;
+  } catch (err) {
+    console.warn(
+      "[conversions] platform settings unreadable, GA4 falls back to env",
+      err
+    );
+  }
+  const config: ConversionConfig = loadConversionConfig({ ga4MeasurementId });
+
+  // Per-user inputs. Missing either one only skips the channels that use it,
+  // so one unreadable row cannot silence a charge.
+  let attribution: AttributionSnapshot | null = null;
+  try {
+    attribution = await getUserAttribution(input.userId);
+  } catch (err) {
+    console.warn("[conversions] attribution unreadable", err);
+  }
+  let email: string | null = null;
+  try {
+    const user = await getUserById(input.userId);
+    email = user?.email ?? null;
+  } catch (err) {
+    console.warn("[conversions] user lookup failed", err);
   }
 
   for (const channel of channels) {

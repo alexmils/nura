@@ -214,6 +214,18 @@ describe("conversion channel configuration", () => {
     assert.equal(config.ga4, null);
   });
 
+  it("stands alone on env when Admin → SEO cannot be read", () => {
+    // The dispatcher falls back to an env-only id rather than failing the
+    // whole charge when platform settings are unreadable.
+    process.env.GA4_API_SECRET = "secret-value";
+    process.env.GA4_MEASUREMENT_ID = "G-66YC11GTZE";
+    const config = loadConversionConfig({ ga4MeasurementId: null });
+    assert.deepEqual(config.ga4, {
+      measurementId: "G-66YC11GTZE",
+      apiSecret: "secret-value",
+    });
+  });
+
   it("normalises a formatted Meta pixel id", () => {
     process.env.META_PIXEL_ID = "1120 6509 7729 4654";
     process.env.META_CAPI_ACCESS_TOKEN = "token";
