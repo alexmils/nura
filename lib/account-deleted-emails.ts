@@ -1,7 +1,7 @@
 import { getPool } from "@/lib/db";
 import { getAppUrl, sendEmail, sendTemplateEmail } from "@/lib/email";
 import { getPlatformSettings } from "@/lib/platform-settings";
-import { BRAND_DOMAIN } from "@/lib/brand";
+import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import {
   accountDeletedBillingNote,
   type StripeCancelResult,
@@ -50,7 +50,7 @@ export async function sendAccountDeletedEmails(input: {
   const displayName =
     input.name?.trim() || input.email.split("@")[0] || "there";
   const supportEmail =
-    platform.supportEmail?.trim() || `hi@contact.${BRAND_DOMAIN}`;
+    platform.supportEmail?.trim() || BRAND_SUPPORT_EMAIL;
   const homeUrl = await getAppUrl("/");
   const billingNote = accountDeletedBillingNote(input.stripe);
 

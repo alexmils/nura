@@ -4,6 +4,7 @@ import {
   BRAND_PRODUCT,
   BRAND_SOCIAL,
   BRAND_SPOKEN,
+  BRAND_SUPPORT_EMAIL,
   brandMetadataBase,
 } from "@/lib/brand";
 import { legalEntityDisplayName } from "@/lib/legal-entity";
@@ -51,7 +52,7 @@ export function buildHomeJsonLd(origin = jsonLdOrigin()) {
         },
         description: BRAND_DESCRIPTION,
         sameAs: [BRAND_SOCIAL.instagram, BRAND_SOCIAL.facebook],
-        email: "hello@nurahelp.com",
+        email: BRAND_SUPPORT_EMAIL,
       },
       {
         "@type": "WebSite",

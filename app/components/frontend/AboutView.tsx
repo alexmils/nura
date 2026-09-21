@@ -3,6 +3,7 @@ import { appPath, LOGIN_PATH } from "@/lib/app-base";
 import {
   BRAND_LIMITS_LINE,
   BRAND_SPOKEN,
+  BRAND_SUPPORT_EMAIL,
   BRAND_TAGLINE,
 } from "@/lib/brand";
 import { legalEntityDisplayName } from "@/lib/legal-entity";
@@ -87,7 +88,7 @@ export function AboutView() {
             <h2>How to reach us</h2>
             <p>
               Product questions go to <Link href="/support">Support</Link> (
-              hello@nurahelp.com). Common answers are on{" "}
+              {BRAND_SUPPORT_EMAIL}). Common answers are on{" "}
               <Link href="/faq">FAQ</Link>. If you are in crisis, use local
               emergency services or 988 in the US — Nura is not crisis care.
             </p>

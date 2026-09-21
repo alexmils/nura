@@ -6,6 +6,7 @@ import {
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import type { EmailTemplateId } from "@/lib/email/templates";
 import { isEmailTemplateId } from "@/lib/email/template-labels";
+import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 
 export async function POST(request: Request) {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
       createPasswordUrl: await getAppUrl("/app/create-password?token=test"),
       loginUrl: await getAppUrl("/app/login"),
       homeUrl: await getAppUrl("/"),
-      supportEmail: "support@example.com",
+      supportEmail: BRAND_SUPPORT_EMAIL,
       expiresIn: "72 hours",
     };
 

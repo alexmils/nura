@@ -14,6 +14,13 @@ export const BRAND_PRODUCT = "EMDR Support";
 /** Site host only — not a brand word for UI. */
 export const BRAND_DOMAIN = "nurahelp.com";
 
+/**
+ * Customer-facing support address — the one shown on the site, in structured
+ * data, and in every email footer. Admin → Platform can override it at
+ * runtime; this is what the code falls back to.
+ */
+export const BRAND_SUPPORT_EMAIL = `support@${BRAND_DOMAIN}`;
+
 /** Official social profiles (footer + Organization sameAs). */
 export const BRAND_SOCIAL = {
   instagram: "https://www.instagram.com/nurahelpco/",

@@ -19,9 +19,8 @@ function stubWindow(consent?: { analytics: boolean; marketing: boolean }) {
   const fbqCalls: FbqCall[] = [];
   const session = new Map<string, string>();
 
-  // @ts-expect-error test stub
-  globalThis.window = {
-    dataLayer: [],
+  const win = {
+    dataLayer: [] as unknown[],
     gtag: (...args: unknown[]) => {
       gtagCalls.push(args as GtagCall);
     },
@@ -37,7 +36,10 @@ function stubWindow(consent?: { analytics: boolean; marketing: boolean }) {
       setItem: (k: string, v: string) => session.set(k, v),
     },
   };
-  return { gtagCalls, fbqCalls };
+  // A partial stub is enough for these modules; casting here keeps the missing
+  // Storage members from leaking into every call site.
+  (globalThis as { window?: unknown }).window = win;
+  return { gtagCalls, fbqCalls, win };
 }
 
 describe("GA4 event mirroring", () => {
@@ -115,12 +117,11 @@ describe("GA4 event mirroring", () => {
   });
 
   it("still pushes the dataLayer event for Tag Manager", () => {
-    stubWindow();
+    const { win } = stubWindow();
     trackMetaEvent("StartTrial", { content_name: "yearly" });
-    const dataLayer = (globalThis.window as { dataLayer: Record<string, unknown>[] })
-      .dataLayer;
-    assert.equal(dataLayer[0].event, "meta_StartTrial");
-    assert.equal(dataLayer[0].meta_event, "StartTrial");
+    const pushed = win.dataLayer[0] as Record<string, unknown>;
+    assert.equal(pushed.event, "meta_StartTrial");
+    assert.equal(pushed.meta_event, "StartTrial");
   });
 });
 

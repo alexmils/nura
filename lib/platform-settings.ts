@@ -14,7 +14,7 @@ import {
   normalizeAdsSettings,
   type PlatformAdsSettings,
 } from "@/lib/ads";
-import { BRAND_SPOKEN, chromeBrandName } from "@/lib/brand";
+import { BRAND_SPOKEN, BRAND_SUPPORT_EMAIL, chromeBrandName } from "@/lib/brand";
 import {
   clampGuidedChatChromeId,
   DEFAULT_GUIDED_CHAT_CHROME_ID,
@@ -156,7 +156,7 @@ export const DEFAULT_PLATFORM_AI: PlatformAiConfig = {
 
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   siteName: "Nura",
-  supportEmail: "",
+  supportEmail: BRAND_SUPPORT_EMAIL,
   publicAppUrl: "",
   invitesEnabled: true,
   maintenanceMessage: "",

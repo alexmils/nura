@@ -9,9 +9,10 @@
  */
 
 import { BILLING_PLANS, isBillingPlanId } from "@/lib/billing-constants";
+import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { getAppUrl } from "@/lib/email/templates";
 import { sendTemplateEmail } from "@/lib/email";
-import { getFromAddress, getReplyToAddress } from "@/lib/email/types";
+import { getPlatformSettings } from "@/lib/platform-settings";
 import { getUserById } from "@/lib/users";
 
 /**
@@ -64,9 +65,9 @@ export async function sendPurchaseReceipt(input: {
     const user = await getUserById(input.userId);
     if (!user?.email) return { sent: false, reason: "no recipient" };
 
-    // Prefer the configured reply-to, since a receipt invites a reply.
-    const supportEmail =
-      (await getReplyToAddress()) || (await getFromAddress()).email;
+    // The address printed on the receipt: Admin → Platform can override it,
+    // the brand constant is what ships.
+    const { supportEmail: configuredSupport } = await getPlatformSettings();
 
     await sendTemplateEmail(user.email, "payment_receipt", {
       name: user.name?.trim() || user.email.split("@")[0]!,
@@ -74,7 +75,7 @@ export async function sendPurchaseReceipt(input: {
       amount: formatReceiptAmount(input.amountCents, input.currency),
       paidAt: formatReceiptDate(input.paidAt),
       manageBillingUrl: await getAppUrl("/app/billing"),
-      supportEmail,
+      supportEmail: configuredSupport.trim() || BRAND_SUPPORT_EMAIL,
     });
     console.info(`[email] purchase receipt sent to ${user.email}`);
     return { sent: true };

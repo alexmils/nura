@@ -1,7 +1,9 @@
 import Link from "next/link";
-import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
-
-const SUPPORT_EMAIL = "hello@nurahelp.com";
+import {
+  BRAND_LIMITS_LINE,
+  BRAND_SPOKEN,
+  BRAND_SUPPORT_EMAIL,
+} from "@/lib/brand";
 
 export function SupportPageView() {
   return (
@@ -21,7 +23,7 @@ export function SupportPageView() {
       <h2>Email</h2>
       <p>
         Write to{" "}
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>. We read every
+        <a href={`mailto:${BRAND_SUPPORT_EMAIL}`}>{BRAND_SUPPORT_EMAIL}</a>. We read every
         message; reply times vary.
       </p>
 

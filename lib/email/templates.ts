@@ -1,4 +1,5 @@
 import { BRAND_COLORS } from "@/lib/brand";
+import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH } from "@/lib/brand-assets";
 import type { EmailTemplateId } from "@/lib/email/template-labels";
 
 export type { EmailTemplateId } from "@/lib/email/template-labels";
@@ -48,8 +49,34 @@ const pageBg = "#EDF9ED";
 const cardBg = "#F7FDF7";
 const borderColor = "#B8D4A8";
 
+type EmailBrand = {
+  name: string;
+  /** Absolute origin for links and the logo; empty → plain-text wordmark. */
+  url: string;
+};
+
+/**
+ * Header brand: the real lockup, linked to the site.
+ *
+ * Email clients need an absolute `src`, which is why the origin is passed down
+ * from the caller. `alt` carries the name so a client with images blocked still
+ * shows who the mail is from, and explicit width/height stop the layout from
+ * jumping while the image loads.
+ */
+function brandHeader(brand: EmailBrand): string {
+  const safeName = escapeEmailHtml(brand.name);
+  if (!brand.url) {
+    return `<p style="margin:0 0 8px;font-size:13px;font-weight:500;color:${mutedColor};">${safeName}</p>`;
+  }
+  return `<a href="${brand.url}" style="display:inline-block;margin:0 0 14px;text-decoration:none;border:0;">
+                <img src="${brand.url}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${Math.round(
+                  (EMAIL_LOGO_WIDTH * 363) / 1600
+                )}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
+              </a>`;
+}
+
 function layout(
-  siteName: string,
+  brand: EmailBrand,
   title: string,
   body: string,
   footer = "If you didn't request this email, you can safely ignore it."
@@ -68,7 +95,7 @@ function layout(
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background:${cardBg};border-radius:8px;border:1px solid ${borderColor};overflow:hidden;">
           <tr>
             <td style="padding:32px 28px 8px;">
-              <p style="margin:0 0 8px;font-size:13px;font-weight:500;color:${mutedColor};">${siteName}</p>
+              ${brandHeader(brand)}
               <h1 style="margin:0 0 20px;font-size:22px;font-weight:500;color:${inkColor};letter-spacing:-0.018em;font-family:Georgia,serif;">${title}</h1>
               ${body}
             </td>
@@ -105,15 +132,21 @@ function escapeEmailHtml(value: string): string {
 export function renderEmailTemplate<T extends EmailTemplateId>(
   id: T,
   data: EmailTemplateData[T],
-  siteName = "Nura"
+  siteName = "Nura",
+  /** Public origin — the logo and its link need an absolute URL. */
+  siteUrl = ""
 ): { subject: string; html: string; text: string } {
+  const brand: EmailBrand = {
+    name: siteName,
+    url: siteUrl.replace(/\/$/, ""),
+  };
   switch (id) {
     case "password_reset": {
       const d = data as EmailTemplateData["password_reset"];
       const subject = "Reset your password";
       const text = `Hi ${d.name},\n\nReset your password: ${d.resetUrl}\n\nThis link expires in ${d.expiresIn}.`;
       const html = layout(
-        siteName,
+        brand,
         "Reset your password",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${d.name},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">We received a request to reset your password. Use the button below to choose a new one.</p>
@@ -127,7 +160,7 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
       const subject = `You're invited to ${siteName}`;
       const text = `Hi ${d.name},\n\nCreate your password: ${d.createPasswordUrl}\n\nThis link expires in ${d.expiresIn}.`;
       const html = layout(
-        siteName,
+        brand,
         "Create your password",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${d.name},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">You've been invited to ${siteName}. Set your password to get started.</p>
@@ -141,7 +174,7 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
       const subject = "Your password was changed";
       const text = `Hi ${d.name},\n\nYour password was changed. Sign in: ${d.loginUrl}`;
       const html = layout(
-        siteName,
+        brand,
         "Password updated",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${d.name},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your password was successfully changed. If you didn't make this change, contact support immediately.</p>
@@ -154,7 +187,7 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
       const subject = `Welcome to ${siteName}`;
       const text = `Hi ${d.name},\n\nYour account is ready. Sign in: ${d.loginUrl}`;
       const html = layout(
-        siteName,
+        brand,
         "Welcome",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${d.name},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your account is ready. Sign in to start EMDR Support sessions.</p>
@@ -170,7 +203,7 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
       const subject = "Your account was deleted";
       const text = `Hi ${d.name},\n\nYour ${siteName} account and associated session data have been deleted. ${d.billingNote}\n\nIf you did not request this, contact ${d.supportEmail} right away.\n\n${d.homeUrl}`;
       const html = layout(
-        siteName,
+        brand,
         "Account deleted",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your ${escapeEmailHtml(siteName)} account and associated session data have been permanently deleted.</p>
@@ -202,7 +235,7 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         `Questions about this charge? Reply to this email or write to ${d.supportEmail}.`,
       ].join("\n");
       const html = layout(
-        siteName,
+        brand,
         "Thank you for your purchase",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Thank you — your <strong>${safePlan}</strong> plan is active and your sessions are unlimited.</p>

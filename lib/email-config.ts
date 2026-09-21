@@ -3,12 +3,18 @@
  * Secrets live in `app_settings.email`; env vars remain optional bootstrap / fallback.
  */
 
+import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
+
 export type PlatformEmailConfig = {
   brevoApiKey: string;
   gmailClientId: string;
   gmailClientSecret: string;
   gmailRefreshToken: string;
-  /** Optional Reply-To for outbound mail (empty = omit). */
+  /**
+   * Reply-To for outbound mail. Customers are told to reply to the receipt, so
+   * this defaults to the support inbox; a stored empty string means the admin
+   * deliberately wants no Reply-To header.
+   */
   replyTo: string;
 };
 
@@ -17,7 +23,9 @@ export const DEFAULT_PLATFORM_EMAIL: PlatformEmailConfig = {
   gmailClientId: "",
   gmailClientSecret: "",
   gmailRefreshToken: "",
-  replyTo: "",
+  // Replies to any transactional mail — a receipt, a password reset — should
+  // land in the inbox someone actually reads.
+  replyTo: BRAND_SUPPORT_EMAIL,
 };
 
 export function normalizeEmailConfig(raw: unknown): PlatformEmailConfig {
@@ -31,17 +39,28 @@ export function normalizeEmailConfig(raw: unknown): PlatformEmailConfig {
     gmailClientId: str(r.gmailClientId),
     gmailClientSecret: str(r.gmailClientSecret),
     gmailRefreshToken: str(r.gmailRefreshToken),
-    replyTo: str(r.replyTo),
+    // A missing key takes the default (fresh install, or a row written before
+    // this field existed); an explicit empty string is the admin saying they
+    // want no Reply-To header.
+    replyTo:
+      typeof r.replyTo === "string"
+        ? str(r.replyTo)
+        : DEFAULT_PLATFORM_EMAIL.replyTo,
   };
 }
 
+/**
+ * True when no delivery credential is set. `replyTo` is deliberately not part
+ * of this: it is optional presentation, not a credential, and it now defaults
+ * to the support inbox — counting it would make every config look non-empty and
+ * silently switch off the `.env` bootstrap below.
+ */
 export function isEmailConfigEmpty(cfg: PlatformEmailConfig): boolean {
   return (
     !cfg.brevoApiKey &&
     !cfg.gmailClientId &&
     !cfg.gmailClientSecret &&
-    !cfg.gmailRefreshToken &&
-    !cfg.replyTo
+    !cfg.gmailRefreshToken
   );
 }
 

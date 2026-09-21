@@ -3,7 +3,7 @@ import {
   TRIAL_DAYS,
   orderedBillingPlans,
 } from "@/lib/billing-constants";
-import { BRAND_SPOKEN } from "@/lib/brand";
+import { BRAND_SPOKEN, BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import {
   CLINICAL_AUTHORITIES,
   MEDICAL_PAGE_AUDIENCE,
@@ -72,7 +72,7 @@ export function organizationJsonLd(origin: string) {
     legalName: legalEntityDisplayName(),
     alternateName: legalEntityDisplayName(),
     url: `${base}/`,
-    email: "hello@nurahelp.com",
+    email: BRAND_SUPPORT_EMAIL,
     description:
       "Guided EMDR practice and visual sets in a calm online app.",
   };
@@ -627,10 +627,10 @@ export function buildSupportJsonLd(origin: string) {
     "@graph": [
       {
         ...organizationJsonLd(origin),
-        email: "hello@nurahelp.com",
+        email: BRAND_SUPPORT_EMAIL,
         contactPoint: {
           "@type": "ContactPoint",
-          email: "hello@nurahelp.com",
+          email: BRAND_SUPPORT_EMAIL,
           contactType: "customer support",
         },
       },

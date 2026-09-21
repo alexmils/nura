@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
+import { BRAND_LIMITS_LINE, BRAND_SPOKEN, BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import "./public-cluster.css";
 
 export function EditorialView() {
@@ -65,7 +65,7 @@ export function EditorialView() {
             <p>
               Use local emergency services if you are unsafe. For clinical EMDR,
               you need a trained person — not this site. Questions about the
-              product: hello@nurahelp.com.
+              product: {BRAND_SUPPORT_EMAIL}.
             </p>
           </section>
         </div>

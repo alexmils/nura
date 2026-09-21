@@ -1,4 +1,4 @@
-import { BRAND_DOMAIN, BRAND_SPOKEN } from "@/lib/brand";
+import { BRAND_SPOKEN, BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 
 /**
  * Operator / counsel fields for Terms, Privacy, and JSON-LD legalName.
@@ -87,7 +87,7 @@ export function formatLegalEntityBlock(): string {
   }
   if (!LEGAL_ENTITY.legalName) {
     lines.push(
-      `(Legal entity details pending — contact hi@contact.${BRAND_DOMAIN} or support for the current operator identity.)`
+      `(Legal entity details pending — contact ${BRAND_SUPPORT_EMAIL} for the current operator identity.)`
     );
   }
   return lines.join("\n");

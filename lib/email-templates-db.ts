@@ -2,7 +2,8 @@ import { ensureSchemaReady, getPool } from "@/lib/db";
 import type { EmailTemplateId } from "@/lib/email/templates";
 import { EMAIL_TEMPLATE_IDS } from "@/lib/email/template-labels";
 import { renderEmailTemplate } from "@/lib/email/templates";
-import { getPlatformSettings } from "@/lib/platform-settings";
+import { getPlatformSettings, getPublicAppUrl } from "@/lib/platform-settings";
+import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 
 export type EmailTemplateRecord = {
   id: EmailTemplateId;
@@ -35,7 +36,7 @@ function sampleData(id: EmailTemplateId) {
     createPasswordUrl: "https://example.com/app/create-password",
     loginUrl: "https://example.com/app/login",
     expiresIn: "72 hours",
-    supportEmail: "support@example.com",
+    supportEmail: BRAND_SUPPORT_EMAIL,
     homeUrl: "https://example.com/",
   };
   switch (id) {
@@ -98,7 +99,12 @@ export async function getEmailTemplate(
   }
 
   const platform = await getPlatformSettings();
-  const rendered = renderEmailTemplate(id, sampleData(id) as never, platform.siteName);
+  const rendered = renderEmailTemplate(
+    id,
+    sampleData(id) as never,
+    platform.siteName,
+    await getPublicAppUrl()
+  );
   return {
     id,
     subject: rendered.subject,
@@ -144,7 +150,7 @@ export async function renderStoredTemplate<T extends EmailTemplateId>(
     };
   }
   const platform = await getPlatformSettings();
-  return renderEmailTemplate(id, data, platform.siteName);
+  return renderEmailTemplate(id, data, platform.siteName, await getPublicAppUrl());
 }
 
 function interpolate(template: string, data: Record<string, string>) {
