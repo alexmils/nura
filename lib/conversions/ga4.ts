@@ -6,6 +6,24 @@ const COLLECT_ENDPOINT = "https://www.google-analytics.com/mp/collect";
 const DEBUG_ENDPOINT = "https://www.google-analytics.com/debug/mp/collect";
 
 /**
+ * Pull the human-readable reasons out of a `/debug/mp/collect` response.
+ * The debug endpoint answers 200 with `validationMessages: []` for a good
+ * payload, and never checks the api_secret at all.
+ */
+export function ga4ValidationMessages(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw || "{}") as {
+      validationMessages?: { description?: string; validationCode?: string }[];
+    };
+    return (parsed.validationMessages || [])
+      .map((m) => m.description || m.validationCode || "")
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Send one event to GA4 over the Measurement Protocol.
  *
  * This is the only way a purchase that happens days later on Stripe's servers
@@ -45,7 +63,16 @@ export async function sendGa4Event(input: {
     });
     // The collect endpoint answers 204 with an empty body when it accepts the
     // event; anything else carries a reason worth surfacing.
-    if (res.ok) return sent("ga4", res.status === 204 ? undefined : `${res.status}`);
+    if (res.ok) {
+      if (endpoint === DEBUG_ENDPOINT) {
+        const messages = ga4ValidationMessages(await res.text().catch(() => ""));
+        if (messages.length) return failed("ga4", messages.join("; "));
+        // Payload is valid — but this path never validates the secret, so a
+        // revoked one would still look healthy here. Do not read it as "sent".
+        return sent("ga4", "debug: payload valid, secret not validated");
+      }
+      return sent("ga4", res.status === 204 ? undefined : `${res.status}`);
+    }
     const text = await res.text().catch(() => "");
     return failed("ga4", `${res.status} ${text}`);
   } catch (err) {

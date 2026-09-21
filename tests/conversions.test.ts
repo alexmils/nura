@@ -14,6 +14,7 @@ import {
   conversionChannelStatus,
   loadConversionConfig,
 } from "@/lib/conversions/config";
+import { ga4ValidationMessages } from "@/lib/conversions/ga4";
 
 const NOW = new Date("2026-09-21T10:00:00.000Z");
 
@@ -66,6 +67,36 @@ describe("GA4 Measurement Protocol payload", () => {
     assert.equal(clampGa4Timestamp(tenMinutesAgo, NOW).getTime(), tenMinutesAgo.getTime());
     const skewed = new Date(NOW.getTime() + 60_000);
     assert.equal(clampGa4Timestamp(skewed, NOW).getTime(), NOW.getTime());
+  });
+});
+
+describe("GA4 debug validation messages", () => {
+  it("reports nothing for a clean payload", () => {
+    assert.deepEqual(ga4ValidationMessages('{"validationMessages": []}'), []);
+  });
+
+  it("surfaces the reasons Google gives", () => {
+    assert.deepEqual(
+      ga4ValidationMessages(
+        JSON.stringify({
+          validationMessages: [
+            { description: "Event at index 0 has an invalid name", validationCode: "NAME_INVALID" },
+            { description: "Missing currency" },
+            { validationCode: "VALUE_INVALID" },
+          ],
+        })
+      ),
+      [
+        "Event at index 0 has an invalid name",
+        "Missing currency",
+        "VALUE_INVALID",
+      ]
+    );
+  });
+
+  it("stays quiet on an unparseable body", () => {
+    assert.deepEqual(ga4ValidationMessages(""), []);
+    assert.deepEqual(ga4ValidationMessages("<html>502</html>"), []);
   });
 });
 

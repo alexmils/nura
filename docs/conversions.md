@@ -74,7 +74,10 @@ logged, recorded on the dispatch row, and the webhook still returns 200.
    (`GA4_MEASUREMENT_ID` only overrides it for preview environments).
 3. Optional: `GA4_MP_DEBUG=1` switches the send to Google's
    `/debug/mp/collect`, which validates the payload and returns why it would be
-   rejected.
+   rejected. Note what it does **not** do: the debug endpoint answers 200 even
+   for a wrong or revoked `api_secret`, so it can only ever confirm the payload
+   shape. A wrong secret shows up only against the real endpoint — as a 403 —
+   so leave debug off when the question is "is my secret right?".
 
 Caveat worth knowing: the Measurement Protocol event is stitched back to the
 visit by `client_id`. A charge seven days later is a new session, so Google Ads
