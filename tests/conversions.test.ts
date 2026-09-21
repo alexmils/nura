@@ -274,18 +274,35 @@ describe("conversion channel configuration", () => {
   });
 
   it("reports readiness without leaking secrets", () => {
-    const status = conversionChannelStatus(
-      buildConversionConfig({
-        ga4MeasurementId: "G-66YC11GTZE",
-        ga4ApiSecret: "super-secret",
-        metaPixelId: "1120650977294654",
-        metaCapiAccessToken: "super-secret-2",
-      })
-    );
+    const status = conversionChannelStatus({
+      ga4MeasurementId: "G-66YC11GTZE",
+      ga4ApiSecret: "super-secret",
+      metaPixelId: "1120650977294654",
+      metaCapiAccessToken: "super-secret-2",
+    });
     assert.equal(status.ga4.configured, true);
     assert.equal(status.meta.configured, true);
     assert.equal(status.googleAds.configured, false);
+    assert.equal(status.ga4.missing.length, 0);
     assert.equal(JSON.stringify(status).includes("super-secret"), false);
+  });
+
+  it("names what a half-configured channel is still waiting for", () => {
+    // A bare `pixelId: null` left the admin guessing which field was empty.
+    const status = conversionChannelStatus({
+      ga4MeasurementId: "G-66YC11GTZE",
+      ga4ApiSecret: "super-secret",
+      metaPixelId: "1120650977294654",
+    });
+    assert.equal(status.meta.pixelId, "1120650977294654");
+    assert.deepEqual(status.meta.missing, ["Conversions API access token"]);
+
+    const empty = conversionChannelStatus({});
+    assert.deepEqual(empty.ga4.missing, [
+      "Google Analytics measurement ID",
+      "Measurement Protocol API secret",
+    ]);
+    assert.equal(empty.googleAds.missing.length, 6);
   });
 
   it("describes which channels are live", () => {

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformSettingsAccess } from "@/lib/api-auth";
-import {
-  conversionChannelStatus,
-  loadConversionConfig,
-} from "@/lib/conversions/config";
+import { getPlatformSettings } from "@/lib/platform-settings";
+import { conversionChannelStatus } from "@/lib/conversions/config";
 import {
   dispatchConversion,
   listRecentDispatches,
@@ -19,22 +17,29 @@ function isChannel(value: unknown): value is ConversionChannel {
 }
 
 /**
- * Which server-side conversion channels are configured, plus the recent
- * delivery log. Secrets are never echoed — only whether they parsed.
+ * Which channels are ready, what each still needs, and the recent delivery log.
+ * Secrets are never echoed — only whether a field is set.
  */
 export async function GET() {
   const auth = await requirePlatformSettingsAccess();
   if (!isAuthContext(auth)) return auth;
 
-  const config = await loadConversionConfig();
-
-  return NextResponse.json(
-    {
-      channels: conversionChannelStatus(config),
-      recent: await listRecentDispatches(),
-    },
-    { headers: { "Cache-Control": "private, no-store" } }
-  );
+  try {
+    const settings = await getPlatformSettings();
+    return NextResponse.json(
+      {
+        channels: conversionChannelStatus(settings.seo),
+        recent: await listRecentDispatches(),
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  } catch (err) {
+    console.error("[admin/conversions GET]", err);
+    return NextResponse.json(
+      { error: "Could not read conversion settings" },
+      { status: 500 }
+    );
+  }
 }
 
 /**

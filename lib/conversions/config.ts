@@ -77,6 +77,28 @@ function digitsOnly(input: string): string {
   return input.replace(/[^0-9]/g, "");
 }
 
+/** Everything a channel needs, already trimmed — read once, used by both the
+ * builder and the status view so the two can never disagree. */
+function readConversionFields(seo: Partial<PlatformSeoConfig> | null | undefined) {
+  return {
+    // The measurement id is the public tag id, shared with the browser tags
+    // rather than duplicated under the conversions fields.
+    measurementId: value(seo, "ga4MeasurementId"),
+    ga4ApiSecret: value(seo, "ga4ApiSecret"),
+    pixelId: digitsOnly(value(seo, "metaPixelId")),
+    metaCapiAccessToken: value(seo, "metaCapiAccessToken"),
+    metaTestEventCode: value(seo, "metaTestEventCode"),
+    customerId: digitsOnly(value(seo, "googleAdsCustomerId")),
+    conversionActionId: digitsOnly(value(seo, "googleAdsConversionActionId")),
+    developerToken: value(seo, "googleAdsDeveloperToken"),
+    loginCustomerId: digitsOnly(value(seo, "googleAdsLoginCustomerId")),
+    clientId: value(seo, "googleAdsOAuthClientId"),
+    clientSecret: value(seo, "googleAdsOAuthClientSecret"),
+    refreshToken: value(seo, "googleAdsOAuthRefreshToken"),
+    apiVersion: value(seo, "googleAdsApiVersion"),
+  };
+}
+
 /**
  * Pure builder so the completeness rules stay testable without a database.
  * `seo` may be a stored config, a partial, or null when it cannot be read.
@@ -84,56 +106,40 @@ function digitsOnly(input: string): string {
 export function buildConversionConfig(
   seo: Partial<PlatformSeoConfig> | null | undefined
 ): ConversionConfig {
-  // The measurement id is the public tag id, shared with the browser tags
-  // rather than duplicated under the conversions fields.
-  const measurementId = value(seo, "ga4MeasurementId");
-  const ga4Secret = value(seo, "ga4ApiSecret");
-
-  const pixelId = digitsOnly(value(seo, "metaPixelId"));
-  const metaToken = value(seo, "metaCapiAccessToken");
-  const testEventCode = value(seo, "metaTestEventCode");
-
-  const customerId = digitsOnly(value(seo, "googleAdsCustomerId"));
-  const conversionActionId = digitsOnly(value(seo, "googleAdsConversionActionId"));
-  const developerToken = value(seo, "googleAdsDeveloperToken");
-  const loginCustomerId = digitsOnly(value(seo, "googleAdsLoginCustomerId"));
-  const clientId = value(seo, "googleAdsOAuthClientId");
-  const clientSecret = value(seo, "googleAdsOAuthClientSecret");
-  const refreshToken = value(seo, "googleAdsOAuthRefreshToken");
-  const apiVersion = value(seo, "googleAdsApiVersion");
+  const f = readConversionFields(seo);
 
   const googleAdsComplete = Boolean(
-    customerId &&
-      conversionActionId &&
-      developerToken &&
-      clientId &&
-      clientSecret &&
-      refreshToken
+    f.customerId &&
+      f.conversionActionId &&
+      f.developerToken &&
+      f.clientId &&
+      f.clientSecret &&
+      f.refreshToken
   );
 
   return {
     ga4:
-      measurementId && ga4Secret
-        ? { measurementId, apiSecret: ga4Secret }
+      f.measurementId && f.ga4ApiSecret
+        ? { measurementId: f.measurementId, apiSecret: f.ga4ApiSecret }
         : null,
     meta:
-      pixelId && metaToken
+      f.pixelId && f.metaCapiAccessToken
         ? {
-            pixelId,
-            accessToken: metaToken,
-            ...(testEventCode ? { testEventCode } : {}),
+            pixelId: f.pixelId,
+            accessToken: f.metaCapiAccessToken,
+            ...(f.metaTestEventCode ? { testEventCode: f.metaTestEventCode } : {}),
           }
         : null,
     googleAds: googleAdsComplete
       ? {
-          customerId,
-          conversionActionId,
-          developerToken,
-          loginCustomerId: loginCustomerId || undefined,
-          clientId,
-          clientSecret,
-          refreshToken,
-          apiVersion: apiVersion || undefined,
+          customerId: f.customerId,
+          conversionActionId: f.conversionActionId,
+          developerToken: f.developerToken,
+          loginCustomerId: f.loginCustomerId || undefined,
+          clientId: f.clientId,
+          clientSecret: f.clientSecret,
+          refreshToken: f.refreshToken,
+          apiVersion: f.apiVersion || undefined,
         }
       : null,
   };
@@ -153,21 +159,50 @@ export async function loadConversionConfig(): Promise<ConversionConfig> {
   }
 }
 
-/** Which channels are ready, for the admin status view. Never exposes secrets. */
-export function conversionChannelStatus(config: ConversionConfig) {
+/**
+ * Which channels are ready, and what each one is still waiting for.
+ *
+ * Reading the same fields the builder does means the status can name the gap —
+ * "Pixel ID" rather than a bare `null` — and never exposes a secret value.
+ */
+export function conversionChannelStatus(
+  seo: Partial<PlatformSeoConfig> | null | undefined
+) {
+  const f = readConversionFields(seo);
+
+  const ga4Missing = [
+    f.measurementId ? null : "Google Analytics measurement ID",
+    f.ga4ApiSecret ? null : "Measurement Protocol API secret",
+  ].filter((v): v is string => Boolean(v));
+  const metaMissing = [
+    f.pixelId ? null : "Pixel ID",
+    f.metaCapiAccessToken ? null : "Conversions API access token",
+  ].filter((v): v is string => Boolean(v));
+  const googleAdsMissing = [
+    f.customerId ? null : "Customer ID",
+    f.conversionActionId ? null : "Conversion action ID",
+    f.developerToken ? null : "Developer token",
+    f.clientId ? null : "OAuth client ID",
+    f.clientSecret ? null : "OAuth client secret",
+    f.refreshToken ? null : "OAuth refresh token",
+  ].filter((v): v is string => Boolean(v));
+
   return {
     ga4: {
-      configured: Boolean(config.ga4),
-      measurementId: config.ga4?.measurementId ?? null,
+      configured: ga4Missing.length === 0,
+      measurementId: f.measurementId || null,
+      missing: ga4Missing,
     },
     meta: {
-      configured: Boolean(config.meta),
-      pixelId: config.meta?.pixelId ?? null,
+      configured: metaMissing.length === 0,
+      pixelId: f.pixelId || null,
+      missing: metaMissing,
     },
     googleAds: {
-      configured: Boolean(config.googleAds),
-      customerId: config.googleAds?.customerId ?? null,
-      conversionActionId: config.googleAds?.conversionActionId ?? null,
+      configured: googleAdsMissing.length === 0,
+      customerId: f.customerId || null,
+      conversionActionId: f.conversionActionId || null,
+      missing: googleAdsMissing,
     },
   };
 }

@@ -166,7 +166,9 @@ async function runChannel(
   const marketingDenied = attribution?.consent?.marketing === false;
 
   if (channel === "ga4") {
-    if (!config.ga4) return skipped("ga4", "not configured");
+    if (!config.ga4) {
+      return skipped("ga4", "not configured — needs the Measurement Protocol API secret");
+    }
     const clientId = attribution?.gaClientId || input.probe?.gaClientId;
     if (!clientId) return skipped("ga4", "no GA4 client_id captured");
     const params: Record<string, unknown> = {
@@ -191,7 +193,9 @@ async function runChannel(
   }
 
   if (channel === "meta") {
-    if (!config.meta) return skipped("meta", "not configured");
+    if (!config.meta) {
+      return skipped("meta", "not configured — needs the Pixel ID and the access token");
+    }
     if (marketingDenied) return skipped("meta", "marketing consent declined");
     const eventName = META_EVENT_NAMES[input.kind];
     if (!eventName) return skipped("meta", `no Meta event for ${input.kind}`);
@@ -214,7 +218,12 @@ async function runChannel(
   }
 
   // google_ads — the only channel that credits the exact click.
-  if (!config.googleAds) return skipped("google_ads", "not configured");
+  if (!config.googleAds) {
+    return skipped(
+      "google_ads",
+      "not configured — needs the customer ID, conversion action ID, developer token and OAuth credentials"
+    );
+  }
   if (marketingDenied) return skipped("google_ads", "marketing consent declined");
   const probeClickId = input.probe?.clickId;
   const click =
