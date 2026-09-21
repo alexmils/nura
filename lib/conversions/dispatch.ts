@@ -64,6 +64,12 @@ export type DispatchConversionInput = {
   channels?: ConversionChannel[];
   /** Ask Google to validate without recording (setup check). */
   validateOnly?: boolean;
+  /**
+   * Probe only. A real charge always leans on stored attribution; the admin
+   * test action runs for an account that has no captured click, so it supplies
+   * identifiers that exercise the transport instead of skipping the channel.
+   */
+  probe?: { gaClientId: string; clickId?: string };
 };
 
 export type DispatchConversionResult = {
@@ -162,7 +168,7 @@ async function runChannel(
 
   if (channel === "ga4") {
     if (!config.ga4) return skipped("ga4", "not configured");
-    const clientId = attribution?.gaClientId;
+    const clientId = attribution?.gaClientId || input.probe?.gaClientId;
     if (!clientId) return skipped("ga4", "no GA4 client_id captured");
     const params: Record<string, unknown> = {
       transaction_id: input.transactionId,
@@ -211,7 +217,10 @@ async function runChannel(
   // google_ads — the only channel that credits the exact click.
   if (!config.googleAds) return skipped("google_ads", "not configured");
   if (marketingDenied) return skipped("google_ads", "marketing consent declined");
-  const click = googleClickIdField(attribution);
+  const probeClickId = input.probe?.clickId;
+  const click =
+    googleClickIdField(attribution) ??
+    (probeClickId ? { id: probeClickId, field: "gclid" as const } : null);
   if (!click) return skipped("google_ads", "no gclid/gbraid/wbraid captured");
   return uploadClickConversion({
     config: config.googleAds,

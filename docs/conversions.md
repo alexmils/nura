@@ -143,6 +143,19 @@ The probe sends a `purchase` with value 0 and a `test_…` transaction id. For
 Google Ads it runs with `validateOnly`, so Google validates the payload without
 recording a conversion.
 
+Probes supply their own throwaway GA4 `client_id` and click id, because the
+account running them has no captured click — without that, every channel would
+answer `skipped: no GA4 client_id captured`. Reading their answers:
+
+- `ga4: skipped (no GA4 client_id captured)` — should no longer happen; if it
+  does, the probe could not build an identifier.
+- `ga4: failed (403 …)` — the api secret is wrong or revoked. This is the only
+  place that mistake becomes visible.
+- `google_ads: failed (… invalid click id …)` — **success in disguise**: the
+  probe's click id is fake by design, so a rejection at that point means the
+  developer token, OAuth token, and conversion action all resolved. An auth or
+  permission error is the real failure to act on.
+
 Where to confirm each one:
 
 - **GA4** → Reports → Realtime (or `GA4_MP_DEBUG=1` for the validation answer),

@@ -70,6 +70,14 @@ export async function POST(request: Request) {
     channels: [body.channel],
     // Google validates the payload without recording a conversion.
     validateOnly: body.channel === "google_ads",
+    probe: {
+      // A GA4 client_id is `<random>.<seconds>`; the account running this probe
+      // has no captured click of its own, and the channel would skip without one.
+      gaClientId: `${Math.floor(Math.random() * 1e10)}.${Math.floor(Date.now() / 1000)}`,
+      // Google rejects this click id on purpose. Reaching that rejection still
+      // proves the developer token, OAuth token, and conversion action resolve.
+      clickId: "nura_probe_click_id",
+    },
   });
 
   return NextResponse.json(
