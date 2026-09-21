@@ -6,7 +6,6 @@ import {
   IMPORT_MAX_NOTES,
   parseImportText,
   pickConversationsJsonFromZip,
-  setNameForImportSource,
   type ImportCandidate,
   type ImportSource,
 } from "@/lib/memory-import";

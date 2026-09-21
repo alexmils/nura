@@ -81,7 +81,7 @@ function brandHeader(brand: EmailBrand): string {
   // bottom padding does the spacing, because table `margin` is unreliable.
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="left" style="border-collapse:collapse;">
                 <tr>
-                  <td width="${EMAIL_LOGO_WIDTH}" align="left" style="width:${EMAIL_LOGO_WIDTH}px;padding:0 0 16px;">
+                  <td width="${EMAIL_LOGO_WIDTH}" align="left" style="width:${EMAIL_LOGO_WIDTH}px;padding:0 0 20px;">
                     <a href="${origin}" style="display:block;text-decoration:none;border:0;">
                       <img src="${origin}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${height}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;max-width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
                     </a>
@@ -109,14 +109,14 @@ function layout(
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:480px;background:${cardBg};border-radius:8px;border:1px solid ${borderColor};overflow:hidden;">
           <tr>
-            <td style="padding:32px 28px 8px;">
+            <td style="padding:36px 32px 12px;">
               ${brandHeader(brand)}
-              <h1 style="margin:0 0 20px;font-size:22px;font-weight:500;color:${inkColor};letter-spacing:-0.018em;font-family:Georgia,serif;">${title}</h1>
+              <h1 style="margin:0 0 22px;font-size:22px;font-weight:500;color:${inkColor};letter-spacing:-0.018em;font-family:Georgia,serif;">${title}</h1>
               ${body}
             </td>
           </tr>
           <tr>
-            <td style="padding:16px 28px 28px;border-top:1px solid ${borderColor};">
+            <td style="padding:20px 32px 30px;border-top:1px solid ${borderColor};">
               <p style="margin:0;font-size:12px;line-height:1.5;color:${mutedColor};">
                 ${footer}
               </p>
@@ -131,7 +131,7 @@ function layout(
 }
 
 function ctaButton(href: string, label: string): string {
-  return `<p style="margin:24px 0;">
+  return `<p style="margin:28px 0;">
   <a href="${href}" style="display:inline-block;background:${brandColor};color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:12px 20px;border-radius:8px;">${label}</a>
 </p>`;
 }
@@ -242,32 +242,37 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
       const text = [
         `Hi ${d.name},`,
         "",
-        `Thank you — your ${d.planLabel} plan is active and your sessions are unlimited.`,
+        `Thank you. Your ${d.planLabel} plan is active and your sessions are unlimited.`,
         "",
+        "------------------------------",
         `Amount charged: ${d.amount}`,
         `Date: ${d.paidAt}`,
+        "------------------------------",
         "",
         `Manage your subscription: ${d.manageBillingUrl}`,
         "",
         `Questions about this charge? Reply to this email or write to ${d.supportEmail}.`,
       ].join("\n");
+      // Rules between the rows, inside a rounded box: a receipt should read as
+      // a receipt. Hairlines are drawn with cell borders, which every client
+      // renders, and the labels are small caps so the numbers carry the weight.
       const html = layout(
         brand,
         "Thank you for your purchase",
-        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
-         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Thank you — your <strong>${safePlan}</strong> plan is active and your sessions are unlimited.</p>
-         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 4px;font-size:14px;color:${inkColor};">
+        `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 4px;font-size:15px;line-height:1.6;color:${inkColor};">Thank you. Your <strong>${safePlan}</strong> plan is active and your sessions are unlimited.</p>
+         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:22px 0 4px;border:1px solid ${borderColor};border-radius:10px;">
            <tr>
-             <td style="padding:6px 0;color:${mutedColor};">Amount charged</td>
-             <td align="right" style="padding:6px 0;font-weight:600;">${safeAmount}</td>
+             <td style="padding:15px 18px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${mutedColor};border-bottom:1px solid ${borderColor};">Amount charged</td>
+             <td align="right" style="padding:15px 18px;font-size:17px;font-weight:600;color:${inkColor};border-bottom:1px solid ${borderColor};">${safeAmount}</td>
            </tr>
            <tr>
-             <td style="padding:6px 0;color:${mutedColor};">Date</td>
-             <td align="right" style="padding:6px 0;">${safePaidAt}</td>
+             <td style="padding:15px 18px;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:${mutedColor};">Date</td>
+             <td align="right" style="padding:15px 18px;font-size:15px;color:${inkColor};">${safePaidAt}</td>
            </tr>
          </table>
          ${ctaButton(d.manageBillingUrl, "Manage billing")}
-         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions about this charge? Reply to this email or write to <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>`,
+         <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:${mutedColor};">Questions about this charge? Reply to this email or write to <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>`,
         `This is a receipt for a charge on your ${escapeEmailHtml(siteName)} subscription. Manage it any time from Billing.`
       );
       return { subject, html, text };

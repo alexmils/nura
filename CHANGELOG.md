@@ -660,6 +660,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Upgrading from the trial now confirms the payment in place: ending the trial early shows “You’re all set / Payment successful” in the upgrade dialog with a toast, and the session limits lift immediately. Previously the click bounced to `/app/billing`, which showed only **Manage billing** and never a confirmation. If Stripe reports the trial ended but the charge has not cleared, the dialog says so instead of claiming success; `/app/billing?activated=1` still confirms for older links
 - [internal] Windows Docker Postgres: `DATABASE_URL` with `localhost` timed out / ECONNRESET (IPv6 `::1`); `getPool` rewrites to `127.0.0.1` on win32, and `.env.example` uses IPv4
 - [internal] Consent Mode default now ships in the document head (`app/layout.tsx`) rather than from `MarketingTags`, which waits on two API calls before rendering — Google Ads flagged the result as “consent mode installation out of order”. The stored banner choice is applied as the default, so a returning visitor who accepted is no longer measured as denied; a `vm` test runs the emitted bootstrap and asserts the signal mapping. The duplicate `consent default` in the client component is gone, since calling it twice is what Google warns about
+- Purchase receipt email: amount and date sit in a bordered receipt box, with clearer spacing around the lockup and Manage billing button
+- [internal] Dropped a leftover `setNameForImportSource` import after memory notes went account-scoped (export was already gone)
+- [internal] Guided chat chrome themes 4, 15, and 19 passed a logo path into `withVoice` and spread a border string as theme keys; outline Voice CTAs now get the right colors
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

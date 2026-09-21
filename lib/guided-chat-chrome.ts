@@ -127,12 +127,7 @@ export const GUIDED_CHAT_CHROMES: GuidedChatChrome[] = [
     "Outline voice",
     "A sage · white fill + sage border",
     `${CIRCLE}/A-white-on-sage-128.png`,
-    withVoice(
-      `${CIRCLE}/A-white-on-sage-128.png`,
-      "#FFFFFF",
-      "#84B067",
-      "1.5px solid #84B067"
-    )
+    withVoice("#FFFFFF", "#84B067", "1.5px solid #84B067")
   ),
   entry(
     5,
@@ -273,25 +268,19 @@ export const GUIDED_CHAT_CHROMES: GuidedChatChrome[] = [
     "Olive quiet",
     "Olive muted · E · outline Voice",
     `${CIRCLE}/E-white-on-olive-128.png`,
-    withVoice(
-      `${CIRCLE}/E-white-on-olive-128.png`,
-      "#FFFFFF",
-      "#948F4E",
-      "1.5px solid #948F4E",
-      {
-        cardBg: "#F6F5EF",
-        agentBg: "#EFEDE3",
-        agentBorder: "color-mix(in srgb, #948F4E 35%, transparent)",
-        userBg: "color-mix(in srgb, #948F4E 22%, #FFFFFF)",
-        userBorder: "#948F4E",
-        userAvatarBg: "#948F4E",
-        userAvatarFg: "#FFFFFF",
-        speak: "#948F4E",
-        chipBorder: "#948F4E",
-        composerBorder: "color-mix(in srgb, #948F4E 45%, transparent)",
-        mic: "#948F4E",
-      }
-    )
+    withVoice("#FFFFFF", "#948F4E", "1.5px solid #948F4E", {
+      cardBg: "#F6F5EF",
+      agentBg: "#EFEDE3",
+      agentBorder: "color-mix(in srgb, #948F4E 35%, transparent)",
+      userBg: "color-mix(in srgb, #948F4E 22%, #FFFFFF)",
+      userBorder: "#948F4E",
+      userAvatarBg: "#948F4E",
+      userAvatarFg: "#FFFFFF",
+      speak: "#948F4E",
+      chipBorder: "#948F4E",
+      composerBorder: "color-mix(in srgb, #948F4E 45%, transparent)",
+      mic: "#948F4E",
+    })
   ),
   entry(
     16,
@@ -360,25 +349,19 @@ export const GUIDED_CHAT_CHROMES: GuidedChatChrome[] = [
     "Soft dual",
     "Gray-mint agent · sage user · A · outline Voice",
     `${CIRCLE}/A-white-on-sage-128.png`,
-    withVoice(
-      `${CIRCLE}/A-white-on-sage-128.png`,
-      "#FFFFFF",
-      "#84B067",
-      "1.5px solid #84B067",
-      {
-        agentBg: "#EEF1EC",
-        agentBorder: "#D2D8CE",
-        userBg: "color-mix(in srgb, #84B067 28%, #FFFFFF)",
-        userBorder: "color-mix(in srgb, #84B067 50%, transparent)",
-        userAvatarBg: "color-mix(in srgb, #84B067 25%, #FFFFFF)",
-        speak: "#6F9A58",
-        chipBorder: "#B5C4AE",
-        chipText: "#3D4129",
-        composerBorder: "#C5CFC0",
-        mic: "#6F7A68",
-        placeholder: "#8A917C",
-      }
-    )
+    withVoice("#FFFFFF", "#84B067", "1.5px solid #84B067", {
+      agentBg: "#EEF1EC",
+      agentBorder: "#D2D8CE",
+      userBg: "color-mix(in srgb, #84B067 28%, #FFFFFF)",
+      userBorder: "color-mix(in srgb, #84B067 50%, transparent)",
+      userAvatarBg: "color-mix(in srgb, #84B067 25%, #FFFFFF)",
+      speak: "#6F9A58",
+      chipBorder: "#B5C4AE",
+      chipText: "#3D4129",
+      composerBorder: "#C5CFC0",
+      mic: "#6F7A68",
+      placeholder: "#8A917C",
+    })
   ),
   entry(
     20,
