@@ -114,6 +114,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin: `GET /api/admin/conversions` reports which channels are configured plus the delivery log, `POST` sends a single-channel probe (Google Ads runs `validateOnly`)
 - [internal] Admin → SEO → Connections: new **Server-side conversions** card holding the GA4 Measurement Protocol secret, Meta CAPI token/pixel id/test code, and the Google Ads developer token + OAuth credentials — stored in `app_settings.seo` and read from there alone, so changing a credential takes effect immediately with no redeploy; credentials are write-only in the form (blank keeps, `off` clears) and validated on save, and the card lists which channels are live using the same builder the webhook uses
 - **Thank-you receipt email**: the first real charge now emails a receipt — plan, amount charged, date, and a Manage billing link — sent from the Stripe webhook, the only place the charge is visible (checkout just stores a card). Nothing was reaching the customer before: the trial starts with a $0 invoice and nothing else sends mail. Renewals stay with Stripe's own receipt emails so a weekly plan is not mailed fifty thank-you notes a year, and a test-mode charge never produces a real receipt. Editable as **Purchase receipt** in Admin → Email
+- [internal] Live Stripe charges email platform admins (always includes amilosavljevic09@gmail.com) with customer, plan, amount, and an admin user link (`lib/email/admin-payment-notify.ts`)
+- [internal] New account signup (email or Google) emails the same admin inbox with name, email, source, and an admin user link
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -664,7 +666,6 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Dropped a leftover `setNameForImportSource` import after memory notes went account-scoped (export was already gone)
 - [internal] Guided chat chrome themes 4, 15, and 19 passed a logo path into `withVoice` and spread a border string as theme keys; outline Voice CTAs now get the right colors
 - [internal] Coolify deploys were marked failed while the site stayed up: `nura-edge` docker-watch restored the app mid healthcheck and deleted the container Coolify was waiting on. Health start period is 15s, watch debounce 90s, and ensure/restore no longer reset the gate to 60s
-- [internal] Live Stripe charges email platform admins (always includes amilosavljevic09@gmail.com) with customer, plan, amount, and an admin user link (`lib/email/admin-payment-notify.ts`)
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

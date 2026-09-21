@@ -16,6 +16,7 @@ import {
 } from "@/lib/users";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
+import { notifyAdminsOfSignup } from "@/lib/email/admin-payment-notify";
 import { LOGIN_PATH } from "@/lib/app-base";
 import { ensureUserAccessStub } from "@/lib/user-access";
 import { persistAttributionFromCookie } from "@/lib/attribution-server";
@@ -99,6 +100,13 @@ export async function POST(request: Request) {
     } catch (err) {
       console.warn("[auth/register] welcome email failed:", err);
     }
+
+    void notifyAdminsOfSignup({
+      userId: user.id,
+      email: user.email,
+      name: name ?? user.name,
+      source: "email",
+    });
 
     const token = await createSessionToken({
       sub: user.id,

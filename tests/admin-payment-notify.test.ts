@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import {
   ADMIN_PAYMENT_NOTIFY_EMAIL,
   buildAdminPaymentNotifyCopy,
+  buildAdminSignupNotifyCopy,
+  signupSourceLabel,
 } from "@/lib/email/admin-payment-notify";
 
 describe("admin payment notify", () => {
@@ -40,5 +42,26 @@ describe("admin payment notify", () => {
     });
     assert.equal(html.includes("<script>"), false);
     assert.match(html, /&lt;script&gt;/);
+  });
+});
+
+describe("admin signup notify", () => {
+  it("labels email and Google sources", () => {
+    assert.equal(signupSourceLabel("email"), "Email");
+    assert.equal(signupSourceLabel("google"), "Google");
+  });
+
+  it("puts the new account in the subject and body", () => {
+    const { subject, text, html } = buildAdminSignupNotifyCopy({
+      customerEmail: "new@example.com",
+      customerName: "Sam",
+      source: "google",
+      adminUserUrl: "https://nurahelp.com/admin/users/u2",
+    });
+    assert.equal(subject, "New account: new@example.com");
+    assert.match(text, /Google/);
+    assert.match(text, /new@example\.com/);
+    assert.match(html, /Google/);
+    assert.match(html, /Open user in admin/);
   });
 });

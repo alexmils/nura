@@ -22,6 +22,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth/session";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
+import { notifyAdminsOfSignup } from "@/lib/email/admin-payment-notify";
 import { getEntitlementForUser } from "@/lib/entitlements";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { ensureUserAccessStub } from "@/lib/user-access";
@@ -110,6 +111,13 @@ async function resolveGoogleUser(
     } catch (err) {
       console.warn("[auth/google/callback] welcome email failed:", err);
     }
+
+    void notifyAdminsOfSignup({
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      source: "google",
+    });
 
     await writeAuditEvent({
       actorUserId: user.id,
