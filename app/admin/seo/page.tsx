@@ -4,7 +4,11 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
-import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
+import {
+  AdminTabs,
+  useAdminTab,
+  type AdminTabDef,
+} from "@/app/components/admin/AdminTabs";
 import { fetchJson } from "@/lib/fetch-json";
 import { BRAND_DOMAIN } from "@/lib/brand";
 import type { SeoAdminView, SeoConfigPatch } from "@/lib/seo-admin-settings";
@@ -63,6 +67,15 @@ function statusClass(status: ConnectionStatus): string {
   if (status === "via_tag_manager") return "admin-seo-status-alt";
   return "admin-seo-status-off";
 }
+
+/** One channel per tab inside the conversions modal. */
+type ConversionTab = "ga4" | "meta" | "google_ads";
+
+const CONVERSION_TABS: AdminTabDef[] = [
+  { id: "ga4", label: "GA4" },
+  { id: "meta", label: "Meta" },
+  { id: "google_ads", label: "Google Ads" },
+];
 
 type ConnId =
   | "gsc"
@@ -256,6 +269,8 @@ function ConnectionConnectModal({
   );
   const [check, setCheck] = useState<SeoConnCheck>({ status: "idle" });
   const [testing, setTesting] = useState(false);
+  /** Which channel the conversions modal is showing. */
+  const [convTab, setConvTab] = useState<ConversionTab>("ga4");
   const titles: Record<ConnId, string> = {
     gsc: "Google Search Console",
     ignore_ips: "Ignored IPs",
@@ -387,8 +402,8 @@ function ConnectionConnectModal({
     >
       <div
         className={`admin-modal${
-          connId === "ga4" || connId === "conversions" ? " admin-modal-wide" : ""
-        }`}
+          connId === "ga4" ? " admin-modal-wide" : ""
+        }${connId === "conversions" ? " admin-modal-conversions" : ""}`}
         role="dialog"
         aria-labelledby="admin-seo-conn-modal-title"
         onClick={(e) => e.stopPropagation()}
@@ -638,206 +653,238 @@ function ConnectionConnectModal({
 
             {connId === "conversions" ? (
               <>
-                <p className="admin-panel-sub">
-                  Reports the first real Stripe charge to GA4, Meta, and Google
-                  Ads. Checkout only saves a card — the money moves days later on
-                  Stripe&apos;s servers, so nothing in the browser can see it.
-                  Saved values take effect immediately, with no redeploy. Leave a
-                  credential blank to keep the stored one, or type off to clear
-                  it.
-                </p>
+                <AdminTabs
+                  tabs={CONVERSION_TABS}
+                  value={convTab}
+                  onChange={(id) => setConvTab(id as ConversionTab)}
+                />
+                <div
+                  className={
+                    convTab === "google_ads"
+                      ? "admin-seo-conv-body admin-seo-conv-body--grid"
+                      : "admin-seo-conv-body"
+                  }
+                >
+                  {convTab === "ga4" ? (
+                    <>
+                      <p className="admin-panel-sub">
+                        Reports the first real charge, days after checkout, when
+                        no browser is present. The measurement ID is not here —
+                        it comes from the Google Analytics card, so the browser
+                        and the server can never disagree.
+                      </p>
+                      <label className="admin-field-label">
+                        Measurement Protocol API secret
+                        {secretHint(seo.hasGa4ApiSecret)}
+                        <input
+                          className="field"
+                          placeholder="GA4 → Admin → Data streams → Measurement Protocol API secrets"
+                          value={draft.ga4ApiSecret}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              ga4ApiSecret: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    </>
+                  ) : null}
 
-                <h3 className="admin-field-label">GA4 · Measurement Protocol</h3>
-                <label className="admin-field-label">
-                  API secret{secretHint(seo.hasGa4ApiSecret)}
-                  <input
-                    className="field"
-                    placeholder="Admin → Data streams → Measurement Protocol API secrets"
-                    value={draft.ga4ApiSecret}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, ga4ApiSecret: e.target.value }))
-                    }
-                  />
-                </label>
-                <p className="admin-panel-sub">
-                  Measurement ID comes from the Google Analytics card — one
-                  source, so the browser and the server always agree.
-                </p>
+                  {convTab === "meta" ? (
+                    <>
+                      <p className="admin-panel-sub">
+                        Sends the charge from the server as well, with a hashed
+                        email and the browser ids, so it matches the pixel event
+                        rather than counting it twice.
+                      </p>
+                      <label className="admin-field-label">
+                        Pixel ID
+                        <input
+                          className="field"
+                          placeholder="1120650977294654"
+                          value={draft.metaPixelId}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              metaPixelId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        Conversions API access token
+                        {secretHint(seo.hasMetaCapiAccessToken)}
+                        <input
+                          className="field"
+                          placeholder="Events Manager → Data sources → Settings → Conversions API"
+                          value={draft.metaCapiAccessToken}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              metaCapiAccessToken: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        Test event code (optional)
+                        <input
+                          className="field"
+                          placeholder="Routes probes to Events Manager → Test Events"
+                          value={draft.metaTestEventCode}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              metaTestEventCode: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    </>
+                  ) : null}
 
-                <h3 className="admin-field-label">Meta · Conversions API</h3>
-                <label className="admin-field-label">
-                  Pixel ID
-                  <input
-                    className="field"
-                    placeholder="1120650977294654"
-                    value={draft.metaPixelId}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({ ...d, metaPixelId: e.target.value }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Access token{secretHint(seo.hasMetaCapiAccessToken)}
-                  <input
-                    className="field"
-                    placeholder="Events Manager → Settings → Conversions API"
-                    value={draft.metaCapiAccessToken}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        metaCapiAccessToken: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Test event code (optional)
-                  <input
-                    className="field"
-                    placeholder="TEST12345"
-                    value={draft.metaTestEventCode}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        metaTestEventCode: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-
-                <h3 className="admin-field-label">Google Ads · offline conversions</h3>
+                  {convTab === "google_ads" ? (
+                    <>
+                      <p className="admin-panel-sub">
+                        The only channel that credits the exact ad click, and the
+                        one that needs the most setup: a developer token, an
+                        OAuth client, and a refresh token minted with the
+                        adwords scope.
+                      </p>
+                      <label className="admin-field-label">
+                        Customer ID
+                        <input
+                          className="field"
+                          placeholder="352-258-1611"
+                          value={draft.googleAdsCustomerId}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsCustomerId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        Conversion action ID
+                        <input
+                          className="field"
+                          placeholder="123456789"
+                          value={draft.googleAdsConversionActionId}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsConversionActionId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        Developer token
+                        {secretHint(seo.hasGoogleAdsDeveloperToken)}
+                        <input
+                          className="field"
+                          placeholder="Ads → Tools → API Center"
+                          value={draft.googleAdsDeveloperToken}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsDeveloperToken: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        Manager account ID (optional)
+                        <input
+                          className="field"
+                          placeholder="Only when the action lives under an MCC"
+                          value={draft.googleAdsLoginCustomerId}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsLoginCustomerId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        OAuth client ID
+                        <input
+                          className="field"
+                          value={draft.googleAdsOAuthClientId}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsOAuthClientId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        OAuth client secret
+                        {secretHint(seo.hasGoogleAdsOAuthClientSecret)}
+                        <input
+                          className="field"
+                          value={draft.googleAdsOAuthClientSecret}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsOAuthClientSecret: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        OAuth refresh token
+                        {secretHint(seo.hasGoogleAdsOAuthRefreshToken)}
+                        <input
+                          className="field"
+                          placeholder="Scope: .../auth/adwords"
+                          value={draft.googleAdsOAuthRefreshToken}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsOAuthRefreshToken: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                      <label className="admin-field-label">
+                        API version (optional)
+                        <input
+                          className="field"
+                          placeholder="v21"
+                          value={draft.googleAdsApiVersion}
+                          disabled={busy}
+                          onChange={(e) =>
+                            setDraft((d) => ({
+                              ...d,
+                              googleAdsApiVersion: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+                    </>
+                  ) : null}
+                </div>
                 <p className="admin-panel-sub">
-                  The only channel that credits the exact click. Needs a
-                  developer token, an OAuth client, and a refresh token with the
-                  adwords scope.
-                </p>
-                <label className="admin-field-label">
-                  Customer ID
-                  <input
-                    className="field"
-                    placeholder="352-258-1611"
-                    value={draft.googleAdsCustomerId}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsCustomerId: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Conversion action ID
-                  <input
-                    className="field"
-                    placeholder="123456789"
-                    value={draft.googleAdsConversionActionId}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsConversionActionId: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Developer token{secretHint(seo.hasGoogleAdsDeveloperToken)}
-                  <input
-                    className="field"
-                    value={draft.googleAdsDeveloperToken}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsDeveloperToken: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Manager account ID (optional)
-                  <input
-                    className="field"
-                    placeholder="Only when the action lives under an MCC"
-                    value={draft.googleAdsLoginCustomerId}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsLoginCustomerId: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  OAuth client ID
-                  <input
-                    className="field"
-                    value={draft.googleAdsOAuthClientId}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsOAuthClientId: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  OAuth client secret{secretHint(seo.hasGoogleAdsOAuthClientSecret)}
-                  <input
-                    className="field"
-                    value={draft.googleAdsOAuthClientSecret}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsOAuthClientSecret: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  OAuth refresh token{secretHint(seo.hasGoogleAdsOAuthRefreshToken)}
-                  <input
-                    className="field"
-                    value={draft.googleAdsOAuthRefreshToken}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsOAuthRefreshToken: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  API version (optional)
-                  <input
-                    className="field"
-                    placeholder="v21"
-                    value={draft.googleAdsApiVersion}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setDraft((d) => ({
-                        ...d,
-                        googleAdsApiVersion: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <p className="admin-panel-sub">
-                  Verify setup at any time: GET /api/admin/conversions lists what
-                  parsed and the recent delivery log, POST it with{" "}
-                  <span className="admin-seo-mono">
-                    {`{"channel":"ga4"}`}
-                  </span>{" "}
-                  to send one probe.
+                  Blank keeps the stored value; type off to clear it. Verify any
+                  time — GET /api/admin/conversions lists what parsed, POST it{" "}
+                  <span className="admin-seo-mono">{`{"channel":"ga4"}`}</span> to
+                  send one probe.
                 </p>
               </>
             ) : null}

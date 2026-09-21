@@ -11223,6 +11223,55 @@ a.help-drawer-signin.btn-primary {
   max-width: 36rem;
 }
 
+/*
+ * Server-side conversions: one channel per tab, so the twelve fields never all
+ * stand in a single column. The body scrolls if a tab ever outgrows the
+ * viewport and the actions stay put.
+ */
+.admin-modal-conversions {
+  max-width: 40rem;
+  max-height: min(90dvh, 48rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal-conversions > .admin-form-stack {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.admin-modal-conversions .admin-modal-actions {
+  flex-shrink: 0;
+}
+
+.admin-seo-conv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.35rem;
+}
+
+/* The Google Ads tab is the long one — two columns keep it to four rows. */
+.admin-seo-conv-body--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.85rem 1.1rem;
+}
+
+.admin-seo-conv-body--grid > p {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .admin-modal-conversions {
+    max-height: 92dvh;
+  }
+}
+
 .admin-seo-status-ok {
   font-size: var(--ui-caption);
   color: var(--earth, #84b067);
