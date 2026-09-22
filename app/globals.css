@@ -4227,6 +4227,19 @@ body:has(.app-shell.session-immersive) .help-fab {
   color: var(--text);
 }
 
+.settings-mem-source {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--paper, #edf9ed) 70%, transparent);
+}
+
 .settings-muted {
   margin: 0;
   font-size: var(--settings-muted);

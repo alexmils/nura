@@ -342,8 +342,8 @@ function SettingsPageContent() {
               <div className="settings-row">
                 <p className="settings-lead">
                   Notes here are account-wide. Every AI agent-guided session can
-                  use them. Intake history is saved separately and is not listed
-                  here.
+                  use them. Closed sessions may add short notes automatically.
+                  Intake history is saved separately and is not listed here.
                 </p>
               </div>
 
@@ -407,8 +407,9 @@ function SettingsPageContent() {
                 </button>
                 {memories.length === 0 && (
                   <p className="settings-help">
-                    No notes yet. Add a title and a short note, or import from
-                    ChatGPT or Claude above.
+                    No notes yet. Add one here, import from ChatGPT or Claude, or
+                    close an AI agent-guided session to save short notes for next
+                    time.
                   </p>
                 )}
                 {memories.map((m) => (
@@ -473,7 +474,15 @@ function SettingsPageContent() {
                       </div>
                     ) : (
                       <>
-                        <p className="settings-body-text">{m.title}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="settings-body-text">{m.title}</p>
+                          {m.source === "session" && (
+                            <span className="settings-mem-source">From session</span>
+                          )}
+                          {m.source === "import" && (
+                            <span className="settings-mem-source">Imported</span>
+                          )}
+                        </div>
                         <p className="mt-0.5 line-clamp-1 settings-help">
                           {m.body}
                         </p>

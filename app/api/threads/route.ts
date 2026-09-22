@@ -8,11 +8,44 @@ import {
   pruneEmptyThreads,
   listMessages,
 } from "@/lib/db";
-import { withAuth } from "@/lib/api-auth";
+import { withAuth, type AuthContext } from "@/lib/api-auth";
 import { isChoosableSessionMode } from "@/lib/session-mode";
 import { consumeGuidedSessionIfNeeded, TrialLimitError } from "@/lib/trial-usage";
 import { getEntitlementForUser, publicEntitlement } from "@/lib/entitlements";
 import { hasRequiredConsents } from "@/lib/consents";
+import { getPlatformSettings } from "@/lib/platform-settings";
+import {
+  scheduleSessionMemoryExtract,
+  shouldScheduleMemoryExtract,
+} from "@/lib/memory-extract";
+import type { Thread } from "@/lib/types";
+
+function maybeScheduleMemoryExtract(opts: {
+  ctx: AuthContext;
+  before: Thread;
+  after: Thread | null;
+  memoryEnabled: boolean;
+}) {
+  if (!opts.after) return;
+  if (
+    !shouldScheduleMemoryExtract({
+      memoryFlagEnabled: opts.memoryEnabled,
+      mode: opts.after.mode,
+      previousPhase: opts.before.phase,
+      previousIncomplete: opts.before.incomplete,
+      nextPhase: opts.after.phase,
+      nextIncomplete: opts.after.incomplete,
+      alreadyExtracted: Boolean(opts.before.memoryExtractedAt),
+    })
+  ) {
+    return;
+  }
+  scheduleSessionMemoryExtract({
+    userId: opts.ctx.user.id,
+    role: opts.ctx.user.role,
+    threadId: opts.after.id,
+  });
+}
 
 export async function GET(request: Request) {
   return withAuth(async () => {
@@ -79,6 +112,14 @@ export async function POST(request: Request) {
         );
       }
 
+      const before = await getThread(body.id);
+      if (!before) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
+
+      const platform = await getPlatformSettings();
+      const memoryEnabled = platform.flags.memory !== false;
+
       if (patch.mode !== undefined) {
         if (ctx.user.role === "user") {
           const ok = await hasRequiredConsents(ctx.user.id);
@@ -92,20 +133,22 @@ export async function POST(request: Request) {
             );
           }
         }
-        const existing = await getThread(body.id);
-        if (!existing) {
-          return NextResponse.json({ error: "Not found" }, { status: 404 });
-        }
         try {
           const nextEntitlement = await consumeGuidedSessionIfNeeded({
             userId: ctx.user.id,
             role: ctx.user.role,
             onboardingCompletedAt: ctx.user.onboardingCompletedAt,
             threadId: body.id,
-            previousMode: existing.mode,
+            previousMode: before.mode,
             nextMode: patch.mode,
           });
           const thread = await updateThread(body.id, patch);
+          maybeScheduleMemoryExtract({
+            ctx,
+            before,
+            after: thread,
+            memoryEnabled,
+          });
           return NextResponse.json({
             thread,
             entitlement: publicEntitlement(nextEntitlement),
@@ -126,6 +169,12 @@ export async function POST(request: Request) {
       }
 
       const thread = await updateThread(body.id, patch);
+      maybeScheduleMemoryExtract({
+        ctx,
+        before,
+        after: thread,
+        memoryEnabled,
+      });
       return NextResponse.json({ thread });
     }
     if (body.action === "delete" && body.id) {

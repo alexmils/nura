@@ -449,7 +449,9 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS agent_language TEXT;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS set_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS last_set_outcome TEXT;
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS memory_extracted_at TIMESTAMPTZ;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
+    ALTER TABLE memories ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user';
   `);
 
   await db.query(`
@@ -531,8 +533,26 @@ function rowToThread(row: QueryResultRow): Thread {
         ? (row.last_set_outcome as Thread["lastSetOutcome"])
         : undefined,
     incomplete: Boolean(row.incomplete),
+    memoryExtractedAt: row.memory_extracted_at
+      ? new Date(row.memory_extracted_at as string).toISOString()
+      : undefined,
     createdAt: new Date(row.created_at as string).toISOString(),
     updatedAt: new Date(row.updated_at as string).toISOString(),
+  };
+}
+
+function rowToMemory(row: QueryResultRow): Memory {
+  const rawSource = row.source as string | undefined;
+  const source: Memory["source"] =
+    rawSource === "session" || rawSource === "import" || rawSource === "user"
+      ? rawSource
+      : "user";
+  return {
+    id: row.id as string,
+    title: row.title as string,
+    body: row.body as string,
+    source,
+    createdAt: new Date(row.created_at as string).toISOString(),
   };
 }
 
@@ -854,35 +874,37 @@ export async function listMemories(): Promise<Memory[]> {
     "SELECT * FROM memories WHERE user_id = $1 ORDER BY created_at DESC",
     [userId]
   );
-  return rows.map((r) => ({
-    id: r.id as string,
-    title: r.title as string,
-    body: r.body as string,
-    createdAt: new Date(r.created_at as string).toISOString(),
-  }));
+  return rows.map(rowToMemory);
 }
 
-export async function createMemory(title: string, body: string): Promise<Memory> {
+export async function createMemory(
+  title: string,
+  body: string,
+  opts?: { source?: Memory["source"] }
+): Promise<Memory> {
   const { userId } = getRlsContext();
+  const source = opts?.source ?? "user";
   const m: Memory = {
     id: crypto.randomUUID(),
     title,
     body,
+    source,
     createdAt: new Date().toISOString(),
   };
   await dbQuery(
-    "INSERT INTO memories (id, user_id, title, body, created_at) VALUES ($1, $2, $3, $4, $5)",
-    [m.id, userId, m.title, m.body, m.createdAt]
+    "INSERT INTO memories (id, user_id, title, body, source, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+    [m.id, userId, m.title, m.body, m.source, m.createdAt]
   );
   return m;
 }
 
 export async function createMemories(
-  notes: { title: string; body: string }[]
+  notes: { title: string; body: string }[],
+  opts?: { source?: Memory["source"] }
 ): Promise<Memory[]> {
   const created: Memory[] = [];
   for (const note of notes) {
-    created.push(await createMemory(note.title, note.body));
+    created.push(await createMemory(note.title, note.body, opts));
   }
   return created;
 }
@@ -895,17 +917,12 @@ export async function updateMemory(
   const { userId } = getRlsContext();
   const { rows } = await dbQuery(
     `UPDATE memories SET title = $1, body = $2 WHERE id = $3 AND user_id = $4
-     RETURNING id, title, body, created_at`,
+     RETURNING id, title, body, source, created_at`,
     [title, body, id, userId]
   );
   const r = rows[0];
   if (!r) return null;
-  return {
-    id: r.id as string,
-    title: r.title as string,
-    body: r.body as string,
-    createdAt: new Date(r.created_at as string).toISOString(),
-  };
+  return rowToMemory(r);
 }
 
 export async function deleteMemory(id: string): Promise<boolean> {
@@ -939,4 +956,40 @@ export async function getAccountMemoryContext(): Promise<string> {
   if (!rows.length) return "";
   const lines = rows.map((row) => `- ${row.title}: ${row.body}`);
   return formatMemoryContext(lines);
+}
+
+/**
+ * Atomically claim guided-closure memory extract for a thread.
+ * Returns false if already claimed or thread missing / not owned.
+ */
+export async function claimThreadMemoryExtract(
+  threadId: string
+): Promise<boolean> {
+  const { userId } = getRlsContext();
+  const { rows } = await dbQuery<{ id: string }>(
+    `UPDATE threads
+     SET memory_extracted_at = NOW()
+     WHERE id = $1
+       AND user_id = $2
+       AND memory_extracted_at IS NULL
+     RETURNING id`,
+    [threadId, userId]
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Clear claim so a failed extract can retry while the thread stays in proper
+ * closure (schedule gate uses alreadyExtracted / claim, not transition-only).
+ */
+export async function clearThreadMemoryExtractClaim(
+  threadId: string
+): Promise<void> {
+  const { userId } = getRlsContext();
+  await dbQuery(
+    `UPDATE threads
+     SET memory_extracted_at = NULL
+     WHERE id = $1 AND user_id = $2`,
+    [threadId, userId]
+  );
 }

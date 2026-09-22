@@ -63,6 +63,11 @@ export interface Thread {
    */
   lastSetOutcome?: "completed" | "stopped";
   incomplete: boolean;
+  /**
+   * Set when account memory was extracted after guided closure.
+   * Server-only for idempotency; may be omitted in older clients.
+   */
+  memoryExtractedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,10 +80,15 @@ export interface Message {
   createdAt: string;
 }
 
+/** How a memory note was created. */
+export type MemorySource = "user" | "session" | "import";
+
 export interface Memory {
   id: string;
   title: string;
   body: string;
+  /** user = Settings form; session = closed guided extract; import = ChatGPT/Claude. */
+  source: MemorySource;
   createdAt: string;
 }
 

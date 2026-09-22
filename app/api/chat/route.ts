@@ -39,6 +39,10 @@ import {
 } from "@/lib/session-interpreter";
 import { withAuth } from "@/lib/api-auth";
 import { getRlsContext } from "@/lib/rls";
+import {
+  scheduleSessionMemoryExtract,
+  shouldScheduleMemoryExtract,
+} from "@/lib/memory-extract";
 
 async function runInterpreter(opts: {
   settings: Awaited<ReturnType<typeof getLlmRuntimeConfig>>;
@@ -287,6 +291,25 @@ export async function POST(request: Request) {
           }
         }
       }
+    }
+
+    if (
+      shouldScheduleMemoryExtract({
+        memoryFlagEnabled: platform.flags.memory !== false,
+        mode: workingThread.mode,
+        previousPhase: thread.phase,
+        previousIncomplete: thread.incomplete,
+        nextPhase: workingThread.phase,
+        nextIncomplete: workingThread.incomplete,
+        alreadyExtracted: Boolean(thread.memoryExtractedAt),
+      })
+    ) {
+      const rls = getRlsContext();
+      scheduleSessionMemoryExtract({
+        userId: rls.userId,
+        role: rls.role,
+        threadId,
+      });
     }
 
     const freshProfile =

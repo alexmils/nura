@@ -116,6 +116,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Thank-you receipt email**: the first real charge now emails a receipt — plan, amount charged, date, and a Manage billing link — sent from the Stripe webhook, the only place the charge is visible (checkout just stores a card). Nothing was reaching the customer before: the trial starts with a $0 invoice and nothing else sends mail. Renewals stay with Stripe's own receipt emails so a weekly plan is not mailed fifty thank-you notes a year, and a test-mode charge never produces a real receipt. Editable as **Purchase receipt** in Admin → Email
 - [internal] Live Stripe charges email platform admins (always includes amilosavljevic09@gmail.com) with customer, plan, amount, and an admin user link (`lib/email/admin-payment-notify.ts`)
 - [internal] New account signup (email or Google) emails the same admin inbox with name, email, source, and an admin user link
+- Closed AI agent-guided sessions can save short notes for next time
+- [internal] Session memory extract on guided closure (`lib/memory-extract.ts`): `memories.source`, `threads.memory_extracted_at`, fire-and-forget from `/api/threads` + `/api/chat`
+- [internal] Memory extract: retry after LLM failure while still closed; empty transcripts claim without looping; defer schedule past request txn
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

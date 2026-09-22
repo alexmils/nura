@@ -35,6 +35,14 @@ describe("memories queries are tenant-scoped", () => {
     ["updateMemory", /UPDATE memories SET title = \$1, body = \$2 WHERE id = \$3 AND user_id = \$4/],
     ["deleteMemory", /DELETE FROM memories WHERE id = \$1 AND user_id = \$2/],
     ["clearMemories", /DELETE FROM memories WHERE user_id = \$1/],
+    [
+      "claimThreadMemoryExtract",
+      /UPDATE threads[\s\S]*WHERE id = \$1[\s\S]*AND user_id = \$2/,
+    ],
+    [
+      "clearThreadMemoryExtractClaim",
+      /UPDATE threads[\s\S]*WHERE id = \$1 AND user_id = \$2/,
+    ],
   ];
 
   for (const [name, pattern] of scoped) {
@@ -45,7 +53,14 @@ describe("memories queries are tenant-scoped", () => {
 
   it("no memories statement can run unfiltered", () => {
     // A quote right after the table name means no WHERE clause followed.
-    assert.doesNotMatch(dbSource, /(SELECT|DELETE) FROM memories["`]/);
+    assert.doesNotMatch(dbSource, /(SELECT|DELETE) FROM memories["`']/);
+  });
+
+  it("createMemory inserts with source and user_id", () => {
+    assert.match(
+      functionBody(dbSource, "createMemory"),
+      /INSERT INTO memories \(id, user_id, title, body, source, created_at\)/
+    );
   });
 });
 
@@ -94,5 +109,30 @@ describe("memory API surface", () => {
   it("threads no longer accepts set_memory", () => {
     assert.doesNotMatch(threadsRoute, /set_memory/);
     assert.doesNotMatch(threadsRoute, /memorySets/);
+  });
+
+  it("threads schedules session memory extract on guided closure", () => {
+    assert.match(threadsRoute, /shouldScheduleMemoryExtract/);
+    assert.match(threadsRoute, /scheduleSessionMemoryExtract/);
+  });
+});
+
+describe("session memory extract wiring", () => {
+  const chatRoute = readFileSync(join(root, "app/api/chat/route.ts"), "utf8");
+
+  it("chat schedules extract when phase advances to closure", () => {
+    assert.match(chatRoute, /shouldScheduleMemoryExtract/);
+    assert.match(chatRoute, /scheduleSessionMemoryExtract/);
+  });
+
+  it("schema adds memories.source and threads.memory_extracted_at", () => {
+    assert.match(
+      dbSource,
+      /ALTER TABLE memories ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user'/
+    );
+    assert.match(
+      dbSource,
+      /ALTER TABLE threads ADD COLUMN IF NOT EXISTS memory_extracted_at TIMESTAMPTZ/
+    );
   });
 });

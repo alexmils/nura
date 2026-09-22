@@ -122,7 +122,7 @@ export async function POST(request: Request) {
       if (!notes.length) {
         return NextResponse.json({ error: "No notes to import" }, { status: 400 });
       }
-      const created = await createMemories(notes);
+      const created = await createMemories(notes, { source: "import" });
       return NextResponse.json({
         imported: created.length,
         memories: await listMemories(),

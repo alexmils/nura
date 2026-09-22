@@ -5,7 +5,8 @@ export type LlmUsagePurpose =
   | "guided_chat"
   | "interpreter"
   | "help"
-  | "voice";
+  | "voice"
+  | "memory_extract";
 
 export type LlmUsageTotals = {
   callCount: number;
