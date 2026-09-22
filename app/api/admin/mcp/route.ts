@@ -51,6 +51,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     action?: string;
     patch?: McpConfigPatch;
+    name?: string;
   };
   const settings = await getPlatformSettings();
   let mcp: PlatformMcpConfig = settings.mcp;
@@ -58,7 +59,19 @@ export async function POST(request: Request) {
 
   switch (body.action) {
     case "generate": {
-      const generated = withGeneratedToken(mcp);
+      const name =
+        typeof body.name === "string"
+          ? body.name
+          : typeof body.patch?.tokenName === "string"
+            ? body.patch.tokenName
+            : "";
+      if (!name.trim()) {
+        return NextResponse.json(
+          { error: "Name is required" },
+          { status: 400 }
+        );
+      }
+      const generated = withGeneratedToken(mcp, { name });
       mcp = generated.config;
       issuedToken = generated.token;
       break;
@@ -85,7 +98,12 @@ export async function POST(request: Request) {
         : body.action === "revoke"
           ? "mcp.token_revoked"
           : "mcp.settings_updated",
-    detail: { source: "admin", enabled: mcp.enabled, hint: mcp.tokenHint },
+    detail: {
+      source: "admin",
+      enabled: mcp.enabled,
+      hint: mcp.tokenHint,
+      name: mcp.tokenName,
+    },
     ip: clientIp(request),
   });
 

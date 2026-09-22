@@ -7749,16 +7749,464 @@ body:has(.app-shell.session-immersive) .help-fab {
   background: var(--bg-muted, rgba(0, 0, 0, 0.04));
 }
 
-/* Wrapping config block on Admin → MCP (token snippet to paste). */
-.admin-mcp-pre {
-  display: block;
-  margin: 0.5rem 0 0;
-  padding: 0.85rem 1rem;
+/* —— Admin → MCP (Hubcast-style token console) —— */
+.admin-mcp-header .admin-mcp-header-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-mcp-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-mcp-banner {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  font-size: var(--ui-muted);
+  line-height: 1.4;
+  color: var(--accent);
+  background: var(--accent-subtle, rgba(132, 176, 103, 0.12));
+}
+
+.admin-mcp-banner.is-error {
+  color: var(--destructive);
+  background: rgba(185, 28, 28, 0.08);
+  border-color: rgba(185, 28, 28, 0.28);
+}
+
+.admin-mcp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.admin-mcp-section-head-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-mcp-section-title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--ui-headline);
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.admin-mcp-section-sub {
+  margin: 0;
+  font-size: var(--ui-muted);
+  line-height: 1.45;
+  color: var(--text-secondary);
+  max-width: 40rem;
+}
+
+.admin-mcp-table-wrap {
   overflow-x: auto;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elevated);
+}
+
+.admin-mcp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ui-body);
+}
+
+.admin-mcp-table th,
+.admin-mcp-table td {
+  text-align: left;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.admin-mcp-table thead th {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--bg-muted) 70%, transparent);
+}
+
+.admin-mcp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-mcp-name {
+  font-weight: 600;
+}
+
+.admin-mcp-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8125rem;
-  line-height: 1.5;
-  white-space: pre;
+  color: var(--text-secondary);
+}
+
+.admin-mcp-muted {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.admin-mcp-source-hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-mcp-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 1.75rem 0.9rem !important;
+}
+
+.admin-mcp-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-mcp-actions .admin-mcp-link + .admin-mcp-link {
+  margin-left: 0.85rem;
+}
+
+.admin-mcp-link {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.admin-mcp-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.admin-mcp-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.admin-mcp-link.is-danger {
+  color: var(--destructive);
+}
+
+.admin-mcp-tokens-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+}
+
+.admin-mcp-wizard-step {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.admin-mcp-wizard-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-width: 26rem;
+}
+
+.admin-mcp-wizard-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.admin-mcp-wizard-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--destructive);
+}
+
+.admin-mcp-create {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elevated);
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.admin-mcp-create-hint {
+  margin: 0;
+  font-size: var(--ui-muted);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.admin-mcp-create .btn-primary {
+  margin-top: 0;
+  flex-shrink: 0;
+}
+
+.admin-mcp-create-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+  width: 100%;
+}
+
+.admin-mcp-name-field {
+  flex: 1 1 14rem;
+  max-width: 22rem;
+  min-width: 12rem;
+}
+
+.admin-mcp-name-field .field {
+  width: 100%;
+  min-width: 12rem;
+  background: var(--bg);
+}
+
+.admin-mcp-info-pop p + p {
+  margin-top: 0.55rem;
+}
+
+.admin-mcp-note {
+  margin: 0.35rem 0 0;
+  font-size: var(--ui-caption);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.admin-mcp-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.admin-mcp-endpoint {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-mcp-endpoint:last-child {
+  border-bottom: none;
+}
+
+.admin-mcp-endpoint-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.admin-mcp-endpoint-url {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--accent-subtle, rgba(164, 237, 165, 0.28));
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 4px;
+  padding: 0.35rem 0.55rem;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.admin-mcp-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+}
+
+.admin-mcp-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.admin-mcp-meta-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.admin-mcp-meta-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.admin-mcp-info {
+  position: relative;
+  display: inline-flex;
+}
+
+.admin-mcp-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.admin-mcp-info-btn:hover,
+.admin-mcp-info-btn[aria-expanded="true"] {
+  color: var(--accent);
+  background: var(--accent-subtle, rgba(132, 176, 103, 0.15));
+}
+
+.admin-mcp-info-pop {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  z-index: 40;
+  width: min(22rem, 80vw);
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-elevated);
+  box-shadow: 0 8px 24px rgba(42, 48, 32, 0.12);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.admin-mcp-info-pop p {
+  margin: 0;
+}
+
+.admin-mcp-info-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.admin-mcp-info-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-mcp-info-list code,
+.admin-mcp-info-list strong {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.admin-mcp-info-list strong {
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+}
+
+.admin-mcp-secret-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.admin-mcp-secret-modal .admin-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.admin-mcp-secret-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.admin-mcp-secret-input {
+  flex: 1;
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+}
+
+.admin-mcp-secret-json {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 10rem;
+}
+
+.admin-mcp-secret-modal .btn-secondary {
+  align-self: flex-start;
+}
+
+@media (max-width: 720px) {
+  .admin-mcp-endpoint {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .admin-mcp-endpoint .admin-mcp-link {
+    justify-self: start;
+  }
+
+  .admin-mcp-actions {
+    text-align: left;
+    white-space: normal;
+  }
+
+  .admin-mcp-actions .admin-mcp-link {
+    display: inline-block;
+    margin: 0.2rem 0.75rem 0.2rem 0;
+  }
+
+  .admin-mcp-actions .admin-mcp-link + .admin-mcp-link {
+    margin-left: 0;
+  }
+
+  .admin-mcp-secret-row {
+    flex-direction: column;
+  }
+
+  .admin-mcp-info-pop {
+    left: auto;
+    right: 0;
+  }
 }
 
 .admin-kv-list {

@@ -23,6 +23,8 @@ export type PlatformMcpConfig = {
   tokenHash: string;
   /** Leading characters of the token, for display only (e.g. `nura_mcp_c37`). */
   tokenHint: string;
+  /** Operator label for the token (e.g. `blog-agent`). */
+  tokenName: string;
   /** ISO timestamp of the last authenticated call, or "". */
   lastUsedAt: string;
   /** Off makes every request unauthorized without losing the token. */
@@ -32,9 +34,18 @@ export type PlatformMcpConfig = {
 export const DEFAULT_PLATFORM_MCP: PlatformMcpConfig = {
   tokenHash: "",
   tokenHint: "",
+  tokenName: "",
   lastUsedAt: "",
   enabled: true,
 };
+
+export const MCP_TOKEN_NAME_MAX = 64;
+
+/** Trim and clamp a token label. Empty string if nothing usable. */
+export function normalizeMcpTokenName(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim().slice(0, MCP_TOKEN_NAME_MAX);
+}
 
 /** New random token. `nura_mcp_` + 40 hex chars. */
 export function generateMcpToken(): string {
@@ -70,6 +81,7 @@ export function normalizeMcpConfig(raw: unknown): PlatformMcpConfig {
       typeof r.tokenHint === "string"
         ? r.tokenHint.trim().slice(0, MCP_TOKEN_PREFIX.length + 8)
         : "",
+    tokenName: normalizeMcpTokenName(r.tokenName),
     lastUsedAt: Number.isNaN(Date.parse(lastUsedAt)) ? "" : lastUsedAt,
     enabled: r.enabled !== false,
   };
@@ -80,6 +92,7 @@ export type McpAdminView = {
   enabled: boolean;
   hasToken: boolean;
   tokenHint: string;
+  tokenName: string;
   lastUsedAt: string;
   /** Where the working token comes from right now. */
   source: "database" | "env" | "none";
@@ -98,6 +111,7 @@ export function toMcpAdminView(
     enabled: config.enabled,
     hasToken,
     tokenHint: config.tokenHint,
+    tokenName: config.tokenName,
     lastUsedAt: config.lastUsedAt,
     source: hasToken ? "database" : opts.envTokenSet ? "env" : "none",
     envTokenIgnored: hasToken && opts.envTokenSet,
@@ -108,30 +122,41 @@ export function toMcpAdminView(
 
 export type McpConfigPatch = {
   enabled?: boolean;
+  tokenName?: string;
 };
 
-/** Apply the enable/disable toggle. Token changes go through generate/revoke. */
+/** Apply enable/disable and optional rename. Token secrets go through generate/revoke. */
 export function mergeMcpConfigPatch(
   current: PlatformMcpConfig,
   patch: McpConfigPatch | undefined
 ): PlatformMcpConfig {
   if (!patch || typeof patch !== "object") return current;
+  const nextName =
+    patch.tokenName === undefined
+      ? current.tokenName
+      : normalizeMcpTokenName(patch.tokenName);
   return {
     ...current,
     enabled: patch.enabled === undefined ? current.enabled : patch.enabled === true,
+    tokenName: nextName || current.tokenName,
   };
 }
 
 /** Config with a freshly generated token: hash stored, plaintext returned once. */
 export function withGeneratedToken(
   current: PlatformMcpConfig,
-  now = new Date().toISOString()
+  opts?: { name?: string }
 ): { config: PlatformMcpConfig; token: string } {
   const token = generateMcpToken();
+  const tokenName =
+    normalizeMcpTokenName(opts?.name) ||
+    current.tokenName ||
+    "Blog agent";
   return {
     config: {
       tokenHash: hashMcpToken(token),
       tokenHint: mcpTokenHint(token),
+      tokenName,
       lastUsedAt: "",
       // Generating a token implies you want it usable.
       enabled: true,
@@ -143,7 +168,13 @@ export function withGeneratedToken(
 export function withRevokedToken(
   current: PlatformMcpConfig
 ): PlatformMcpConfig {
-  return { ...current, tokenHash: "", tokenHint: "", lastUsedAt: "" };
+  return {
+    ...current,
+    tokenHash: "",
+    tokenHint: "",
+    tokenName: "",
+    lastUsedAt: "",
+  };
 }
 
 /** `~/.cursor/mcp.json` entry, ready to paste. */

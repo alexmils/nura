@@ -61,6 +61,7 @@ describe("mcp config", () => {
     assert.equal(bad.tokenHash, "");
     assert.equal(bad.lastUsedAt, "");
     assert.equal(bad.tokenHint, "");
+    assert.equal(bad.tokenName, "");
     assert.equal(bad.enabled, true);
   });
 
@@ -78,41 +79,67 @@ describe("mcp config", () => {
   });
 
   it("generate stores only a hash and returns the plaintext once", () => {
-    const { config, token } = withGeneratedToken(DEFAULT_PLATFORM_MCP);
+    const { config, token } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "blog-agent",
+    });
     assert.equal(config.tokenHash, hashMcpToken(token));
     assert.equal(config.tokenHint, mcpTokenHint(token));
+    assert.equal(config.tokenName, "blog-agent");
     assert.equal(config.enabled, true);
     assert.equal(config.lastUsedAt, "");
     // The stored config must not contain the token itself.
     assert.equal(JSON.stringify(config).includes(token), false);
   });
 
-  it("revoke clears the hash, hint, and usage", () => {
-    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP);
+  it("generate requires a usable name and keeps one on rotate", () => {
+    const first = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "  nura-blog  ",
+    });
+    assert.equal(first.config.tokenName, "nura-blog");
+    const rotated = withGeneratedToken(first.config, { name: "" });
+    assert.equal(rotated.config.tokenName, "nura-blog");
+    const renamed = withGeneratedToken(first.config, { name: "cursor" });
+    assert.equal(renamed.config.tokenName, "cursor");
+  });
+
+  it("revoke clears the hash, hint, name, and usage", () => {
+    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "blog-agent",
+    });
     const revoked = withRevokedToken(config);
     assert.equal(revoked.tokenHash, "");
     assert.equal(revoked.tokenHint, "");
+    assert.equal(revoked.tokenName, "");
     assert.equal(revoked.lastUsedAt, "");
   });
 
-  it("merges only the enabled toggle", () => {
-    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP);
+  it("merges the enabled toggle and optional rename", () => {
+    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "blog-agent",
+    });
     assert.equal(mergeMcpConfigPatch(config, undefined), config);
     assert.equal(mergeMcpConfigPatch(config, {}).tokenHash, config.tokenHash);
     assert.equal(mergeMcpConfigPatch(config, { enabled: false }).enabled, false);
     // tokenHash survives a toggle.
     assert.equal(mergeMcpConfigPatch(config, { enabled: false }).tokenHash, config.tokenHash);
     assert.equal(mergeMcpConfigPatch(config, { enabled: true }).enabled, true);
+    assert.equal(
+      mergeMcpConfigPatch(config, { tokenName: "cursor-agent" }).tokenName,
+      "cursor-agent"
+    );
   });
 
   it("never exposes the hash in the admin view", () => {
-    const { config, token } = withGeneratedToken(DEFAULT_PLATFORM_MCP);
+    const { config, token } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "blog-agent",
+    });
     const view = toMcpAdminView(config, {
       envTokenSet: false,
       localUrl: "http://localhost:3471",
       publicUrl: "https://nurahelp.com",
     });
     assert.equal(view.hasToken, true);
+    assert.equal(view.tokenName, "blog-agent");
     assert.equal(view.source, "database");
     assert.equal(view.envTokenIgnored, false);
     assert.equal(view.localUrl, "http://localhost:3471/api/mcp");

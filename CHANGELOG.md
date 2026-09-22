@@ -360,6 +360,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Emails open with the real Nura lockup instead of a plain-text “Nura”, linked to the site, in **every** template (welcome, invite, reset, password changed, account deleted, purchase receipt). `alt` carries the name so a client with images blocked still shows the sender, and the header falls back to the wordmark if no origin is known
 - One support address everywhere: **support@nurahelp.com** (`BRAND_SUPPORT_EMAIL`) replaces `hello@nurahelp.com` on the support, about, and editorial pages and in structured data, the `support@example.com` placeholders in the template previews and admin test send, and the `hi@contact.nurahelp.com` fallbacks. Reply-To defaults to it, so replying to a receipt reaches the support inbox instead of an unmonitored sender address
 - [internal] `isEmailConfigEmpty` no longer counts `replyTo` as a delivery credential — it is optional presentation, and with the new default it would have made every config look non-empty, silently switching off the `.env` → DB bootstrap for Brevo/Gmail
+- [internal] Admin → MCP restyled like Hubcast token console: status KPIs, bordered token table with Rotate/Disable/Revoke links, endpoint copy row, tool grid, rules list, and a Copy now modal
+- [internal] Admin → MCP tightened: token list + Create token panel with Generate button; tools/rules/about text behind (i) tips instead of long page copy
+- [internal] Admin → MCP: name the token when creating or rotating (`tokenName` on platform mcp settings)
+- [internal] Admin → MCP create flow is two steps: Name this token, then Copy your token
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
