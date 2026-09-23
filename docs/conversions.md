@@ -28,10 +28,12 @@ also the trial start, not the charge.
 | Subscription activated | onboarding / billing after redirect | `start_subscription` |
 | **First real charge** | **Stripe webhook `invoice.paid`** | **`purchase`** |
 
-The client deliberately never sends GA4 `purchase`. Only the webhook knows the
-invoice id, and that id is what stops a charge being counted twice — so the
-browser reports `start_subscription` and the server reports `purchase`, once,
-with the real amount.
+The client deliberately never sends `purchase` to either platform. Only the
+webhook knows the invoice id, and that id is what stops a charge being counted
+twice — so the browser reports `start_subscription` and the server reports
+`purchase`, once, with the amount that actually cleared. That split also keeps
+Meta happy: a pixel `Purchase` carries no value (Meta flags the whole dataset)
+and has no invoice id to deduplicate with, so it double-counts.
 
 `start_subscription` is also the better Google Ads optimization target: it
 happens in a live session with the click still attached, while `purchase` is
@@ -149,9 +151,15 @@ GET  /api/admin/conversions              # which channels parsed + recent log
 POST /api/admin/conversions              # {"channel":"ga4"|"meta"|"google_ads"}
 ```
 
-The probe sends a `purchase` with value 0 and a `test_…` transaction id. For
-Google Ads it runs with `validateOnly`, so Google validates the payload without
+The probe sends a `purchase` with a nominal **$1.00** value and a `test_…`
+transaction id. The amount is not decoration: Meta rejects a value of 0 as
+malformed and then flags the whole dataset ("Fix value and currency data"), so a
+zero-value probe poisons the very diagnostics it was meant to clear. For Google
+Ads it runs with `validateOnly`, so Google validates the payload without
 recording a conversion.
+
+Set a **Meta test event code** before probing: without one, every probe lands in
+the live dataset as a purchase campaigns can optimise on.
 
 Probes supply their own throwaway GA4 `client_id` and click id, because the
 account running them has no captured click — without that, every channel would

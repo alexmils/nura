@@ -84,10 +84,14 @@ function BillingPageInner() {
       // Legacy trial-activation return link; the Upgrade modal now confirms
       // in place, but old links must still say the payment went through.
       setMsg("Payment successful. Your subscription is active.");
+      // Subscription start, not a purchase: the charge is reported from the
+      // webhook with the amount Stripe actually collected. No value here
+      // either — this legacy link has no plan loaded yet, and Meta flags a
+      // Purchase without one.
       trackMetaEvent(
-        "Purchase",
+        "Subscribe",
         { content_category: "subscription", content_name: "activate_trial" },
-        { onceKey: "purchase_activate" }
+        { onceKey: "subscribe_activate" }
       );
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);

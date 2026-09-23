@@ -12,6 +12,14 @@ export const dynamic = "force-dynamic";
 
 const CHANNELS: ConversionChannel[] = ["ga4", "meta", "google_ads"];
 
+/**
+ * Nominal probe amount, in cents. Meta rejects a value of 0 outright and flags
+ * the whole dataset — "must be a numeric value greater than 0" — so a probe
+ * must carry a real-looking amount. Set a Meta test event code to route probes
+ * to Test Events and keep them out of the numbers campaigns optimise on.
+ */
+const PROBE_VALUE_CENTS = 100;
+
 function isChannel(value: unknown): value is ConversionChannel {
   return CHANNELS.includes(value as ConversionChannel);
 }
@@ -64,7 +72,7 @@ export async function POST(request: Request) {
     kind: "purchase",
     userId: auth.user.id,
     transactionId,
-    valueCents: 0,
+    valueCents: PROBE_VALUE_CENTS,
     currency: "USD",
     plan: "test",
     sourceUrl: "https://nurahelp.com/app/billing",

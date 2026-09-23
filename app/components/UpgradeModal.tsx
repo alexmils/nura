@@ -133,13 +133,21 @@ export function UpgradeModal({
             );
             return;
           }
+          // The charge itself is reported from the Stripe webhook, with the
+          // amount that actually cleared and the invoice id Meta deduplicates
+          // on. The browser reports the subscription starting instead — sending
+          // Purchase here too counted every charge twice, and the pixel has no
+          // invoice id to deduplicate with.
           trackMetaEvent(
-            "Purchase",
+            "Subscribe",
             {
+              ...metaMoneyFromPlanPrice(
+                plans[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
+              ),
               content_category: "subscription",
               content_name: plan,
             },
-            { onceKey: "purchase_activate" }
+            { onceKey: "subscribe_activate" }
           );
           setActivated(true);
           toast("Payment successful — your subscription is active.");

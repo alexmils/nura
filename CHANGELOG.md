@@ -119,6 +119,19 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Closed AI agent-guided sessions can save short notes for next time
 - [internal] Session memory extract on guided closure (`lib/memory-extract.ts`): `memories.source`, `threads.memory_extracted_at`, fire-and-forget from `/api/threads` + `/api/chat`
 - [internal] Memory extract: retry after LLM failure while still closed; empty transcripts claim without looping; defer schedule past request txn
+- [internal] Home How it works Ground first: live CSS/React tutorial mock (camera zoom, cursor, typing) + `/dev/ground-mock` recording page
+- [internal] Ground first tutorial: camera follows cursor; starts on mode cards (AI agent-guided / Self-guided), then typing, then each pair card
+- [internal] Ground first: three independent demos (ModePick with cursor; Safe place + No cold starts without cursor)
+- [internal] Ground first: cursor only on AI agent-guided; all three demos fit sticky stage (pair always visible)
+- [internal] Ground first ModePick: milder zoom + padded camera so “Start a session” no longer clips; pair row reserved in grid
+- [internal] Ground first demos: taller pair cards, larger type inside ModePick / Safe place / No cold starts; stage uses more viewport height
+- [internal] Ground first: more air between lead and Start a session box (gap + padding-block)
+- [internal] Ground first: clearer gaps — Start a session ↔ pair titles (1.65rem), titles ↔ mock boxes (0.75rem)
+- [internal] Ground first spacing: Start↔Safe place ~71px (gap 2.75rem); lead↔box ~43px; title↔mock ~33px; pair border-top removed
+- [internal] ModePickDemo: open on full session picker; zoom only after click on AI agent-guided
+- [internal] ModePickDemo: start zoomed-out (0.86) so full picker is in frame; click AI agent-guided zooms to 1.14
+- [internal] ModePickDemo: wide shot is full /app shell (olive sidebar + Start a session); zoom only on AI agent-guided click
+- [internal] ModePickDemo: no camera zoom — cursor aims at AI agent-guided card (measured) and clicks; No cold starts is static phase swap only
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -367,6 +380,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin → MCP tightened: token list + Create token panel with Generate button; tools/rules/about text behind (i) tips instead of long page copy
 - [internal] Admin → MCP: name the token when creating or rotating (`tokenName` on platform mcp settings)
 - [internal] Admin → MCP create flow is two steps: Name this token, then Copy your token
+- [internal] Home topic band: replace Why people start card grid with orbital Guides (`SessionTopicsGrid`); labels link to `/blog/category/[slug]`; slow orbit + pause on hover
+- [internal] Topics orbit center uses the Nura wave lockup (not a stock photo)
+- [internal] Topics orbit labels: larger/bolder type, sit outside the ring
+- [internal] Topics orbit: mint-on-ink circle logo + looser vertical padding (head / orbit / CTA)
+- [internal] Topics orbit: smaller center logo; more gap title→labels and labels→CTA
+- [internal] Topics orbit link hover: color only (no mint fill box)
+- [internal] Topics orbit keeps spinning on hover (no pause)
+- [internal] Home + `/blog` cards: Balancia-style image fade overlay (white gradient + soft frosted blur)
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -668,6 +689,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Rebuilt the accessibility widget interaction: the ribbon is now pull-out only (clicking it shows the circle without opening the settings), the circle can be dragged anywhere on screen again, and hovering it reveals a control that sends it to the nearest edge. Pinning animates as a short travel, and the panel also offers the same action without hover
 - Upgrading from the trial now confirms the payment in place: ending the trial early shows “You’re all set / Payment successful” in the upgrade dialog with a toast, and the session limits lift immediately. Previously the click bounced to `/app/billing`, which showed only **Manage billing** and never a confirmation. If Stripe reports the trial ended but the charge has not cleared, the dialog says so instead of claiming success; `/app/billing?activated=1` still confirms for older links
 - [internal] Windows Docker Postgres: `DATABASE_URL` with `localhost` timed out / ECONNRESET (IPv6 `::1`); `getPool` rewrites to `127.0.0.1` on win32, and `.env.example` uses IPv4
+- [internal] Meta no longer receives a `Purchase` from the browser pixel. It carried no value — which is exactly what Meta flagged (“all of the price and currency data received from website Purchase events has formatting issues or missing values”) — and with no invoice id to deduplicate on it counted every charge twice alongside the Conversions API. The pixel reports `Subscribe` at activation with the plan value, and the Stripe webhook stays the only source of `Purchase`; a test now fails if a browser `Purchase` comes back. The admin probe sends a nominal $1.00 instead of $0, because Meta rejects a zero value and then flags the dataset
 - [internal] Consent Mode default now ships in the document head (`app/layout.tsx`) rather than from `MarketingTags`, which waits on two API calls before rendering — Google Ads flagged the result as “consent mode installation out of order”. The stored banner choice is applied as the default, so a returning visitor who accepted is no longer measured as denied; a `vm` test runs the emitted bootstrap and asserts the signal mapping. The duplicate `consent default` in the client component is gone, since calling it twice is what Google warns about
 - Purchase receipt email: amount and date sit in a bordered receipt box, with clearer spacing around the lockup and Manage billing button
 - [internal] Dropped a leftover `setNameForImportSource` import after memory notes went account-scoped (export was already gone)

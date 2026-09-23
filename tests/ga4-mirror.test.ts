@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import { describe, it, beforeEach } from "node:test";
 import {
@@ -44,8 +46,7 @@ function stubWindow(consent?: { analytics: boolean; marketing: boolean }) {
 
 describe("GA4 event mirroring", () => {
   beforeEach(() => {
-    // @ts-expect-error reset between tests
-    delete globalThis.window;
+    delete (globalThis as { window?: unknown }).window;
   });
 
   it("never maps a browser event to GA4 purchase", () => {
@@ -122,6 +123,26 @@ describe("GA4 event mirroring", () => {
     const pushed = win.dataLayer[0] as Record<string, unknown>;
     assert.equal(pushed.event, "meta_StartTrial");
     assert.equal(pushed.meta_event, "StartTrial");
+  });
+});
+
+describe("purchase ownership", () => {
+  it("never fires a Meta purchase from the browser", () => {
+    // Meta flagged our dataset: "all of the price and currency data received
+    // from website Purchase events has formatting issues or missing values",
+    // and "all of your website Purchase events are sending the same price
+    // data". The pixel Purchase carried no value to fix either complaint, and
+    // with no invoice id to deduplicate on it counted each charge twice
+    // alongside the Conversions API. Only the webhook may report a purchase.
+    const files = readdirSync("app", { recursive: true, encoding: "utf8" })
+      .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
+      .map((f) => join("app", f));
+
+    const offenders = files.filter((file) =>
+      /trackMetaEvent\(\s*"Purchase"/.test(readFileSync(file, "utf8"))
+    );
+
+    assert.deepEqual(offenders, [], "a browser Purchase came back");
   });
 });
 
