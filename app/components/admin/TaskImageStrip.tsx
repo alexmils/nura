@@ -3,7 +3,7 @@
 /**
  * Up to 3 thumbs +N; click opens a portaled lightbox (Esc / click-away).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const MAX_VISIBLE = 3;
@@ -30,7 +30,6 @@ export function TaskImageStrip({
       <span
         className={`inline-flex items-center gap-1 shrink-0 ${className}`}
         onClick={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
       >
         {visible.map((src, i) => (
           <button
@@ -91,38 +90,58 @@ export function TaskImageLightbox({
   const count = urls.length;
   const safeIndex = ((index % count) + count) % count;
   const src = urls[safeIndex];
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+  const onIndexChangeRef = useRef(onIndexChange);
+  onCloseRef.current = onClose;
+  onIndexChangeRef.current = onIndexChange;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") {
         e.preventDefault();
-        onClose();
-      } else if (e.key === "ArrowLeft" && count > 1) {
+        e.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (e.key === "ArrowLeft" && count > 1) {
         e.preventDefault();
-        onIndexChange((safeIndex - 1 + count) % count);
+        onIndexChangeRef.current((safeIndex - 1 + count) % count);
       } else if (e.key === "ArrowRight" && count > 1) {
         e.preventDefault();
-        onIndexChange((safeIndex + 1) % count);
+        onIndexChangeRef.current((safeIndex + 1) % count);
       }
     }
-    window.addEventListener("keydown", onKey);
+    // Capture phase so Esc still works when focus stayed on the thumb button
+    // (row/strip handlers used to stopPropagation and swallow the bubble).
+    window.addEventListener("keydown", onKey, true);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    rootRef.current?.focus();
     return () => {
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
       document.body.style.overflow = prev;
     };
-  }, [count, onClose, onIndexChange, safeIndex]);
+  }, [count, safeIndex]);
 
   if (!src || typeof document === "undefined") return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-4"
+      ref={rootRef}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/85 p-4 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label="Image preview"
+      tabIndex={-1}
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }
+      }}
     >
       {count > 1 ? (
         <button
