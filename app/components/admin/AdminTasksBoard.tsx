@@ -17,6 +17,7 @@ import {
   type AdminTaskStatus,
 } from "@/lib/admin-tasks";
 import { fetchJson } from "@/lib/fetch-json";
+import "./admin-tasks.css";
 
 const FILTERS: { id: AdminTaskStatus | "all"; label: string }[] = [
   { id: "all", label: "All" },
@@ -173,7 +174,7 @@ export function AdminTasksBoard() {
       <main className="admin-main max-w-2xl space-y-5">
         {err ? <p className="admin-invite-msg text-[var(--destructive)]">{err}</p> : null}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="admin-tasks-board-filters">
           {FILTERS.map((s) => (
             <button
               key={s.id}
@@ -189,8 +190,8 @@ export function AdminTasksBoard() {
         </div>
 
         {labels.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--text-secondary)]">
+          <div className="admin-tasks-board-filters">
+            <span className="admin-task-composer-label" style={{ margin: 0 }}>
               Label
             </span>
             <button
@@ -217,13 +218,15 @@ export function AdminTasksBoard() {
           </div>
         ) : null}
 
-        <input
-          className="admin-task-input"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search tasks…"
-          aria-label="Search tasks"
-        />
+        <div className="admin-tasks-board-search">
+          <input
+            className="admin-task-input"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search tasks…"
+            aria-label="Search tasks"
+          />
+        </div>
 
         <ul className="admin-task-list">
           {items.length === 0 ? (

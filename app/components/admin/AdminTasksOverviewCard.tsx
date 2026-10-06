@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin-tasks";
 import { imageFileFromClipboard } from "@/lib/clipboard-image";
 import { fetchJson } from "@/lib/fetch-json";
+import "./admin-tasks.css";
 
 export function AdminTasksOverviewCard() {
   const router = useRouter();
@@ -192,8 +193,8 @@ export function AdminTasksOverviewCard() {
           <input
             id="admin-task-draft"
             type="text"
-            className="admin-task-input flex-1"
-            placeholder="Type here… Ctrl+V for a screenshot"
+            className="admin-task-input"
+            placeholder="Type the task here"
             value={draft}
             disabled={busy}
             onChange={(e) => setDraft(e.target.value)}
@@ -215,12 +216,13 @@ export function AdminTasksOverviewCard() {
           </button>
         </div>
         <p className="admin-task-composer-hint">
-          Click a row to open · right-click for Edit or Delete
+          Tip: Ctrl+V pastes a screenshot into this box.
         </p>
       </div>
 
       {image && preview ? (
         <div className="admin-task-attach">
+          <p className="admin-task-composer-label">Attached screenshot</p>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={preview} alt="" />
           <button
@@ -233,6 +235,10 @@ export function AdminTasksOverviewCard() {
           </button>
         </div>
       ) : null}
+
+      <p className="admin-task-composer-hint" style={{ marginBottom: "0.75rem" }}>
+        Open tasks below · click a row to open · right-click for Edit or Delete
+      </p>
 
       <ul className="admin-task-list">
         {tasks == null ? (

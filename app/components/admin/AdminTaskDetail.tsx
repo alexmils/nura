@@ -21,6 +21,7 @@ import {
 } from "@/lib/admin-tasks";
 import { imageFileFromClipboard } from "@/lib/clipboard-image";
 import { fetchJson } from "@/lib/fetch-json";
+import "./admin-tasks.css";
 
 export function AdminTaskDetail({ taskId }: { taskId: string }) {
   const router = useRouter();
