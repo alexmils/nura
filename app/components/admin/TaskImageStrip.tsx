@@ -134,7 +134,15 @@ export function TaskImageLightbox({
       aria-modal="true"
       aria-label="Image preview"
       tabIndex={-1}
-      onClick={onClose}
+      onMouseDown={(e) => {
+        // Portals still bubble through the React tree — stop before the
+        // task row under the strip treats this as "open task".
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) onClose();
+      }}
       onKeyDown={(e) => {
         if (e.key === "Escape") {
           e.preventDefault();
@@ -149,6 +157,7 @@ export function TaskImageLightbox({
           className="absolute left-3 sm:left-6 grid h-10 w-10 cursor-pointer place-items-center rounded border border-white/30 bg-black/70 text-white hover:border-[#84B067]"
           title="Previous"
           aria-label="Previous image"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onIndexChange((safeIndex - 1 + count) % count);
@@ -162,6 +171,7 @@ export function TaskImageLightbox({
         src={src}
         alt=""
         className="max-h-[88vh] max-w-[min(96vw,1100px)] rounded border border-white/20 object-contain shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       />
       {count > 1 ? (
@@ -170,6 +180,7 @@ export function TaskImageLightbox({
           className="absolute right-3 sm:right-6 grid h-10 w-10 cursor-pointer place-items-center rounded border border-white/30 bg-black/70 text-white hover:border-[#84B067]"
           title="Next"
           aria-label="Next image"
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             onIndexChange((safeIndex + 1) % count);

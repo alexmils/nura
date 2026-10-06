@@ -699,6 +699,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Tasks styles load from `/admin` layout (not only client HMR) so Overview card keeps stacked title + badge after Turbopack cache stalls
 - [internal] Admin search suggests **Tasks** on empty focus (Ctrl/Cmd+K), matches `todo` / `ideas`, and the sidebar nav scrolls so Dashboard links stay reachable
 - [internal] Admin Tasks image lightbox: Esc closes again (capture-phase keydown + focus dialog; thumb strip no longer swallows Escape)
+- [internal] Admin Tasks lightbox click-away stops React portal bubbling so it no longer opens the task page
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
