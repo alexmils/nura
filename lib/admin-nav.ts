@@ -20,7 +20,8 @@ export type AdminNavIcon =
   | "ai"
   | "platform"
   | "seo"
-  | "mcp";
+  | "mcp"
+  | "tasks";
 
 export type AdminNavItem = {
   href: string;
@@ -46,6 +47,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     label: "Dashboard",
     items: [
       { href: "/admin", label: "Overview", icon: "overview", exact: true },
+      { href: "/admin/tasks", label: "Tasks", icon: "tasks" },
       {
         href: "/admin/analytics",
         label: "Analytics",

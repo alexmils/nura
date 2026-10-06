@@ -18,6 +18,7 @@ import {
   CHART_SLICE_COLORS,
   DeltaBadge,
 } from "@/app/components/admin/AdminCharts";
+import { AdminTasksOverviewCard } from "@/app/components/admin/AdminTasksOverviewCard";
 import { PlatformHealthCard } from "@/app/components/admin/PlatformHealthCard";
 import { actionLabel, formatDateTime, formatMoney } from "@/lib/admin-format";
 import { formatTokenCount, formatUsdMicros } from "@/lib/admin-llm-format";
@@ -161,6 +162,7 @@ export default function AdminOverviewPage() {
         </section>
 
         <div className="admin-dash-grid">
+          <AdminTasksOverviewCard />
           <section className="admin-panel admin-dash-span-2">
             <div className="admin-panel-head-row">
               <div>

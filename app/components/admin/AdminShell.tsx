@@ -9,6 +9,7 @@ import {
   CreditCard,
   BarChart3,
   LayoutGrid,
+  ListTodo,
   Wallet,
   LifeBuoy,
   Mail,
@@ -51,6 +52,7 @@ type AdminUser = {
 
 const NAV_ICONS: Record<AdminNavIcon, LucideIcon> = {
   overview: LayoutGrid,
+  tasks: ListTodo,
   analytics: BarChart3,
   users: Users,
   help: LifeBuoy,

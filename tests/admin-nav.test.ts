@@ -64,9 +64,11 @@ describe("admin search index", () => {
     const titles = index.map((e) => e.title);
     assert.ok(titles.includes("Dashboard"));
     assert.ok(titles.includes("Overview"));
+    assert.ok(titles.includes("Tasks"));
     assert.ok(titles.includes("Stripe"));
     assert.ok(titles.includes("SEO"));
     assert.ok(titles.includes("Settings"));
+    assert.ok(index.some((e) => e.href === "/admin/tasks"));
     assert.ok(index.some((e) => e.href.startsWith("/admin/seo")));
     assert.ok(index.some((e) => e.kind === "section"));
     assert.ok(index.some((e) => e.kind === "tab" && e.href.includes("tab=")));
