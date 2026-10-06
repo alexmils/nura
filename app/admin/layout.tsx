@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { AdminShell } from "@/app/components/admin/AdminShell";
 import { ToastProvider } from "@/app/components/Toast";
+/** Always load with /admin — do not rely only on client-component CSS HMR. */
+import "@/app/components/admin/admin-tasks.css";
 
 export const metadata: Metadata = {
   title: "Nura Admin",

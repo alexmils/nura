@@ -142,12 +142,14 @@
 }
 
 .admin-task-row-main {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.45rem;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start;
+  gap: 0.5rem !important;
   min-width: 0;
   flex: 1 1 auto;
+  width: 100%;
 }
 
 .admin-task-row-meta {

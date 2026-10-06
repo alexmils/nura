@@ -252,16 +252,14 @@ export function AdminTasksOverviewCard() {
             <li key={row.id}>
               <button
                 type="button"
-                className="admin-task-row w-full text-left"
+                className="admin-task-row"
                 disabled={busy}
                 title="Open task · right-click for Edit or Delete"
                 onClick={() => openTask(row)}
                 onContextMenu={(e) => onContextMenu(e, row)}
               >
                 <span className="admin-task-row-main">
-                  <span className="admin-task-body line-clamp-2">
-                    {row.body}
-                  </span>
+                  <span className="admin-task-body">{row.body}</span>
                   <span className="admin-task-pill muted">
                     {ADMIN_TASK_STATUS_LABEL[row.status] || row.status}
                     {row.label ? ` · ${row.label}` : ""}
