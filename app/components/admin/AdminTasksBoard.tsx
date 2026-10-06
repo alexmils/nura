@@ -168,7 +168,7 @@ export function AdminTasksBoard() {
     <div className="admin-page">
       <AdminPageHeader
         title="Tasks"
-        subtitle="Click a task to open it. Right-click for Edit or Delete. Add new ones from Overview."
+        subtitle="Click a row to open · right-click Edit or Delete · add from Overview"
       />
       <main className="admin-main max-w-2xl space-y-5">
         {err ? <p className="admin-invite-msg text-[var(--destructive)]">{err}</p> : null}

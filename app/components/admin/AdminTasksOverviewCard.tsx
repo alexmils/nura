@@ -166,73 +166,63 @@ export function AdminTasksOverviewCard() {
   return (
     <section className="admin-panel admin-dash-span-2 admin-tasks-card">
       <div className="admin-panel-head-row">
-        <div>
-          <h2 className="admin-panel-title">Tasks</h2>
-          <p className="admin-panel-sub">
-            Click a task to open it. Right-click for Edit or Delete. Ctrl+V
-            pastes a screenshot with your text.
-          </p>
-        </div>
-        <Link href="/admin/tasks" className="admin-task-btn accent text-xs">
+        <h2 className="admin-panel-title">Tasks</h2>
+        <Link href="/admin/tasks" className="admin-task-btn solid">
           Open board →
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-[var(--text-secondary)]">
-        <span>
-          Open{" "}
-          <span className="text-[var(--text)]">
-            {tasks == null ? "…" : counts.open}
-          </span>
+      <div className="admin-task-stats">
+        <span className="admin-task-stat">
+          <strong>{tasks == null ? "…" : counts.open}</strong> Open
         </span>
-        <span>
-          Idea{" "}
-          <span className="text-[var(--text)]">
-            {tasks == null ? "…" : counts.idea}
-          </span>
+        <span className="admin-task-stat">
+          <strong>{tasks == null ? "…" : counts.idea}</strong> Idea
         </span>
-        <span>
-          Pending{" "}
-          <span className="text-[var(--text)]">
-            {tasks == null ? "…" : counts.pending}
-          </span>
+        <span className="admin-task-stat">
+          <strong>{tasks == null ? "…" : counts.pending}</strong> Pending
         </span>
       </div>
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input
-          type="text"
-          className="admin-task-input flex-1"
-          placeholder="Add a task… Ctrl+V pastes a screenshot"
-          value={draft}
-          disabled={busy}
-          onChange={(e) => setDraft(e.target.value)}
-          onPaste={onPaste}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              void addTask();
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="admin-task-btn accent"
-          disabled={busy || (!draft.trim() && !image)}
-          onClick={() => void addTask()}
-        >
-          Add task
-        </button>
+      <div className="admin-task-composer">
+        <label className="admin-task-composer-label" htmlFor="admin-task-draft">
+          New task
+        </label>
+        <div className="admin-task-composer-row">
+          <input
+            id="admin-task-draft"
+            type="text"
+            className="admin-task-input flex-1"
+            placeholder="Type here… Ctrl+V for a screenshot"
+            value={draft}
+            disabled={busy}
+            onChange={(e) => setDraft(e.target.value)}
+            onPaste={onPaste}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addTask();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="admin-task-btn solid"
+            disabled={busy || (!draft.trim() && !image)}
+            onClick={() => void addTask()}
+          >
+            Add task
+          </button>
+        </div>
+        <p className="admin-task-composer-hint">
+          Click a row to open · right-click for Edit or Delete
+        </p>
       </div>
 
       {image && preview ? (
-        <div className="mt-2 flex flex-wrap items-start gap-3">
+        <div className="admin-task-attach">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={preview}
-            alt=""
-            className="max-h-32 max-w-full rounded border border-[#84B067] object-contain"
-          />
+          <img src={preview} alt="" />
           <button
             type="button"
             className="admin-task-btn"
@@ -244,12 +234,12 @@ export function AdminTasksOverviewCard() {
         </div>
       ) : null}
 
-      <ul className="admin-task-list mt-3">
+      <ul className="admin-task-list">
         {tasks == null ? (
           <li className="admin-task-empty">Loading tasks…</li>
         ) : openTasks.length === 0 ? (
           <li className="admin-task-empty">
-            Nothing open yet. Add a task above or open the board.
+            Nothing open yet. Type a task above, then Add task.
           </li>
         ) : (
           openTasks.map((row) => (
