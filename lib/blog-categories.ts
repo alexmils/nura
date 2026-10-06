@@ -1,6 +1,6 @@
 /**
  * Clinical blog categories for `/blog` — the themes people start with
- * (mirrors the home "Why people start" grid). Slugs are stable and stored;
+ * (mirrors the home `SessionTopicsGrid` orbit). Slugs are stable and stored;
  * names and descriptions are UI + meta copy.
  *
  * A post can sit in more than one category. `/learn` keeps the separate

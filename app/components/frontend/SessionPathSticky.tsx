@@ -7,6 +7,11 @@ import {
   getLandingLenis,
   scrollToLandingSection,
 } from "@/lib/landing-scroll";
+import {
+  ModePickDemo,
+  NoColdStartDemo,
+  SafePlaceDemo,
+} from "./GroundFirstTutorial";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SessionLoopKit } from "./SessionLoopKit";
 import "./session-path-sticky.css";
@@ -61,17 +66,16 @@ const RHYTHM_CARDS = [
   { label: "Hands", hint: "Gamepad" },
 ] as const;
 
-/** Attio dual cards under the main stage visual (ground only). */
 const GROUND_PAIR = [
   {
+    id: "safe" as const,
     title: "Safe place first.",
     line: "Feet on the floor before anything heavy.",
-    mediaLabel: "Image or video",
   },
   {
+    id: "cold" as const,
     title: "No cold starts.",
-    line: "Intake and breath — then the set.",
-    mediaLabel: "Image or video",
+    line: "Intake and breath, then the set.",
   },
 ] as const;
 
@@ -132,7 +136,6 @@ export function SessionPathSticky() {
   const rootRef = useRef<HTMLElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
   const [active, setActive] = useState<StageId>("ground");
-  const [pairIn, setPairIn] = useState(false);
   const [compactNav, setCompactNav] = useState(true);
 
   useEffect(() => {
@@ -170,20 +173,6 @@ export function SessionPathSticky() {
     if (next !== activeRef.current) {
       activeRef.current = next;
       setActive(next);
-    }
-
-    const ground = root.querySelector<HTMLElement>(
-      '[data-spath-sentinel="ground"]'
-    );
-    if (ground) {
-      const r = ground.getBoundingClientRect();
-      const local = Math.min(
-        1,
-        Math.max(0, (marker - r.top) / Math.max(r.height, 1))
-      );
-      setPairIn(next === "ground" && local > 0.35);
-    } else {
-      setPairIn(next === "ground");
     }
   }, []);
 
@@ -236,6 +225,22 @@ export function SessionPathSticky() {
     return () => window.clearTimeout(t);
   }, [active]);
 
+  function pinStageInView() {
+    const panels = rootRef.current?.querySelector<HTMLElement>(
+      ".fe-spath-panels"
+    );
+    if (!panels) return;
+    const excess = panels.getBoundingClientRect().bottom - window.innerHeight + 16;
+    if (excess <= 8) return;
+    const target = window.scrollY + excess;
+    const lenis = getLandingLenis();
+    if (lenis) {
+      lenis.scrollTo(target, { duration: 0.55 });
+    } else {
+      window.scrollTo({ top: target, behavior: "smooth" });
+    }
+  }
+
   function goTo(id: StageId) {
     activeRef.current = id;
     setActive(id);
@@ -246,8 +251,14 @@ export function SessionPathSticky() {
       : 0;
     scrollToLandingSection(`session-path-${id}`, extra);
     window.setTimeout(() => {
+      pinStageInView();
       centerChipInNav(navListRef.current, id);
     }, 50);
+    // Lenis duration ~1.35s — nudge again so tall Ground demos stay on-screen
+    window.setTimeout(() => {
+      pinStageInView();
+      centerChipInNav(navListRef.current, id);
+    }, 1450);
   }
 
   return (
@@ -374,18 +385,24 @@ export function SessionPathSticky() {
                     </div>
                   ) : stage.id === "ground" ? (
                     <div className="fe-spath-ground">
-                      <MediaPlaceholder label={stage.mediaLabel} />
+                      <div
+                        className="fe-spath-media fe-spath-media--live"
+                        role="img"
+                        aria-label="Choose AI agent-guided or Self-guided"
+                      >
+                        {active === "ground" ? <ModePickDemo /> : null}
+                      </div>
                       <ul className="fe-spath-pair" data-spath-pair>
                         {GROUND_PAIR.map((card) => (
                           <li
-                            key={card.title}
+                            key={card.id}
                             className={
-                              pairIn
+                              active === "ground"
                                 ? "fe-spath-pair-card is-in"
                                 : "fe-spath-pair-card is-pending"
                             }
                           >
-                            {pairIn ? (
+                            {active === "ground" ? (
                               <LetterRevealHeading
                                 as="h4"
                                 eager
@@ -394,13 +411,24 @@ export function SessionPathSticky() {
                                 {card.title}
                               </LetterRevealHeading>
                             ) : (
-                              <h4 className="fe-spath-pair-title">{card.title}</h4>
+                              <h4 className="fe-spath-pair-title">
+                                {card.title}
+                              </h4>
                             )}
                             <p className="fe-spath-pair-line">{card.line}</p>
-                            <MediaPlaceholder
-                              label={card.mediaLabel}
-                              compact
-                            />
+                            <div
+                              className="fe-spath-media fe-spath-media--card fe-spath-media--live"
+                              role="img"
+                              aria-label={card.title}
+                            >
+                              {active === "ground" ? (
+                                card.id === "safe" ? (
+                                  <SafePlaceDemo />
+                                ) : (
+                                  <NoColdStartDemo />
+                                )
+                              ) : null}
+                            </div>
                           </li>
                         ))}
                       </ul>

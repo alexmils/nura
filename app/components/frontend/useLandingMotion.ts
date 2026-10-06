@@ -17,7 +17,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       isA11yReduceMotionPreferred();
     if (reduced) {
-      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-card, .fe-topics-cta").forEach((el) => {
+      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-orbit, .fe-topics-more").forEach((el) => {
         gsap.set(el, { clearProps: "all", opacity: 1, y: 0, x: 0, color: "" });
         el.classList.add("is-in");
       });
@@ -170,23 +170,35 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         scrollTrigger: { trigger: ".fe-site-footer", start: "top 85%" },
       });
 
-      const topicTiles = root.querySelectorAll<HTMLElement>(
-        ".fe-topics-card, .fe-topics-cta"
-      );
-      if (topicTiles.length) {
-        gsap.from(topicTiles, {
-          y: 28,
+      const topicsOrbit = root.querySelector<HTMLElement>(".fe-topics-orbit");
+      const topicsMore = root.querySelectorAll<HTMLElement>(".fe-topics-more");
+      if (topicsOrbit) {
+        gsap.from(topicsOrbit, {
+          y: 32,
           opacity: 0,
-          duration: 0.7,
-          stagger: 0.07,
+          scale: 0.94,
+          duration: 0.9,
           ease: "power3.out",
           scrollTrigger: {
-            trigger: ".fe-topics-grid",
+            trigger: ".fe-topics-stage",
             start: "top 82%",
             toggleActions: "play none none none",
           },
           onComplete: () => {
-            gsap.set(topicTiles, { clearProps: "transform" });
+            gsap.set(topicsOrbit, { clearProps: "transform" });
+          },
+        });
+      }
+      if (topicsMore.length) {
+        gsap.from(topicsMore, {
+          y: 20,
+          opacity: 0,
+          duration: 0.7,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: ".fe-topics-stage",
+            start: "top 78%",
+            toggleActions: "play none none none",
           },
         });
       }
