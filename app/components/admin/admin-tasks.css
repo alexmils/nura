@@ -141,7 +141,24 @@
   background: #84b067;
 }
 
+.admin-task-row-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.admin-task-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .admin-task-body {
+  display: block;
   margin: 0;
   font-size: 0.95rem;
   font-weight: 500;

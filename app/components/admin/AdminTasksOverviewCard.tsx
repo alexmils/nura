@@ -258,11 +258,11 @@ export function AdminTasksOverviewCard() {
                 onClick={() => openTask(row)}
                 onContextMenu={(e) => onContextMenu(e, row)}
               >
-                <span className="min-w-0 flex-1 space-y-1">
+                <span className="admin-task-row-main">
                   <span className="admin-task-body line-clamp-2">
                     {row.body}
                   </span>
-                  <span className="admin-task-pill muted inline-block">
+                  <span className="admin-task-pill muted">
                     {ADMIN_TASK_STATUS_LABEL[row.status] || row.status}
                     {row.label ? ` · ${row.label}` : ""}
                   </span>

@@ -329,11 +329,11 @@ function TaskRow({
           }}
           aria-label={done ? "Mark pending" : "Mark completed"}
         />
-        <div className="min-w-0 flex-1 space-y-1">
+        <div className="admin-task-row-main">
           <p className={`admin-task-body ${done ? "done" : ""}`}>
             {oneLine(row.body)}
           </p>
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className="admin-task-row-meta">
             <span className={statusTone(row.status)}>
               {ADMIN_TASK_STATUS_LABEL[row.status] || row.status}
             </span>
