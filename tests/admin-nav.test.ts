@@ -4,6 +4,7 @@ import {
   adminChildIsActive,
   adminPathMatches,
   buildAdminSearchIndex,
+  defaultAdminSearchHits,
   filterAdminSearch,
 } from "../lib/admin-nav.ts";
 
@@ -134,6 +135,14 @@ describe("admin search index", () => {
     assert.ok(stripe.some((e) => e.title === "Stripe"));
     const fin = filterAdminSearch(index, "financ");
     assert.ok(fin.some((e) => e.title === "Finances"));
-    assert.deepEqual(filterAdminSearch(index, ""), []);
+    const todos = filterAdminSearch(index, "todo");
+    assert.ok(todos.some((e) => e.href === "/admin/tasks"));
+  });
+
+  it("suggests Tasks when the query is empty", () => {
+    const index = buildAdminSearchIndex(true);
+    const empty = filterAdminSearch(index, "");
+    assert.ok(empty.some((e) => e.href === "/admin/tasks" && e.title === "Tasks"));
+    assert.equal(defaultAdminSearchHits(index)[0]?.href, "/admin/tasks");
   });
 });

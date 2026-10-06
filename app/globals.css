@@ -6929,13 +6929,15 @@ body:has(.app-shell.session-immersive) .help-fab {
   padding: 0.35rem 1rem 1rem;
   flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .admin-nav-section {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  flex-shrink: 0;
 }
 
 .admin-nav-section-label {

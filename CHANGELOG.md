@@ -697,6 +697,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Coolify deploys were marked failed while the site stayed up: `nura-edge` docker-watch restored the app mid healthcheck and deleted the container Coolify was waiting on. Health start period is 15s, watch debounce 90s, and ensure/restore no longer reset the gate to 60s
 - [internal] Admin Tasks board (`/admin/tasks` + `/admin/tasks/{id}`): list-only board, Overview quick-add with Ctrl+V screenshots, multi-image thumbs (+N) and lightbox (Esc / click-away), right-click Edit/Delete. Images stored under `data/admin-tasks/`
 - [internal] Admin Tasks styles load from `/admin` layout (not only client HMR) so Overview card keeps stacked title + badge after Turbopack cache stalls
+- [internal] Admin search suggests **Tasks** on empty focus (Ctrl/Cmd+K), matches `todo` / `ideas`, and the sidebar nav scrolls so Dashboard links stay reachable
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

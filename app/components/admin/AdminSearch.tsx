@@ -131,7 +131,7 @@ export function AdminSearch({
     }
   };
 
-  const showPanel = open && query.trim().length > 0;
+  const showPanel = open;
 
   return (
     <div className="admin-search" ref={rootRef}>

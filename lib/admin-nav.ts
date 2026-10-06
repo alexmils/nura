@@ -382,6 +382,13 @@ export function buildAdminSearchIndex(
       const children = (item.children ?? []).filter(
         (c) => !c.adminOnly || isPlatformAdmin
       );
+      const pageKeywords = [
+        item.icon,
+        ...item.href.split("/").filter(Boolean),
+      ];
+      if (item.href === "/admin/tasks") {
+        pageKeywords.push("todo", "todos", "ideas", "board", "scratchpad");
+      }
       entries.push({
         id: `page:${item.href}`,
         href: item.href,
@@ -389,7 +396,7 @@ export function buildAdminSearchIndex(
         group: section.label,
         kind: "page",
         adminOnly: item.adminOnly,
-        keywords: [item.icon, ...item.href.split("/").filter(Boolean)],
+        keywords: pageKeywords,
       });
 
       for (const child of children) {
@@ -422,6 +429,37 @@ function normalizeSearch(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Suggested pages when the search field is focused with an empty query. */
+export function defaultAdminSearchHits(
+  entries: AdminSearchEntry[],
+  limit = 8
+): AdminSearchEntry[] {
+  const preferred = [
+    "/admin/tasks",
+    "/admin",
+    "/admin/analytics",
+    "/admin/users",
+    "/admin/help",
+    "/admin/seo",
+    "/admin/finance",
+    "/admin/settings",
+  ];
+  const pages = entries.filter((e) => e.kind === "page" || e.kind === "action");
+  const byHref = new Map(pages.map((e) => [e.href, e]));
+  const out: AdminSearchEntry[] = [];
+  for (const href of preferred) {
+    const hit = byHref.get(href);
+    if (hit) out.push(hit);
+    if (out.length >= limit) return out;
+  }
+  for (const page of pages) {
+    if (out.some((e) => e.id === page.id)) continue;
+    out.push(page);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /** Ranked filter for the admin command search. */
 export function filterAdminSearch(
   entries: AdminSearchEntry[],
@@ -429,7 +467,7 @@ export function filterAdminSearch(
   limit = 12
 ): AdminSearchEntry[] {
   const q = normalizeSearch(query);
-  if (!q) return [];
+  if (!q) return defaultAdminSearchHits(entries, Math.min(limit, 8));
 
   const scored: { entry: AdminSearchEntry; score: number }[] = [];
 
