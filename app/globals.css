@@ -12608,9 +12608,7 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   transform: none !important;
 }
 
-
-
-/* —— Admin Tasks board —— */
+/* -- Admin Tasks board -- */
 .admin-tasks-card {
   border-color: color-mix(in srgb, #84b067 40%, var(--border));
 }
