@@ -26,14 +26,19 @@ function expiryLine(view: MetaAdsAdminView): string {
   return "Add the app id and app secret if this token should refresh on its own.";
 }
 
-export function MetaAdsConnectionForm({ onSaved }: { onSaved?: () => void }) {
+export function MetaAdsConnectionForm({
+  onSaved,
+  onClose,
+}: {
+  onSaved?: () => void;
+  onClose: () => void;
+}) {
   const [view, setView] = useState<MetaAdsAdminView | null>(null);
   const [accountId, setAccountId] = useState("");
   const [appId, setAppId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [appSecret, setAppSecret] = useState("");
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -57,11 +62,18 @@ export function MetaAdsConnectionForm({ onSaved }: { onSaved?: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!view?.canEdit || busy) return;
     setBusy(true);
-    setMessage("");
     setError("");
     try {
       const data = (await fetchJson("/api/admin/meta-ads", {
@@ -74,7 +86,6 @@ export function MetaAdsConnectionForm({ onSaved }: { onSaved?: () => void }) {
       setAppId(data.metaAds.appId);
       setAccessToken("");
       setAppSecret("");
-      setMessage("Saved.");
       onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
@@ -84,65 +95,90 @@ export function MetaAdsConnectionForm({ onSaved }: { onSaved?: () => void }) {
   }
 
   return (
-    <form className="mkt-conn" onSubmit={(event) => void onSubmit(event)}>
-      <div className="mkt-conn-head">
-        <h3>Meta Ads</h3>
-        <p>{view ? expiryLine(view) : "Loading connection…"}</p>
+    <div
+      className="admin-modal-backdrop"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        className="admin-modal admin-modal-conversions"
+        role="dialog"
+        aria-labelledby="admin-meta-ads-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="admin-meta-ads-modal-title" className="admin-panel-title">
+          Meta Ads
+        </h2>
+        <form className="admin-form-stack" onSubmit={(event) => void onSubmit(event)}>
+          <p className="admin-panel-sub">
+            {view ? expiryLine(view) : "Loading connection…"} Leave a secret
+            blank to keep it. Type off to clear it.
+          </p>
+          <div className="admin-seo-conv-body admin-seo-conv-body--grid">
+            <label className="admin-field-label">
+              Ad account ID
+              <input
+                className="field"
+                value={accountId}
+                disabled={!view?.canEdit || busy}
+                onChange={(event) => setAccountId(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="admin-field-label">
+              Access token
+              <input
+                className="field"
+                type="password"
+                value={accessToken}
+                placeholder={
+                  view?.hasAccessToken ? "Saved. Leave blank to keep it." : ""
+                }
+                disabled={!view?.canEdit || busy}
+                onChange={(event) => setAccessToken(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="admin-field-label">
+              App ID
+              <input
+                className="field"
+                value={appId}
+                disabled={!view?.canEdit || busy}
+                onChange={(event) => setAppId(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <label className="admin-field-label">
+              App secret
+              <input
+                className="field"
+                type="password"
+                value={appSecret}
+                placeholder={
+                  view?.hasAppSecret ? "Saved. Leave blank to keep it." : ""
+                }
+                disabled={!view?.canEdit || busy}
+                onChange={(event) => setAppSecret(event.target.value)}
+                autoComplete="off"
+              />
+            </label>
+          </div>
+          {error ? <p className="admin-conn-fail">{error}</p> : null}
+          <div className="admin-modal-actions">
+            <button type="button" className="admin-btn-edit" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="admin-btn-edit"
+              disabled={!view?.canEdit || busy}
+            >
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </form>
       </div>
-      <label>
-        Ad account ID
-        <input
-          className="field"
-          value={accountId}
-          disabled={!view?.canEdit || busy}
-          onChange={(event) => setAccountId(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <label>
-        Access token
-        <input
-          className="field"
-          type="password"
-          value={accessToken}
-          placeholder={view?.hasAccessToken ? "Saved. Leave blank to keep it." : ""}
-          disabled={!view?.canEdit || busy}
-          onChange={(event) => setAccessToken(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <label>
-        App ID
-        <input
-          className="field"
-          value={appId}
-          disabled={!view?.canEdit || busy}
-          onChange={(event) => setAppId(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <label>
-        App secret
-        <input
-          className="field"
-          type="password"
-          value={appSecret}
-          placeholder={view?.hasAppSecret ? "Saved. Leave blank to keep it." : ""}
-          disabled={!view?.canEdit || busy}
-          onChange={(event) => setAppSecret(event.target.value)}
-          autoComplete="off"
-        />
-      </label>
-      <div className="mkt-conn-actions">
-        <button type="submit" className="btn-primary" disabled={!view?.canEdit || busy}>
-          {busy ? "Saving…" : "Save"}
-        </button>
-        {message ? <span className="mkt-conn-ok">{message}</span> : null}
-        {error ? <span className="mkt-conn-err">{error}</span> : null}
-      </div>
-      <p className="mkt-conn-hint">
-        Leave a secret blank to keep it. Type off to clear it.
-      </p>
-    </form>
+    </div>
   );
 }

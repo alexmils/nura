@@ -4,10 +4,13 @@ import {
   requirePlatformSettingsAccess,
   isAuthContext,
 } from "@/lib/api-auth";
+import { effectiveMetaAds } from "@/lib/meta-ads-settings";
+import { metaAdsEnv } from "@/lib/meta-ads-refresh";
 import {
   getPlatformSettings,
   getPublicAppUrl,
   savePlatformSettings,
+  type PlatformSettings,
 } from "@/lib/platform-settings";
 import {
   mergeSeoConfigPatch,
@@ -22,6 +25,18 @@ import {
 import { revalidatePublicSeo } from "@/lib/site-seo-cache";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 
+function statusFor(settings: PlatformSettings, publicAppUrl: string) {
+  const pages = resolveSiteSeoPages(settings.seo, publicAppUrl);
+  const ads = effectiveMetaAds(settings.metaAds, metaAdsEnv());
+  const status = buildMarketingSeoStatus(settings.seo, pages, publicAppUrl, {
+    metaAds: {
+      accountId: ads.accountId,
+      hasAccessToken: Boolean(ads.accessToken),
+    },
+  });
+  return { pages, status };
+}
+
 export async function GET() {
   const auth = await requireAdminAccess();
   if (!isAuthContext(auth)) return auth;
@@ -32,12 +47,7 @@ export async function GET() {
       getPublicAppUrl(),
     ]);
     const canEdit = auth.user.role === "platform_admin";
-    const pages = resolveSiteSeoPages(settings.seo, publicAppUrl);
-    const status = buildMarketingSeoStatus(
-      settings.seo,
-      pages,
-      publicAppUrl
-    );
+    const { pages, status } = statusFor(settings, publicAppUrl);
     return NextResponse.json({
       seo: toSeoAdminView(settings.seo, canEdit),
       pages,
@@ -70,8 +80,7 @@ export async function PUT(request: Request) {
       seo: nextSeo,
     });
     const publicAppUrl = await getPublicAppUrl();
-    const pages = resolveSiteSeoPages(next.seo, publicAppUrl);
-    const status = buildMarketingSeoStatus(next.seo, pages, publicAppUrl);
+    const { pages, status } = statusFor(next, publicAppUrl);
 
     revalidatePublicSeo();
 

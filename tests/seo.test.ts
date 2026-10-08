@@ -211,6 +211,15 @@ describe("site-seo status", () => {
     const googleAds = status.connections.find((c) => c.id === "google_ads");
     assert.equal(googleAds?.name, "Google Ads");
     assert.equal(googleAds?.status, "not_connected");
+    const metaAds = status.connections.find((c) => c.id === "meta_ads");
+    assert.equal(metaAds?.name, "Meta Ads");
+    assert.equal(metaAds?.status, "not_connected");
+    const linked = buildMarketingSeoStatus(seo, pages, "https://nurahelp.com", {
+      metaAds: { accountId: "3522581611327832", hasAccessToken: true },
+    });
+    const linkedAds = linked.connections.find((c) => c.id === "meta_ads");
+    assert.equal(linkedAds?.status, "connected");
+    assert.equal(linkedAds?.detail, "3522581611327832");
   });
 
   it("maps data URL OG images to the public /og-image route", () => {

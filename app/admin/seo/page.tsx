@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { MetaAdsConnectionForm } from "@/app/components/admin/MetaAdsConnectionForm";
 import { SEO_CONNECTIONS_REV } from "@/app/components/admin/seo-connections-rev";
+import { SEO_CARD_REV } from "@/app/components/admin/seo-card-rev";
 import {
   AdminTabs,
   useAdminTab,
@@ -88,6 +89,7 @@ type ConnId =
   | "meta"
   | "linkedin"
   | "google_ads"
+  | "meta_ads"
   | "conversions";
 
 type ConnFormState = {
@@ -283,6 +285,7 @@ function ConnectionConnectModal({
     meta: "Meta Pixel",
     linkedin: "LinkedIn Insight",
     google_ads: "Google Ads",
+    meta_ads: "Meta Ads",
     conversions: "Server-side conversions",
   };
 
@@ -1678,7 +1681,7 @@ function AdminSeoPageInner() {
         {tab === "analytics" ? <SeoAnalyticsPanel /> : null}
 
         {tab === "connections" ? (
-          <div className="admin-seo-section" data-rev={SEO_CONNECTIONS_REV}>
+          <div className="admin-seo-section" data-rev={SEO_CONNECTIONS_REV} data-card={SEO_CARD_REV}>
             <h2 className="admin-panel-title">Connections</h2>
             <p className="admin-panel-sub">
               Public IDs are masked in the cards. Verification codes and the
@@ -1722,13 +1725,21 @@ function AdminSeoPageInner() {
                 );
               })}
             </div>
-            <MetaAdsConnectionForm />
             {!canEdit ? (
               <p className="admin-panel-sub">
                 Support can view connections. Platform admin can connect them.
               </p>
             ) : null}
-            {connModal && seo ? (
+            {connModal === "meta_ads" ? (
+              <MetaAdsConnectionForm
+                onClose={() => setConnModal(null)}
+                onSaved={() => {
+                  setConnModal(null);
+                  void load();
+                }}
+              />
+            ) : null}
+            {connModal && connModal !== "meta_ads" && seo ? (
               <ConnectionConnectModal
                 key={connModal}
                 connId={connModal}

@@ -437,7 +437,10 @@ export async function buildPageMetadata(pageId: SeoPageId): Promise<Metadata> {
 export function buildMarketingSeoStatus(
   seo: PlatformSeoConfig,
   pages: SiteSeoPage[],
-  publicAppUrl?: string
+  publicAppUrl?: string,
+  extras?: {
+    metaAds?: { accountId: string; hasAccessToken: boolean };
+  }
 ): MarketingSeoStatus {
   const origin = siteOrigin(publicAppUrl);
   const home = pages.find((p) => p.id === "home") ?? pages[0];
@@ -526,6 +529,14 @@ export function buildMarketingSeoStatus(
       publicIdMasked: null,
       detail: null,
       hint: "Add the LinkedIn tag inside Google Tag Manager. Nura does not load a separate LinkedIn script.",
+    },
+    {
+      id: "meta_ads",
+      name: "Meta Ads",
+      status: extras?.metaAds?.hasAccessToken ? "connected" : "not_connected",
+      publicIdMasked: null,
+      detail: extras?.metaAds?.accountId.trim() || null,
+      hint: "Ad account and access token. Spend and campaigns then show on Overview.",
     },
     {
       id: "google_ads",
