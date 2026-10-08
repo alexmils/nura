@@ -208,6 +208,9 @@ describe("site-seo status", () => {
     assert.ok(connected.length >= 5);
     const meta = status.connections.find((c) => c.id === "meta");
     assert.equal(meta?.status, "via_tag_manager");
+    const googleAds = status.connections.find((c) => c.id === "google_ads");
+    assert.equal(googleAds?.name, "Google Ads");
+    assert.equal(googleAds?.status, "not_connected");
   });
 
   it("maps data URL OG images to the public /og-image route", () => {

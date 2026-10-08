@@ -523,11 +523,11 @@ function GoogleCard({
         <div className="mkt-empty">
           <p className="mkt-empty-title">Google Ads is not connected</p>
           <p>
-            Add the customer ID, developer token, and OAuth refresh token on
-            Connections. Cost, clicks, and conversions then show up here.
+            Add the customer ID, developer token, and OAuth refresh token on the
+            Google Ads card.
           </p>
           <Link href="/admin/seo?tab=connections" className="btn-primary mkt-connect">
-            Open Connections
+            Connect Google Ads
           </Link>
         </div>
       ) : ads.error ? (

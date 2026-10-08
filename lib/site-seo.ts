@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
   buildConversionConfig,
-  describeConversionChannels,
 } from "@/lib/conversions/config";
 import {
   BRAND_DESCRIPTION,
@@ -449,9 +448,11 @@ export function buildMarketingSeoStatus(
   const gscVer = seo.gscVerification.trim();
   const bing = seo.bingVerification.trim();
   const ignoreList = parseAnalyticsIgnoreIps(seo.ignoreIps);
-  const conversionChannels = describeConversionChannels(
-    buildConversionConfig(seo)
-  );
+  const conversionConfig = buildConversionConfig(seo);
+  const serverSideReady = [
+    conversionConfig.ga4 ? "GA4" : null,
+    conversionConfig.meta ? "Meta" : null,
+  ].filter((name): name is string => Boolean(name));
   const gtmOn = isValidGtmId(gtm);
   const ga4On = isValidGa4Id(ga4);
   const clarityOn = isValidClarityId(clarity);
@@ -527,14 +528,20 @@ export function buildMarketingSeoStatus(
       hint: "Add the LinkedIn tag inside Google Tag Manager. Nura does not load a separate LinkedIn script.",
     },
     {
+      id: "google_ads",
+      name: "Google Ads",
+      status: conversionConfig.googleAds ? "connected" : "not_connected",
+      publicIdMasked: null,
+      detail: seo.googleAdsCustomerId.trim() || null,
+      hint: "Customer ID, developer token, and OAuth refresh token. Spend and clicks then show on Overview.",
+    },
+    {
       id: "conversions",
       name: "Server-side conversions",
-      status: conversionChannels === "none" ? "not_connected" : "connected",
+      status: serverSideReady.length ? "connected" : "not_connected",
       publicIdMasked: null,
-      // Derived from the same builder the dispatcher uses, so the card can never
-      // claim a channel is live that the webhook would skip.
-      detail: conversionChannels === "none" ? null : conversionChannels,
-      hint: "Reports the first real Stripe charge to GA4, Meta, and Google Ads — the browser is gone by then, so nothing else can. Credentials are stored here and take effect immediately. Verify with GET or POST /api/admin/conversions.",
+      detail: serverSideReady.length ? serverSideReady.join(", ") : null,
+      hint: "Reports the first real Stripe charge to GA4 and Meta. The browser is already gone, so the server sends it.",
     },
   ];
 
