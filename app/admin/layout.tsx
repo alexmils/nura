@@ -3,6 +3,7 @@ import { AdminShell } from "@/app/components/admin/AdminShell";
 import { ToastProvider } from "@/app/components/Toast";
 /** Always load with /admin — do not rely only on client-component CSS HMR. */
 import "@/app/components/admin/admin-tasks.css";
+import "@/app/components/admin/admin-marketing.css";
 
 export const metadata: Metadata = {
   title: "Nura Admin",

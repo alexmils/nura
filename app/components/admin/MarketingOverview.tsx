@@ -34,6 +34,7 @@ import {
   formatAdsMoney,
 } from "@/lib/admin-marketing-window";
 import { MetaAdsConnectionForm } from "@/app/components/admin/MetaAdsConnectionForm";
+import "@/app/components/admin/admin-marketing.css";
 import { fetchJson } from "@/lib/fetch-json";
 
 const CHANNEL_LABELS: Record<string, string> = {

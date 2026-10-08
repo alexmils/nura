@@ -704,6 +704,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin search suggests **Tasks** on empty focus (Ctrl/Cmd+K), matches `todo` / `ideas`, and the sidebar nav scrolls so Dashboard links stay reachable
 - [internal] Admin Tasks image lightbox: Esc closes again (capture-phase keydown + focus dialog; thumb strip no longer swallows Escape)
 - [internal] Admin Tasks lightbox click-away stops React portal bubbling so it no longer opens the task page
+- [internal] Admin Overview marketing cards load their styles from the admin layout, so Search Console, Meta Ads, and Google Ads keep their grid after a stale CSS cache
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
