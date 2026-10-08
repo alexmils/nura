@@ -8,7 +8,28 @@
 .mkt-card {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 1rem;
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+  font-size: 0.9375rem;
+}
+
+.mkt-card,
+.mkt-card button,
+.mkt-card input,
+.mkt-card select {
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+}
+
+.mkt-card .admin-panel-title {
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.mkt-card .admin-panel-sub {
+  font-size: 1rem;
+  line-height: 1.4;
 }
 
 .mkt-head,
@@ -25,17 +46,30 @@
   align-items: flex-start;
 }
 
+.mkt-age {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.mkt-toolbar-end {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
 .mkt-ghost {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  height: 2rem;
-  padding: 0 0.75rem;
+  height: 2.375rem;
+  padding: 0 0.85rem;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
 }
@@ -77,7 +111,7 @@
   border: 1px solid color-mix(in srgb, var(--sage, #84b067) 28%, var(--border));
   background: color-mix(in srgb, var(--sage, #84b067) 8%, var(--bg));
   border-radius: 10px;
-  padding: 0.65rem 0.75rem;
+  padding: 0.8rem 0.9rem;
 }
 
 .mkt-metric-label {
@@ -85,7 +119,7 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -99,8 +133,9 @@
   display: flex;
   align-items: baseline;
   gap: 0.45rem;
-  margin-top: 0.35rem;
-  font-size: 1.35rem;
+  margin-top: 0.4rem;
+  font-size: 1.75rem;
+  line-height: 1.15;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -112,7 +147,7 @@
   padding: 0.1rem 0.4rem;
   background: var(--bg-muted);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -141,7 +176,7 @@
 .mkt-foot,
 .mkt-sub {
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-bars-caption {
@@ -162,7 +197,7 @@
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-pages li span:first-child {
@@ -186,7 +221,7 @@
 .mkt-kicker {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -218,7 +253,7 @@
   gap: 0.35rem;
   margin-top: 0.85rem;
   color: var(--sage, #84b067);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
 }
@@ -234,27 +269,27 @@
   margin: 0.35rem 0 0;
   max-width: 40rem;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-empty-title {
   margin: 0 !important;
   color: var(--text);
-  font-size: 0.95rem !important;
+  font-size: 1.0625rem !important;
   font-weight: 600;
 }
 
 .mkt-empty-inline {
   text-align: center;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-connect {
   margin-top: 0.75rem;
-  height: 2rem;
-  padding: 0 0.8rem;
-  font-size: 0.8rem;
+  height: 2.375rem;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
 }
 
 .mkt-note {
@@ -262,17 +297,17 @@
   background: var(--bg-muted);
   padding: 0.85rem 1rem;
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-select,
 .mkt-search input {
-  height: 2rem;
+  height: 2.5rem;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
   color: var(--text);
-  font-size: 0.75rem;
+  font-size: 0.9375rem;
 }
 
 .mkt-select {
@@ -299,9 +334,9 @@
   border-radius: 8px;
   background: var(--bg-muted);
   color: var(--text-secondary);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  padding: 0.35rem 0.6rem;
+  padding: 0.45rem 0.75rem;
   cursor: pointer;
 }
 
@@ -329,9 +364,52 @@
 }
 
 .mkt-search input {
-  width: 14rem;
+  width: 18rem;
   max-width: 100%;
-  padding: 0 0.6rem 0 1.7rem;
+  padding: 0 0.75rem 0 2rem;
+}
+
+.mkt-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.mkt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem 0.2rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--sage, #84b067) 45%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sage, #84b067) 14%, var(--bg));
+  color: var(--ink, #2a3020);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.mkt-tag:hover {
+  background: color-mix(in srgb, var(--pistachio, #c6d67e) 55%, var(--bg));
+}
+
+.mkt-tag:focus-visible {
+  outline: 2px solid var(--pistachio, #c6d67e);
+  outline-offset: 2px;
 }
 
 .mkt-table-wrap {
@@ -398,10 +476,10 @@
   border-radius: 999px;
   background: var(--bg-muted);
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  padding: 0.12rem 0.4rem;
+  padding: 0.2rem 0.5rem;
   text-transform: uppercase;
 }
 
@@ -494,6 +572,13 @@
 }
 
 @media (max-width: 720px) {
+  .mkt-watch {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .mkt-search,
   .mkt-search input,
   .mkt-select {
     width: 100%;

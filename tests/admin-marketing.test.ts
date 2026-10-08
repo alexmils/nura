@@ -9,6 +9,7 @@ import {
   normalizeMetaAccountId,
   pctDelta,
 } from "../lib/admin-marketing-window.ts";
+import { addWatchTag, textMatchesWatchTags } from "../lib/ads-watch-tags.ts";
 import { collectLandingHosts, indexLandingHosts, landingHost } from "../lib/google-ads-landing.ts";
 
 describe("admin marketing windows", () => {
@@ -79,5 +80,31 @@ describe("admin marketing windows", () => {
     assert.equal(isAdsRange("28"), true);
     assert.equal(isAdsRange("14"), false);
     assert.equal(ADS_ALL_ACCOUNTS, "all");
+  });
+});
+
+describe("ads watch tags", () => {
+  it("adds a word on Enter and ignores an empty one", () => {
+    assert.deepEqual(addWatchTag([], "  "), []);
+    assert.deepEqual(addWatchTag([], " receptly "), ["receptly"]);
+    assert.deepEqual(addWatchTag(["receptly"], "Receptly"), ["receptly"]);
+    assert.deepEqual(addWatchTag(["receptly"], "nura"), ["receptly", "nura"]);
+  });
+
+  it("keeps a campaign when any tag is in the name, account, status, type, or site", () => {
+    const google = [
+      "Campaign #1",
+      "Receptly",
+      "PAUSED",
+      "PERFORMANCE_MAX",
+      "Performance Max",
+      "receptly.app",
+    ];
+    assert.equal(textMatchesWatchTags([], google), true);
+    assert.equal(textMatchesWatchTags(["receptly"], google), true);
+    assert.equal(textMatchesWatchTags(["nura", "receptly"], google), true);
+    assert.equal(textMatchesWatchTags(["hubcast"], google), false);
+    assert.equal(textMatchesWatchTags(["paused"], ["CAMPAIGN_PAUSED"]), true);
+    assert.equal(textMatchesWatchTags(["traffic"], ["OUTCOME_TRAFFIC", "traffic"]), true);
   });
 });

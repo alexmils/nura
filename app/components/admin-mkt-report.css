@@ -1,0 +1,147 @@
+/* Marketing list + single-campaign report. Loaded from the admin layout. */
+
+.mkt-page.admin-main {
+  max-width: 76rem;
+  gap: 1.25rem;
+}
+
+.mkt-stack-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.mkt-stack-page .mkt-chart-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.25rem;
+}
+
+.mkt-stack-page .mkt-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.mkt-chart-value {
+  margin: 0.15rem 0 0;
+  color: var(--text);
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.mkt-stack-page .mkt-chart .admin-fin-chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 0.35rem;
+}
+
+.mkt-stack-page .admin-panel {
+  min-width: 0;
+}
+
+.mkt-stack-page .mkt-table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.mkt-account {
+  height: 2rem;
+  max-width: 18rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.875rem;
+  padding: 0 0.5rem;
+}
+
+.mkt-account:focus {
+  outline: none;
+  border-color: var(--pistachio, #c6d67e);
+}
+
+.mkt-campaign-link {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mkt-campaign-link:hover {
+  color: var(--sage, #84b067);
+  text-decoration: underline;
+}
+
+.mkt-back {
+  display: inline-flex;
+  margin: 0 0 0.65rem;
+  color: var(--sage, #84b067);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mkt-back:hover {
+  text-decoration: underline;
+}
+
+.mkt-report-facts {
+  margin: 0.35rem 0 0;
+  color: var(--text-secondary);
+  font-size: var(--ui-muted, 1rem);
+  line-height: 1.4;
+}
+
+.mkt-report-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.mkt-report-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1rem 1.25rem;
+  margin: 0;
+}
+
+.mkt-report-metrics div {
+  min-width: 0;
+  border-top: 1px solid color-mix(in srgb, var(--sage, #84b067) 35%, var(--border));
+  padding-top: 0.65rem;
+}
+
+.mkt-report-metrics dt {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mkt-report-metrics dd {
+  margin: 0.25rem 0 0;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+}
+
+@media (max-width: 800px) {
+  .mkt-stack-page .mkt-chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mkt-report-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+}

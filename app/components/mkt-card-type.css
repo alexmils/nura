@@ -1,0 +1,176 @@
+/*
+ * Ads card type, loaded after admin-marketing.css.
+ * The admin CSS chunk URL stays cached at the edge, so this file lives
+ * outside that folder and sets the readable sizes for the whole card.
+ * Chrome floor is 0.875rem (14px). KPI values are 1.75rem (28px).
+ */
+.mkt-card {
+  gap: 1rem;
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+  font-size: 0.9375rem;
+}
+
+.mkt-card,
+.mkt-card button,
+.mkt-card input,
+.mkt-card select {
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+}
+
+.mkt-card .admin-panel-title {
+  font-family: var(--font-sans), "Source Sans 3", sans-serif;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.mkt-card .admin-panel-sub,
+.mkt-card .mkt-age {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.mkt-card .mkt-age {
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.mkt-card .mkt-ghost {
+  height: 2.375rem;
+  padding: 0 0.85rem;
+  font-size: 0.875rem;
+}
+
+.mkt-card .mkt-metric {
+  padding: 0.8rem 0.9rem;
+}
+
+.mkt-card .mkt-metric-label {
+  font-size: 0.875rem;
+}
+
+.mkt-card .mkt-metric-value {
+  margin-top: 0.4rem;
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+
+.mkt-card .mkt-delta {
+  font-size: 0.875rem;
+}
+
+.mkt-card .mkt-count,
+.mkt-card .mkt-foot,
+.mkt-card .mkt-sub,
+.mkt-card .mkt-bars-caption,
+.mkt-card .mkt-pages li {
+  font-size: 0.9375rem;
+}
+
+.mkt-card .mkt-kicker,
+.mkt-card .mkt-inline {
+  font-size: 0.875rem;
+}
+
+.mkt-card .mkt-select,
+.mkt-card .mkt-search input {
+  height: 2.5rem;
+  font-size: 0.9375rem;
+}
+
+.mkt-card .mkt-search input {
+  width: 18rem;
+  padding: 0 0.75rem 0 2rem;
+}
+
+.mkt-card .mkt-pills button,
+.mkt-card .mkt-filters button {
+  font-size: 0.875rem;
+  padding: 0.45rem 0.75rem;
+}
+
+.mkt-card .mkt-watch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.mkt-card .mkt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mkt-card .mkt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2rem;
+  padding: 0.2rem 0.55rem 0.2rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--sage, #84b067) 45%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--sage, #84b067) 14%, var(--bg));
+  color: var(--ink, #2a3020);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.mkt-card .mkt-tag:hover {
+  background: color-mix(in srgb, var(--pistachio, #c6d67e) 55%, var(--bg));
+}
+
+.mkt-card .mkt-tag:focus-visible {
+  outline: 2px solid var(--pistachio, #c6d67e);
+  outline-offset: 2px;
+}
+
+.mkt-card .mkt-table {
+  font-size: 1rem;
+}
+
+.mkt-card .mkt-table th {
+  font-size: 0.875rem;
+}
+
+.mkt-card .mkt-table .mkt-sub {
+  font-size: 0.9375rem;
+}
+
+.mkt-card .mkt-status,
+.mkt-card .mkt-ig {
+  font-size: 0.875rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.mkt-card .mkt-empty p,
+.mkt-card .mkt-note,
+.mkt-card .mkt-empty-inline {
+  font-size: 0.9375rem;
+}
+
+.mkt-card .mkt-empty-title {
+  font-size: 1.0625rem;
+}
+
+@media (max-width: 720px) {
+  .mkt-card .mkt-watch {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .mkt-card .mkt-search,
+  .mkt-card .mkt-search input,
+  .mkt-card .mkt-select {
+    width: 100%;
+    max-width: none;
+  }
+}

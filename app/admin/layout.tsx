@@ -5,11 +5,15 @@ import { ToastProvider } from "@/app/components/Toast";
 import "@/app/components/admin/admin-tasks.css";
 import "@/app/components/admin/admin-marketing.css";
 import "@/app/components/mkt-table-type.css";
+import "@/app/components/mkt-card-type.css";
+import "@/app/components/admin-mkt-report.css";
+import { ADMIN_MKT_REPORT_REV } from "@/app/components/admin-mkt-report-rev";
 import "@/app/components/admin-dash-pack.css";
 
 export const metadata: Metadata = {
   title: "Nura Admin",
   applicationName: "Nura Admin",
+  other: { "mkt-report": ADMIN_MKT_REPORT_REV },
   manifest: "/admin/manifest.webmanifest",
   appleWebApp: {
     capable: true,

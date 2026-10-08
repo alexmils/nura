@@ -136,6 +136,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Privacy policy “Update or delete your account” is the Meta data-deletion instructions URL (`/privacy#update-or-delete`)
 - [internal] Admin Meta Ads card reads `META_ADS_ACCOUNT_ID` and `META_ADS_ACCESS_TOKEN` from the environment (`.env.example` only, values stay local)
 - [internal] Admin Overview Meta card: connection form (account, token, app id, app secret) with Save. Blank secrets stay stored. A user token refreshes itself in the two weeks before it expires when the app id and secret are saved
+- [internal] Admin Marketing opens one campaign as a full report: name, status, type, landing site, spend, clicks, and its ad groups or ads
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -392,6 +393,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Topics orbit link hover: color only (no mint fill box)
 - [internal] Topics orbit keeps spinning on hover (no pause)
 - [internal] Home + `/blog` cards: Balancia-style image fade overlay (white gradient + soft frosted blur)
+- [internal] Admin Meta and Google Ads cards use larger type so the title, KPIs, search, and filters are readable
+- [internal] Admin Meta and Google campaign search turns a word into a removable tag on Enter and keeps a campaign when that word is in the name, account, status, type, or landing site
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -714,6 +717,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin sidebar Marketing opens Meta and Google Ads on separate tabs, with daily spend and click charts plus campaign and ad-group tables
 - [internal] Admin Overview closes the gap under the week chart: Tasks sits directly beneath it, and Snapshot stays in the side column with AI cost mix
 - [internal] Admin Overview puts Platform health in the side column under AI cost mix, so the mint gap beside Tasks is gone
+- [internal] Admin Overview and Marketing reuse the last Meta and Google Ads report for 6 hours, so opening those pages does not call the ads APIs again. Refresh still loads live numbers. A failed refresh keeps the previous report.
+- [internal] Admin Marketing stacks daily charts, the campaign table, and ad groups in separate panels, and the campaign name opens that report
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

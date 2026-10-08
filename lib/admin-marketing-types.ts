@@ -106,6 +106,8 @@ export type DashboardAds = {
   series: MarketingDay[];
   error: string | null;
   notice: string | null;
+  /** When the last successful report was fetched. */
+  cachedAt?: string | null;
 };
 
 export type GoogleAdsCampaign = {
@@ -153,6 +155,8 @@ export type DashboardGoogleAds = {
   series: MarketingDay[];
   error: string | null;
   notice: string | null;
+  /** When the last successful report was fetched. */
+  cachedAt?: string | null;
 };
 
 export type MarketingOverview = {

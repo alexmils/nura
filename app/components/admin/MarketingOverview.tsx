@@ -14,7 +14,9 @@ import {
   ShoppingBag,
   Target,
   Users,
+  X,
 } from "lucide-react";
+import { addWatchTag, textMatchesWatchTags } from "@/lib/ads-watch-tags";
 import {
   ADS_ALL_ACCOUNTS,
   ADS_RANGE_LABELS,
@@ -34,6 +36,7 @@ import {
   formatAdsMoney,
 } from "@/lib/admin-marketing-window";
 import "@/app/components/admin/admin-marketing.css";
+import { ADS_REPORT_AGE_REV, formatAdsUpdatedAgo } from "@/app/components/admin/ads-report-age";
 import { MARKETING_CARDS_REV } from "@/app/components/admin/marketing-cards-rev";
 import { GOOGLE_SITES_REV } from "@/app/components/admin/google-sites-rev";
 import { fetchJson } from "@/lib/fetch-json";
@@ -50,6 +53,31 @@ const CHANNEL_LABELS: Record<string, string> = {
   DISCOVERY: "Discovery",
   UNKNOWN: "–",
 };
+
+function useWatchTags() {
+  const [draft, setDraft] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const commit = useCallback(() => {
+    const cleaned = draft.trim().replace(/\s+/g, " ");
+    if (!cleaned) return;
+    setTags((current) => addWatchTag(current, cleaned));
+    setDraft("");
+  }, [draft]);
+  const remove = useCallback((tag: string) => {
+    setTags((current) => current.filter((item) => item !== tag));
+  }, []);
+  return { draft, setDraft, tags, commit, remove };
+}
+
+function lineMatches(line: MarketingLine, tags: string[]) {
+  return textMatchesWatchTags(tags, [
+    line.name,
+    line.campaignName,
+    line.status,
+    line.kind,
+    ...line.sites,
+  ]);
+}
 
 function DeltaBadge({ value }: { value: number | null | undefined }) {
   if (value == null) return null;
@@ -76,7 +104,7 @@ function Metric({
   return (
     <div className="mkt-metric">
       <span className="mkt-metric-label">
-        <Icon size={14} />
+        <Icon size={16} />
         {label}
       </span>
       <span className="mkt-metric-value">
@@ -115,7 +143,7 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
         </div>
         <Link href="/admin/seo?tab=analytics" className="mkt-ghost">
           Full analytics
-          <ArrowUpRight size={14} />
+          <ArrowUpRight size={16} />
         </Link>
       </div>
 
@@ -217,7 +245,7 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
             </li>
           </ul>
           <Link href="/admin/seo?tab=indexing" className="mkt-inline">
-            <Clock3 size={14} />
+            <Clock3 size={16} />
             Open indexing report
           </Link>
         </aside>
@@ -315,20 +343,22 @@ function MetaCard({
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "paused" | "delivered">(
     "all"
   );
-  const [query, setQuery] = useState("");
+  const watch = useWatchTags();
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     return ads.campaigns.filter((campaign) => {
       if (statusFilter === "running" && campaign.status !== "ACTIVE") return false;
       if (statusFilter === "paused" && !campaign.status.includes("PAUSED")) return false;
       if (statusFilter === "delivered" && campaign.noDelivery) return false;
-      if (!needle) return true;
-      return (
-        campaign.name.toLowerCase().includes(needle) ||
-        campaign.accountName.toLowerCase().includes(needle)
-      );
+      return textMatchesWatchTags(watch.tags, [
+        campaign.name,
+        campaign.accountName,
+        campaign.status,
+        campaign.objective,
+        campaign.objective?.replace(/^OUTCOME_/, ""),
+        ...campaign.pages,
+      ]);
     });
-  }, [ads.campaigns, query, statusFilter]);
+  }, [ads.campaigns, statusFilter, watch.tags]);
 
   const line = rangeLine(ads.startDate, ads.endDate, ads.range);
 
@@ -346,9 +376,12 @@ function MetaCard({
           </p>
         </div>
         <div className="mkt-head-actions">
+          {ads.cachedAt ? (
+            <span className="mkt-age">{formatAdsUpdatedAgo(ads.cachedAt)}</span>
+          ) : null}
           {ads.configured ? (
             <button type="button" className="mkt-ghost" onClick={onRefresh} disabled={refreshing}>
-              <RefreshCw size={14} className={refreshing ? "mkt-spin" : undefined} />
+              <RefreshCw size={16} className={refreshing ? "mkt-spin" : undefined} />
               Refresh
             </button>
           ) : null}
@@ -359,7 +392,7 @@ function MetaCard({
             className="mkt-ghost"
           >
             Ads Manager
-            <ArrowUpRight size={14} />
+            <ArrowUpRight size={16} />
           </a>
         </div>
       </div>
@@ -439,8 +472,11 @@ function MetaCard({
           </div>
 
           <CampaignFilters
-            query={query}
-            onQuery={setQuery}
+            draft={watch.draft}
+            onDraft={watch.setDraft}
+            onCommit={watch.commit}
+            tags={watch.tags}
+            onRemoveTag={watch.remove}
             statusFilter={statusFilter}
             onStatus={setStatusFilter}
             options={[
@@ -483,15 +519,7 @@ function MetaCard({
           {detail ? (
             <LinesTable
               title="Ads"
-              lines={ads.lines.filter((line) => {
-                const needle = query.trim().toLowerCase();
-                if (!needle) return true;
-                return (
-                  line.name.toLowerCase().includes(needle) ||
-                  line.campaignName.toLowerCase().includes(needle) ||
-                  line.sites.some((site) => site.includes(needle))
-                );
-              })}
+              lines={ads.lines.filter((line) => lineMatches(line, watch.tags))}
               currency={ads.currency}
               moneyLabel="Spend"
               showConversions={false}
@@ -570,22 +598,23 @@ function GoogleCard({
   const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "paused" | "delivered">(
     "all"
   );
-  const [query, setQuery] = useState("");
+  const watch = useWatchTags();
   const visible = useMemo(() => {
-    const needle = query.trim().toLowerCase();
     return ads.campaigns.filter((campaign) => {
       if (statusFilter === "enabled" && campaign.status !== "ENABLED") return false;
       if (statusFilter === "paused" && campaign.status !== "PAUSED") return false;
       if (statusFilter === "delivered" && campaign.noDelivery) return false;
-      if (!needle) return true;
       const channel = CHANNEL_LABELS[campaign.channelType] ?? campaign.channelType;
-      return (
-        campaign.name.toLowerCase().includes(needle) ||
-        channel.toLowerCase().includes(needle) ||
-        campaign.sites.some((site) => site.includes(needle))
-      );
+      return textMatchesWatchTags(watch.tags, [
+        campaign.name,
+        ads.customerName,
+        campaign.status,
+        campaign.channelType,
+        channel,
+        ...campaign.sites,
+      ]);
     });
-  }, [ads.campaigns, query, statusFilter]);
+  }, [ads.campaigns, ads.customerName, statusFilter, watch.tags]);
   const enabled = ads.campaigns.filter((c) => c.status === "ENABLED").length;
   const line = rangeLine(ads.startDate, ads.endDate, ads.range);
 
@@ -601,15 +630,18 @@ function GoogleCard({
           </p>
         </div>
         <div className="mkt-head-actions">
+          {ads.cachedAt ? (
+            <span className="mkt-age">{formatAdsUpdatedAgo(ads.cachedAt)}</span>
+          ) : null}
           {ads.connected ? (
             <button type="button" className="mkt-ghost" onClick={onRefresh} disabled={refreshing}>
-              <RefreshCw size={14} className={refreshing ? "mkt-spin" : undefined} />
+              <RefreshCw size={16} className={refreshing ? "mkt-spin" : undefined} />
               Refresh
             </button>
           ) : null}
           <a href="https://ads.google.com" target="_blank" rel="noreferrer" className="mkt-ghost">
             Google Ads
-            <ArrowUpRight size={14} />
+            <ArrowUpRight size={16} />
           </a>
         </div>
       </div>
@@ -686,9 +718,11 @@ function GoogleCard({
           </div>
 
           <CampaignFilters
-            query={query}
-            onQuery={setQuery}
-            placeholder="Search campaigns or sites"
+            draft={watch.draft}
+            onDraft={watch.setDraft}
+            onCommit={watch.commit}
+            tags={watch.tags}
+            onRemoveTag={watch.remove}
             statusFilter={statusFilter}
             onStatus={setStatusFilter}
             options={[
@@ -782,16 +816,7 @@ function GoogleCard({
           {detail ? (
             <LinesTable
               title="Ad groups"
-              lines={ads.lines.filter((line) => {
-                const needle = query.trim().toLowerCase();
-                if (!needle) return true;
-                return (
-                  line.name.toLowerCase().includes(needle) ||
-                  line.campaignName.toLowerCase().includes(needle) ||
-                  line.kind.toLowerCase().includes(needle) ||
-                  line.sites.some((site) => site.includes(needle))
-                );
-              })}
+              lines={ads.lines.filter((line) => lineMatches(line, watch.tags))}
               currency={ads.currency}
               moneyLabel="Cost"
               showConversions
@@ -808,18 +833,22 @@ function GoogleCard({
 }
 
 function CampaignFilters<T extends string>({
-  query,
-  onQuery,
-  placeholder = "Search campaigns or accounts",
+  draft,
+  onDraft,
+  onCommit,
+  tags,
+  onRemoveTag,
   statusFilter,
   onStatus,
   options,
   shown,
   total,
 }: {
-  query: string;
-  onQuery: (value: string) => void;
-  placeholder?: string;
+  draft: string;
+  onDraft: (value: string) => void;
+  onCommit: () => void;
+  tags: string[];
+  onRemoveTag: (tag: string) => void;
   statusFilter: T;
   onStatus: (value: T) => void;
   options: Array<[T, string]>;
@@ -828,15 +857,43 @@ function CampaignFilters<T extends string>({
 }) {
   return (
     <div className="mkt-toolbar">
-      <label className="mkt-search">
-        <Search size={14} />
-        <input
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
-          placeholder={placeholder}
-          aria-label={placeholder}
-        />
-      </label>
+      <div className="mkt-watch">
+        <label className="mkt-search">
+          <Search size={16} aria-hidden />
+          <input
+            type="text"
+            value={draft}
+            enterKeyHint="done"
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(event) => onDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              onCommit();
+            }}
+            placeholder="Add a word, then Enter"
+            aria-label="Add a word to watch"
+          />
+        </label>
+        {tags.length > 0 ? (
+          <ul className="mkt-tags">
+            {tags.map((tag) => (
+              <li key={tag}>
+                <button
+                  type="button"
+                  className="mkt-tag"
+                  onClick={() => onRemoveTag(tag)}
+                  aria-label={`Remove ${tag}`}
+                >
+                  {tag}
+                  <X size={16} aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
       <div className="mkt-filters">
         {options.map(([value, label]) => (
           <button
@@ -940,7 +997,13 @@ export function MarketingOverview({ detail = false }: { detail?: boolean }) {
   }
 
   return (
-    <div className="mkt-stack" id="marketing" data-rev={MARKETING_CARDS_REV} data-sites={GOOGLE_SITES_REV}>
+    <div
+      className="mkt-stack"
+      id="marketing"
+      data-rev={MARKETING_CARDS_REV}
+      data-sites={GOOGLE_SITES_REV}
+      data-age={ADS_REPORT_AGE_REV}
+    >
       {detail ? null : <SeoCard seo={data.seo} />}
       <MetaCard
         ads={data.meta}
