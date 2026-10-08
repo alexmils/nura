@@ -26,6 +26,7 @@ import { formatTokenCount, formatUsdMicros } from "@/lib/admin-llm-format";
 import type { AdminDashboardStats } from "@/lib/admin-stats";
 import type { AuditEvent } from "@/lib/audit-log";
 import { fetchJson } from "@/lib/fetch-json";
+import { OVERVIEW_LAYOUT_REV } from "@/app/components/admin/overview-layout";
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -110,7 +111,7 @@ export default function AdminOverviewPage() {
         title="Overview"
         subtitle="Users, sessions, AI cost, search, and ads."
       />
-      <main className="admin-main">
+      <main className="admin-main" data-layout={OVERVIEW_LAYOUT_REV}>
         <section className="admin-dash-kpis">
           <article className="admin-dash-kpi">
             <p className="admin-stat-label">Users</p>
@@ -162,10 +163,7 @@ export default function AdminOverviewPage() {
           </article>
         </section>
 
-        <MarketingOverview />
-
         <div className="admin-dash-grid">
-          <AdminTasksOverviewCard />
           <section className="admin-panel admin-dash-span-2">
             <div className="admin-panel-head-row">
               <div>
@@ -193,7 +191,7 @@ export default function AdminOverviewPage() {
             </div>
           </section>
 
-          <section className="admin-panel admin-dash-side-stats">
+          <section className="admin-panel admin-dash-side-stats admin-dash-snapshot">
             <h2 className="admin-panel-title">Snapshot</h2>
             <div className="admin-dash-side-row">
               <div>
@@ -245,6 +243,8 @@ export default function AdminOverviewPage() {
             </div>
           </section>
 
+          <AdminTasksOverviewCard />
+
           <section className="admin-panel">
             <div className="admin-panel-head-row">
               <h2 className="admin-panel-title">AI cost mix</h2>
@@ -277,7 +277,7 @@ export default function AdminOverviewPage() {
 
           <PlatformHealthCard />
 
-          <section className="admin-panel">
+          <section className="admin-panel admin-dash-span-2">
             <h2 className="admin-panel-title">Paying share</h2>
             <p className="admin-dash-cost-total">
               {stats.billing.paidSharePct}%
@@ -323,6 +323,8 @@ export default function AdminOverviewPage() {
             </div>
           </section>
         </div>
+
+        <MarketingOverview />
 
         <div className="admin-two-col">
           <section className="admin-panel">

@@ -4864,31 +4864,35 @@ body:has(.app-shell.session-immersive) .help-fab {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.9fr);
   gap: 0.85rem;
+  align-items: start;
 }
 
 @media (max-width: 1200px) {
   .admin-dash-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1.45fr) minmax(200px, 0.7fr);
   }
   .admin-dash-span-2 {
-    grid-column: 1 / -1;
+    grid-column: 1;
+  }
+  .admin-dash-snapshot {
+    grid-column: 2;
+    grid-row: 1;
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 800px) {
   .admin-dash-grid {
     grid-template-columns: 1fr;
+  }
+  .admin-dash-span-2,
+  .admin-dash-snapshot {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 
 .admin-dash-span-2 {
   grid-column: span 2;
-}
-
-@media (max-width: 1200px) {
-  .admin-dash-span-2 {
-    grid-column: 1 / -1;
-  }
 }
 
 .admin-dash-hero-metric {

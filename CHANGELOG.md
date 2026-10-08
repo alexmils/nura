@@ -706,6 +706,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Tasks lightbox click-away stops React portal bubbling so it no longer opens the task page
 - [internal] Admin Overview marketing cards load their styles from the admin layout, so Search Console, Meta Ads, and Google Ads keep their grid after a stale CSS cache
 - [internal] Admin Overview Meta card drops the “Runs as” note. The account form lives on SEO → Connections
+- [internal] Admin Overview puts the week chart beside Snapshot under the numbers. Search and ads sit in the middle, invite and activity stay at the bottom
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
