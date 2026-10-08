@@ -710,6 +710,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] SEO Connections: Google Ads is its own card. Server-side conversions keeps GA4 and Meta
 - [internal] SEO Connections: Meta Ads is a small card like Google Ads. The wide form at the bottom of the page is gone
 - [internal] Admin Overview Google Ads shows the landing site under each campaign name, taken from the ad or asset-group final URL, so one account running several products can be told apart from the name alone
+- [internal] Admin Overview campaign tables use a larger type size so the name, site, and status are readable
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

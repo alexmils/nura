@@ -1,0 +1,33 @@
+/*
+ * Campaign table type, loaded after admin-marketing.css.
+ * The admin CSS chunk URL stays cached at the edge, so this file lives
+ * outside that folder and wins on font size.
+ */
+.mkt-table {
+  font-size: 1rem;
+}
+
+.mkt-table th {
+  padding: 0 0.7rem 0.55rem 0;
+  font-size: 0.875rem;
+}
+
+.mkt-table td {
+  padding: 0.7rem 0.7rem 0.7rem 0;
+}
+
+.mkt-table td:first-child {
+  min-width: 12rem;
+}
+
+.mkt-table .mkt-sub {
+  margin-top: 0.2rem;
+  font-size: 0.9375rem;
+  line-height: 1.3;
+}
+
+.mkt-status,
+.mkt-ig {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.8125rem;
+}
