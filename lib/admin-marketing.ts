@@ -27,13 +27,30 @@ import {
   normalizeMetaAccountId,
   pctDelta,
 } from "@/lib/admin-marketing-window";
+import {
+  googleAdsCacheKey,
+  loadThroughAdsCache,
+  metaAdsCacheKey,
+  type AdsReportSource,
+} from "@/lib/admin-ads-cache";
+import { postgresAdsReportStore } from "@/lib/admin-ads-cache-store";
+import {
+  accountSeriesForOnlyCampaign,
+  buildGoogleCampaignView,
+  buildMetaCampaignView,
+  campaignSeriesCacheKey,
+  isCampaignId,
+  missingCampaignView,
+  type MarketingCampaignView,
+} from "@/lib/admin-marketing-campaign";
 import { mintGoogleAdsAccessToken } from "@/lib/conversions/google-ads";
 import { indexLandingHosts, collectLandingHosts } from "@/lib/google-ads-landing";
-import { ensureFreshMetaAdsToken } from "@/lib/meta-ads-refresh";
-import type { MetaAdsSettings } from "@/lib/meta-ads-settings";
+import { ensureFreshMetaAdsToken, metaAdsEnv } from "@/lib/meta-ads-refresh";
+import { effectiveMetaAds, type MetaAdsSettings } from "@/lib/meta-ads-settings";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import type { PlatformSeoConfig } from "@/lib/seo-config";
 
+/** Search Console only. Meta and Google Ads use the durable 6-hour report cache. */
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const GRAPH_VERSION = "v21.0";
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -50,6 +67,30 @@ function readCache<T>(key: string): T | null {
 
 function writeCache(key: string, data: unknown) {
   cache.set(key, { at: Date.now(), data });
+}
+
+const reportInflight = new Map<string, Promise<unknown>>();
+
+function singleFlight<T>(key: string, refresh: boolean, run: () => Promise<T>): Promise<T> {
+  if (!refresh) {
+    const pending = reportInflight.get(key);
+    if (pending) return pending as Promise<T>;
+  }
+  const job = run().finally(() => {
+    if (reportInflight.get(key) === job) reportInflight.delete(key);
+  });
+  reportInflight.set(key, job);
+  return job;
+}
+
+function stampReport<T extends { cachedAt?: string | null }>(data: T, at: number): T {
+  return { ...data, cachedAt: new Date(at).toISOString() };
+}
+
+function logAdsReport(channel: "meta" | "google", source: AdsReportSource, key: string) {
+  if (source === "cache") console.info(`[admin-marketing] ${channel} cache hit`, key);
+  else if (source === "network") console.info(`[admin-marketing] ${channel} fetch`, key);
+  else console.info(`[admin-marketing] ${channel} kept cache`, key);
 }
 
 export function clearMarketingCache(): void {
@@ -494,9 +535,38 @@ async function loadMeta(
   capiToken: string,
   range: AdsRange,
   requestedAccount: string | null,
-  refresh: boolean,
-  detail: boolean
+  refresh: boolean
 ): Promise<DashboardAds> {
+  const envAccount = normalizeMetaAccountId(ads.accountId) || null;
+  const wanted = requestedAccount || envAccount;
+  const empty = emptyMeta(range, wanted);
+  const tokenReady = Boolean(
+    effectiveMetaAds(ads, metaAdsEnv()).accessToken || capiToken.trim()
+  );
+  if (!tokenReady) return empty;
+
+  const cacheKey = metaAdsCacheKey(wanted || "auto", range);
+  return singleFlight(cacheKey, refresh, async () => {
+    const hit = await loadThroughAdsCache({
+      key: cacheKey,
+      store: postgresAdsReportStore,
+      now: Date.now(),
+      refresh,
+      failed: (row) => Boolean(row.error),
+      fetchReport: () => fetchMetaLive(ads, capiToken, range, requestedAccount),
+    });
+    logAdsReport("meta", hit.source, cacheKey);
+    return stampReport(hit.data, hit.at);
+  });
+}
+
+async function fetchMetaLive(
+  ads: MetaAdsSettings,
+  capiToken: string,
+  range: AdsRange,
+  requestedAccount: string | null
+): Promise<DashboardAds> {
+  const detail = true;
   let creds = ads;
   try {
     creds = await ensureFreshMetaAdsToken(ads);
@@ -507,13 +577,7 @@ async function loadMeta(
   const envAccount = normalizeMetaAccountId(creds.accountId) || null;
   const wanted = requestedAccount || envAccount;
   const empty = emptyMeta(range, wanted);
-  if (!token) return empty;
-
-  const cacheKey = `meta:${wanted || "auto"}:${range}${detail ? ":detail2" : ""}`;
-  if (!refresh) {
-    const hit = readCache<DashboardAds>(cacheKey);
-    if (hit) return hit;
-  }
+  if (!token) return { ...empty, configured: true, error: "Meta Ads token is missing." };
 
   try {
     const accounts = await listMetaAccounts(token);
@@ -576,7 +640,6 @@ async function loadMeta(
         error: null,
         notice: null,
       };
-      writeCache(cacheKey, data);
       return data;
     }
 
@@ -648,7 +711,6 @@ async function loadMeta(
       error: null,
       notice: null,
     };
-    writeCache(cacheKey, data);
     return data;
   } catch (err) {
     console.error("[admin-marketing] Meta Ads failed", err);
@@ -974,8 +1036,7 @@ async function loadGoogleLines(
 async function loadGoogle(
   seo: PlatformSeoConfig,
   range: AdsRange,
-  refresh: boolean,
-  detail: boolean
+  refresh: boolean
 ): Promise<DashboardGoogleAds> {
   const customerId = seo.googleAdsCustomerId.replace(/\D/g, "") || null;
   const empty = emptyGoogle(range, customerId);
@@ -988,12 +1049,28 @@ async function loadGoogle(
   );
   if (!ready || !customerId) return empty;
 
-  const cacheKey = `gads:${customerId}:${range}${detail ? ":detail2" : ""}`;
-  if (!refresh) {
-    const hit = readCache<DashboardGoogleAds>(cacheKey);
-    if (hit) return hit;
-  }
+  const cacheKey = googleAdsCacheKey(customerId, range);
+  return singleFlight(cacheKey, refresh, async () => {
+    const hit = await loadThroughAdsCache({
+      key: cacheKey,
+      store: postgresAdsReportStore,
+      now: Date.now(),
+      refresh,
+      failed: (row) => Boolean(row.error),
+      fetchReport: () => fetchGoogleLive(seo, range, customerId),
+    });
+    logAdsReport("google", hit.source, cacheKey);
+    return stampReport(hit.data, hit.at);
+  });
+}
 
+async function fetchGoogleLive(
+  seo: PlatformSeoConfig,
+  range: AdsRange,
+  customerId: string
+): Promise<DashboardGoogleAds> {
+  const detail = true;
+  const empty = emptyGoogle(range, customerId);
   const auth = await mintGoogleAdsAccessToken({
     clientId: seo.googleAdsOAuthClientId.trim(),
     clientSecret: seo.googleAdsOAuthClientSecret.trim(),
@@ -1176,7 +1253,6 @@ async function loadGoogle(
       error: null,
       notice: null,
     };
-    writeCache(cacheKey, data);
     return data;
   } catch (err) {
     console.error("[admin-marketing] Google Ads failed", err);
@@ -1197,7 +1273,9 @@ export async function loadMarketingOverview(input: {
 }): Promise<MarketingOverview> {
   const settings = await getPlatformSettings();
   const seo = settings.seo;
-  const detail = input.detail === true;
+  // Older clients still send detail=1. Overview and Marketing share one report,
+  // so a cached overview does not trigger a second ads fetch.
+  void input.detail;
   const [seoCard, meta, googleAds] = await Promise.all([
     loadSeo(seo, input.refresh === "seo"),
     loadMeta(
@@ -1205,10 +1283,206 @@ export async function loadMarketingOverview(input: {
       seo.metaCapiAccessToken,
       input.metaRange,
       input.metaAccount,
-      input.refresh === "meta",
-      detail
+      input.refresh === "meta"
     ),
-    loadGoogle(seo, input.googleRange, input.refresh === "google", detail),
+    loadGoogle(seo, input.googleRange, input.refresh === "google"),
   ]);
   return { seo: seoCard, meta, google: googleAds };
+}
+
+type CampaignSeriesRow = { series: MarketingDay[] };
+
+async function fetchGoogleCampaignSeries(
+  seo: PlatformSeoConfig,
+  customerId: string,
+  campaignId: string,
+  range: AdsRange
+): Promise<CampaignSeriesRow> {
+  const where = dateClause(range);
+  if (!where) return { series: [] };
+  const auth = await mintGoogleAdsAccessToken({
+    clientId: seo.googleAdsOAuthClientId.trim(),
+    clientSecret: seo.googleAdsOAuthClientSecret.trim(),
+    refreshToken: seo.googleAdsOAuthRefreshToken.trim(),
+  });
+  if (!auth.token) {
+    throw new Error("Google Ads sign-in expired.");
+  }
+  const apiVersion = seo.googleAdsApiVersion.trim() || DEFAULT_ADS_API;
+  const login = seo.googleAdsLoginCustomerId.replace(/\D/g, "") || undefined;
+  const rows = await adsSearch(
+    apiVersion,
+    customerId,
+    `SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM campaign WHERE campaign.id = ${campaignId} AND ${where} ORDER BY segments.date`,
+    auth.token,
+    seo.googleAdsDeveloperToken.trim(),
+    login
+  );
+  const days = rows
+    .map((row) => {
+      const segments = (row.segments ?? {}) as Record<string, unknown>;
+      const totals = googleTotals(row);
+      return {
+        date: String(segments.date || ""),
+        spend: totals.cost,
+        impressions: totals.impressions,
+        clicks: totals.clicks,
+        conversions: totals.conversions,
+      };
+    })
+    .filter((day) => day.date);
+  return { series: fillMarketingDays(range, days) };
+}
+
+async function fetchMetaCampaignSeries(
+  token: string,
+  campaignId: string,
+  range: AdsRange
+): Promise<CampaignSeriesRow> {
+  const body = await graph(token, `${campaignId}/insights`, {
+    fields: "spend,impressions,clicks,date_start",
+    time_increment: "1",
+    ...metaWindowParams(range),
+    limit: "100",
+  });
+  const days = (body.data ?? [])
+    .map((row) => ({
+      date: String(row.date_start || ""),
+      spend: num(row.spend),
+      impressions: num(row.impressions),
+      clicks: num(row.clicks),
+      conversions: 0,
+    }))
+    .filter((day) => day.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return { series: fillMarketingDays(range, days) };
+}
+
+async function loadCachedCampaignSeries(
+  key: string,
+  fetchReport: () => Promise<CampaignSeriesRow>
+): Promise<MarketingDay[]> {
+  const hit = await loadThroughAdsCache({
+    key,
+    store: postgresAdsReportStore,
+    now: Date.now(),
+    refresh: false,
+    fetchReport,
+  });
+  return hit.data.series ?? [];
+}
+
+/**
+ * One campaign from the cached account report.
+ * A daily series is fetched only when the account has more than one campaign,
+ * and that series uses its own cache key. This does not clear the account report.
+ */
+export async function loadMarketingCampaign(input: {
+  channel: "google" | "meta";
+  campaignId: string;
+  range: AdsRange;
+  metaAccount: string | null;
+}): Promise<MarketingCampaignView> {
+  if (!isCampaignId(input.campaignId)) {
+    return missingCampaignView(
+      input.channel,
+      input.campaignId,
+      input.range,
+      "This campaign is not in the loaded account."
+    );
+  }
+
+  const overview = await loadMarketingOverview({
+    metaRange: input.channel === "meta" ? input.range : "28",
+    metaAccount: input.channel === "meta" ? input.metaAccount : null,
+    googleRange: input.channel === "google" ? input.range : "28",
+    detail: true,
+  });
+
+  if (input.channel === "google") {
+    const google = overview.google;
+    const campaign = google.campaigns.find((row) => row.id === input.campaignId);
+    if (!campaign) {
+      return missingCampaignView(
+        "google",
+        input.campaignId,
+        input.range,
+        google.error || "This campaign is not in the loaded account."
+      );
+    }
+    const lines = google.lines.filter((line) => line.campaignId === campaign.id);
+    const reused = accountSeriesForOnlyCampaign(
+      google.campaigns.map((row) => row.id),
+      campaign.id,
+      google.series
+    );
+    let series = reused ?? [];
+    if (!reused && google.customerId) {
+      try {
+        series = await loadCachedCampaignSeries(
+          campaignSeriesCacheKey("google", google.customerId, campaign.id, input.range),
+          async () => {
+            const settings = await getPlatformSettings();
+            return fetchGoogleCampaignSeries(
+              settings.seo,
+              google.customerId || "",
+              campaign.id,
+              input.range
+            );
+          }
+        );
+      } catch (err) {
+        console.error("[admin-marketing] campaign series failed", err);
+        series = [];
+      }
+    }
+    return buildGoogleCampaignView(campaign, lines, series, google.currency, input.range);
+  }
+
+  const meta = overview.meta;
+  const campaign = meta.campaigns.find((row) => row.id === input.campaignId);
+  if (!campaign) {
+    return missingCampaignView(
+      "meta",
+      input.campaignId,
+      input.range,
+      meta.error || "This campaign is not in the loaded account."
+    );
+  }
+  const lines = meta.lines.filter((line) => line.campaignId === campaign.id);
+  const reused = accountSeriesForOnlyCampaign(
+    meta.campaigns.map((row) => row.id),
+    campaign.id,
+    meta.series
+  );
+  let series = reused ?? [];
+  if (!reused) {
+    try {
+      const settings = await getPlatformSettings();
+      let creds = settings.metaAds;
+      try {
+        creds = await ensureFreshMetaAdsToken(settings.metaAds);
+      } catch (err) {
+        console.error("[admin-marketing] Meta token check failed", err);
+      }
+      const token =
+        effectiveMetaAds(creds, metaAdsEnv()).accessToken ||
+        settings.seo.metaCapiAccessToken.trim();
+      if (token) {
+        series = await loadCachedCampaignSeries(
+          campaignSeriesCacheKey(
+            "meta",
+            input.metaAccount || meta.accountId || "auto",
+            campaign.id,
+            input.range
+          ),
+          () => fetchMetaCampaignSeries(token, campaign.id, input.range)
+        );
+      }
+    } catch (err) {
+      console.error("[admin-marketing] campaign series failed", err);
+      series = [];
+    }
+  }
+  return buildMetaCampaignView(campaign, lines, series, meta.currency, input.range);
 }

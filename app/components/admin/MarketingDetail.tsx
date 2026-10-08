@@ -1,6 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { RefreshCw } from "lucide-react";
+import { ADS_REPORT_AGE_REV, formatAdsUpdatedAgo } from "@/app/components/admin/ads-report-age";
 import {
   AdminLineChart,
   type LineChartPoint,
@@ -11,6 +14,7 @@ import {
   ADS_RANGES,
   type AdsRange,
 } from "@/lib/ads-range";
+import { marketingCampaignHref } from "@/lib/admin-marketing-campaign";
 import type {
   DashboardAds,
   DashboardGoogleAds,
@@ -42,12 +46,14 @@ function chartPoints(
   }));
 }
 
-function DayCharts({
+export function DayCharts({
   series,
   currency,
+  rangeLabel,
 }: {
   series: MarketingDay[];
   currency: string | null;
+  rangeLabel: string;
 }) {
   const spend = chartPoints(series, (day) => day.spend);
   const clicks = chartPoints(series, (day) => day.clicks);
@@ -57,18 +63,30 @@ function DayCharts({
     <div className="mkt-chart-grid">
       <section className="admin-panel mkt-chart">
         <h2 className="admin-panel-title">Spend</h2>
-        <p className="admin-panel-sub">{formatAdsMoney(totalSpend, currency)} in this range</p>
+        <p className="mkt-chart-value">{formatAdsMoney(totalSpend, currency)}</p>
+        <p className="admin-panel-sub">{rangeLabel}</p>
         {series.length > 1 ? (
-          <AdminLineChart points={spend} ariaLabel="Spend by day" markers={series.length <= 16} />
+          <AdminLineChart
+            points={spend}
+            height={128}
+            ariaLabel="Spend by day"
+            markers={series.length <= 16}
+          />
         ) : (
           <p className="mkt-empty-inline">No daily spend in this range.</p>
         )}
       </section>
       <section className="admin-panel mkt-chart">
         <h2 className="admin-panel-title">Clicks</h2>
-        <p className="admin-panel-sub">{formatAdsInt(totalClicks)} in this range</p>
+        <p className="mkt-chart-value">{formatAdsInt(totalClicks)}</p>
+        <p className="admin-panel-sub">{rangeLabel}</p>
         {series.length > 1 ? (
-          <AdminLineChart points={clicks} ariaLabel="Clicks by day" markers={series.length <= 16} />
+          <AdminLineChart
+            points={clicks}
+            height={128}
+            ariaLabel="Clicks by day"
+            markers={series.length <= 16}
+          />
         ) : (
           <p className="mkt-empty-inline">No daily clicks in this range.</p>
         )}
@@ -108,16 +126,18 @@ function SpendMix({
   );
 }
 
-function LineRows({
+export function MarketingLines({
   lines,
   currency,
   moneyLabel,
   showConversions,
+  showCampaign = true,
 }: {
   lines: MarketingLine[];
   currency: string | null;
   moneyLabel: string;
   showConversions: boolean;
+  showCampaign?: boolean;
 }) {
   if (lines.length === 0) return null;
   return (
@@ -126,7 +146,7 @@ function LineRows({
         <thead>
           <tr>
             <th>Name</th>
-            <th>Campaign</th>
+            {showCampaign ? <th>Campaign</th> : null}
             <th>Kind</th>
             <th>Status</th>
             <th className="num">{moneyLabel}</th>
@@ -145,7 +165,7 @@ function LineRows({
                   <span className="mkt-sub">{line.sites.join(", ")}</span>
                 ) : null}
               </td>
-              <td>{line.campaignName || "–"}</td>
+              {showCampaign ? <td>{line.campaignName || "–"}</td> : null}
               <td>{line.kind}</td>
               <td>{line.status.replace(/_/g, " ")}</td>
               <td className="num">{formatAdsMoney(line.spend, currency)}</td>
@@ -163,19 +183,28 @@ function LineRows({
   );
 }
 
-export function MarketingChannel({ channel }: { channel: "meta" | "google" }) {
-  const [range, setRange] = useState<AdsRange>("28");
+export function MarketingChannel({
+  channel,
+  range,
+  onRange,
+}: {
+  channel: "meta" | "google";
+  range: AdsRange;
+  onRange: (range: AdsRange) => void;
+}) {
   const [account, setAccount] = useState("");
   const [data, setData] = useState<MarketingOverview | null>(null);
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (refresh = false) => {
     const params = new URLSearchParams();
     params.set("detail", "1");
     if (range !== "28") {
       params.set(channel === "meta" ? "ads" : "gads", range);
     }
     if (channel === "meta" && account) params.set("account", account);
+    if (refresh) params.set("refresh", channel);
     const next = (await fetchJson(
       `/api/admin/marketing?${params.toString()}`
     )) as MarketingOverview;
@@ -202,6 +231,24 @@ export function MarketingChannel({ channel }: { channel: "meta" | "google" }) {
   const google = data?.google;
   const series = channel === "meta" ? meta?.series ?? [] : google?.series ?? [];
   const currency = channel === "meta" ? meta?.currency ?? null : google?.currency ?? null;
+  const cachedAt = channel === "meta" ? meta?.cachedAt : google?.cachedAt;
+  const canRefresh = channel === "meta" ? Boolean(meta?.configured) : Boolean(google?.connected);
+
+  async function refreshReport() {
+    setRefreshing(true);
+    try {
+      await load(true);
+    } catch (err) {
+      console.error(err);
+      setError("Could not refresh.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+  const metaAccount =
+    channel === "meta"
+      ? account || (meta?.scope === "all" ? ADS_ALL_ACCOUNTS : meta?.accountId || "")
+      : "";
 
   const mix = useMemo(() => {
     if (channel === "meta") {
@@ -221,7 +268,7 @@ export function MarketingChannel({ channel }: { channel: "meta" | "google" }) {
   }, [channel, google?.campaigns, meta?.campaigns]);
 
   return (
-    <div className="mkt-detail">
+    <div className="mkt-detail mkt-stack-page" data-age={ADS_REPORT_AGE_REV}>
       <div className="mkt-toolbar">
         {channel === "meta" && meta && meta.accounts.length > 0 ? (
           <select
@@ -244,11 +291,25 @@ export function MarketingChannel({ channel }: { channel: "meta" | "google" }) {
               key={item}
               type="button"
               className={range === item ? "is-on" : undefined}
-              onClick={() => setRange(item)}
+              onClick={() => onRange(item)}
             >
               {ADS_RANGE_LABELS[item]}
             </button>
           ))}
+        </div>
+        <div className="mkt-toolbar-end">
+          {cachedAt ? <span className="mkt-age">{formatAdsUpdatedAgo(cachedAt)}</span> : null}
+          {canRefresh ? (
+            <button
+              type="button"
+              className="mkt-ghost"
+              onClick={() => void refreshReport()}
+              disabled={refreshing}
+            >
+              <RefreshCw size={16} className={refreshing ? "mkt-spin" : undefined} />
+              Refresh
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -260,147 +321,200 @@ export function MarketingChannel({ channel }: { channel: "meta" | "google" }) {
 
       {data ? (
         <>
-          <DayCharts series={series} currency={currency} />
+          <DayCharts
+            series={series}
+            currency={currency}
+            rangeLabel={ADS_RANGE_LABELS[range]}
+          />
           <SpendMix rows={mix} currency={currency} />
-          {channel === "meta" && meta ? <MetaTable ads={meta} /> : null}
-          {channel === "google" && google ? <GoogleTable ads={google} /> : null}
+          {channel === "meta" && meta ? (
+            <MetaTables ads={meta} range={range} account={metaAccount} />
+          ) : null}
+          {channel === "google" && google ? (
+            <GoogleTables ads={google} range={range} />
+          ) : null}
         </>
       ) : null}
     </div>
   );
 }
 
-function MetaTable({ ads }: { ads: DashboardAds }) {
+function MetaTables({
+  ads,
+  range,
+  account,
+}: {
+  ads: DashboardAds;
+  range: AdsRange;
+  account: string;
+}) {
   return (
-    <section className="admin-panel mkt-chart">
-      <h2 className="admin-panel-title">Campaigns</h2>
-      <p className="admin-panel-sub">{ads.accountName || "Meta Ads"}</p>
-      {ads.campaigns.length === 0 ? (
-        <p className="mkt-empty-inline">No campaigns in this account.</p>
-      ) : (
-        <div className="mkt-table-wrap">
-          <table className="mkt-table">
-            <thead>
-              <tr>
-                <th>Campaign</th>
-                <th>Status</th>
-                <th className="num">Spend</th>
-                <th className="num">Impr.</th>
-                <th className="num">Reach</th>
-                <th className="num">Clicks</th>
-                <th className="num">CTR</th>
-                <th className="num">CPC</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ads.campaigns.map((campaign) => (
-                <tr key={campaign.id}>
-                  <td>
-                    {campaign.name}
-                    <span className="mkt-sub">
-                      {campaign.accountName}
-                      {campaign.objective
-                        ? ` · ${campaign.objective.replace(/^OUTCOME_/, "").toLowerCase()}`
-                        : ""}
-                    </span>
-                  </td>
-                  <td>{campaign.status.replace(/_/g, " ")}</td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsMoney(campaign.spend, ads.currency)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsInt(campaign.impressions)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsInt(campaign.reach)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsInt(campaign.clicks)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : `${campaign.ctr.toFixed(2)}%`}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsMoney(campaign.cpc, ads.currency)}
-                  </td>
+    <>
+      <section className="admin-panel mkt-report-panel">
+        <h2 className="admin-panel-title">Campaigns</h2>
+        <p className="admin-panel-sub">{ads.accountName || "Meta Ads"}</p>
+        {ads.campaigns.length === 0 ? (
+          <p className="mkt-empty-inline">No campaigns in this account.</p>
+        ) : (
+          <div className="mkt-table-wrap">
+            <table className="mkt-table">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Status</th>
+                  <th className="num">Spend</th>
+                  <th className="num">Impr.</th>
+                  <th className="num">Reach</th>
+                  <th className="num">Clicks</th>
+                  <th className="num">CTR</th>
+                  <th className="num">CPC</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <h2 className="admin-panel-title mkt-lines-title">Ads</h2>
-      {ads.lines.length === 0 ? (
-        <p className="mkt-empty-inline">No ads in this account.</p>
-      ) : (
-        <LineRows lines={ads.lines} currency={ads.currency} moneyLabel="Spend" showConversions={false} />
-      )}
-    </section>
+              </thead>
+              <tbody>
+                {ads.campaigns.map((campaign) => (
+                  <tr key={campaign.id}>
+                    <td>
+                      <Link
+                        className="mkt-campaign-link"
+                        href={marketingCampaignHref({
+                          id: campaign.id,
+                          channel: "meta",
+                          range,
+                          account,
+                        })}
+                      >
+                        {campaign.name}
+                      </Link>
+                      <span className="mkt-sub">
+                        {campaign.accountName}
+                        {campaign.objective
+                          ? ` · ${campaign.objective.replace(/^OUTCOME_/, "").toLowerCase()}`
+                          : ""}
+                      </span>
+                    </td>
+                    <td>{campaign.status.replace(/_/g, " ")}</td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsMoney(campaign.spend, ads.currency)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsInt(campaign.impressions)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsInt(campaign.reach)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsInt(campaign.clicks)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : `${campaign.ctr.toFixed(2)}%`}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsMoney(campaign.cpc, ads.currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="admin-panel mkt-report-panel">
+        <h2 className="admin-panel-title">Ads</h2>
+        {ads.lines.length === 0 ? (
+          <p className="mkt-empty-inline">No ads in this account.</p>
+        ) : (
+          <MarketingLines
+            lines={ads.lines}
+            currency={ads.currency}
+            moneyLabel="Spend"
+            showConversions={false}
+          />
+        )}
+      </section>
+    </>
   );
 }
 
-function GoogleTable({ ads }: { ads: DashboardGoogleAds }) {
+function GoogleTables({ ads, range }: { ads: DashboardGoogleAds; range: AdsRange }) {
   return (
-    <section className="admin-panel mkt-chart">
-      <h2 className="admin-panel-title">Campaigns</h2>
-      <p className="admin-panel-sub">{ads.customerName || "Google Ads"}</p>
-      {ads.campaigns.length === 0 ? (
-        <p className="mkt-empty-inline">No campaigns in this account.</p>
-      ) : (
-        <div className="mkt-table-wrap">
-          <table className="mkt-table">
-            <thead>
-              <tr>
-                <th>Campaign</th>
-                <th>Status</th>
-                <th>Type</th>
-                <th className="num">Cost</th>
-                <th className="num">Clicks</th>
-                <th className="num">CTR</th>
-                <th className="num">Conv.</th>
-                <th className="num">Conv. value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ads.campaigns.map((campaign) => (
-                <tr key={campaign.id}>
-                  <td>
-                    {campaign.name}
-                    {campaign.sites.length ? (
-                      <span className="mkt-sub">{campaign.sites.join(", ")}</span>
-                    ) : null}
-                  </td>
-                  <td>{campaign.status.charAt(0) + campaign.status.slice(1).toLowerCase()}</td>
-                  <td>{CHANNEL_LABELS[campaign.channelType] ?? campaign.channelType}</td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsMoney(campaign.cost, ads.currency)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : formatAdsInt(campaign.clicks)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : `${campaign.ctr.toFixed(2)}%`}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery ? "–" : campaign.conversions.toFixed(1)}
-                  </td>
-                  <td className="num">
-                    {campaign.noDelivery
-                      ? "–"
-                      : formatAdsMoney(campaign.conversionsValue, ads.currency)}
-                  </td>
+    <>
+      <section className="admin-panel mkt-report-panel">
+        <h2 className="admin-panel-title">Campaigns</h2>
+        <p className="admin-panel-sub">{ads.customerName || "Google Ads"}</p>
+        {ads.campaigns.length === 0 ? (
+          <p className="mkt-empty-inline">No campaigns in this account.</p>
+        ) : (
+          <div className="mkt-table-wrap">
+            <table className="mkt-table">
+              <thead>
+                <tr>
+                  <th>Campaign</th>
+                  <th>Status</th>
+                  <th>Type</th>
+                  <th className="num">Cost</th>
+                  <th className="num">Clicks</th>
+                  <th className="num">CTR</th>
+                  <th className="num">Conv.</th>
+                  <th className="num">Conv. value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <h2 className="admin-panel-title mkt-lines-title">Ad groups</h2>
-      {ads.lines.length === 0 ? (
-        <p className="mkt-empty-inline">No ad groups in this account.</p>
-      ) : (
-        <LineRows lines={ads.lines} currency={ads.currency} moneyLabel="Cost" showConversions />
-      )}
-    </section>
+              </thead>
+              <tbody>
+                {ads.campaigns.map((campaign) => (
+                  <tr key={campaign.id}>
+                    <td>
+                      <Link
+                        className="mkt-campaign-link"
+                        href={marketingCampaignHref({
+                          id: campaign.id,
+                          channel: "google",
+                          range,
+                        })}
+                      >
+                        {campaign.name}
+                      </Link>
+                      {campaign.sites.length ? (
+                        <span className="mkt-sub">{campaign.sites.join(", ")}</span>
+                      ) : null}
+                    </td>
+                    <td>{campaign.status.charAt(0) + campaign.status.slice(1).toLowerCase()}</td>
+                    <td>{CHANNEL_LABELS[campaign.channelType] ?? campaign.channelType}</td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsMoney(campaign.cost, ads.currency)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : formatAdsInt(campaign.clicks)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : `${campaign.ctr.toFixed(2)}%`}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery ? "–" : campaign.conversions.toFixed(1)}
+                    </td>
+                    <td className="num">
+                      {campaign.noDelivery
+                        ? "–"
+                        : formatAdsMoney(campaign.conversionsValue, ads.currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+      <section className="admin-panel mkt-report-panel">
+        <h2 className="admin-panel-title">Ad groups</h2>
+        {ads.lines.length === 0 ? (
+          <p className="mkt-empty-inline">No ad groups in this account.</p>
+        ) : (
+          <MarketingLines
+            lines={ads.lines}
+            currency={ads.currency}
+            moneyLabel="Cost"
+            showConversions
+          />
+        )}
+      </section>
+    </>
   );
 }
