@@ -34,6 +34,7 @@ import {
 } from "@/lib/admin-marketing-window";
 import "@/app/components/admin/admin-marketing.css";
 import { MARKETING_CARDS_REV } from "@/app/components/admin/marketing-cards-rev";
+import { GOOGLE_SITES_REV } from "@/app/components/admin/google-sites-rev";
 import { fetchJson } from "@/lib/fetch-json";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -487,7 +488,8 @@ function GoogleCard({
       const channel = CHANNEL_LABELS[campaign.channelType] ?? campaign.channelType;
       return (
         campaign.name.toLowerCase().includes(needle) ||
-        channel.toLowerCase().includes(needle)
+        channel.toLowerCase().includes(needle) ||
+        campaign.sites.some((site) => site.includes(needle))
       );
     });
   }, [ads.campaigns, query, statusFilter]);
@@ -593,7 +595,7 @@ function GoogleCard({
           <CampaignFilters
             query={query}
             onQuery={setQuery}
-            placeholder="Search campaigns"
+            placeholder="Search campaigns or sites"
             statusFilter={statusFilter}
             onStatus={setStatusFilter}
             options={[
@@ -637,6 +639,9 @@ function GoogleCard({
                       >
                         {campaign.name}
                       </a>
+                      {campaign.sites.length ? (
+                        <span className="mkt-sub">{campaign.sites.join(", ")}</span>
+                      ) : null}
                     </td>
                     <td>
                       <span
@@ -815,7 +820,7 @@ export function MarketingOverview() {
   }
 
   return (
-    <div className="mkt-stack" id="marketing" data-rev={MARKETING_CARDS_REV}>
+    <div className="mkt-stack" id="marketing" data-rev={MARKETING_CARDS_REV} data-sites={GOOGLE_SITES_REV}>
       <SeoCard seo={data.seo} />
       <MetaCard
         ads={data.meta}

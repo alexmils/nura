@@ -9,6 +9,7 @@ import {
   normalizeMetaAccountId,
   pctDelta,
 } from "../lib/admin-marketing-window.ts";
+import { collectLandingHosts, indexLandingHosts, landingHost } from "../lib/google-ads-landing.ts";
 
 describe("admin marketing windows", () => {
   const now = new Date("2026-10-08T15:00:00Z");
@@ -42,6 +43,33 @@ describe("admin marketing windows", () => {
       countTrackingIds({ ga4: "G-1", gtm: "", clarity: "x", meta: "" }),
       { ids: 2, total: 4 }
     );
+  });
+
+  it("reads the landing host from a final URL", () => {
+    assert.equal(landingHost("https://www.Receptly.app/book?gclid=1"), "receptly.app");
+    assert.equal(landingHost("hubcast.com/start"), "hubcast.com");
+    assert.equal(landingHost(""), null);
+    assert.deepEqual(
+      collectLandingHosts([
+        "https://receptly.app/a",
+        "https://www.receptly.app/b",
+        "https://hubcast.com/",
+      ]),
+      ["receptly.app", "hubcast.com"]
+    );
+    const indexed = indexLandingHosts([
+      {
+        campaign: { id: "1" },
+        assetGroup: { finalUrls: ["https://www.receptly.app/"] },
+      },
+      {
+        campaign: { id: "1" },
+        adGroupAd: { ad: { finalUrls: ["https://hubcast.com/go"] } },
+      },
+      { campaign: { id: "2" } },
+    ]);
+    assert.deepEqual(indexed.get("1"), ["receptly.app", "hubcast.com"]);
+    assert.equal(indexed.has("2"), false);
   });
 
   it("normalizes Meta account ids", () => {

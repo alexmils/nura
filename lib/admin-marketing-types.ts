@@ -83,6 +83,8 @@ export type DashboardAds = {
 export type GoogleAdsCampaign = {
   id: string;
   name: string;
+  /** Landing hosts from the ad or asset-group final URL. */
+  sites: string[];
   status: string;
   channelType: string;
   noDelivery: boolean;

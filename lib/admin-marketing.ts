@@ -26,6 +26,7 @@ import {
   pctDelta,
 } from "@/lib/admin-marketing-window";
 import { mintGoogleAdsAccessToken } from "@/lib/conversions/google-ads";
+import { indexLandingHosts } from "@/lib/google-ads-landing";
 import { ensureFreshMetaAdsToken } from "@/lib/meta-ads-refresh";
 import type { MetaAdsSettings } from "@/lib/meta-ads-settings";
 import { getPlatformSettings } from "@/lib/platform-settings";
@@ -693,7 +694,7 @@ async function loadGoogle(
   const previousWhere = range === "all" ? "" : dateClause(range, 1);
 
   try {
-    const [customerRows, totalsRows, previousRows, metricRows, campaignRows] =
+    const [customerRows, totalsRows, previousRows, metricRows, campaignRows, adUrlRows, assetUrlRows] =
       await Promise.all([
         adsSearch(
           apiVersion,
@@ -737,7 +738,31 @@ async function loadGoogle(
           seo.googleAdsDeveloperToken.trim(),
           login
         ),
+        adsSearch(
+          apiVersion,
+          customerId,
+          "SELECT campaign.id, ad_group_ad.ad.final_urls FROM ad_group_ad WHERE ad_group_ad.status != 'REMOVED'",
+          auth.token,
+          seo.googleAdsDeveloperToken.trim(),
+          login
+        ).catch(() => [] as AdsRow[]),
+        adsSearch(
+          apiVersion,
+          customerId,
+          "SELECT campaign.id, asset_group.final_urls FROM asset_group WHERE asset_group.status != 'REMOVED'",
+          auth.token,
+          seo.googleAdsDeveloperToken.trim(),
+          login
+        ).catch(() => [] as AdsRow[]),
       ]);
+
+    const sitesByCampaign = indexLandingHosts(
+      [...adUrlRows, ...assetUrlRows] as Array<{
+        campaign?: { id?: unknown };
+        adGroupAd?: { ad?: { finalUrls?: unknown } };
+        assetGroup?: { finalUrls?: unknown };
+      }>
+    );
 
     const customer = (customerRows[0]?.customer ?? {}) as Record<string, unknown>;
     if (customer.manager === true) {
@@ -764,6 +789,7 @@ async function loadGoogle(
       return {
         id,
         name: String(campaign.name || "(unnamed campaign)"),
+        sites: sitesByCampaign.get(id) ?? [],
         status: String(campaign.status || "UNKNOWN"),
         channelType: String(campaign.advertisingChannelType || "UNKNOWN"),
         noDelivery: !metricsRow,
@@ -776,6 +802,7 @@ async function loadGoogle(
       campaigns.push({
         id: String(campaign.id ?? ""),
         name: String(campaign.name || "(unnamed campaign)"),
+        sites: sitesByCampaign.get(String(campaign.id ?? "")) ?? [],
         status: String(campaign.status || "UNKNOWN"),
         channelType: String(campaign.advertisingChannelType || "UNKNOWN"),
         noDelivery: false,
