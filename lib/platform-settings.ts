@@ -47,6 +47,11 @@ import {
   normalizeMcpConfig,
   type PlatformMcpConfig,
 } from "@/lib/mcp-settings";
+import {
+  DEFAULT_META_ADS_SETTINGS,
+  normalizeMetaAdsSettings,
+  type MetaAdsSettings,
+} from "@/lib/meta-ads-settings";
 import { normalizeBrandAssetUrl } from "@/lib/brand-assets";
 
 export type { HelpSettings };
@@ -72,6 +77,8 @@ export {
 } from "@/lib/seo-config";
 export type { PlatformMcpConfig } from "@/lib/mcp-settings";
 export { DEFAULT_PLATFORM_MCP, normalizeMcpConfig } from "@/lib/mcp-settings";
+export type { MetaAdsSettings } from "@/lib/meta-ads-settings";
+export { DEFAULT_META_ADS_SETTINGS, normalizeMetaAdsSettings } from "@/lib/meta-ads-settings";
 
 export type PlatformFeatureFlags = {
   voice: boolean;
@@ -115,6 +122,8 @@ export type PlatformSettings = {
   seo: PlatformSeoConfig;
   /** Blog MCP access token — Admin → MCP. */
   mcp: PlatformMcpConfig;
+  /** Meta Ads overview card — account, token, and app secret for refresh. */
+  metaAds: MetaAdsSettings;
   /**
    * Browser tab icon (jpeg/png/webp data URL, https, or path).
    * Empty → built-in `/icon.png`.
@@ -180,6 +189,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   email: { ...DEFAULT_PLATFORM_EMAIL },
   seo: { ...DEFAULT_PLATFORM_SEO, pages: {} },
   mcp: { ...DEFAULT_PLATFORM_MCP },
+  metaAds: { ...DEFAULT_META_ADS_SETTINGS },
   faviconUrl: "",
   appLogoUrl: "",
   guidedChatChromeId: DEFAULT_GUIDED_CHAT_CHROME_ID,
@@ -322,6 +332,7 @@ function normalizeSettings(raw: unknown): PlatformSettings {
     email: normalizeEmailConfig((r as Partial<PlatformSettings>).email),
     seo: normalizeSeoConfig((r as Partial<PlatformSettings>).seo),
     mcp: normalizeMcpConfig((r as Partial<PlatformSettings>).mcp),
+    metaAds: normalizeMetaAdsSettings((r as Partial<PlatformSettings>).metaAds),
     faviconUrl: normalizeBrandAssetUrl(r.faviconUrl),
     appLogoUrl: normalizeBrandAssetUrl(r.appLogoUrl),
     guidedChatChromeId: clampGuidedChatChromeId(r.guidedChatChromeId),

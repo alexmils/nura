@@ -135,6 +135,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Overview marketing cards: Search Console, Meta Ads, and Google Ads (spend, delivery, campaign tables) from the same Connections credentials
 - [internal] Privacy policy “Update or delete your account” is the Meta data-deletion instructions URL (`/privacy#update-or-delete`)
 - [internal] Admin Meta Ads card reads `META_ADS_ACCOUNT_ID` and `META_ADS_ACCESS_TOKEN` from the environment (`.env.example` only, values stay local)
+- [internal] Admin Overview Meta card: connection form (account, token, app id, app secret) with Save. Blank secrets stay stored. A user token refreshes itself in the two weeks before it expires when the app id and secret are saved
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

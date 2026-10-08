@@ -26,6 +26,8 @@ import {
   pctDelta,
 } from "@/lib/admin-marketing-window";
 import { mintGoogleAdsAccessToken } from "@/lib/conversions/google-ads";
+import { ensureFreshMetaAdsToken } from "@/lib/meta-ads-refresh";
+import type { MetaAdsSettings } from "@/lib/meta-ads-settings";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import type { PlatformSeoConfig } from "@/lib/seo-config";
 
@@ -178,14 +180,6 @@ async function loadSeo(seo: PlatformSeoConfig, refresh: boolean): Promise<Dashbo
       error: "Could not load Search Console. Check the service account on Connections.",
     };
   }
-}
-
-function metaToken(seo: PlatformSeoConfig): string | null {
-  return (
-    process.env.META_ADS_ACCESS_TOKEN?.trim() ||
-    seo.metaCapiAccessToken.trim() ||
-    null
-  );
 }
 
 type GraphBody = {
@@ -424,13 +418,20 @@ function emptyMeta(range: AdsRange, accountId: string | null): DashboardAds {
 }
 
 async function loadMeta(
-  seo: PlatformSeoConfig,
+  ads: MetaAdsSettings,
+  capiToken: string,
   range: AdsRange,
   requestedAccount: string | null,
   refresh: boolean
 ): Promise<DashboardAds> {
-  const token = metaToken(seo);
-  const envAccount = normalizeMetaAccountId(process.env.META_ADS_ACCOUNT_ID) || null;
+  let creds = ads;
+  try {
+    creds = await ensureFreshMetaAdsToken(ads);
+  } catch (err) {
+    console.error("[admin-marketing] Meta token check failed", err);
+  }
+  const token = creds.accessToken || capiToken.trim() || null;
+  const envAccount = normalizeMetaAccountId(creds.accountId) || null;
   const wanted = requestedAccount || envAccount;
   const empty = emptyMeta(range, wanted);
   if (!token) return empty;
@@ -827,7 +828,13 @@ export async function loadMarketingOverview(input: {
   const seo = settings.seo;
   const [seoCard, meta, googleAds] = await Promise.all([
     loadSeo(seo, input.refresh === "seo"),
-    loadMeta(seo, input.metaRange, input.metaAccount, input.refresh === "meta"),
+    loadMeta(
+      settings.metaAds,
+      seo.metaCapiAccessToken,
+      input.metaRange,
+      input.metaAccount,
+      input.refresh === "meta"
+    ),
     loadGoogle(seo, input.googleRange, input.refresh === "google"),
   ]);
   return { seo: seoCard, meta, google: googleAds };

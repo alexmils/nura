@@ -13,6 +13,7 @@ export type AuditAction =
   | "user.enabled"
   | "settings.platform_updated"
   | "settings.seo_updated"
+  | "settings.meta_ads_updated"
   | "settings.email_updated"
   | "settings.stripe_updated"
   | "settings.stripe_synced"
