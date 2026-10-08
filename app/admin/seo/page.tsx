@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
+import { MetaAdsConnectionForm } from "@/app/components/admin/MetaAdsConnectionForm";
 import {
   AdminTabs,
   useAdminTab,
@@ -1711,6 +1712,7 @@ function AdminSeoPageInner() {
                 );
               })}
             </div>
+            <MetaAdsConnectionForm />
             {!canEdit ? (
               <p className="admin-panel-sub">
                 Support can view connections. Platform admin can connect them.

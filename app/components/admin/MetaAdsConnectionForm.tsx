@@ -26,7 +26,7 @@ function expiryLine(view: MetaAdsAdminView): string {
   return "Add the app id and app secret if this token should refresh on its own.";
 }
 
-export function MetaAdsConnectionForm({ onSaved }: { onSaved: () => void }) {
+export function MetaAdsConnectionForm({ onSaved }: { onSaved?: () => void }) {
   const [view, setView] = useState<MetaAdsAdminView | null>(null);
   const [accountId, setAccountId] = useState("");
   const [appId, setAppId] = useState("");
@@ -75,7 +75,7 @@ export function MetaAdsConnectionForm({ onSaved }: { onSaved: () => void }) {
       setAccessToken("");
       setAppSecret("");
       setMessage("Saved.");
-      onSaved();
+      onSaved?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save.");
     } finally {
@@ -86,7 +86,7 @@ export function MetaAdsConnectionForm({ onSaved }: { onSaved: () => void }) {
   return (
     <form className="mkt-conn" onSubmit={(event) => void onSubmit(event)}>
       <div className="mkt-conn-head">
-        <h3>Connection</h3>
+        <h3>Meta Ads</h3>
         <p>{view ? expiryLine(view) : "Loading connection…"}</p>
       </div>
       <label>

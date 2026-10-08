@@ -7,7 +7,6 @@ import {
   Clock3,
   Coins,
   Eye,
-  Megaphone,
   MousePointerClick,
   Percent,
   RefreshCw,
@@ -33,8 +32,8 @@ import {
   formatAdsInt,
   formatAdsMoney,
 } from "@/lib/admin-marketing-window";
-import { MetaAdsConnectionForm } from "@/app/components/admin/MetaAdsConnectionForm";
 import "@/app/components/admin/admin-marketing.css";
+import { MARKETING_CARDS_REV } from "@/app/components/admin/marketing-cards-rev";
 import { fetchJson } from "@/lib/fetch-json";
 
 const CHANNEL_LABELS: Record<string, string> = {
@@ -231,14 +230,12 @@ function MetaCard({
   onAccount,
   onRefresh,
   refreshing,
-  onConnectionSaved,
 }: {
   ads: DashboardAds;
   onRange: (range: AdsRange) => void;
   onAccount: (account: string) => void;
   onRefresh: () => void;
   refreshing: boolean;
-  onConnectionSaved: () => void;
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "paused" | "delivered">(
     "all"
@@ -292,12 +289,13 @@ function MetaCard({
         </div>
       </div>
 
-      <MetaAdsConnectionForm onSaved={onConnectionSaved} />
-
       {!ads.configured ? (
         <div className="mkt-empty">
           <p className="mkt-empty-title">Meta Ads is not connected</p>
-          <p>Save an ad account and access token above. Spend and campaigns show up here after that.</p>
+          <p>Spend and campaigns show up here once the account is saved.</p>
+          <Link href="/admin/seo?tab=connections" className="btn-primary mkt-connect">
+            Connect on SEO
+          </Link>
         </div>
       ) : ads.error ? (
         <div className="mkt-note">{ads.error}</div>
@@ -407,14 +405,6 @@ function MetaCard({
               </tbody>
             </table>
           </CampaignTable>
-
-          <p className="mkt-foot">
-            <Megaphone size={14} />
-            <span>
-              <strong>Runs as</strong> is the Facebook Page the ad appears under.
-              The ad account is named under each campaign.
-            </span>
-          </p>
         </>
       ) : null}
     </section>
@@ -825,7 +815,7 @@ export function MarketingOverview() {
   }
 
   return (
-    <div className="mkt-stack" id="marketing">
+    <div className="mkt-stack" id="marketing" data-rev={MARKETING_CARDS_REV}>
       <SeoCard seo={data.seo} />
       <MetaCard
         ads={data.meta}
@@ -833,7 +823,6 @@ export function MarketingOverview() {
         onAccount={setMetaAccount}
         onRefresh={() => void refresh("meta")}
         refreshing={refreshing === "meta"}
-        onConnectionSaved={() => void load()}
       />
       <GoogleCard
         ads={data.google}
