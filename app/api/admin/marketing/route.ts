@@ -28,6 +28,7 @@ export async function GET(request: Request) {
       metaAccount: account,
       googleRange: rangeOf(url.searchParams.get("gads")),
       refresh: refreshOf(url.searchParams.get("refresh")),
+      detail: url.searchParams.get("detail") === "1",
     });
     return NextResponse.json(overview);
   } catch (err) {

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { AdminShell } from "@/app/components/admin/AdminShell";
+import { AdminShell } from "@/app/components/nura-admin-shell";
 import { ToastProvider } from "@/app/components/Toast";
 /** Always load with /admin — do not rely only on client-component CSS HMR. */
 import "@/app/components/admin/admin-tasks.css";

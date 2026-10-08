@@ -711,6 +711,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] SEO Connections: Meta Ads is a small card like Google Ads. The wide form at the bottom of the page is gone
 - [internal] Admin Overview Google Ads shows the landing site under each campaign name, taken from the ad or asset-group final URL, so one account running several products can be told apart from the name alone
 - [internal] Admin Overview campaign tables use a larger type size so the name, site, and status are readable
+- [internal] Admin sidebar Marketing opens Meta and Google Ads on separate tabs, with daily spend and click charts plus campaign and ad-group tables
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

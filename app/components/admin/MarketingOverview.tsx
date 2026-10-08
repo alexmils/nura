@@ -27,6 +27,7 @@ import type {
   DashboardSeo,
   MarketingOverview,
   MetaAdsCampaign,
+  type MarketingLine,
 } from "@/lib/admin-marketing-types";
 import {
   formatAdsInt,
@@ -225,18 +226,91 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
   );
 }
 
+function LinesTable({
+  title,
+  lines,
+  currency,
+  moneyLabel,
+  showConversions,
+}: {
+  title: string;
+  lines: MarketingLine[];
+  currency: string | null;
+  moneyLabel: string;
+  showConversions: boolean;
+}) {
+  return (
+    <div>
+      <p className="mkt-lines-title">{title}</p>
+      {lines.length === 0 ? (
+        <p className="mkt-empty mkt-empty-inline">Nothing here yet.</p>
+      ) : (
+        <div className="mkt-table-wrap">
+          <table className="mkt-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Campaign</th>
+                <th>Kind</th>
+                <th>Status</th>
+                <th className="num">{moneyLabel}</th>
+                <th className="num">Impr.</th>
+                <th className="num">Clicks</th>
+                <th className="num">CTR</th>
+                {showConversions ? <th className="num">Conv.</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line) => (
+                <tr key={`${line.kind}-${line.id}`}>
+                  <td>
+                    {line.name}
+                    {line.sites.length ? (
+                      <span className="mkt-sub">{line.sites.join(", ")}</span>
+                    ) : null}
+                  </td>
+                  <td>{line.campaignName || "–"}</td>
+                  <td>{line.kind}</td>
+                  <td>
+                    <span
+                      className={`mkt-status${
+                        line.status === "ENABLED" || line.status === "ACTIVE" ? " is-on" : ""
+                      }`}
+                    >
+                      {line.status.replace(/_/g, " ")}
+                    </span>
+                  </td>
+                  <td className="num">{formatAdsMoney(line.spend, currency)}</td>
+                  <td className="num">{formatAdsInt(line.impressions)}</td>
+                  <td className="num">{formatAdsInt(line.clicks)}</td>
+                  <td className="num">{`${line.ctr.toFixed(2)}%`}</td>
+                  {showConversions ? (
+                    <td className="num">{line.conversions.toFixed(1)}</td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MetaCard({
   ads,
   onRange,
   onAccount,
   onRefresh,
   refreshing,
+  detail,
 }: {
   ads: DashboardAds;
   onRange: (range: AdsRange) => void;
   onAccount: (account: string) => void;
   onRefresh: () => void;
   refreshing: boolean;
+  detail: boolean;
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | "running" | "paused" | "delivered">(
     "all"
@@ -406,6 +480,23 @@ function MetaCard({
               </tbody>
             </table>
           </CampaignTable>
+          {detail ? (
+            <LinesTable
+              title="Ads"
+              lines={ads.lines.filter((line) => {
+                const needle = query.trim().toLowerCase();
+                if (!needle) return true;
+                return (
+                  line.name.toLowerCase().includes(needle) ||
+                  line.campaignName.toLowerCase().includes(needle) ||
+                  line.sites.some((site) => site.includes(needle))
+                );
+              })}
+              currency={ads.currency}
+              moneyLabel="Spend"
+              showConversions={false}
+            />
+          ) : null}
         </>
       ) : null}
     </section>
@@ -468,11 +559,13 @@ function GoogleCard({
   onRange,
   onRefresh,
   refreshing,
+  detail,
 }: {
   ads: DashboardGoogleAds;
   onRange: (range: AdsRange) => void;
   onRefresh: () => void;
   refreshing: boolean;
+  detail: boolean;
 }) {
   const [statusFilter, setStatusFilter] = useState<"all" | "enabled" | "paused" | "delivered">(
     "all"
@@ -626,6 +719,7 @@ function GoogleCard({
                   <th className="num">CTR</th>
                   <th className="num">Avg. CPC</th>
                   <th className="num">Conv.</th>
+                  {detail ? <th className="num">Conv. value</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -673,11 +767,36 @@ function GoogleCard({
                     <td className="num">
                       {campaign.noDelivery ? "–" : campaign.conversions.toFixed(1)}
                     </td>
+                    {detail ? (
+                      <td className="num">
+                        {campaign.noDelivery
+                          ? "–"
+                          : formatAdsMoney(campaign.conversionsValue, ads.currency)}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </CampaignTable>
+          {detail ? (
+            <LinesTable
+              title="Ad groups"
+              lines={ads.lines.filter((line) => {
+                const needle = query.trim().toLowerCase();
+                if (!needle) return true;
+                return (
+                  line.name.toLowerCase().includes(needle) ||
+                  line.campaignName.toLowerCase().includes(needle) ||
+                  line.kind.toLowerCase().includes(needle) ||
+                  line.sites.some((site) => site.includes(needle))
+                );
+              })}
+              currency={ads.currency}
+              moneyLabel="Cost"
+              showConversions
+            />
+          ) : null}
           <p className="mkt-foot">
             Google Ads reports stop at yesterday, in the account time zone. Cost
             arrives in micros and is converted here.
@@ -757,7 +876,7 @@ function CampaignTable({
   return <div className="mkt-table-wrap">{children}</div>;
 }
 
-export function MarketingOverview() {
+export function MarketingOverview({ detail = false }: { detail?: boolean }) {
   const [data, setData] = useState<MarketingOverview | null>(null);
   const [error, setError] = useState("");
   const [metaRange, setMetaRange] = useState<AdsRange>("28");
@@ -771,6 +890,7 @@ export function MarketingOverview() {
       if (metaRange !== "28") params.set("ads", metaRange);
       if (metaAccount) params.set("account", metaAccount);
       if (googleRange !== "28") params.set("gads", googleRange);
+      if (detail) params.set("detail", "1");
       if (refresh) params.set("refresh", refresh);
       const next = (await fetchJson(
         `/api/admin/marketing?${params.toString()}`
@@ -778,7 +898,7 @@ export function MarketingOverview() {
       setData(next);
       setError("");
     },
-    [googleRange, metaAccount, metaRange]
+    [detail, googleRange, metaAccount, metaRange]
   );
 
   useEffect(() => {
@@ -821,19 +941,21 @@ export function MarketingOverview() {
 
   return (
     <div className="mkt-stack" id="marketing" data-rev={MARKETING_CARDS_REV} data-sites={GOOGLE_SITES_REV}>
-      <SeoCard seo={data.seo} />
+      {detail ? null : <SeoCard seo={data.seo} />}
       <MetaCard
         ads={data.meta}
         onRange={setMetaRange}
         onAccount={setMetaAccount}
         onRefresh={() => void refresh("meta")}
         refreshing={refreshing === "meta"}
+        detail={detail}
       />
       <GoogleCard
         ads={data.google}
         onRange={setGoogleRange}
         onRefresh={() => void refresh("google")}
         refreshing={refreshing === "google"}
+        detail={detail}
       />
     </div>
   );

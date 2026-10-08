@@ -21,7 +21,8 @@ export type AdminNavIcon =
   | "platform"
   | "seo"
   | "mcp"
-  | "tasks";
+  | "tasks"
+  | "marketing";
 
 export type AdminNavItem = {
   href: string;
@@ -47,6 +48,11 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     label: "Dashboard",
     items: [
       { href: "/admin", label: "Overview", icon: "overview", exact: true },
+      { href: "/admin/marketing", label: "Marketing", icon: "marketing", children: [
+          { href: "/admin/marketing", label: "Meta", tab: "meta" },
+          { href: "/admin/marketing?tab=google", label: "Google Ads", tab: "google" },
+        ],
+      },
       { href: "/admin/tasks", label: "Tasks", icon: "tasks" },
       {
         href: "/admin/analytics",
@@ -335,6 +341,7 @@ export const ADMIN_DEFAULT_TAB_BY_PATH: Record<string, string> = {
   "/admin/ai": "ai",
   "/admin/platform": "brand",
   "/admin/seo": "overview",
+  "/admin/marketing": "meta",
 };
 
 export type AdminSearchKind = "section" | "page" | "tab" | "action";
@@ -390,13 +397,10 @@ export function buildAdminSearchIndex(
         pageKeywords.push("todo", "todos", "ideas", "board", "scratchpad");
       }
       if (item.href === "/admin" && item.exact) {
-        pageKeywords.push(
-          "meta ads",
-          "google ads",
-          "search console",
-          "seo performance",
-          "marketing"
-        );
+        pageKeywords.push("search console", "seo performance");
+      }
+      if (item.href === "/admin/marketing") {
+        pageKeywords.push("meta ads", "google ads", "facebook", "campaigns", "ad groups");
       }
       entries.push({
         id: `page:${item.href}`,

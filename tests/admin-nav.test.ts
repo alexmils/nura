@@ -137,6 +137,8 @@ describe("admin search index", () => {
     assert.ok(fin.some((e) => e.title === "Finances"));
     const todos = filterAdminSearch(index, "todo");
     assert.ok(todos.some((e) => e.href === "/admin/tasks"));
+    const marketing = filterAdminSearch(index, "google ads");
+    assert.ok(marketing.some((e) => e.href === "/admin/marketing" && e.title === "Marketing"));
   });
 
   it("suggests Tasks when the query is empty", () => {

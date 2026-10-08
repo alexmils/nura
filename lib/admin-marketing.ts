@@ -12,6 +12,8 @@ import type {
   DashboardSeo,
   GoogleAdsCampaign,
   GoogleAdsTotals,
+  MarketingDay,
+  MarketingLine,
   MarketingOverview,
   MetaAdsAccountOption,
   MetaAdsCampaign,
@@ -26,7 +28,7 @@ import {
   pctDelta,
 } from "@/lib/admin-marketing-window";
 import { mintGoogleAdsAccessToken } from "@/lib/conversions/google-ads";
-import { indexLandingHosts } from "@/lib/google-ads-landing";
+import { indexLandingHosts, collectLandingHosts } from "@/lib/google-ads-landing";
 import { ensureFreshMetaAdsToken } from "@/lib/meta-ads-refresh";
 import type { MetaAdsSettings } from "@/lib/meta-ads-settings";
 import { getPlatformSettings } from "@/lib/platform-settings";
@@ -268,15 +270,79 @@ function totalsFromInsight(row: Record<string, unknown> | undefined): MetaAdsTot
   };
 }
 
+function metaCreativeHosts(creative: unknown): string[] {
+  const spec = creative as {
+    object_story_spec?: {
+      link_data?: { link?: string };
+      video_data?: { call_to_action?: { value?: { link?: string } } };
+    };
+    asset_feed_spec?: { link_urls?: Array<{ website_url?: string }> };
+  } | null;
+  const urls: unknown[] = [
+    spec?.object_story_spec?.link_data?.link,
+    spec?.object_story_spec?.video_data?.call_to_action?.value?.link,
+  ];
+  for (const item of spec?.asset_feed_spec?.link_urls ?? []) urls.push(item.website_url);
+  return collectLandingHosts(urls);
+}
+
+async function loadMetaLines(
+  token: string,
+  accountId: string,
+  current: Record<string, string>
+): Promise<MarketingLine[]> {
+  const [ads, insights] = await Promise.all([
+    graph(token, `${accountId}/ads`, {
+      fields:
+        "id,name,effective_status,campaign_id,campaign{name},creative{object_story_spec{link_data{link},video_data{call_to_action{value{link}}}},asset_feed_spec{link_urls{website_url}}}",
+      limit: "100",
+    }).catch(() => ({ data: [] }) as GraphBody),
+    graph(token, `${accountId}/insights`, {
+      fields: "ad_id,spend,impressions,clicks,ctr",
+      level: "ad",
+      ...current,
+      limit: "100",
+    }).catch(() => ({ data: [] }) as GraphBody),
+  ]);
+  const metrics = new Map<string, Record<string, unknown>>();
+  for (const row of insights.data ?? []) {
+    const id = String(row.ad_id || "");
+    if (id) metrics.set(id, row);
+  }
+  return (ads.data ?? [])
+    .map((row) => {
+      const id = String(row.id || "");
+      const insight = id ? metrics.get(id) : undefined;
+      const campaign = row.campaign as { name?: string } | undefined;
+      return {
+        id,
+        name: String(row.name || "(unnamed ad)"),
+        campaignId: String(row.campaign_id || ""),
+        campaignName: String(campaign?.name || ""),
+        kind: "Ad",
+        status: String(row.effective_status || "UNKNOWN"),
+        sites: metaCreativeHosts(row.creative),
+        spend: num(insight?.spend),
+        impressions: num(insight?.impressions),
+        clicks: num(insight?.clicks),
+        ctr: num(insight?.ctr),
+        conversions: 0,
+      } satisfies MarketingLine;
+    })
+    .sort((a, b) => b.spend - a.spend);
+}
+
 async function loadAccountCampaigns(
   token: string,
   accountId: string,
   accountName: string,
   range: AdsRange,
   wantPrevious: boolean,
-  pages: Map<string, string>
+  pages: Map<string, string>,
+  includeAds: boolean
 ): Promise<{
   campaigns: MetaAdsCampaign[];
+  lines: MarketingLine[];
   totals: MetaAdsTotals;
   previous: MetaAdsTotals | null;
   startDate: string;
@@ -387,9 +453,12 @@ async function loadAccountCampaigns(
     .filter((c) => !c.noDelivery || live.has(c.status))
     .sort((a, b) => b.spend - a.spend);
 
+  const lines = includeAds ? await loadMetaLines(token, accountId, current) : [];
+
   const row = insights.data?.[0];
   return {
     campaigns: kept,
+    lines,
     totals: totalsFromInsight(row),
     previous: wantPrevious ? totalsFromInsight(previous.data?.[0]) : null,
     startDate: String(row?.date_start || window?.startDate || ""),
@@ -413,6 +482,8 @@ function emptyMeta(range: AdsRange, accountId: string | null): DashboardAds {
     totals: null,
     delta: { spend: null, impressions: null, clicks: null },
     campaigns: [],
+    lines: [],
+    series: [],
     error: null,
     notice: null,
   };
@@ -423,7 +494,8 @@ async function loadMeta(
   capiToken: string,
   range: AdsRange,
   requestedAccount: string | null,
-  refresh: boolean
+  refresh: boolean,
+  detail: boolean
 ): Promise<DashboardAds> {
   let creds = ads;
   try {
@@ -437,7 +509,7 @@ async function loadMeta(
   const empty = emptyMeta(range, wanted);
   if (!token) return empty;
 
-  const cacheKey = `meta:${wanted || "auto"}:${range}`;
+  const cacheKey = `meta:${wanted || "auto"}:${range}${detail ? ":detail2" : ""}`;
   if (!refresh) {
     const hit = readCache<DashboardAds>(cacheKey);
     if (hit) return hit;
@@ -467,7 +539,8 @@ async function loadMeta(
         preferred.name,
         range,
         range !== "all",
-        pages
+        pages,
+        detail
       );
       const data: DashboardAds = {
         configured: true,
@@ -493,6 +566,13 @@ async function loadMeta(
             : null,
         },
         campaigns: scoped.campaigns,
+        lines: scoped.lines,
+        series: detail
+          ? fillMarketingDays(
+              range,
+              await loadMetaSeries(token, preferred.id, metaWindowParams(range))
+            )
+          : [],
         error: null,
         notice: null,
       };
@@ -509,7 +589,8 @@ async function loadMeta(
             account.name,
             range,
             false,
-            pages
+            pages,
+            detail
           ).catch((err) => {
             console.error(`[admin-marketing] ${account.id} failed`, err);
             return null;
@@ -551,6 +632,19 @@ async function loadMeta(
       },
       delta: { spend: null, impressions: null, clicks: null },
       campaigns: loaded.flatMap((r) => r.campaigns).sort((a, b) => b.spend - a.spend),
+      lines: loaded.flatMap((r) => r.lines).sort((a, b) => b.spend - a.spend),
+      series: detail
+        ? fillMarketingDays(
+            range,
+            mergeMarketingDays(
+              await Promise.all(
+                accounts.map((account) =>
+                  loadMetaSeries(token, account.id, metaWindowParams(range)).catch(() => [])
+                )
+              )
+            )
+          )
+        : [],
       error: null,
       notice: null,
     };
@@ -634,6 +728,106 @@ function dateClause(range: AdsRange, offset = 0): string {
   return `segments.date BETWEEN '${window.startDate}' AND '${window.endDate}'`;
 }
 
+function fillMarketingDays(range: AdsRange, days: MarketingDay[]): MarketingDay[] {
+  const window = adsWindow(range);
+  if (!window || range === "all") return days;
+  const byDate = new Map(days.map((day) => [day.date, day]));
+  const out: MarketingDay[] = [];
+  const cursor = new Date(`${window.startDate}T00:00:00Z`);
+  const end = new Date(`${window.endDate}T00:00:00Z`);
+  while (cursor <= end && out.length < 120) {
+    const date = cursor.toISOString().slice(0, 10);
+    out.push(
+      byDate.get(date) ?? {
+        date,
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+      }
+    );
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return out;
+}
+
+function mergeMarketingDays(groups: MarketingDay[][]): MarketingDay[] {
+  const byDate = new Map<string, MarketingDay>();
+  for (const group of groups) {
+    for (const day of group) {
+      const current = byDate.get(day.date) ?? {
+        date: day.date,
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+      };
+      current.spend += day.spend;
+      current.impressions += day.impressions;
+      current.clicks += day.clicks;
+      current.conversions += day.conversions;
+      byDate.set(day.date, current);
+    }
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function loadMetaSeries(
+  token: string,
+  accountId: string,
+  current: Record<string, string>
+): Promise<MarketingDay[]> {
+  const body = await graph(token, `${accountId}/insights`, {
+    fields: "spend,impressions,clicks,date_start",
+    level: "account",
+    time_increment: "1",
+    ...current,
+    limit: "100",
+  }).catch(() => ({ data: [] }) as GraphBody);
+  return (body.data ?? [])
+    .map((row) => ({
+      date: String(row.date_start || ""),
+      spend: num(row.spend),
+      impressions: num(row.impressions),
+      clicks: num(row.clicks),
+      conversions: 0,
+    }))
+    .filter((day) => day.date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+async function loadGoogleSeries(
+  apiVersion: string,
+  customerId: string,
+  accessToken: string,
+  developerToken: string,
+  login: string | undefined,
+  where: string
+): Promise<MarketingDay[]> {
+  if (!where) return [];
+  const rows = await adsSearch(
+    apiVersion,
+    customerId,
+    `SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.conversions FROM customer WHERE ${where} ORDER BY segments.date`,
+    accessToken,
+    developerToken,
+    login
+  ).catch(() => [] as AdsRow[]);
+  return rows
+    .map((row) => {
+      const segments = (row.segments ?? {}) as Record<string, unknown>;
+      const totals = googleTotals(row);
+      return {
+        date: String(segments.date || ""),
+        spend: totals.cost,
+        impressions: totals.impressions,
+        clicks: totals.clicks,
+        conversions: totals.conversions,
+      };
+    })
+    .filter((day) => day.date);
+}
+
 function emptyGoogle(range: AdsRange, customerId: string | null): DashboardGoogleAds {
   const window = adsWindow(range);
   return {
@@ -648,15 +842,140 @@ function emptyGoogle(range: AdsRange, customerId: string | null): DashboardGoogl
     totals: null,
     delta: { cost: null, impressions: null, clicks: null },
     campaigns: [],
+    lines: [],
+    series: [],
     error: null,
     notice: null,
   };
 }
 
+async function loadGoogleLines(
+  apiVersion: string,
+  customerId: string,
+  accessToken: string,
+  developerToken: string,
+  login: string | undefined,
+  where: string
+): Promise<MarketingLine[]> {
+  try {
+    const metricQuery = where
+      ? `SELECT campaign.id, ad_group.id, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.conversions FROM ad_group WHERE ${where}`
+      : "";
+    const assetMetricQuery = where
+      ? `SELECT campaign.id, asset_group.id, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr, metrics.conversions FROM asset_group WHERE ${where}`
+      : "";
+    const [groups, metrics, assets, assetMetrics] = await Promise.all([
+      adsSearch(
+        apiVersion,
+        customerId,
+        "SELECT campaign.id, campaign.name, ad_group.id, ad_group.name, ad_group.status FROM ad_group",
+        accessToken,
+        developerToken,
+        login
+      ).catch(() => [] as AdsRow[]),
+      metricQuery
+        ? adsSearch(apiVersion, customerId, metricQuery, accessToken, developerToken, login).catch(
+            () => [] as AdsRow[]
+          )
+        : Promise.resolve([] as AdsRow[]),
+      adsSearch(
+        apiVersion,
+        customerId,
+        "SELECT campaign.id, campaign.name, asset_group.id, asset_group.name, asset_group.status, asset_group.final_urls FROM asset_group WHERE asset_group.status != 'REMOVED'",
+        accessToken,
+        developerToken,
+        login
+      ).catch(() => [] as AdsRow[]),
+      assetMetricQuery
+        ? adsSearch(
+            apiVersion,
+            customerId,
+            assetMetricQuery,
+            accessToken,
+            developerToken,
+            login
+          ).catch(() => [] as AdsRow[])
+        : Promise.resolve([] as AdsRow[]),
+    ]);
+
+    const spendById = new Map<string, GoogleAdsTotals>();
+    function remember(rows: AdsRow[], idOf: (row: AdsRow) => string) {
+      for (const row of rows) {
+        const id = idOf(row);
+        if (id) spendById.set(id, googleTotals(row));
+      }
+    }
+    remember(metrics, (row) => String((row.adGroup as { id?: unknown } | undefined)?.id ?? ""));
+    remember(assetMetrics, (row) =>
+      String((row.assetGroup as { id?: unknown } | undefined)?.id ?? "")
+    );
+
+    const lines: MarketingLine[] = [];
+    function push(
+      id: string,
+      name: string,
+      campaignId: string,
+      campaignName: string,
+      kind: string,
+      status: string,
+      sites: string[]
+    ) {
+      if (!id) return;
+      const totals = spendById.get(id);
+      lines.push({
+        id,
+        name: name || "(unnamed)",
+        campaignId,
+        campaignName,
+        kind,
+        status: status || "UNKNOWN",
+        sites,
+        spend: totals?.cost ?? 0,
+        impressions: totals?.impressions ?? 0,
+        clicks: totals?.clicks ?? 0,
+        ctr: totals?.ctr ?? 0,
+        conversions: totals?.conversions ?? 0,
+      });
+    }
+    for (const row of groups) {
+      const campaign = (row.campaign ?? {}) as Record<string, unknown>;
+      const group = (row.adGroup ?? {}) as Record<string, unknown>;
+      push(
+        String(group.id ?? ""),
+        String(group.name ?? ""),
+        String(campaign.id ?? ""),
+        String(campaign.name ?? ""),
+        "Ad group",
+        String(group.status ?? ""),
+        []
+      );
+    }
+    for (const row of assets) {
+      const campaign = (row.campaign ?? {}) as Record<string, unknown>;
+      const group = (row.assetGroup ?? {}) as Record<string, unknown>;
+      push(
+        String(group.id ?? ""),
+        String(group.name ?? ""),
+        String(campaign.id ?? ""),
+        String(campaign.name ?? ""),
+        "Asset group",
+        String(group.status ?? ""),
+        collectLandingHosts(Array.isArray(group.finalUrls) ? group.finalUrls : [])
+      );
+    }
+    lines.sort((a, b) => b.spend - a.spend);
+    return lines;
+  } catch (err) {
+    console.error("[admin-marketing] Google Ads lines failed", err);
+    return [];
+  }
+}
+
 async function loadGoogle(
   seo: PlatformSeoConfig,
   range: AdsRange,
-  refresh: boolean
+  refresh: boolean,
+  detail: boolean
 ): Promise<DashboardGoogleAds> {
   const customerId = seo.googleAdsCustomerId.replace(/\D/g, "") || null;
   const empty = emptyGoogle(range, customerId);
@@ -669,7 +988,7 @@ async function loadGoogle(
   );
   if (!ready || !customerId) return empty;
 
-  const cacheKey = `gads:${customerId}:${range}`;
+  const cacheKey = `gads:${customerId}:${range}${detail ? ":detail2" : ""}`;
   if (!refresh) {
     const hit = readCache<DashboardGoogleAds>(cacheKey);
     if (hit) return hit;
@@ -810,6 +1129,16 @@ async function loadGoogle(
       });
     }
     campaigns.sort((a, b) => b.cost - a.cost);
+    const lines = detail
+      ? await loadGoogleLines(
+          apiVersion,
+          customerId,
+          auth.token,
+          seo.googleAdsDeveloperToken.trim(),
+          login,
+          where
+        )
+      : [];
 
     const totals = googleTotals(totalsRows[0]);
     const previous = previousWhere ? googleTotals(previousRows[0]) : null;
@@ -830,6 +1159,20 @@ async function loadGoogle(
         clicks: previous ? pctDelta(totals.clicks, previous.clicks) : null,
       },
       campaigns,
+      lines,
+      series: detail
+        ? fillMarketingDays(
+            range,
+            await loadGoogleSeries(
+              apiVersion,
+              customerId,
+              auth.token,
+              seo.googleAdsDeveloperToken.trim(),
+              login,
+              where
+            )
+          )
+        : [],
       error: null,
       notice: null,
     };
@@ -850,9 +1193,11 @@ export async function loadMarketingOverview(input: {
   metaAccount: string | null;
   googleRange: AdsRange;
   refresh?: "seo" | "meta" | "google" | null;
+  detail?: boolean;
 }): Promise<MarketingOverview> {
   const settings = await getPlatformSettings();
   const seo = settings.seo;
+  const detail = input.detail === true;
   const [seoCard, meta, googleAds] = await Promise.all([
     loadSeo(seo, input.refresh === "seo"),
     loadMeta(
@@ -860,9 +1205,10 @@ export async function loadMarketingOverview(input: {
       seo.metaCapiAccessToken,
       input.metaRange,
       input.metaAccount,
-      input.refresh === "meta"
+      input.refresh === "meta",
+      detail
     ),
-    loadGoogle(seo, input.googleRange, input.refresh === "google"),
+    loadGoogle(seo, input.googleRange, input.refresh === "google", detail),
   ]);
   return { seo: seoCard, meta, google: googleAds };
 }

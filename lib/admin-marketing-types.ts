@@ -27,6 +27,30 @@ export type DashboardSeo = {
   error: string | null;
 };
 
+export type MarketingDay = {
+  date: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+};
+
+export type MarketingLine = {
+  id: string;
+  name: string;
+  campaignId: string;
+  campaignName: string;
+  /** Ad group, asset group, or ad. */
+  kind: string;
+  status: string;
+  sites: string[];
+  spend: number;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  conversions: number;
+};
+
 export type MetaAdsCampaign = {
   id: string;
   name: string;
@@ -76,6 +100,10 @@ export type DashboardAds = {
   totals: MetaAdsTotals | null;
   delta: { spend: number | null; impressions: number | null; clicks: number | null };
   campaigns: MetaAdsCampaign[];
+  /** Ads under those campaigns. Empty on Overview. */
+  lines: MarketingLine[];
+  /** One point per day. Empty on Overview. */
+  series: MarketingDay[];
   error: string | null;
   notice: string | null;
 };
@@ -119,6 +147,10 @@ export type DashboardGoogleAds = {
   totals: GoogleAdsTotals | null;
   delta: { cost: number | null; impressions: number | null; clicks: number | null };
   campaigns: GoogleAdsCampaign[];
+  /** Ad groups and Performance Max asset groups. Empty on Overview. */
+  lines: MarketingLine[];
+  /** One point per day. Empty on Overview. */
+  series: MarketingDay[];
   error: string | null;
   notice: string | null;
 };
