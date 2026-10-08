@@ -29,7 +29,7 @@ import type {
   DashboardSeo,
   MarketingOverview,
   MetaAdsCampaign,
-  type MarketingLine,
+  MarketingLine,
 } from "@/lib/admin-marketing-types";
 import {
   formatAdsInt,
