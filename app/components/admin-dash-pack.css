@@ -1,0 +1,37 @@
+/* Overview band: chart and Tasks stack on the left, Snapshot and cost on the right.
+   A shared grid row used to leave a mint gap under the short chart. */
+
+.admin-dash-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(220px, 0.72fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.admin-dash-band-main,
+.admin-dash-band-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.admin-dash-band-side {
+  height: 100%;
+}
+
+.admin-dash-band-side > :last-child {
+  flex: 1 1 auto;
+}
+
+.admin-dash-band .admin-dash-span-2,
+.admin-dash-band .admin-dash-snapshot {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+@media (max-width: 800px) {
+  .admin-dash-band {
+    grid-template-columns: 1fr;
+  }
+}

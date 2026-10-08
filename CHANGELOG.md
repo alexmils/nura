@@ -712,6 +712,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Overview Google Ads shows the landing site under each campaign name, taken from the ad or asset-group final URL, so one account running several products can be told apart from the name alone
 - [internal] Admin Overview campaign tables use a larger type size so the name, site, and status are readable
 - [internal] Admin sidebar Marketing opens Meta and Google Ads on separate tabs, with daily spend and click charts plus campaign and ad-group tables
+- [internal] Admin Overview closes the gap under the week chart: Tasks sits directly beneath it, and Snapshot stays in the side column with AI cost mix
+- [internal] Admin Overview puts Platform health in the side column under AI cost mix, so the mint gap beside Tasks is gone
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

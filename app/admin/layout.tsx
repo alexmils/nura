@@ -5,6 +5,7 @@ import { ToastProvider } from "@/app/components/Toast";
 import "@/app/components/admin/admin-tasks.css";
 import "@/app/components/admin/admin-marketing.css";
 import "@/app/components/mkt-table-type.css";
+import "@/app/components/admin-dash-pack.css";
 
 export const metadata: Metadata = {
   title: "Nura Admin",
