@@ -16,6 +16,7 @@ export type PrivacyTocItem = { id: string; label: string };
 /** Termly section anchors + Nura product addendum. */
 export const PRIVACY_TOC: PrivacyTocItem[] = [
   { id: "nura-privacy", label: "Nura product details" },
+  { id: "update-or-delete", label: "Update or delete your account" },
   { id: "infocollect", label: "1. What information do we collect?" },
   { id: "infouse", label: "2. How do we process your information?" },
   { id: "legalbases", label: "3. What legal bases do we rely on?" },
@@ -128,14 +129,39 @@ const NURA_PRIVACY_ADDENDUM = `
   </p>
 
   <h3 id="update-or-delete">Update or delete your account</h3>
-  <p>You can update or delete your account yourself in the app:</p>
-  <ul>
-    <li><strong>Update profile</strong> — Sign in → Settings → Profile. Change your display name or photo, then Save profile.</li>
-    <li><strong>Delete account</strong> — Sign in → Settings → Profile → Danger zone → Delete account. Type your account email to confirm. This permanently removes your account, sessions, intake notes, and memory notes. If a Stripe subscription is on file, it must cancel successfully before deletion finishes.</li>
-  </ul>
   <p>
-    Prefer chat help instead? Open ${HELP_CONTROL} while signed in from the
-    address on your account. We may ask you to verify ownership before erasure.
+    To delete the personal data Nura stores, delete your account. These steps
+    are the data deletion instructions, including a request that starts on
+    Facebook or Meta.
+  </p>
+  <ol>
+    <li>Sign in at <a href="https://nurahelp.com">nurahelp.com</a>.</li>
+    <li>Open Settings, then Profile.</li>
+    <li>In Danger zone, choose Delete account.</li>
+    <li>Type the email on the account.</li>
+    <li>If the account has a password, enter it. If you sign in with Google or a passkey, type DELETE.</li>
+    <li>Confirm. This cannot be undone.</li>
+  </ol>
+  <p>
+    This removes your account, sessions, intake notes, and memory notes. An
+    active subscription must cancel successfully before deletion finishes.
+    Primary copies are removed within 30 days. Billing and tax records stay
+    where the law requires them. Backups stay until they age out.
+  </p>
+  <p>
+    If you cannot sign in, reset the password or sign in with Google, then
+    follow the steps above. From a signed-in screen you can also open
+    ${HELP_CONTROL}. We may ask you to confirm you own the account before we
+    erase it.
+  </p>
+  <p>
+    Nura accounts use email, Google, or a passkey. They are not created with
+    Facebook Login. A deletion request inside Facebook does not delete a Nura
+    account on its own. Use the steps above.
+  </p>
+  <p>
+    <strong>Update profile:</strong> Sign in, open Settings, then Profile.
+    Change your display name or photo, then Save profile.
   </p>
 
   <h3 id="nura-rights">Your rights</h3>

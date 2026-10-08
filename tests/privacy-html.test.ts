@@ -60,8 +60,9 @@ describe("preparePrivacyHtml", () => {
     assert.match(out, /id="nura-privacy"/);
     assert.match(out, /GDPR Article 9\(2\)\(a\)/);
     assert.match(out, /SUD\/VoC/);
-    assert.match(out, /Danger zone/);
     assert.match(out, /id="update-or-delete"/);
+    assert.match(out, /Facebook Login/);
+    assert.match(out, /Danger zone/);
     assert.match(out, /Cloudflare/);
     assert.match(out, /Brevo/);
     assert.match(out, /row-level\s+security/i);
