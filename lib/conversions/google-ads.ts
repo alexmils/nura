@@ -24,10 +24,22 @@ function apiVersion(config: GoogleAdsConversionConfig): string {
 /**
  * The Ads API rejects service accounts unless they use domain-wide delegation,
  * so this mints an access token from a refresh token issued to a real user with
- * access to the account.
+ * access to the account. Reporting on the admin overview uses the same token.
  */
+export async function mintGoogleAdsAccessToken(
+  config: Pick<
+    GoogleAdsConversionConfig,
+    "clientId" | "clientSecret" | "refreshToken"
+  >
+): Promise<{ token?: string; error?: string }> {
+  return getAccessToken(config);
+}
+
 async function getAccessToken(
-  config: GoogleAdsConversionConfig
+  config: Pick<
+    GoogleAdsConversionConfig,
+    "clientId" | "clientSecret" | "refreshToken"
+  >
 ): Promise<{ token?: string; error?: string }> {
   const key = `${config.clientId}:${config.refreshToken}`;
   const now = Date.now();

@@ -389,6 +389,15 @@ export function buildAdminSearchIndex(
       if (item.href === "/admin/tasks") {
         pageKeywords.push("todo", "todos", "ideas", "board", "scratchpad");
       }
+      if (item.href === "/admin" && item.exact) {
+        pageKeywords.push(
+          "meta ads",
+          "google ads",
+          "search console",
+          "seo performance",
+          "marketing"
+        );
+      }
       entries.push({
         id: `page:${item.href}`,
         href: item.href,

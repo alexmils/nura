@@ -19,6 +19,7 @@ import {
   DeltaBadge,
 } from "@/app/components/admin/AdminCharts";
 import { AdminTasksOverviewCard } from "@/app/components/admin/AdminTasksOverviewCard";
+import { MarketingOverview } from "@/app/components/admin/MarketingOverview";
 import { PlatformHealthCard } from "@/app/components/admin/PlatformHealthCard";
 import { actionLabel, formatDateTime, formatMoney } from "@/lib/admin-format";
 import { formatTokenCount, formatUsdMicros } from "@/lib/admin-llm-format";
@@ -107,7 +108,7 @@ export default function AdminOverviewPage() {
     <div className="admin-page">
       <AdminPageHeader
         title="Overview"
-        subtitle="Users, sessions, AI cost, and health."
+        subtitle="Users, sessions, AI cost, search, and ads."
       />
       <main className="admin-main">
         <section className="admin-dash-kpis">
@@ -160,6 +161,8 @@ export default function AdminOverviewPage() {
             />
           </article>
         </section>
+
+        <MarketingOverview />
 
         <div className="admin-dash-grid">
           <AdminTasksOverviewCard />

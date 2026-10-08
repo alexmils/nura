@@ -132,6 +132,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] ModePickDemo: start zoomed-out (0.86) so full picker is in frame; click AI agent-guided zooms to 1.14
 - [internal] ModePickDemo: wide shot is full /app shell (olive sidebar + Start a session); zoom only on AI agent-guided click
 - [internal] ModePickDemo: no camera zoom — cursor aims at AI agent-guided card (measured) and clicks; No cold starts is static phase swap only
+- [internal] Admin Overview marketing cards: Search Console, Meta Ads, and Google Ads (spend, delivery, campaign tables) from the same Connections credentials
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
