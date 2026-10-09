@@ -80,14 +80,18 @@ export function validatePausedCampaign(input: PausedCampaignInput): string | nul
   }
   const urlProblem = finalUrlProblem(input.finalUrl);
   if (urlProblem) return urlProblem;
-  const budget = input.dailyBudgetUsd ?? 1;
+  return dailyBudgetProblem(input.dailyBudgetUsd ?? 1, "created");
+}
+
+function dailyBudgetProblem(budget: number, action: "created" | "changed"): string | null {
   if (
     !Number.isFinite(budget) ||
     budget <= 0 ||
     budget > PAUSED_CAMPAIGN_BUDGET_USD_MAX ||
     Math.round(budget * 1_000_000) < 1
   ) {
-    return `Daily budget must be greater than 0 and at most ${PAUSED_CAMPAIGN_BUDGET_USD_MAX} USD. Nothing was created.`;
+    const stopped = action === "created" ? "Nothing was created." : "Nothing was changed.";
+    return `Daily budget must be greater than 0 and at most ${PAUSED_CAMPAIGN_BUDGET_USD_MAX} USD. ${stopped}`;
   }
   return null;
 }
@@ -309,6 +313,95 @@ export function gaqlQuote(value: string): string {
 
 export function campaignByNameQuery(name: string): string {
   return `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.name = ${gaqlQuote(name.trim())}`;
+}
+
+export function campaignLookupQuery(campaignId: string): string {
+  return `SELECT campaign.id, campaign.name, campaign.status, campaign_budget.resource_name, campaign_budget.amount_micros FROM campaign WHERE campaign.id = ${campaignId}`;
+}
+
+export type CampaignUpdateInput = {
+  name?: string;
+  dailyBudgetUsd?: number;
+};
+
+export function validateCampaignUpdate(input: CampaignUpdateInput): string | null {
+  const hasName = input.name !== undefined;
+  const hasBudget = input.dailyBudgetUsd !== undefined;
+  if (!hasName && !hasBudget) return "Provide a name or a daily budget. Nothing was changed.";
+  const name = input.name?.trim() ?? "";
+  if (hasName && !name) return "Campaign name is required. Nothing was changed.";
+  if (name.length > 255) return "Campaign name is too long. Nothing was changed.";
+  if (hasBudget) return dailyBudgetProblem(input.dailyBudgetUsd as number, "changed");
+  return null;
+}
+
+export function campaignBudgetResourceFromRow(row: unknown): string {
+  const rec = asRecord(row);
+  const budget = asRecord(rec?.campaignBudget) ?? asRecord(rec?.campaign_budget);
+  const name = budget?.resourceName ?? budget?.resource_name;
+  return typeof name === "string" ? name : "";
+}
+
+export function campaignStatusFromRow(row: unknown): string {
+  return String(asRecord(asRecord(row)?.campaign)?.status ?? "");
+}
+
+export function pausedCampaignGate(
+  rows: unknown[],
+  campaignId: string,
+  verb: "changed" | "removed"
+): { ok: true; budgetResourceName: string } | { ok: false; error: string } {
+  const row = rows[0];
+  if (!row) return { ok: false, error: `Campaign ${campaignId} was not found. Nothing was ${verb}.` };
+  const status = campaignStatusFromRow(row);
+  if (status !== "PAUSED") {
+    return { ok: false, error: `Campaign ${campaignId} is ${status || "not paused"}. Nothing was ${verb}.` };
+  }
+  return { ok: true, budgetResourceName: campaignBudgetResourceFromRow(row) };
+}
+
+export function buildCampaignUpdateMutate(args: {
+  campaignResourceName: string;
+  budgetResourceName?: string;
+  name?: string;
+  dailyBudgetUsd?: number;
+}): { mutateOperations: Array<Record<string, unknown>> } {
+  const problem = validateCampaignUpdate(args);
+  if (problem) throw new Error(problem);
+  const ops: Array<Record<string, unknown>> = [];
+  if (args.dailyBudgetUsd !== undefined) {
+    if (!args.budgetResourceName) throw new Error("This campaign has no budget to update. Nothing was changed.");
+    ops.push({
+      campaignBudgetOperation: {
+        update: {
+          resourceName: args.budgetResourceName,
+          amountMicros: String(Math.round(args.dailyBudgetUsd * 1_000_000)),
+        },
+        updateMask: "amount_micros",
+      },
+    });
+  }
+  if (args.name !== undefined) {
+    ops.push({
+      campaignOperation: {
+        update: {
+          resourceName: args.campaignResourceName,
+          name: args.name.trim(),
+        },
+        updateMask: "name",
+      },
+    });
+  }
+  return { mutateOperations: ops };
+}
+
+export function buildCampaignRemoveMutate(campaignResourceName: string): {
+  mutateOperations: Array<Record<string, unknown>>;
+} {
+  if (!/^customers\/\d+\/campaigns\/\d+$/.test(campaignResourceName)) {
+    throw new Error("Campaign id is required. Nothing was removed.");
+  }
+  return { mutateOperations: [{ campaignOperation: { remove: campaignResourceName } }] };
 }
 
 export function nuraGoogleAdsMcpJson(repoDir: string): string {

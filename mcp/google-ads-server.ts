@@ -4,8 +4,9 @@
  *   npx tsx mcp/google-ads-server.ts
  *
  * Loads Google Ads credentials from the repo `.env`. Do not put those values
- * in the agent prompt. This server can read a campaign and create a new one
- * only while it stays paused.
+ * in the agent prompt. This server can read a campaign, create one that stays
+ * paused, change its name or daily budget, or remove a paused campaign.
+ * It cannot enable a campaign, and the daily budget cannot exceed 5 USD.
  */
 import { config as loadEnv } from "dotenv";
 import path from "node:path";
@@ -15,16 +16,22 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { mintGoogleAdsAccessToken } from "../lib/conversions/google-ads.ts";
 import {
+  buildCampaignRemoveMutate,
+  buildCampaignUpdateMutate,
   buildPausedCampaignMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
+  campaignLookupQuery,
   existingCampaignDecision,
   googleAdsConfigFromEnv,
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
+  pausedCampaignGate,
   redactSecrets,
   rollupCampaignWeek,
+  validateCampaignUpdate,
   validatePausedCampaign,
+  type CampaignUpdateInput,
   type PausedCampaignInput,
 } from "../lib/google-ads-agent.ts";
 
@@ -126,15 +133,12 @@ server.registerTool(
       if (!id) {
         const rows = await search(
           token,
-          "SELECT campaign.id, campaign.name, campaign.status FROM campaign"
+          "SELECT campaign.id, campaign.name, campaign.status, campaign_budget.amount_micros FROM campaign"
         );
         return text({ ok: true, customerId: ads.customerId, campaigns: latestCampaignRows(rows) });
       }
       const [campaignRows, metricRows, adsRows] = await Promise.all([
-        search(
-          token,
-          `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`
-        ),
+        search(token, campaignLookupQuery(id)),
         search(
           token,
           `SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE campaign.id = ${id} AND segments.date DURING LAST_7_DAYS`
@@ -214,6 +218,79 @@ server.registerTool(
         campaignId,
         created,
       });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "update_campaign",
+  {
+    title: "Update a paused Google Ads campaign",
+    description:
+      "Change the name or daily budget of one paused campaign. Budget stays at most 5 USD. This tool cannot enable a campaign. A campaign that is not paused is left unchanged.",
+    inputSchema: z.object({
+      campaignId: z.string().describe("Digits only."),
+      name: z.string().optional().describe("New campaign name."),
+      dailyBudgetUsd: z.number().optional().describe("New USD per day. Maximum 5."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  async (input) => {
+    const id = input.campaignId.replace(/\D/g, "");
+    if (!id) return fail("Campaign id is required. Nothing was changed.");
+    const patch: CampaignUpdateInput = {};
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.dailyBudgetUsd !== undefined) patch.dailyBudgetUsd = input.dailyBudgetUsd;
+    const problem = validateCampaignUpdate(patch);
+    if (problem) return fail(problem);
+    try {
+      const token = await accessToken();
+      const rows = await search(token, campaignLookupQuery(id));
+      const gate = pausedCampaignGate(rows, id, "changed");
+      if (!gate.ok) return fail(gate.error);
+      const updated = await adsFetch(
+        token,
+        "googleAds:mutate",
+        buildCampaignUpdateMutate({
+          campaignResourceName: `customers/${ads.customerId}/campaigns/${id}`,
+          budgetResourceName: gate.budgetResourceName,
+          ...patch,
+        })
+      );
+      return text({ ok: true, paused: true, customerId: ads.customerId, campaignId: id, updated });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "remove_campaign",
+  {
+    title: "Remove a paused Google Ads campaign",
+    description:
+      "Remove one paused campaign. This cannot enable a campaign. A campaign that is not paused is left in place.",
+    inputSchema: z.object({
+      campaignId: z.string().describe("Digits only."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  async ({ campaignId }) => {
+    const id = campaignId.replace(/\D/g, "");
+    if (!id) return fail("Campaign id is required. Nothing was removed.");
+    try {
+      const token = await accessToken();
+      const rows = await search(token, campaignLookupQuery(id));
+      const gate = pausedCampaignGate(rows, id, "removed");
+      if (!gate.ok) return fail(gate.error);
+      const removed = await adsFetch(
+        token,
+        "googleAds:mutate",
+        buildCampaignRemoveMutate(`customers/${ads.customerId}/campaigns/${id}`)
+      );
+      return text({ ok: true, removed: true, customerId: ads.customerId, campaignId: id, result: removed });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }

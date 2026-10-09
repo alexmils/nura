@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildCampaignRemoveMutate,
+  buildCampaignUpdateMutate,
   buildPausedCampaignMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
@@ -9,8 +11,10 @@ import {
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
   nuraGoogleAdsMcpJson,
+  pausedCampaignGate,
   redactSecrets,
   rollupCampaignWeek,
+  validateCampaignUpdate,
   validatePausedCampaign,
 } from "../lib/google-ads-agent.ts";
 
@@ -131,6 +135,37 @@ describe("google ads paused campaign", () => {
     assert.equal(server.args.at(-1), "D:\\Python\\EMDR\\mcp\\google-ads-server.ts");
     assert.equal(json.includes("GOOGLE_ADS"), false);
     assert.equal(nuraGoogleAdsMcpJson("   "), "");
+  });
+
+  it("updates a paused budget and refuses a live campaign", () => {
+    assert.match(validateCampaignUpdate({}) ?? "", /Nothing was changed/);
+    assert.match(validateCampaignUpdate({ dailyBudgetUsd: 9 }) ?? "", /5 USD/);
+    const body = buildCampaignUpdateMutate({
+      campaignResourceName: "customers/7280736748/campaigns/24335695082",
+      budgetResourceName: "customers/7280736748/campaignBudgets/15928589183",
+      name: "Nura PAUSED",
+      dailyBudgetUsd: 2,
+    });
+    const blob = JSON.stringify(body);
+    assert.match(blob, /"amountMicros":"2000000"/);
+    assert.match(blob, /"updateMask":"amount_micros"/);
+    assert.match(blob, /"updateMask":"name"/);
+    assert.equal(blob.includes("ENABLED"), false);
+    assert.equal(blob.includes('"status"'), false);
+    const removed = JSON.stringify(buildCampaignRemoveMutate("customers/7280736748/campaigns/24335695082"));
+    assert.match(removed, /"remove":"customers\/7280736748\/campaigns\/24335695082"/);
+    const live = pausedCampaignGate(
+      [{ campaign: { id: "1", status: "ENABLED" }, campaignBudget: { resourceName: "customers/1/campaignBudgets/2" } }],
+      "1",
+      "changed"
+    );
+    assert.equal(live.ok, false);
+    const paused = pausedCampaignGate(
+      [{ campaign: { id: "1", status: "PAUSED" }, campaignBudget: { resourceName: "customers/1/campaignBudgets/2" } }],
+      "1",
+      "changed"
+    );
+    assert.equal(paused.ok && paused.budgetResourceName, "customers/1/campaignBudgets/2");
   });
 
   it("reads the new campaign id and hides secrets", () => {
