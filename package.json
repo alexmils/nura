@@ -11,10 +11,12 @@
     "start": "next start -p 3471",
     "lint": "next lint",
     "test": "tsx --test tests/**/*.test.ts",
+    "ads:mcp": "tsx mcp/google-ads-server.ts",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@simplewebauthn/browser": "^14.0.0",
     "@simplewebauthn/server": "^14.0.0",
     "bcryptjs": "^3.0.3",
