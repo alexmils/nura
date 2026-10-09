@@ -5,6 +5,8 @@ import {
   buildCampaignUpdateMutate,
   buildPausedCampaignMutate,
   campaignByNameQuery,
+  campaignLookupQuery,
+  removalNameProblem,
   campaignIdFromMutate,
   existingCampaignDecision,
   googleAdsConfigFromEnv,
@@ -148,10 +150,28 @@ describe("google ads paused campaign", () => {
     });
     const blob = JSON.stringify(body);
     assert.match(blob, /"amountMicros":"2000000"/);
-    assert.match(blob, /"updateMask":"amount_micros"/);
+    assert.match(blob, /"updateMask":"amountMicros"/);
     assert.match(blob, /"updateMask":"name"/);
     assert.equal(blob.includes("ENABLED"), false);
     assert.equal(blob.includes('"status"'), false);
+    const nameOnly = JSON.stringify(
+      buildCampaignUpdateMutate({
+        campaignResourceName: "customers/7280736748/campaigns/24335695082",
+        name: "Nura PAUSED",
+      })
+    );
+    assert.equal(nameOnly.includes("campaignBudgetOperation"), false);
+    assert.throws(
+      () =>
+        buildCampaignUpdateMutate({
+          campaignResourceName: "customers/7280736748/campaigns/24335695082",
+          budgetResourceName: "",
+          dailyBudgetUsd: 2,
+        }),
+      /no budget/
+    );
+    assert.throws(() => campaignLookupQuery("12 OR 1"), /digits/);
+    assert.match(campaignLookupQuery("24335695082"), /explicitly_shared/);
     const removed = JSON.stringify(buildCampaignRemoveMutate("customers/7280736748/campaigns/24335695082"));
     assert.match(removed, /"remove":"customers\/7280736748\/campaigns\/24335695082"/);
     const live = pausedCampaignGate(
@@ -166,6 +186,23 @@ describe("google ads paused campaign", () => {
       "changed"
     );
     assert.equal(paused.ok && paused.budgetResourceName, "customers/1/campaignBudgets/2");
+    const shared = pausedCampaignGate(
+      [
+        {
+          campaign: { id: "1", status: "PAUSED", name: "Nura PAUSED" },
+          campaign_budget: { resource_name: "customers/1/campaignBudgets/9", explicitly_shared: true },
+        },
+      ],
+      "1",
+      "changed"
+    );
+    assert.equal(shared.ok && shared.budgetResourceName, "customers/1/campaignBudgets/9");
+    assert.equal(shared.ok && shared.explicitlyShared, true);
+    const sharedRow = {
+      campaign: { id: "1", status: "PAUSED", name: "Nura PAUSED" },
+    };
+    assert.equal(removalNameProblem(sharedRow, "Receptly"), "Campaign name does not match this id. Nothing was removed.");
+    assert.equal(removalNameProblem(sharedRow, "Nura PAUSED"), null);
   });
 
   it("reads the new campaign id and hides secrets", () => {

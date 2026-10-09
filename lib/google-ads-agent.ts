@@ -316,7 +316,8 @@ export function campaignByNameQuery(name: string): string {
 }
 
 export function campaignLookupQuery(campaignId: string): string {
-  return `SELECT campaign.id, campaign.name, campaign.status, campaign_budget.resource_name, campaign_budget.amount_micros FROM campaign WHERE campaign.id = ${campaignId}`;
+  if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
+  return `SELECT campaign.id, campaign.name, campaign.status, campaign_budget.resource_name, campaign_budget.amount_micros, campaign_budget.explicitly_shared FROM campaign WHERE campaign.id = ${campaignId}`;
 }
 
 export type CampaignUpdateInput = {
@@ -335,11 +336,34 @@ export function validateCampaignUpdate(input: CampaignUpdateInput): string | nul
   return null;
 }
 
-export function campaignBudgetResourceFromRow(row: unknown): string {
+function budgetRecord(row: unknown): Record<string, unknown> | null {
   const rec = asRecord(row);
-  const budget = asRecord(rec?.campaignBudget) ?? asRecord(rec?.campaign_budget);
+  return asRecord(rec?.campaignBudget) ?? asRecord(rec?.campaign_budget);
+}
+
+export function campaignBudgetResourceFromRow(row: unknown): string {
+  const budget = budgetRecord(row);
   const name = budget?.resourceName ?? budget?.resource_name;
   return typeof name === "string" ? name : "";
+}
+
+export function campaignBudgetIsShared(row: unknown): boolean {
+  const budget = budgetRecord(row);
+  const value = budget?.explicitlyShared ?? budget?.explicitly_shared;
+  return value === true;
+}
+
+export function campaignNameFromRow(row: unknown): string {
+  const name = asRecord(asRecord(row)?.campaign)?.name;
+  return typeof name === "string" ? name : "";
+}
+
+export function removalNameProblem(row: unknown, name: string): string | null {
+  const expected = name.trim();
+  if (!expected) return "Campaign name is required. Nothing was removed.";
+  const actual = campaignNameFromRow(row);
+  if (actual !== expected) return "Campaign name does not match this id. Nothing was removed.";
+  return null;
 }
 
 export function campaignStatusFromRow(row: unknown): string {
@@ -350,14 +374,18 @@ export function pausedCampaignGate(
   rows: unknown[],
   campaignId: string,
   verb: "changed" | "removed"
-): { ok: true; budgetResourceName: string } | { ok: false; error: string } {
+): { ok: true; budgetResourceName: string; explicitlyShared: boolean } | { ok: false; error: string } {
   const row = rows[0];
   if (!row) return { ok: false, error: `Campaign ${campaignId} was not found. Nothing was ${verb}.` };
   const status = campaignStatusFromRow(row);
   if (status !== "PAUSED") {
     return { ok: false, error: `Campaign ${campaignId} is ${status || "not paused"}. Nothing was ${verb}.` };
   }
-  return { ok: true, budgetResourceName: campaignBudgetResourceFromRow(row) };
+  return {
+    ok: true,
+    budgetResourceName: campaignBudgetResourceFromRow(row),
+    explicitlyShared: campaignBudgetIsShared(row),
+  };
 }
 
 export function buildCampaignUpdateMutate(args: {
@@ -377,7 +405,7 @@ export function buildCampaignUpdateMutate(args: {
           resourceName: args.budgetResourceName,
           amountMicros: String(Math.round(args.dailyBudgetUsd * 1_000_000)),
         },
-        updateMask: "amount_micros",
+        updateMask: "amountMicros",
       },
     });
   }

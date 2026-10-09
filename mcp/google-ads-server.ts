@@ -28,6 +28,7 @@ import {
   NURA_GOOGLE_ADS_MCP_NAME,
   pausedCampaignGate,
   redactSecrets,
+  removalNameProblem,
   rollupCampaignWeek,
   validateCampaignUpdate,
   validatePausedCampaign,
@@ -229,7 +230,7 @@ server.registerTool(
   {
     title: "Update a paused Google Ads campaign",
     description:
-      "Change the name or daily budget of one paused campaign. Budget stays at most 5 USD. This tool cannot enable a campaign. A campaign that is not paused is left unchanged.",
+      "Change the name or daily budget of one paused campaign. Budget stays at most 5 USD. A shared budget is left unchanged. This tool cannot enable a campaign.",
     inputSchema: z.object({
       campaignId: z.string().describe("Digits only."),
       name: z.string().optional().describe("New campaign name."),
@@ -250,6 +251,9 @@ server.registerTool(
       const rows = await search(token, campaignLookupQuery(id));
       const gate = pausedCampaignGate(rows, id, "changed");
       if (!gate.ok) return fail(gate.error);
+      if (patch.dailyBudgetUsd !== undefined && gate.explicitlyShared) {
+        return fail("This campaign uses a shared budget. Nothing was changed.");
+      }
       const updated = await adsFetch(
         token,
         "googleAds:mutate",
@@ -271,13 +275,14 @@ server.registerTool(
   {
     title: "Remove a paused Google Ads campaign",
     description:
-      "Remove one paused campaign. This cannot enable a campaign. A campaign that is not paused is left in place.",
+      "Remove one paused campaign when the id and the exact name both match. This cannot enable a campaign. A campaign that is not paused is left in place.",
     inputSchema: z.object({
       campaignId: z.string().describe("Digits only."),
+      name: z.string().describe("Exact campaign name. Must match this id."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: true },
   },
-  async ({ campaignId }) => {
+  async ({ campaignId, name }) => {
     const id = campaignId.replace(/\D/g, "");
     if (!id) return fail("Campaign id is required. Nothing was removed.");
     try {
@@ -285,6 +290,8 @@ server.registerTool(
       const rows = await search(token, campaignLookupQuery(id));
       const gate = pausedCampaignGate(rows, id, "removed");
       if (!gate.ok) return fail(gate.error);
+      const nameProblem = removalNameProblem(rows[0], name);
+      if (nameProblem) return fail(nameProblem);
       const removed = await adsFetch(
         token,
         "googleAds:mutate",
