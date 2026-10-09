@@ -4,8 +4,8 @@
  *   npx tsx mcp/google-ads-server.ts
  *
  * Loads Google Ads credentials from the repo `.env`. Do not put those values
- * in the agent prompt. This server can read a campaign, create one that stays
- * paused, change its name or daily budget, or remove a paused campaign.
+ * in the agent prompt. This server can read a campaign, create a paused Search
+ * campaign, create a paused sales ad, change a paused campaign, or remove one.
  * It cannot enable a campaign, and the daily budget cannot exceed 5 USD.
  */
 import { config as loadEnv } from "dotenv";
@@ -21,6 +21,7 @@ import {
   buildCampaignUpdateMutate,
   buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
+  buildPausedSalesMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
   campaignLookupQuery,
@@ -38,8 +39,10 @@ import {
   rollupCampaignWeek,
   validateCampaignUpdate,
   validatePausedCampaign,
+  validatePausedSalesAd,
   type CampaignUpdateInput,
   type PausedCampaignInput,
+  type PausedSalesInput,
 } from "../lib/google-ads-agent.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -223,6 +226,66 @@ server.registerTool(
         paused: true,
         customerId: ads.customerId,
         campaignId,
+        created,
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "create_paused_sales_ad",
+  {
+    title: "Create a paused sales ad",
+    description:
+      "Create a paused sales ad on nurahelp.com. format search builds a Search campaign with a landing URL, headlines, and descriptions. format performance_max builds a Performance Max campaign with a landing URL. Campaign and ad stay PAUSED. Daily budget defaults to 1 USD and cannot exceed 5 USD. This tool cannot enable a campaign. The existing Search campaign tool is unchanged. A paused campaign with the same name is reused.",
+    inputSchema: z.object({
+      format: z.enum(["search", "performance_max"]).describe("search uses a site and text. performance_max uses a site."),
+      name: z.string().describe("Campaign name."),
+      finalUrl: z.string().describe("https landing URL on nurahelp.com."),
+      headlines: z.array(z.string()).describe("3 to 15 headlines, each up to 30 characters."),
+      descriptions: z.array(z.string()).describe("2 to 4 descriptions, each up to 90 characters. Performance Max needs one of 60 characters or fewer."),
+      adGroupName: z.string().optional().describe("Required for search. Target group name."),
+      keyword: z.string().optional().describe("Search phrase keyword. Defaults to nura."),
+      longHeadline: z.string().optional().describe("Required for performance_max. 1 to 90 characters."),
+      businessName: z.string().optional().describe("Performance Max business name. Defaults to Nura."),
+      assetGroupName: z.string().optional().describe("Performance Max asset group name."),
+      dailyBudgetUsd: z.number().optional().describe("USD per day. Defaults to 1. Maximum 5."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  async (input) => {
+    const draft: PausedSalesInput = input;
+    const problem = validatePausedSalesAd(draft);
+    if (problem) return fail(problem);
+    try {
+      const token = await accessToken();
+      const existing = await search(token, campaignByNameQuery(draft.name));
+      const decision = existingCampaignDecision(existing);
+      if (decision.action === "reuse") {
+        return text({
+          ok: true,
+          paused: true,
+          alreadyExists: true,
+          customerId: ads.customerId,
+          campaignId: decision.campaignId,
+          format: draft.format,
+        });
+      }
+      if (decision.action === "refuse") {
+        return fail(
+          `A campaign named ${draft.name.trim()} already exists (${decision.status}). Nothing was created.`
+        );
+      }
+      const created = await adsFetch(token, "googleAds:mutate", buildPausedSalesMutate(ads.customerId, draft));
+      return text({
+        ok: true,
+        paused: true,
+        customerId: ads.customerId,
+        campaignId: campaignIdFromMutate(created),
+        format: draft.format,
+        finalUrl: draft.finalUrl.trim(),
         created,
       });
     } catch (err) {

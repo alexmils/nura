@@ -6,6 +6,7 @@ import {
   buildCampaignUpdateMutate,
   buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
+  buildPausedSalesMutate,
   campaignByNameQuery,
   campaignLookupQuery,
   removalNameProblem,
@@ -22,6 +23,7 @@ import {
   rollupCampaignWeek,
   validateCampaignUpdate,
   validatePausedCampaign,
+  validatePausedSalesAd,
 } from "../lib/google-ads-agent.ts";
 
 const draft = {
@@ -238,6 +240,46 @@ describe("google ads paused campaign", () => {
     const removeAt = keyword.indexOf("remove");
     const createAt = keyword.indexOf("create");
     assert.ok(removeAt >= 0 && removeAt < createAt);
+  });
+
+  it("builds a paused sales search ad and a paused performance max ad", () => {
+    const search = JSON.stringify(
+      buildPausedSalesMutate("7280736748", { ...draft, format: "search" }, 7)
+    );
+    assert.match(search, /"advertisingChannelType":"SEARCH"/);
+    assert.match(search, /"finalUrls":\["https:\/\/nurahelp.com"\]/);
+    assert.equal(search.includes("ENABLED"), false);
+    assert.equal(search.match(/"status":"PAUSED"/g)?.length, 4);
+    const max = JSON.stringify(
+      buildPausedSalesMutate(
+        "7280736748",
+        {
+          ...draft,
+          format: "performance_max",
+          longHeadline: "A calm app for guided EMDR sessions.",
+        },
+        7
+      )
+    );
+    assert.match(max, /"advertisingChannelType":"PERFORMANCE_MAX"/);
+    assert.match(max, /"finalUrls":\["https:\/\/nurahelp.com"\]/);
+    assert.match(max, /"fieldType":"BUSINESS_NAME"/);
+    assert.match(max, /"fieldType":"LOGO"/);
+    assert.match(max, /"fieldType":"MARKETING_IMAGE"/);
+    assert.match(max, /"fieldType":"SQUARE_MARKETING_IMAGE"/);
+    assert.match(max, /"fieldType":"LONG_HEADLINE"/);
+    assert.equal(max.includes("\"status\":\"ENABLED\""), false);
+    assert.equal(max.includes("manualCpc"), false);
+    assert.match(validatePausedSalesAd({ ...draft, format: "performance_max" }) ?? "", /long headline/);
+    assert.match(
+      validatePausedSalesAd({
+        ...draft,
+        format: "performance_max",
+        longHeadline: "A calm app for guided EMDR sessions.",
+        finalUrl: "https://evil.example",
+      }) ?? "",
+      /nurahelp.com/
+    );
   });
 
   it("reads the new campaign id and hides secrets", () => {

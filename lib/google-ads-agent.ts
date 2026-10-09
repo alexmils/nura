@@ -2,6 +2,7 @@
  * Paused-only Google Ads payloads for the local MCP server.
  * The server reads credentials from the environment. This module never sees them.
  */
+import { crc32, deflateSync } from "node:zlib";
 
 export const PAUSED_CAMPAIGN_BUDGET_USD_MAX = 5;
 export const ENGLISH_LANGUAGE = "languageConstants/1000";
@@ -578,6 +579,230 @@ export function buildKeywordReplaceMutate(
       },
     });
   }
+  return { mutateOperations: ops };
+}
+
+export type PausedSalesFormat = "search" | "performance_max";
+
+export type PausedSalesInput = {
+  format: PausedSalesFormat;
+  name: string;
+  finalUrl: string;
+  headlines: string[];
+  descriptions: string[];
+  dailyBudgetUsd?: number;
+  adGroupName?: string;
+  keyword?: string;
+  longHeadline?: string;
+  businessName?: string;
+  assetGroupName?: string;
+};
+
+export function validatePausedSalesAd(input: PausedSalesInput): string | null {
+  if (input.format !== "search" && input.format !== "performance_max") {
+    return "Sales ad format must be search or performance_max. Nothing was created.";
+  }
+  if (input.format === "search") {
+    return validatePausedCampaign({
+      name: input.name,
+      adGroupName: input.adGroupName ?? "",
+      headlines: input.headlines,
+      descriptions: input.descriptions,
+      finalUrl: input.finalUrl,
+      keyword: input.keyword,
+      dailyBudgetUsd: input.dailyBudgetUsd,
+    });
+  }
+  const name = input.name.trim();
+  if (!name) return "Campaign name is required.";
+  if (name.length > 255) return "Campaign name is too long.";
+  const urlProblem = finalUrlProblem(input.finalUrl);
+  if (urlProblem) return urlProblem;
+  if (input.headlines.length < 3 || input.headlines.length > 15) {
+    return "A sales ad needs 3 to 15 headlines.";
+  }
+  if (input.headlines.some((line) => !line.trim() || line.trim().length > 30)) {
+    return "Each headline must be 1 to 30 characters.";
+  }
+  if (input.descriptions.length < 2 || input.descriptions.length > 4) {
+    return "A sales ad needs 2 to 4 descriptions.";
+  }
+  if (input.descriptions.some((line) => !line.trim() || line.trim().length > 90)) {
+    return "Each description must be 1 to 90 characters.";
+  }
+  if (!input.descriptions.some((line) => line.trim().length > 0 && line.trim().length <= 60)) {
+    return "Performance Max needs one description of 60 characters or fewer. Nothing was created.";
+  }
+  const longHeadline = input.longHeadline?.trim() ?? "";
+  if (!longHeadline || longHeadline.length > 90) {
+    return "Performance Max needs one long headline of 1 to 90 characters. Nothing was created.";
+  }
+  const businessName = (input.businessName?.trim() || "Nura");
+  if (!businessName || businessName.length > 25) {
+    return "Business name must be 1 to 25 characters. Nothing was created.";
+  }
+  return dailyBudgetProblem(input.dailyBudgetUsd ?? 1, "created");
+}
+
+function pngChunk(type: string, data: Buffer): Buffer {
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length, 0);
+  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
+  const sum = Buffer.alloc(4);
+  sum.writeUInt32BE(crc32(body) >>> 0, 0);
+  return Buffer.concat([length, body, sum]);
+}
+
+/** Small sage PNG with an ink circle. Performance Max requires these sizes. */
+function brandPng(width: number, height: number): string {
+  const sage: [number, number, number] = [132, 176, 103];
+  const ink: [number, number, number] = [42, 48, 32];
+  const cx = width / 2;
+  const cy = height / 2;
+  const radius = Math.min(width, height) * 0.28;
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y += 1) {
+    const row = y * (width * 3 + 1);
+    raw[row] = 0;
+    for (let x = 0; x < width; x += 1) {
+      const inside = (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius;
+      const rgb = inside ? ink : sage;
+      const index = row + 1 + x * 3;
+      raw[index] = rgb[0];
+      raw[index + 1] = rgb[1];
+      raw[index + 2] = rgb[2];
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(width, 0);
+  ihdr.writeUInt32BE(height, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 2;
+  const png = Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    pngChunk("IHDR", ihdr),
+    pngChunk("IDAT", deflateSync(raw)),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+  return png.toString("base64");
+}
+
+function textAssetOp(resourceName: string, text: string): Record<string, unknown> {
+  return { assetOperation: { create: { resourceName, textAsset: { text } } } };
+}
+
+function imageAssetOp(resourceName: string, name: string, data: string): Record<string, unknown> {
+  return { assetOperation: { create: { resourceName, name, imageAsset: { data } } } };
+}
+
+function groupLink(assetGroup: string, asset: string, fieldType: string): Record<string, unknown> {
+  return { assetGroupAssetOperation: { create: { assetGroup, asset, fieldType } } };
+}
+
+function campaignLink(campaign: string, asset: string, fieldType: string): Record<string, unknown> {
+  return { campaignAssetOperation: { create: { campaign, asset, fieldType } } };
+}
+
+export function buildPausedSalesMutate(
+  customerId: string,
+  input: PausedSalesInput,
+  now = Date.now()
+): { mutateOperations: Array<Record<string, unknown>> } {
+  const problem = validatePausedSalesAd(input);
+  if (problem) throw new Error(problem);
+  if (input.format === "search") {
+    return buildPausedCampaignMutate(
+      customerId,
+      {
+        name: input.name,
+        adGroupName: input.adGroupName ?? "",
+        headlines: input.headlines,
+        descriptions: input.descriptions,
+        finalUrl: input.finalUrl,
+        keyword: input.keyword,
+        dailyBudgetUsd: input.dailyBudgetUsd,
+      },
+      now
+    );
+  }
+  const budgetUsd = input.dailyBudgetUsd ?? 1;
+  const budget = `customers/${customerId}/campaignBudgets/-1`;
+  const campaign = `customers/${customerId}/campaigns/-2`;
+  const assetGroup = `customers/${customerId}/assetGroups/-3`;
+  const asset = (id: number) => `customers/${customerId}/assets/-${id}`;
+  const businessName = (input.businessName?.trim() || "Nura");
+  const ops: Array<Record<string, unknown>> = [
+    {
+      campaignBudgetOperation: {
+        create: {
+          resourceName: budget,
+          name: `${input.name.trim()} paused budget ${now}`,
+          amountMicros: String(Math.round(budgetUsd * 1_000_000)),
+          deliveryMethod: "STANDARD",
+          explicitlyShared: false,
+        },
+      },
+    },
+    {
+      campaignOperation: {
+        create: {
+          resourceName: campaign,
+          name: input.name.trim(),
+          status: "PAUSED",
+          advertisingChannelType: "PERFORMANCE_MAX",
+          campaignBudget: budget,
+          maximizeConversions: {},
+          brandGuidelinesEnabled: true,
+          containsEuPoliticalAdvertising: "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING",
+        },
+      },
+    },
+  ];
+  let next = 10;
+  const headlineAssets = input.headlines.map((line) => {
+    const resourceName = asset(next);
+    next += 1;
+    ops.push(textAssetOp(resourceName, line.trim()));
+    return resourceName;
+  });
+  const descriptionAssets = input.descriptions.map((line) => {
+    const resourceName = asset(next);
+    next += 1;
+    ops.push(textAssetOp(resourceName, line.trim()));
+    return resourceName;
+  });
+  const longAsset = asset(next);
+  next += 1;
+  ops.push(textAssetOp(longAsset, input.longHeadline!.trim()));
+  const businessAsset = asset(next);
+  next += 1;
+  ops.push(textAssetOp(businessAsset, businessName));
+  const logoAsset = asset(next);
+  next += 1;
+  ops.push(imageAssetOp(logoAsset, `Nura logo ${now}`, brandPng(128, 128)));
+  const landscapeAsset = asset(next);
+  next += 1;
+  ops.push(imageAssetOp(landscapeAsset, `Nura landscape ${now}`, brandPng(600, 314)));
+  const squareAsset = asset(next);
+  ops.push(imageAssetOp(squareAsset, `Nura square ${now}`, brandPng(300, 300)));
+  ops.push(campaignLink(campaign, businessAsset, "BUSINESS_NAME"));
+  ops.push(campaignLink(campaign, logoAsset, "LOGO"));
+  ops.push({
+    assetGroupOperation: {
+      create: {
+        resourceName: assetGroup,
+        name: (input.assetGroupName?.trim() || `${input.name.trim()} pages`).slice(0, 255),
+        campaign,
+        status: "PAUSED",
+        finalUrls: [input.finalUrl.trim()],
+      },
+    },
+  });
+  for (const resourceName of headlineAssets) ops.push(groupLink(assetGroup, resourceName, "HEADLINE"));
+  for (const resourceName of descriptionAssets) ops.push(groupLink(assetGroup, resourceName, "DESCRIPTION"));
+  ops.push(groupLink(assetGroup, longAsset, "LONG_HEADLINE"));
+  ops.push(groupLink(assetGroup, landscapeAsset, "MARKETING_IMAGE"));
+  ops.push(groupLink(assetGroup, squareAsset, "SQUARE_MARKETING_IMAGE"));
   return { mutateOperations: ops };
 }
 
