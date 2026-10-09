@@ -16,9 +16,14 @@ import { z } from "zod";
 import { mintGoogleAdsAccessToken } from "../lib/conversions/google-ads.ts";
 import {
   buildPausedCampaignMutate,
+  campaignByNameQuery,
   campaignIdFromMutate,
+  existingCampaignDecision,
   googleAdsConfigFromEnv,
+  latestCampaignRows,
+  NURA_GOOGLE_ADS_MCP_NAME,
   redactSecrets,
+  rollupCampaignWeek,
   validatePausedCampaign,
   type PausedCampaignInput,
 } from "../lib/google-ads-agent.ts";
@@ -101,14 +106,14 @@ async function search(token: string, query: string): Promise<unknown[]> {
   return body.results ?? [];
 }
 
-const server = new McpServer({ name: "nura-google-ads", version: "1.0.0" });
+const server = new McpServer({ name: NURA_GOOGLE_ADS_MCP_NAME, version: "1.0.0" });
 
 server.registerTool(
   "read_campaign",
   {
     title: "Read a Google Ads campaign",
     description:
-      "Read one campaign on customer 7280736748, or list recent campaigns when campaignId is omitted. Returns name, status, ad group, final URL, and last-7-day cost. Does not change the account.",
+      `Read one campaign on customer ${ads.customerId}, or the 20 highest campaign ids when campaignId is omitted. One campaign returns a 7-day total for cost, impressions, and clicks, plus its ads. Does not change the account.`,
     inputSchema: z.object({
       campaignId: z.string().optional().describe("Digits only. Omit to list campaigns."),
     }),
@@ -121,21 +126,36 @@ server.registerTool(
       if (!id) {
         const rows = await search(
           token,
-          "SELECT campaign.id, campaign.name, campaign.status FROM campaign LIMIT 20"
+          "SELECT campaign.id, campaign.name, campaign.status FROM campaign"
         );
-        return text({ ok: true, customerId: ads.customerId, campaigns: rows });
+        return text({ ok: true, customerId: ads.customerId, campaigns: latestCampaignRows(rows) });
       }
-      const [summary, adsRows] = await Promise.all([
+      const [campaignRows, metricRows, adsRows] = await Promise.all([
         search(
           token,
-          `SELECT campaign.id, campaign.name, campaign.status, metrics.cost_micros, metrics.impressions, metrics.clicks, metrics.ctr FROM campaign WHERE campaign.id = ${id} AND segments.date DURING LAST_7_DAYS`
+          `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.id = ${id}`
+        ),
+        search(
+          token,
+          `SELECT segments.date, metrics.cost_micros, metrics.impressions, metrics.clicks FROM campaign WHERE campaign.id = ${id} AND segments.date DURING LAST_7_DAYS`
         ),
         search(
           token,
           `SELECT ad_group.id, ad_group.name, ad_group.status, ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.ad.final_urls FROM ad_group_ad WHERE campaign.id = ${id}`
         ),
       ]);
-      return text({ ok: true, customerId: ads.customerId, summary, ads: adsRows });
+      const campaign = campaignRows[0] ?? null;
+      if (!campaign) {
+        return text({ ok: true, found: false, customerId: ads.customerId, campaignId: id });
+      }
+      return text({
+        ok: true,
+        found: true,
+        customerId: ads.customerId,
+        campaign,
+        last7Days: rollupCampaignWeek(metricRows),
+        ads: adsRows,
+      });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }
@@ -147,7 +167,7 @@ server.registerTool(
   {
     title: "Create a paused Google Ads campaign",
     description:
-      "Create a Search campaign, ad group, keyword, and responsive search ad. Campaign, ad group, keyword, and ad are always PAUSED. Daily budget defaults to 1 USD and cannot exceed 5 USD. This tool cannot enable a campaign.",
+      "Create a Search campaign, ad group, keyword, and responsive search ad. Campaign, ad group, keyword, and ad are always PAUSED. Daily budget defaults to 1 USD. Pass dailyBudgetUsd for any other amount. The landing URL must be https on nurahelp.com. This tool cannot enable a campaign. A paused campaign with the same name is reused.",
     inputSchema: z.object({
       name: z.string().describe("Campaign name, for example Nura."),
       adGroupName: z.string().describe("Target group name."),
@@ -155,7 +175,7 @@ server.registerTool(
       descriptions: z.array(z.string()).describe("2 to 4 descriptions, each up to 90 characters."),
       finalUrl: z.string().describe("https landing URL, usually https://nurahelp.com"),
       keyword: z.string().optional().describe("Phrase keyword. Defaults to nura. Avoid health-condition phrases."),
-      dailyBudgetUsd: z.number().optional().describe("1 to 5. Defaults to 1. The campaign stays paused."),
+      dailyBudgetUsd: z.number().optional().describe("USD per day. Defaults to 1. Any positive amount."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
@@ -165,6 +185,22 @@ server.registerTool(
     if (problem) return fail(problem);
     try {
       const token = await accessToken();
+      const existing = await search(token, campaignByNameQuery(draft.name));
+      const decision = existingCampaignDecision(existing);
+      if (decision.action === "reuse") {
+        return text({
+          ok: true,
+          paused: true,
+          alreadyExists: true,
+          customerId: ads.customerId,
+          campaignId: decision.campaignId,
+        });
+      }
+      if (decision.action === "refuse") {
+        return fail(
+          `A campaign named ${draft.name.trim()} already exists (${decision.status}). Nothing was created.`
+        );
+      }
       const created = await adsFetch(
         token,
         "googleAds:mutate",

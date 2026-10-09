@@ -2,9 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildPausedCampaignMutate,
+  campaignByNameQuery,
   campaignIdFromMutate,
+  existingCampaignDecision,
   googleAdsConfigFromEnv,
+  latestCampaignRows,
+  NURA_GOOGLE_ADS_MCP_NAME,
+  nuraGoogleAdsMcpJson,
   redactSecrets,
+  rollupCampaignWeek,
   validatePausedCampaign,
 } from "../lib/google-ads-agent.ts";
 
@@ -36,6 +42,16 @@ describe("google ads paused campaign", () => {
     assert.equal(ready.config?.customerId, "7280736748");
     assert.equal(ready.config?.apiVersion, "v25");
     assert.equal(ready.config?.loginCustomerId, "");
+    assert.equal(
+      googleAdsConfigFromEnv({
+        GOOGLE_ADS_CUSTOMER_ID: "abc",
+        GOOGLE_ADS_DEVELOPER_TOKEN: "dev",
+        GOOGLE_ADS_CLIENT_ID: "client",
+        GOOGLE_ADS_CLIENT_SECRET: "secret",
+        GOOGLE_ADS_REFRESH_TOKEN: "refresh",
+      }).config,
+      undefined
+    );
   });
 
   it("builds a mutate where every delivery status is paused", () => {
@@ -49,10 +65,71 @@ describe("google ads paused campaign", () => {
     assert.match(blob, /DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING/);
   });
 
-  it("rejects a live-sized budget and a bad url", () => {
-    assert.match(validatePausedCampaign({ ...draft, dailyBudgetUsd: 50 }) ?? "", /5 USD/);
-    assert.match(validatePausedCampaign({ ...draft, finalUrl: "http://nurahelp.com" }) ?? "", /https/);
-    assert.equal(validatePausedCampaign(draft), null);
+  it("rejects a zero budget and a url outside nurahelp.com", () => {
+    assert.match(validatePausedCampaign({ ...draft, dailyBudgetUsd: 0 }) ?? "", /Nothing was created/);
+    assert.equal(validatePausedCampaign({ ...draft, dailyBudgetUsd: 50 }), null);
+    assert.match(validatePausedCampaign({ ...draft, finalUrl: "https://evil.example" }) ?? "", /nurahelp.com/);
+    assert.match(validatePausedCampaign({ ...draft, finalUrl: "https://user:pass@nurahelp.com" }) ?? "", /nurahelp.com/);
+    assert.equal(validatePausedCampaign({ ...draft, finalUrl: "https://www.nurahelp.com/pricing" }), null);
+  });
+
+  it("defaults the keyword to nura and slices it to 80 characters", () => {
+    const omitted = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, keyword: undefined }, 1));
+    assert.match(omitted, /"text":"nura"/);
+    assert.match(omitted, /"amountMicros":"1000000"/);
+    const sized = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, dailyBudgetUsd: 50 }, 1));
+    assert.match(sized, /"amountMicros":"50000000"/);
+    const sliced = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, keyword: "n".repeat(120) }, 1));
+    assert.match(sliced, new RegExp(`"text":"${"n".repeat(80)}"`));
+    assert.equal(sliced.includes("n".repeat(81)), false);
+  });
+
+  it("sums a week and keeps the highest campaign ids", () => {
+    const week = rollupCampaignWeek([
+      { segments: { date: "2026-10-01" }, metrics: { costMicros: "1000000", impressions: "10", clicks: "2" } },
+      { segments: { date: "2026-10-02" }, metrics: { cost_micros: "500000", impressions: "5", clicks: "1" } },
+    ]);
+    assert.equal(week.days, 2);
+    assert.equal(week.costMicros, "1500000");
+    assert.equal(week.impressions, "15");
+    assert.equal(week.clicks, "3");
+    assert.equal(week.ctr, 0.2);
+    const latest = latestCampaignRows([
+      { campaign: { id: "10", name: "Old", status: "PAUSED" } },
+      { campaign: { id: "99", name: "New", status: "PAUSED" } },
+      { campaign: { id: "50", name: "Gone", status: "REMOVED" } },
+    ]);
+    assert.deepEqual(
+      latest.map((row) => (row as { campaign: { id: string } }).campaign.id),
+      ["99", "10"]
+    );
+  });
+
+  it("reuses a paused name and refuses a live one", () => {
+    assert.equal(existingCampaignDecision([]).action, "create");
+    assert.deepEqual(
+      existingCampaignDecision([{ campaign: { id: "4", status: "PAUSED" } }]),
+      { action: "reuse", campaignId: "4" }
+    );
+    assert.equal(
+      existingCampaignDecision([{ campaign: { id: "8", status: "ENABLED" } }]).action,
+      "refuse"
+    );
+    assert.equal(campaignByNameQuery("Nura's ad"), "SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.name = 'Nura\\'s ad'");
+  });
+
+  it("builds Cherry Studio JSON named Nura Google Ads with an empty env", () => {
+    const json = nuraGoogleAdsMcpJson("D:\\Python\\EMDR");
+    const parsed = JSON.parse(json) as {
+      mcpServers: Record<string, { type: string; command: string; args: string[]; env: Record<string, string> }>;
+    };
+    const server = parsed.mcpServers[NURA_GOOGLE_ADS_MCP_NAME];
+    assert.equal(server.type, "stdio");
+    assert.equal(server.command, "npx");
+    assert.deepEqual(server.env, {});
+    assert.equal(server.args.at(-1), "D:\\Python\\EMDR\\mcp\\google-ads-server.ts");
+    assert.equal(json.includes("GOOGLE_ADS"), false);
+    assert.equal(nuraGoogleAdsMcpJson("   "), "");
   });
 
   it("reads the new campaign id and hides secrets", () => {

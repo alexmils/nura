@@ -10,6 +10,10 @@ import {
   type ReactNode,
 } from "react";
 import { CircleHelp } from "lucide-react";
+import {
+  NURA_GOOGLE_ADS_REPO_DEFAULT,
+  nuraGoogleAdsMcpJson,
+} from "@/lib/google-ads-agent";
 
 type McpView = {
   enabled: boolean;
@@ -123,6 +127,9 @@ export default function AdminMcpPage() {
   const [copied, setCopied] = useState("");
   const [info, setInfo] = useState<InfoKind>(null);
   const [wizard, setWizard] = useState<WizardStep>(null);
+  const [repoDir, setRepoDir] = useState(NURA_GOOGLE_ADS_REPO_DEFAULT);
+  const [adsJson, setAdsJson] = useState("");
+  const [adsJsonError, setAdsJsonError] = useState("");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -220,6 +227,18 @@ export default function AdminMcpPage() {
     void act("generate", undefined, name);
   }
 
+  function generateAdsJson(e?: FormEvent) {
+    e?.preventDefault();
+    const json = nuraGoogleAdsMcpJson(repoDir);
+    if (!json) {
+      setAdsJson("");
+      setAdsJsonError("Repo folder is required.");
+      return;
+    }
+    setAdsJsonError("");
+    setAdsJson(json);
+  }
+
   async function copy(value: string, what: string) {
     try {
       await navigator.clipboard.writeText(value);
@@ -279,6 +298,57 @@ export default function AdminMcpPage() {
       </header>
 
       <main className="admin-main admin-mcp-main">
+        <section className="admin-mcp-section">
+          <div className="admin-mcp-section-head-row">
+            <h2 className="admin-mcp-section-title">Nura Google Ads</h2>
+          </div>
+          <p className="admin-mcp-section-sub">Cherry Studio. No secrets in this file.</p>
+          <form className="admin-mcp-ads-form" onSubmit={generateAdsJson}>
+            <label className="admin-field-label" htmlFor="admin-mcp-ads-repo">
+              Repo folder
+              <input
+                id="admin-mcp-ads-repo"
+                type="text"
+                className="field"
+                value={repoDir}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => {
+                  setRepoDir(e.target.value);
+                  if (adsJsonError) setAdsJsonError("");
+                }}
+              />
+            </label>
+            {adsJsonError ? (
+              <p className="admin-mcp-wizard-error" role="alert">
+                {adsJsonError}
+              </p>
+            ) : null}
+            <button type="submit" className="btn-primary">
+              Generate JSON
+            </button>
+          </form>
+          {adsJson ? (
+            <label className="admin-field-label">
+              JSON
+              <textarea
+                className="field admin-mcp-secret-json"
+                readOnly
+                rows={12}
+                value={adsJson}
+                onFocus={(e) => e.currentTarget.select()}
+              />
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => void copy(adsJson, "ads-json")}
+              >
+                {copied === "ads-json" ? "Copied" : "Copy JSON"}
+              </button>
+            </label>
+          ) : null}
+        </section>
+
         {(msg || err) && !wizard && (
           <div
             className={`admin-mcp-banner${err ? " is-error" : ""}`}
