@@ -167,7 +167,7 @@ server.registerTool(
   {
     title: "Create a paused Google Ads campaign",
     description:
-      "Create a Search campaign, ad group, keyword, and responsive search ad. Campaign, ad group, keyword, and ad are always PAUSED. Daily budget defaults to 1 USD. Pass dailyBudgetUsd for any other amount. The landing URL must be https on nurahelp.com. This tool cannot enable a campaign. A paused campaign with the same name is reused.",
+      "Create a Search campaign, ad group, keyword, and responsive search ad. Campaign, ad group, keyword, and ad are always PAUSED. Daily budget defaults to 1 USD and cannot exceed 5 USD. The landing URL must be https on nurahelp.com. This tool cannot enable a campaign. A paused campaign with the same name is reused.",
     inputSchema: z.object({
       name: z.string().describe("Campaign name, for example Nura."),
       adGroupName: z.string().describe("Target group name."),
@@ -175,7 +175,7 @@ server.registerTool(
       descriptions: z.array(z.string()).describe("2 to 4 descriptions, each up to 90 characters."),
       finalUrl: z.string().describe("https landing URL, usually https://nurahelp.com"),
       keyword: z.string().optional().describe("Phrase keyword. Defaults to nura. Avoid health-condition phrases."),
-      dailyBudgetUsd: z.number().optional().describe("USD per day. Defaults to 1. Any positive amount."),
+      dailyBudgetUsd: z.number().optional().describe("USD per day. Defaults to 1. Maximum 5."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },

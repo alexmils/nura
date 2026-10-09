@@ -3,6 +3,7 @@
  * The server reads credentials from the environment. This module never sees them.
  */
 
+export const PAUSED_CAMPAIGN_BUDGET_USD_MAX = 5;
 export const ENGLISH_LANGUAGE = "languageConstants/1000";
 export const NURA_GOOGLE_ADS_MCP_NAME = "Nura Google Ads";
 export const NURA_GOOGLE_ADS_REPO_DEFAULT = "D:\\Python\\EMDR";
@@ -80,8 +81,13 @@ export function validatePausedCampaign(input: PausedCampaignInput): string | nul
   const urlProblem = finalUrlProblem(input.finalUrl);
   if (urlProblem) return urlProblem;
   const budget = input.dailyBudgetUsd ?? 1;
-  if (!Number.isFinite(budget) || budget <= 0 || Math.round(budget * 1_000_000) < 1) {
-    return "Daily budget must be greater than 0. Nothing was created.";
+  if (
+    !Number.isFinite(budget) ||
+    budget <= 0 ||
+    budget > PAUSED_CAMPAIGN_BUDGET_USD_MAX ||
+    Math.round(budget * 1_000_000) < 1
+  ) {
+    return `Daily budget must be greater than 0 and at most ${PAUSED_CAMPAIGN_BUDGET_USD_MAX} USD. Nothing was created.`;
   }
   return null;
 }

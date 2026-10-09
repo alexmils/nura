@@ -723,6 +723,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Overview marketing cards compile again. A nested type keyword on an import type statement was failing the production image build
 - [internal] Admin Overview packs both columns: Paying share and Search Console stay under Tasks, tracking stays under Platform health, and the ads row starts only once those stacks meet
 - [internal] Nura Google Ads MCP sums the last 7 days, lists the newest campaign ids, and reuses a paused name. The landing URL stays on nurahelp.com. Daily budget has no cap. Admin MCP can generate the Cherry Studio JSON, with no secrets in it.
+- [internal] Nura Google Ads MCP caps a new campaign at 5 USD a day. A higher budget is changed in Google Ads, not by the agent.
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

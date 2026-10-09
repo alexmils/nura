@@ -67,7 +67,8 @@ describe("google ads paused campaign", () => {
 
   it("rejects a zero budget and a url outside nurahelp.com", () => {
     assert.match(validatePausedCampaign({ ...draft, dailyBudgetUsd: 0 }) ?? "", /Nothing was created/);
-    assert.equal(validatePausedCampaign({ ...draft, dailyBudgetUsd: 50 }), null);
+    assert.match(validatePausedCampaign({ ...draft, dailyBudgetUsd: 50 }) ?? "", /5 USD/);
+    assert.equal(validatePausedCampaign({ ...draft, dailyBudgetUsd: 5 }), null);
     assert.match(validatePausedCampaign({ ...draft, finalUrl: "https://evil.example" }) ?? "", /nurahelp.com/);
     assert.match(validatePausedCampaign({ ...draft, finalUrl: "https://user:pass@nurahelp.com" }) ?? "", /nurahelp.com/);
     assert.equal(validatePausedCampaign({ ...draft, finalUrl: "https://www.nurahelp.com/pricing" }), null);
@@ -77,8 +78,8 @@ describe("google ads paused campaign", () => {
     const omitted = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, keyword: undefined }, 1));
     assert.match(omitted, /"text":"nura"/);
     assert.match(omitted, /"amountMicros":"1000000"/);
-    const sized = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, dailyBudgetUsd: 50 }, 1));
-    assert.match(sized, /"amountMicros":"50000000"/);
+    const sized = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, dailyBudgetUsd: 5 }, 1));
+    assert.match(sized, /"amountMicros":"5000000"/);
     const sliced = JSON.stringify(buildPausedCampaignMutate("7280736748", { ...draft, keyword: "n".repeat(120) }, 1));
     assert.match(sliced, new RegExp(`"text":"${"n".repeat(80)}"`));
     assert.equal(sliced.includes("n".repeat(81)), false);
