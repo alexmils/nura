@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildAdUpdateMutate,
   buildCampaignRemoveMutate,
   buildCampaignUpdateMutate,
+  buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
   campaignByNameQuery,
   campaignLookupQuery,
@@ -13,7 +15,9 @@ import {
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
   nuraGoogleAdsMcpJson,
+  pausedAdIds,
   pausedCampaignGate,
+  pausedKeywordGroups,
   redactSecrets,
   rollupCampaignWeek,
   validateCampaignUpdate,
@@ -203,6 +207,37 @@ describe("google ads paused campaign", () => {
     };
     assert.equal(removalNameProblem(sharedRow, "Receptly"), "Campaign name does not match this id. Nothing was removed.");
     assert.equal(removalNameProblem(sharedRow, "Nura PAUSED"), null);
+  });
+
+  it("updates paused ad copy and replaces the keyword", () => {
+    assert.match(validateCampaignUpdate({ finalUrl: "https://evil.example" }) ?? "", /nurahelp.com/);
+    assert.match(validateCampaignUpdate({ headlines: ["Nura"] }) ?? "", /3 to 15/);
+    const ad = buildAdUpdateMutate("7280736748", ["827454280033"], {
+      headlines: ["Nura", "EMDR therapy online", "A calm session app"],
+      descriptions: ["Support for therapy. Starting with EMDR.", "A calm app for guided EMDR sessions."],
+      finalUrl: "https://nurahelp.com",
+    });
+    const adBlob = JSON.stringify(ad);
+    assert.match(adBlob, /customers\/7280736748\/ads\/827454280033/);
+    assert.match(adBlob, /responsiveSearchAd.headlines/);
+    assert.match(adBlob, /finalUrls/);
+    assert.equal(adBlob.includes("ENABLED"), false);
+    const ids = pausedAdIds([{ adGroupAd: { status: "PAUSED", ad: { id: "9" } } }, { ad_group_ad: { status: "ENABLED", ad: { id: "8" } } }]);
+    assert.deepEqual(ids, ["9"]);
+    const groups = pausedKeywordGroups([
+      {
+        adGroup: { id: "198726548097" },
+        adGroupCriterion: { status: "PAUSED", negative: false, resourceName: "customers/1/adGroupCriteria/198726548097~132241482" },
+      },
+    ]);
+    const keyword = JSON.stringify(buildKeywordReplaceMutate("7280736748", groups, "nura"));
+    assert.match(keyword, /"status":"PAUSED"/);
+    assert.match(keyword, /"text":"nura"/);
+    assert.match(keyword, /adGroupCriteria\/198726548097~132241482/);
+    assert.equal(keyword.includes("ENABLED"), false);
+    const removeAt = keyword.indexOf("remove");
+    const createAt = keyword.indexOf("create");
+    assert.ok(removeAt >= 0 && removeAt < createAt);
   });
 
   it("reads the new campaign id and hides secrets", () => {

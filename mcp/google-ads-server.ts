@@ -16,8 +16,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { mintGoogleAdsAccessToken } from "../lib/conversions/google-ads.ts";
 import {
+  buildAdUpdateMutate,
   buildCampaignRemoveMutate,
   buildCampaignUpdateMutate,
+  buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
@@ -26,7 +28,11 @@ import {
   googleAdsConfigFromEnv,
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
+  pausedAdIds,
+  pausedAdQuery,
   pausedCampaignGate,
+  pausedKeywordGroups,
+  pausedKeywordQuery,
   redactSecrets,
   removalNameProblem,
   rollupCampaignWeek,
@@ -230,11 +236,15 @@ server.registerTool(
   {
     title: "Update a paused Google Ads campaign",
     description:
-      "Change the name or daily budget of one paused campaign. Budget stays at most 5 USD. A shared budget is left unchanged. This tool cannot enable a campaign.",
+      "Change the name, daily budget, headlines, descriptions, final URL, or keyword of one paused campaign. Budget stays at most 5 USD. The final URL must be https on nurahelp.com. A shared budget is left unchanged. The keyword is replaced and stays paused. This tool cannot enable a campaign.",
     inputSchema: z.object({
       campaignId: z.string().describe("Digits only."),
       name: z.string().optional().describe("New campaign name."),
       dailyBudgetUsd: z.number().optional().describe("New USD per day. Maximum 5."),
+      headlines: z.array(z.string()).optional().describe("3 to 15 headlines, each up to 30 characters. Replaces the paused ad."),
+      descriptions: z.array(z.string()).optional().describe("2 to 4 descriptions, each up to 90 characters. Replaces the paused ad."),
+      finalUrl: z.string().optional().describe("https URL on nurahelp.com."),
+      keyword: z.string().optional().describe("New phrase keyword. Replaces the paused keyword."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
@@ -244,6 +254,10 @@ server.registerTool(
     const patch: CampaignUpdateInput = {};
     if (input.name !== undefined) patch.name = input.name;
     if (input.dailyBudgetUsd !== undefined) patch.dailyBudgetUsd = input.dailyBudgetUsd;
+    if (input.headlines !== undefined) patch.headlines = input.headlines;
+    if (input.descriptions !== undefined) patch.descriptions = input.descriptions;
+    if (input.finalUrl !== undefined) patch.finalUrl = input.finalUrl;
+    if (input.keyword !== undefined) patch.keyword = input.keyword;
     const problem = validateCampaignUpdate(patch);
     if (problem) return fail(problem);
     try {
@@ -254,16 +268,35 @@ server.registerTool(
       if (patch.dailyBudgetUsd !== undefined && gate.explicitlyShared) {
         return fail("This campaign uses a shared budget. Nothing was changed.");
       }
-      const updated = await adsFetch(
-        token,
-        "googleAds:mutate",
-        buildCampaignUpdateMutate({
-          campaignResourceName: `customers/${ads.customerId}/campaigns/${id}`,
-          budgetResourceName: gate.budgetResourceName,
-          ...patch,
-        })
-      );
-      return text({ ok: true, paused: true, customerId: ads.customerId, campaignId: id, updated });
+      const hasCopy = patch.headlines !== undefined || patch.descriptions !== undefined || patch.finalUrl !== undefined;
+      let ad: unknown;
+      let keyword: unknown;
+      if (hasCopy) {
+        const adIds = pausedAdIds(await search(token, pausedAdQuery(id)));
+        ad = await adsFetch(token, "ads:mutate", buildAdUpdateMutate(ads.customerId, adIds, patch));
+      }
+      if (patch.keyword !== undefined) {
+        const groups = pausedKeywordGroups(await search(token, pausedKeywordQuery(id)));
+        keyword = await adsFetch(
+          token,
+          "googleAds:mutate",
+          buildKeywordReplaceMutate(ads.customerId, groups, patch.keyword)
+        );
+      }
+      let updated: unknown;
+      if (patch.name !== undefined || patch.dailyBudgetUsd !== undefined) {
+        updated = await adsFetch(
+          token,
+          "googleAds:mutate",
+          buildCampaignUpdateMutate({
+            campaignResourceName: `customers/${ads.customerId}/campaigns/${id}`,
+            budgetResourceName: gate.budgetResourceName,
+            name: patch.name,
+            dailyBudgetUsd: patch.dailyBudgetUsd,
+          })
+        );
+      }
+      return text({ ok: true, paused: true, customerId: ads.customerId, campaignId: id, updated, ad, keyword });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }

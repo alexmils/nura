@@ -323,16 +323,55 @@ export function campaignLookupQuery(campaignId: string): string {
 export type CampaignUpdateInput = {
   name?: string;
   dailyBudgetUsd?: number;
+  headlines?: string[];
+  descriptions?: string[];
+  finalUrl?: string;
+  keyword?: string;
 };
 
 export function validateCampaignUpdate(input: CampaignUpdateInput): string | null {
   const hasName = input.name !== undefined;
   const hasBudget = input.dailyBudgetUsd !== undefined;
-  if (!hasName && !hasBudget) return "Provide a name or a daily budget. Nothing was changed.";
+  const hasHeadlines = input.headlines !== undefined;
+  const hasDescriptions = input.descriptions !== undefined;
+  const hasUrl = input.finalUrl !== undefined;
+  const hasKeyword = input.keyword !== undefined;
+  if (!hasName && !hasBudget && !hasHeadlines && !hasDescriptions && !hasUrl && !hasKeyword) {
+    return "Provide a name, budget, headlines, descriptions, final URL, or keyword. Nothing was changed.";
+  }
   const name = input.name?.trim() ?? "";
   if (hasName && !name) return "Campaign name is required. Nothing was changed.";
   if (name.length > 255) return "Campaign name is too long. Nothing was changed.";
-  if (hasBudget) return dailyBudgetProblem(input.dailyBudgetUsd as number, "changed");
+  if (hasBudget) {
+    const budgetProblem = dailyBudgetProblem(input.dailyBudgetUsd as number, "changed");
+    if (budgetProblem) return budgetProblem;
+  }
+  if (hasHeadlines) {
+    const lines = input.headlines ?? [];
+    if (lines.length < 3 || lines.length > 15) {
+      return "A responsive search ad needs 3 to 15 headlines. Nothing was changed.";
+    }
+    if (lines.some((line) => !line.trim() || line.trim().length > 30)) {
+      return "Each headline must be 1 to 30 characters. Nothing was changed.";
+    }
+  }
+  if (hasDescriptions) {
+    const lines = input.descriptions ?? [];
+    if (lines.length < 2 || lines.length > 4) {
+      return "A responsive search ad needs 2 to 4 descriptions. Nothing was changed.";
+    }
+    if (lines.some((line) => !line.trim() || line.trim().length > 90)) {
+      return "Each description must be 1 to 90 characters. Nothing was changed.";
+    }
+  }
+  if (hasUrl) {
+    const urlProblem = finalUrlProblem(input.finalUrl ?? "");
+    if (urlProblem) return `${urlProblem} Nothing was changed.`;
+  }
+  const keyword = input.keyword?.trim() ?? "";
+  if (hasKeyword && (!keyword || keyword.length > 80)) {
+    return "Keyword must be 1 to 80 characters. Nothing was changed.";
+  }
   return null;
 }
 
@@ -420,6 +459,7 @@ export function buildCampaignUpdateMutate(args: {
       },
     });
   }
+  if (!ops.length) throw new Error("Nothing was changed.");
   return { mutateOperations: ops };
 }
 
@@ -430,6 +470,115 @@ export function buildCampaignRemoveMutate(campaignResourceName: string): {
     throw new Error("Campaign id is required. Nothing was removed.");
   }
   return { mutateOperations: [{ campaignOperation: { remove: campaignResourceName } }] };
+}
+
+function digitsOnly(id: string, label: string): void {
+  if (!/^\d+$/.test(id)) throw new Error(`${label} must be digits. Nothing was changed.`);
+}
+
+export function pausedAdQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT ad_group_ad.ad.id, ad_group_ad.status FROM ad_group_ad WHERE campaign.id = ${campaignId} AND ad_group_ad.status = 'PAUSED'`;
+}
+
+export function pausedKeywordQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT ad_group.id, ad_group_criterion.resource_name, ad_group_criterion.negative, ad_group_criterion.status FROM ad_group_criterion WHERE campaign.id = ${campaignId} AND ad_group_criterion.type = KEYWORD AND ad_group_criterion.status = 'PAUSED'`;
+}
+
+function nested(row: unknown, camel: string, snake: string): Record<string, unknown> | null {
+  const rec = asRecord(row);
+  return asRecord(rec?.[camel]) ?? asRecord(rec?.[snake]);
+}
+
+export function pausedAdIds(rows: unknown[]): string[] {
+  const ids: string[] = [];
+  for (const row of rows) {
+    const adGroupAd = nested(row, "adGroupAd", "ad_group_ad");
+    if (String(adGroupAd?.status ?? "") !== "PAUSED") continue;
+    const id = asRecord(adGroupAd?.ad)?.id;
+    const text = typeof id === "number" ? String(Math.trunc(id)) : typeof id === "string" ? id.replace(/\D/g, "") : "";
+    if (text) ids.push(text);
+  }
+  return ids;
+}
+
+export function pausedKeywordGroups(rows: unknown[]): Array<{ adGroupId: string; remove: string[] }> {
+  const groups = new Map<string, string[]>();
+  for (const row of rows) {
+    const criterion = nested(row, "adGroupCriterion", "ad_group_criterion");
+    const adGroup = nested(row, "adGroup", "ad_group");
+    if (!criterion || String(criterion.status ?? "") !== "PAUSED" || criterion.negative === true) continue;
+    const adGroupId = typeof adGroup?.id === "number" ? String(Math.trunc(adGroup.id)) : String(adGroup?.id ?? "").replace(/\D/g, "");
+    const resourceName = typeof criterion.resourceName === "string" ? criterion.resourceName : typeof criterion.resource_name === "string" ? criterion.resource_name : "";
+    if (!adGroupId || !/^customers\/\d+\/adGroupCriteria\/\d+~\d+$/.test(resourceName)) continue;
+    const list = groups.get(adGroupId) ?? [];
+    list.push(resourceName);
+    groups.set(adGroupId, list);
+  }
+  return [...groups.entries()].map(([adGroupId, remove]) => ({ adGroupId, remove }));
+}
+
+export function buildAdUpdateMutate(
+  customerId: string,
+  adIds: string[],
+  input: Pick<CampaignUpdateInput, "headlines" | "descriptions" | "finalUrl">
+): { operations: Array<Record<string, unknown>> } {
+  digitsOnly(customerId, "Customer id");
+  if (!adIds.length) throw new Error("No paused ad to update. Nothing was changed.");
+  const masks: string[] = [];
+  const ad: Record<string, unknown> = {};
+  if (input.finalUrl !== undefined) {
+    ad.finalUrls = [input.finalUrl.trim()];
+    masks.push("finalUrls");
+  }
+  const rsa: Record<string, unknown> = {};
+  if (input.headlines) {
+    rsa.headlines = input.headlines.map((text) => ({ text: text.trim() }));
+    masks.push("responsiveSearchAd.headlines");
+  }
+  if (input.descriptions) {
+    rsa.descriptions = input.descriptions.map((text) => ({ text: text.trim() }));
+    masks.push("responsiveSearchAd.descriptions");
+  }
+  if (!masks.length) throw new Error("Nothing was changed.");
+  if (Object.keys(rsa).length) ad.responsiveSearchAd = rsa;
+  return {
+    operations: adIds.map((adId) => {
+      digitsOnly(adId, "Ad id");
+      return {
+        update: { resourceName: `customers/${customerId}/ads/${adId}`, ...structuredClone(ad) },
+        updateMask: masks.join(","),
+      };
+    }),
+  };
+}
+
+export function buildKeywordReplaceMutate(
+  customerId: string,
+  groups: Array<{ adGroupId: string; remove: string[] }>,
+  keyword: string
+): { mutateOperations: Array<Record<string, unknown>> } {
+  digitsOnly(customerId, "Customer id");
+  const text = keyword.trim();
+  if (!groups.length) throw new Error("No paused keyword to replace. Nothing was changed.");
+  const ops: Array<Record<string, unknown>> = [];
+  for (const group of groups) {
+    digitsOnly(group.adGroupId, "Ad group id");
+    for (const resourceName of group.remove) {
+      ops.push({ adGroupCriterionOperation: { remove: resourceName } });
+    }
+    ops.push({
+      adGroupCriterionOperation: {
+        create: {
+          adGroup: `customers/${customerId}/adGroups/${group.adGroupId}`,
+          status: "PAUSED",
+          keyword: { text, matchType: "PHRASE" },
+        },
+      },
+    });
+  }
+  return { mutateOperations: ops };
 }
 
 export function nuraGoogleAdsMcpJson(repoDir: string): string {
