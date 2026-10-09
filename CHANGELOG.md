@@ -720,6 +720,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Overview and Marketing reuse the last Meta and Google Ads report for 6 hours, so opening those pages does not call the ads APIs again. Refresh still loads live numbers. A failed refresh keeps the previous report.
 - [internal] Admin Marketing stacks daily charts, the campaign table, and ad groups in separate panels, and the campaign name opens that report
 - [internal] Admin Overview marketing cards compile again. A nested type keyword on an import type statement was failing the production image build
+- [internal] Admin Overview packs both columns: Paying share and Search Console stay under Tasks, tracking stays under Platform health, and the ads row starts only once those stacks meet
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

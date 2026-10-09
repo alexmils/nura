@@ -19,14 +19,19 @@ import {
   DeltaBadge,
 } from "@/app/components/admin/AdminCharts";
 import { AdminTasksOverviewCard } from "@/app/components/admin/AdminTasksOverviewCard";
-import { MarketingOverview } from "@/app/components/admin/MarketingOverview";
+import {
+  MarketingAds,
+  MarketingBoard,
+  MarketingLead,
+  MarketingRail,
+} from "@/app/components/admin/MarketingOverview";
 import { OverviewSideHealth } from "@/app/components/nura-overview-side";
 import { actionLabel, formatDateTime, formatMoney } from "@/lib/admin-format";
 import { formatTokenCount, formatUsdMicros } from "@/lib/admin-llm-format";
 import type { AdminDashboardStats } from "@/lib/admin-stats";
 import type { AuditEvent } from "@/lib/audit-log";
 import { fetchJson } from "@/lib/fetch-json";
-import { OVERVIEW_LAYOUT_REV } from "@/app/components/admin/overview-layout";
+import { OVERVIEW_LAYOUT_REV } from "@/app/components/admin/overview-flow-rev";
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -111,7 +116,11 @@ export default function AdminOverviewPage() {
         title="Overview"
         subtitle="Users, sessions, AI cost, search, and ads."
       />
-      <main className="admin-main" data-layout={OVERVIEW_LAYOUT_REV}>
+      <main
+        className="admin-main"
+        data-layout={OVERVIEW_LAYOUT_REV}
+        data-pack={OVERVIEW_LAYOUT_REV}
+      >
         <section className="admin-dash-kpis">
           <article className="admin-dash-kpi">
             <p className="admin-stat-label">Users</p>
@@ -163,8 +172,10 @@ export default function AdminOverviewPage() {
           </article>
         </section>
 
-        <div className="admin-dash-band">
-          <div className="admin-dash-band-main">
+        <MarketingBoard>
+        <div className="admin-overview-flow">
+        <div className="admin-dash-pack">
+          <div className="admin-dash-col admin-dash-col-main">
           <section className="admin-panel">
             <div className="admin-panel-head-row">
               <div>
@@ -193,9 +204,57 @@ export default function AdminOverviewPage() {
           </section>
 
           <AdminTasksOverviewCard />
+
+          <section className="admin-panel">
+            <h2 className="admin-panel-title">Paying share</h2>
+            <p className="admin-dash-cost-total">
+              {stats.billing.paidSharePct}%
+              <span> of users on a paid plan</span>
+            </p>
+            <div className="admin-progress-track">
+              <div
+                className="admin-progress-fill"
+                style={{
+                  width: `${Math.min(100, stats.billing.paidSharePct)}%`,
+                }}
+              />
+            </div>
+            <p className="admin-panel-sub">
+              {stats.billing.activePaid} paying · MRR{" "}
+              {formatMoney(stats.billing.mrrCents, stats.billing.currency)}
+            </p>
+            <div className="admin-dash-quick">
+              <Link href="/admin/users?tab=invite" className="admin-dash-quick-btn">
+                <Users size={18} />
+                Invite
+              </Link>
+              <Link href="/admin/billing?tab=stripe" className="admin-dash-quick-btn">
+                <CreditCard size={18} />
+                Billing
+              </Link>
+              <Link href="/admin/help?tab=inbox" className="admin-dash-quick-btn">
+                <LifeBuoy size={18} />
+                Help
+              </Link>
+              <Link href="/admin/email?tab=delivery" className="admin-dash-quick-btn">
+                <Mail size={18} />
+                Email
+              </Link>
+              <Link href="/admin/ai?tab=ai" className="admin-dash-quick-btn">
+                <Sparkles size={18} />
+                AI
+              </Link>
+              <Link href="/admin/activity" className="admin-dash-quick-btn">
+                <Activity size={18} />
+                Activity
+              </Link>
+            </div>
+          </section>
+
+          <MarketingLead />
           </div>
 
-          <div className="admin-dash-band-side">
+          <div className="admin-dash-col admin-dash-col-side">
           <section className="admin-panel admin-dash-side-stats admin-dash-snapshot">
             <h2 className="admin-panel-title">Snapshot</h2>
             <div className="admin-dash-side-row">
@@ -279,56 +338,11 @@ export default function AdminOverviewPage() {
           </section>
 
           <OverviewSideHealth />
+          <MarketingRail />
           </div>
         </div>
 
-        <section className="admin-panel">
-            <h2 className="admin-panel-title">Paying share</h2>
-            <p className="admin-dash-cost-total">
-              {stats.billing.paidSharePct}%
-              <span> of users on a paid plan</span>
-            </p>
-            <div className="admin-progress-track">
-              <div
-                className="admin-progress-fill"
-                style={{
-                  width: `${Math.min(100, stats.billing.paidSharePct)}%`,
-                }}
-              />
-            </div>
-            <p className="admin-panel-sub">
-              {stats.billing.activePaid} paying · MRR{" "}
-              {formatMoney(stats.billing.mrrCents, stats.billing.currency)}
-            </p>
-            <div className="admin-dash-quick">
-              <Link href="/admin/users?tab=invite" className="admin-dash-quick-btn">
-                <Users size={18} />
-                Invite
-              </Link>
-              <Link href="/admin/billing?tab=stripe" className="admin-dash-quick-btn">
-                <CreditCard size={18} />
-                Billing
-              </Link>
-              <Link href="/admin/help?tab=inbox" className="admin-dash-quick-btn">
-                <LifeBuoy size={18} />
-                Help
-              </Link>
-              <Link href="/admin/email?tab=delivery" className="admin-dash-quick-btn">
-                <Mail size={18} />
-                Email
-              </Link>
-              <Link href="/admin/ai?tab=ai" className="admin-dash-quick-btn">
-                <Sparkles size={18} />
-                AI
-              </Link>
-              <Link href="/admin/activity" className="admin-dash-quick-btn">
-                <Activity size={18} />
-                Activity
-              </Link>
-            </div>
-          </section>
-
-        <MarketingOverview />
+        <MarketingAds />
 
         <div className="admin-two-col">
           <section className="admin-panel">
@@ -367,6 +381,8 @@ export default function AdminOverviewPage() {
             </ul>
           </section>
         </div>
+        </div>
+        </MarketingBoard>
       </main>
     </div>
   );

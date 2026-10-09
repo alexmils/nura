@@ -1,7 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   ArrowUpRight,
   Clock3,
@@ -135,7 +144,13 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
   const total = seo.daily.reduce((sum, day) => sum + day.impressions, 0);
 
   return (
-    <section className="admin-panel mkt-card">
+    <section
+      className="admin-panel mkt-card"
+      id="marketing"
+      data-rev={MARKETING_CARDS_REV}
+      data-sites={GOOGLE_SITES_REV}
+      data-age={ADS_REPORT_AGE_REV}
+    >
       <div className="mkt-head">
         <div>
           <h2 className="admin-panel-title">SEO performance</h2>
@@ -147,8 +162,7 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
         </Link>
       </div>
 
-      <div className="mkt-seo-grid">
-        <div>
+      <div className="mkt-seo-body">
           {!seo.connected ? (
             <div className="mkt-empty">
               <p className="mkt-empty-title">Search Console is not connected</p>
@@ -224,31 +238,36 @@ function SeoCard({ seo }: { seo: DashboardSeo }) {
               ) : null}
             </>
           ) : null}
-        </div>
+      </div>
+    </section>
+  );
+}
 
-        <aside className="mkt-side">
-          <p className="mkt-kicker">Also from tracking</p>
-          <ul>
-            <li>
-              <span>Tracking IDs configured</span>
-              <strong>
-                {seo.tracking.ids}/{seo.tracking.total}
-              </strong>
-            </li>
-            <li>
-              <span>URLs indexed</span>
-              <strong>–</strong>
-            </li>
-            <li>
-              <span>Indexing errors</span>
-              <strong>–</strong>
-            </li>
-          </ul>
-          <Link href="/admin/seo?tab=indexing" className="mkt-inline">
-            <Clock3 size={16} />
-            Open indexing report
-          </Link>
-        </aside>
+function SeoTrackingCard({ seo }: { seo: DashboardSeo }) {
+  return (
+    <section className="admin-panel mkt-card mkt-track">
+      <p className="mkt-kicker">Also from tracking</p>
+      <div className="mkt-side">
+        <ul>
+          <li>
+            <span>Tracking IDs configured</span>
+            <strong>
+              {seo.tracking.ids}/{seo.tracking.total}
+            </strong>
+          </li>
+          <li>
+            <span>URLs indexed</span>
+            <strong>–</strong>
+          </li>
+          <li>
+            <span>Indexing errors</span>
+            <strong>–</strong>
+          </li>
+        </ul>
+        <Link href="/admin/seo?tab=indexing" className="mkt-inline">
+          <Clock3 size={16} />
+          Open indexing report
+        </Link>
       </div>
     </section>
   );
@@ -933,7 +952,34 @@ function CampaignTable({
   return <div className="mkt-table-wrap">{children}</div>;
 }
 
-export function MarketingOverview({ detail = false }: { detail?: boolean }) {
+type MarketingBoardValue = {
+  detail: boolean;
+  data: MarketingOverview | null;
+  error: string;
+  refreshing: "meta" | "google" | null;
+  setMetaRange: (range: AdsRange) => void;
+  setMetaAccount: (account: string) => void;
+  setGoogleRange: (range: AdsRange) => void;
+  refresh: (which: "meta" | "google") => void;
+};
+
+const MarketingBoardContext = createContext<MarketingBoardValue | null>(null);
+
+function useMarketingBoard() {
+  const value = useContext(MarketingBoardContext);
+  if (!value) {
+    throw new Error("Marketing cards must render inside MarketingBoard");
+  }
+  return value;
+}
+
+export function MarketingBoard({
+  detail = false,
+  children,
+}: {
+  detail?: boolean;
+  children: ReactNode;
+}) {
   const [data, setData] = useState<MarketingOverview | null>(null);
   const [error, setError] = useState("");
   const [metaRange, setMetaRange] = useState<AdsRange>("28");
@@ -973,17 +1019,42 @@ export function MarketingOverview({ detail = false }: { detail?: boolean }) {
     };
   }, [load]);
 
-  async function refresh(which: "meta" | "google") {
-    setRefreshing(which);
-    try {
-      await load(which);
-    } catch (err) {
-      console.error(err);
-      setError("Could not refresh.");
-    } finally {
-      setRefreshing(null);
-    }
-  }
+  const refresh = useCallback(
+    (which: "meta" | "google") => {
+      setRefreshing(which);
+      void load(which)
+        .catch((err) => {
+          console.error(err);
+          setError("Could not refresh.");
+        })
+        .finally(() => setRefreshing(null));
+    },
+    [load]
+  );
+
+  const value = useMemo(
+    () => ({
+      detail,
+      data,
+      error,
+      refreshing,
+      setMetaRange,
+      setMetaAccount,
+      setGoogleRange,
+      refresh,
+    }),
+    [data, detail, error, refresh, refreshing]
+  );
+
+  return (
+    <MarketingBoardContext.Provider value={value}>
+      {children}
+    </MarketingBoardContext.Provider>
+  );
+}
+
+export function MarketingLead() {
+  const { data, detail, error } = useMarketingBoard();
 
   if (error && !data) {
     return <p className="mkt-note">{error}</p>;
@@ -995,31 +1066,46 @@ export function MarketingOverview({ detail = false }: { detail?: boolean }) {
       </section>
     );
   }
+  if (detail) return null;
+  return <SeoCard seo={data.seo} />;
+}
+
+export function MarketingAds() {
+  const {
+    data,
+    detail,
+    refresh,
+    refreshing,
+    setGoogleRange,
+    setMetaAccount,
+    setMetaRange,
+  } = useMarketingBoard();
+
+  if (!data) return null;
 
   return (
-    <div
-      className="mkt-stack"
-      id="marketing"
-      data-rev={MARKETING_CARDS_REV}
-      data-sites={GOOGLE_SITES_REV}
-      data-age={ADS_REPORT_AGE_REV}
-    >
-      {detail ? null : <SeoCard seo={data.seo} />}
+    <div className="admin-dash-ads">
       <MetaCard
         ads={data.meta}
         onRange={setMetaRange}
         onAccount={setMetaAccount}
-        onRefresh={() => void refresh("meta")}
+        onRefresh={() => refresh("meta")}
         refreshing={refreshing === "meta"}
         detail={detail}
       />
       <GoogleCard
         ads={data.google}
         onRange={setGoogleRange}
-        onRefresh={() => void refresh("google")}
+        onRefresh={() => refresh("google")}
         refreshing={refreshing === "google"}
         detail={detail}
       />
     </div>
   );
+}
+
+export function MarketingRail() {
+  const { data, detail } = useMarketingBoard();
+  if (detail || !data) return null;
+  return <SeoTrackingCard seo={data.seo} />;
 }

@@ -8,7 +8,7 @@ import "@/app/components/mkt-table-type.css";
 import "@/app/components/mkt-card-type.css";
 import "@/app/components/admin-mkt-report.css";
 import { ADMIN_MKT_REPORT_REV } from "@/app/components/admin-mkt-report-rev";
-import "@/app/components/admin-dash-pack.css";
+import "@/app/components/admin-overview-flow.css";
 
 export const metadata: Metadata = {
   title: "Nura Admin",

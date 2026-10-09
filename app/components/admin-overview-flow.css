@@ -1,0 +1,68 @@
+/* Two stacks pack their own cards. The shorter stack's last card
+   fills so the next full-width row does not sit beside a mint field. */
+
+.admin-overview-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-dash-ads {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.admin-dash-pack {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(220px, 0.72fr);
+  column-gap: 0.85rem;
+  align-items: stretch;
+}
+
+.admin-dash-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-width: 0;
+  min-height: 100%;
+}
+
+.admin-dash-col > * {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.admin-dash-col > :last-child {
+  flex: 1 1 auto;
+}
+
+.admin-dash-pack .admin-dash-span-2,
+.admin-dash-pack .admin-dash-snapshot {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.admin-dash-col-side .mkt-track .mkt-side {
+  border-top: 0;
+  border-left: 0;
+  padding-top: 0;
+  padding-left: 0;
+}
+
+@media (max-width: 800px) {
+  .admin-dash-pack {
+    grid-template-columns: 1fr;
+    row-gap: 0.85rem;
+    align-items: start;
+  }
+
+  .admin-dash-col {
+    min-height: 0;
+  }
+
+  .admin-dash-col > :last-child {
+    flex: 0 0 auto;
+  }
+}
