@@ -7,9 +7,10 @@ import {
   buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
   buildPausedSalesMutate,
+  buildPerformanceMaxUpdateMutate,
   pausedSalesInput,
   performanceMaxCopy,
-  resolvedAssetGroupName,
+  storedSalesProblem,
   campaignByNameQuery,
   campaignLookupQuery,
   removalNameProblem,
@@ -131,7 +132,17 @@ describe("google ads paused campaign", () => {
       existingCampaignDecision([{ campaign: { id: "8", status: "ENABLED" } }]).action,
       "refuse"
     );
-    assert.equal(campaignByNameQuery("Nura's ad"), "SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.name = 'Nura\\'s ad'");
+    assert.equal(
+      campaignByNameQuery("Nura's ad"),
+      "SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type FROM campaign WHERE campaign.name = 'Nura\\'s ad'"
+    );
+    assert.equal(
+      existingCampaignDecision(
+        [{ campaign: { id: "4", status: "PAUSED", advertisingChannelType: "SEARCH" } }],
+        "PERFORMANCE_MAX"
+      ).action,
+      "refuse"
+    );
   });
 
   it("builds Cherry Studio JSON named Nura Google Ads with an empty env", () => {
@@ -292,19 +303,43 @@ describe("google ads paused campaign", () => {
       long_headline: "A calm app for guided EMDR sessions.",
       asset_group_name: "Nura pages",
     });
-    assert.equal(fromSnake.longHeadline, "A calm app for guided EMDR sessions.");
-    assert.equal(fromSnake.assetGroupName, "Nura pages");
-    assert.equal(resolvedAssetGroupName(fromSnake), "Nura pages");
+    assert.equal("input" in fromSnake && fromSnake.input.longHeadline, "A calm app for guided EMDR sessions.");
+    assert.equal("input" in fromSnake && fromSnake.input.finalUrl, "https://nurahelp.com");
+    assert.equal("input" in fromSnake && fromSnake.input.assetGroupName, "Nura pages");
+    const badFormat = pausedSalesInput({ format: "display" });
+    assert.match("error" in badFormat ? badFormat.error : "", /performance_max/);
     const copy = performanceMaxCopy(
-      [{ assetGroup: { name: "Nura pages", status: "PAUSED", finalUrls: ["https://nurahelp.com"] } }],
+      [{ assetGroup: { name: "Nura pages", status: "PAUSED", finalUrls: ["https://nurahelp.com"], resourceName: "customers/1/assetGroups/9" } }],
       [
-        { assetGroupAsset: { fieldType: "LONG_HEADLINE" }, asset: { textAsset: { text: "A calm app for guided EMDR sessions." } } },
+        { assetGroupAsset: { fieldType: "LONG_HEADLINE", resourceName: "customers/1/assetGroupAssets/9~2~LONG_HEADLINE" }, asset: { textAsset: { text: "Nura pages nurahelp.com" } } },
+        { assetGroupAsset: { fieldType: "LONG_HEADLINE", resourceName: "customers/1/assetGroupAssets/9~3~LONG_HEADLINE" }, asset: { textAsset: { text: "A calm app for guided EMDR sessions." } } },
         { assetGroupAsset: { fieldType: "HEADLINE" }, asset: { textAsset: { text: "Nura" } } },
       ]
     );
-    assert.equal(copy?.assetGroupName, "Nura pages");
     assert.equal(copy?.longHeadline, "A calm app for guided EMDR sessions.");
-    assert.equal(copy?.finalUrl, "https://nurahelp.com");
+    assert.equal(
+      storedSalesProblem(
+        { finalUrl: "https://nurahelp.com", longHeadline: "A calm app for guided EMDR sessions.", assetGroupName: "Nura pages" },
+        copy
+      ),
+      null
+    );
+    assert.match(storedSalesProblem({ longHeadline: "Missing line" }, copy) ?? "", /long headline/);
+    const replaced = JSON.stringify(
+      buildPerformanceMaxUpdateMutate({
+        customerId: "7280736748",
+        assetGroupResourceName: "customers/7280736748/assetGroups/9",
+        links: [{ assetGroupAsset: { fieldType: "LONG_HEADLINE", resourceName: "customers/7280736748/assetGroupAssets/9~3~LONG_HEADLINE" }, asset: { textAsset: { text: "old" } } }],
+        longHeadline: "A calm app for guided EMDR sessions.",
+        finalUrl: "https://nurahelp.com",
+      })
+    );
+    assert.match(replaced, /"updateMask":"finalUrls"/);
+    assert.match(replaced, /assetGroupAssets\/9~3~LONG_HEADLINE/);
+    assert.equal(replaced.includes("\"status\":\"ENABLED\""), false);
+    const removeAt = replaced.indexOf("remove");
+    const createAt = replaced.indexOf("textAsset");
+    assert.ok(removeAt >= 0 && removeAt < createAt);
   });
 
   it("reads the new campaign id and hides secrets", () => {

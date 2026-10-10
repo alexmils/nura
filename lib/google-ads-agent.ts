@@ -294,14 +294,28 @@ export type ExistingCampaignDecision =
   | { action: "refuse"; campaignId: string; status: string };
 
 /** A paused campaign with this name is reused. Any other live status blocks a second create. */
-export function existingCampaignDecision(rows: unknown[]): ExistingCampaignDecision {
+export function existingCampaignDecision(
+  rows: unknown[],
+  expectedChannel = ""
+): ExistingCampaignDecision {
   const live = rows
-    .map((row) => ({ id: campaignIdFromRow(row), status: String(asRecord(asRecord(row)?.campaign)?.status ?? "") }))
+    .map((row) => {
+      const campaign = asRecord(asRecord(row)?.campaign);
+      return {
+        id: campaignIdFromRow(row),
+        status: String(campaign?.status ?? ""),
+        channel: String(campaign?.advertisingChannelType ?? campaign?.advertising_channel_type ?? ""),
+      };
+    })
     .filter((item) => item.id && item.status !== "REMOVED");
   const paused = live.filter((item) => item.status === "PAUSED");
   if (paused.length) {
     paused.sort((a, b) => (a.id < b.id ? 1 : -1));
-    return { action: "reuse", campaignId: paused[0]!.id };
+    const chosen = paused[0]!;
+    if (expectedChannel && chosen.channel && chosen.channel !== expectedChannel) {
+      return { action: "refuse", campaignId: chosen.id, status: chosen.channel };
+    }
+    return { action: "reuse", campaignId: chosen.id };
   }
   const other = live[0];
   if (other) return { action: "refuse", campaignId: other.id, status: other.status };
@@ -313,7 +327,7 @@ export function gaqlQuote(value: string): string {
 }
 
 export function campaignByNameQuery(name: string): string {
-  return `SELECT campaign.id, campaign.name, campaign.status FROM campaign WHERE campaign.name = ${gaqlQuote(name.trim())}`;
+  return `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type FROM campaign WHERE campaign.name = ${gaqlQuote(name.trim())}`;
 }
 
 export function campaignLookupQuery(campaignId: string): string {
@@ -328,6 +342,7 @@ export type CampaignUpdateInput = {
   descriptions?: string[];
   finalUrl?: string;
   keyword?: string;
+  longHeadline?: string;
 };
 
 export function validateCampaignUpdate(input: CampaignUpdateInput): string | null {
@@ -337,8 +352,9 @@ export function validateCampaignUpdate(input: CampaignUpdateInput): string | nul
   const hasDescriptions = input.descriptions !== undefined;
   const hasUrl = input.finalUrl !== undefined;
   const hasKeyword = input.keyword !== undefined;
-  if (!hasName && !hasBudget && !hasHeadlines && !hasDescriptions && !hasUrl && !hasKeyword) {
-    return "Provide a name, budget, headlines, descriptions, final URL, or keyword. Nothing was changed.";
+  const hasLong = input.longHeadline !== undefined;
+  if (!hasName && !hasBudget && !hasHeadlines && !hasDescriptions && !hasUrl && !hasKeyword && !hasLong) {
+    return "Provide a name, budget, headlines, descriptions, final URL, keyword, or long headline. Nothing was changed.";
   }
   const name = input.name?.trim() ?? "";
   if (hasName && !name) return "Campaign name is required. Nothing was changed.";
@@ -363,6 +379,12 @@ export function validateCampaignUpdate(input: CampaignUpdateInput): string | nul
     }
     if (lines.some((line) => !line.trim() || line.trim().length > 90)) {
       return "Each description must be 1 to 90 characters. Nothing was changed.";
+    }
+  }
+  if (hasLong) {
+    const line = input.longHeadline?.trim() ?? "";
+    if (!line || line.length > 90) {
+      return "Performance Max needs one long headline of 1 to 90 characters. Nothing was changed.";
     }
   }
   if (hasUrl) {
@@ -665,21 +687,27 @@ type SalesToolFields = {
 };
 
 /** Accept camelCase and snake_case. The tool schema must list both or Zod drops the snake_case keys. */
-export function pausedSalesInput(raw: SalesToolFields): PausedSalesInput {
+export function pausedSalesInput(
+  raw: SalesToolFields
+): { input: PausedSalesInput } | { error: string } {
+  if (raw.format !== "search" && raw.format !== "performance_max") {
+    return { error: "Sales ad format must be search or performance_max. Nothing was created." };
+  }
   const budget = raw.dailyBudgetUsd ?? raw.daily_budget_usd;
-  const format = raw.format === "performance_max" ? "performance_max" : "search";
   return {
-    format,
-    name: raw.name ?? "",
-    finalUrl: raw.finalUrl ?? raw.final_url ?? "",
-    headlines: raw.headlines ?? [],
-    descriptions: raw.descriptions ?? [],
-    dailyBudgetUsd: budget,
-    adGroupName: raw.adGroupName ?? raw.ad_group_name,
-    keyword: raw.keyword,
-    longHeadline: raw.longHeadline ?? raw.long_headline,
-    businessName: raw.businessName ?? raw.business_name,
-    assetGroupName: raw.assetGroupName ?? raw.asset_group_name,
+    input: {
+      format: raw.format,
+      name: raw.name ?? "",
+      finalUrl: raw.finalUrl ?? raw.final_url ?? "",
+      headlines: raw.headlines ?? [],
+      descriptions: raw.descriptions ?? [],
+      dailyBudgetUsd: budget,
+      adGroupName: raw.adGroupName ?? raw.ad_group_name,
+      keyword: raw.keyword,
+      longHeadline: raw.longHeadline ?? raw.long_headline,
+      businessName: raw.businessName ?? raw.business_name,
+      assetGroupName: raw.assetGroupName ?? raw.asset_group_name,
+    },
   };
 }
 
@@ -689,27 +717,31 @@ export function resolvedAssetGroupName(input: PausedSalesInput): string {
 
 export function assetGroupReadQuery(campaignId: string): string {
   if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
-  return `SELECT campaign.id, asset_group.id, asset_group.name, asset_group.status, asset_group.final_urls FROM asset_group WHERE campaign.id = ${campaignId}`;
+  return `SELECT campaign.id, asset_group.resource_name, asset_group.id, asset_group.name, asset_group.status, asset_group.final_urls FROM asset_group WHERE campaign.id = ${campaignId}`;
 }
 
 export function assetTextReadQuery(campaignId: string): string {
   if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
-  return `SELECT campaign.id, asset_group_asset.field_type, asset.text_asset.text FROM asset_group_asset WHERE campaign.id = ${campaignId}`;
+  return `SELECT campaign.id, asset_group_asset.resource_name, asset_group_asset.field_type, asset.text_asset.text FROM asset_group_asset WHERE campaign.id = ${campaignId}`;
 }
 
-export function performanceMaxCopy(groupRows: unknown[], assetRows: unknown[]): {
-  assetGroupName: string;
-  assetGroupStatus: string;
+export type StoredSalesCopy = {
   finalUrl: string;
-  longHeadline: string;
   headlines: string[];
   descriptions: string[];
-} | null {
-  const groupRow = asRecord(groupRows[0]);
-  const group = asRecord(groupRow?.assetGroup) ?? asRecord(groupRow?.asset_group);
-  if (!group) return null;
-  const urls = group.finalUrls ?? group.final_urls;
-  const texts: Array<{ fieldType: string; text: string }> = [];
+  assetGroupName?: string;
+  assetGroupResourceName?: string;
+  assetGroupStatus?: string;
+  longHeadline?: string;
+  longHeadlines?: string[];
+};
+
+function textLines(rows: Array<{ fieldType: string; text: string }>, fieldType: string): string[] {
+  return rows.filter((item) => item.fieldType === fieldType).map((item) => item.text);
+}
+
+function assetTexts(assetRows: unknown[]): Array<{ fieldType: string; text: string; resourceName: string }> {
+  const texts: Array<{ fieldType: string; text: string; resourceName: string }> = [];
   for (const row of assetRows) {
     const rec = asRecord(row);
     const link = asRecord(rec?.assetGroupAsset) ?? asRecord(rec?.asset_group_asset);
@@ -717,16 +749,132 @@ export function performanceMaxCopy(groupRows: unknown[], assetRows: unknown[]): 
     const textAsset = asRecord(asset?.textAsset) ?? asRecord(asset?.text_asset);
     const text = textAsset?.text;
     const fieldType = String(link?.fieldType ?? link?.field_type ?? "");
-    if (typeof text === "string" && text && fieldType) texts.push({ fieldType, text });
+    const resourceName = String(link?.resourceName ?? link?.resource_name ?? "");
+    if (typeof text === "string" && text && fieldType) texts.push({ fieldType, text, resourceName });
   }
+  return texts;
+}
+
+/** Prefer a headline the caller wrote. Google may also store "{name} nurahelp.com". */
+function preferredLongHeadline(lines: string[]): string {
+  const written = lines.filter((line) => !/ nurahelp\.com$/i.test(line.trim()));
+  return written[0] ?? lines[0] ?? "";
+}
+
+export function performanceMaxCopy(groupRows: unknown[], assetRows: unknown[]): StoredSalesCopy | null {
+  const groupRow = asRecord(groupRows[0]);
+  const group = asRecord(groupRow?.assetGroup) ?? asRecord(groupRow?.asset_group);
+  if (!group) return null;
+  const urls = group.finalUrls ?? group.final_urls;
+  const texts = assetTexts(assetRows);
+  const longHeadlines = textLines(texts, "LONG_HEADLINE");
   return {
     assetGroupName: String(group.name ?? ""),
+    assetGroupResourceName: String(group.resourceName ?? group.resource_name ?? ""),
     assetGroupStatus: String(group.status ?? ""),
     finalUrl: Array.isArray(urls) ? String(urls[0] ?? "") : "",
-    longHeadline: texts.find((item) => item.fieldType === "LONG_HEADLINE")?.text ?? "",
-    headlines: texts.filter((item) => item.fieldType === "HEADLINE").map((item) => item.text),
-    descriptions: texts.filter((item) => item.fieldType === "DESCRIPTION").map((item) => item.text),
+    longHeadlines,
+    longHeadline: preferredLongHeadline(longHeadlines),
+    headlines: textLines(texts, "HEADLINE"),
+    descriptions: textLines(texts, "DESCRIPTION"),
   };
+}
+
+export function searchAdReadQuery(campaignId: string): string {
+  if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
+  return `SELECT campaign.id, ad_group_ad.status, ad_group_ad.ad.final_urls, ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions FROM ad_group_ad WHERE campaign.id = ${campaignId}`;
+}
+
+function adTexts(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(asRecord(item)?.text ?? "")).filter(Boolean);
+}
+
+export function searchAdCopy(rows: unknown[]): StoredSalesCopy | null {
+  const ad = asRecord(asRecord(asRecord(rows[0])?.adGroupAd)?.ad) ?? asRecord(asRecord(asRecord(rows[0])?.ad_group_ad)?.ad);
+  if (!ad) return null;
+  const rsa = asRecord(ad.responsiveSearchAd) ?? asRecord(ad.responsive_search_ad);
+  const urls = ad.finalUrls ?? ad.final_urls;
+  return {
+    finalUrl: Array.isArray(urls) ? String(urls[0] ?? "") : "",
+    headlines: adTexts(rsa?.headlines),
+    descriptions: adTexts(rsa?.descriptions),
+  };
+}
+
+export function storedSalesProblem(
+  requested: {
+    finalUrl?: string;
+    headlines?: string[];
+    descriptions?: string[];
+    longHeadline?: string;
+    assetGroupName?: string;
+  },
+  stored: StoredSalesCopy | null
+): string | null {
+  if (!stored) return "The paused campaign was written, but its ad could not be read back.";
+  const missing: string[] = [];
+  if (requested.finalUrl !== undefined && stored.finalUrl !== requested.finalUrl.trim()) missing.push("final URL");
+  if (requested.assetGroupName !== undefined && stored.assetGroupName !== requested.assetGroupName) {
+    missing.push("asset group name");
+  }
+  if (requested.longHeadline !== undefined && !(stored.longHeadlines ?? []).includes(requested.longHeadline.trim())) {
+    missing.push("long headline");
+  }
+  if (requested.headlines?.some((line) => !stored.headlines.includes(line.trim()))) missing.push("headlines");
+  if (requested.descriptions?.some((line) => !stored.descriptions.includes(line.trim()))) missing.push("descriptions");
+  if (!missing.length) return null;
+  return `Stored ad does not match the request (${missing.join(", ")}). The paused campaign was left in place.`;
+}
+
+export function assetLinks(rows: unknown[], fieldType: string): string[] {
+  return assetTexts(rows)
+    .filter((item) => item.fieldType === fieldType && /^customers\/\d+\/assetGroupAssets\/\d+~\d+~[A-Z0-9_]+$/.test(item.resourceName))
+    .map((item) => item.resourceName);
+}
+
+export function buildPerformanceMaxUpdateMutate(input: {
+  customerId: string;
+  assetGroupResourceName: string;
+  links: unknown[];
+  finalUrl?: string;
+  headlines?: string[];
+  descriptions?: string[];
+  longHeadline?: string;
+}): { mutateOperations: Array<Record<string, unknown>> } {
+  digitsOnly(input.customerId, "Customer id");
+  if (!/^customers\/\d+\/assetGroups\/\d+$/.test(input.assetGroupResourceName)) {
+    throw new Error("Performance Max asset group was not found. Nothing was changed.");
+  }
+  const ops: Array<Record<string, unknown>> = [];
+  let next = 20;
+  const replace = (fieldType: string, lines: string[]) => {
+    for (const resourceName of assetLinks(input.links, fieldType)) {
+      ops.push({ assetGroupAssetOperation: { remove: resourceName } });
+    }
+    for (const line of lines) {
+      const resourceName = `customers/${input.customerId}/assets/-${next}`;
+      next += 1;
+      ops.push(textAssetOp(resourceName, line.trim()));
+      ops.push(groupLink(input.assetGroupResourceName, resourceName, fieldType));
+    }
+  };
+  if (input.headlines) replace("HEADLINE", input.headlines);
+  if (input.descriptions) replace("DESCRIPTION", input.descriptions);
+  if (input.longHeadline !== undefined) replace("LONG_HEADLINE", [input.longHeadline]);
+  if (input.finalUrl !== undefined) {
+    ops.push({
+      assetGroupOperation: {
+        update: {
+          resourceName: input.assetGroupResourceName,
+          finalUrls: [input.finalUrl.trim()],
+        },
+        updateMask: "finalUrls",
+      },
+    });
+  }
+  if (!ops.length) throw new Error("Nothing was changed.");
+  return { mutateOperations: ops };
 }
 
 function pngChunk(type: string, data: Buffer): Buffer {

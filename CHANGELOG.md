@@ -729,6 +729,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Nura Google Ads MCP refuses a shared budget change, and remove needs the campaign id and the exact name.
 - [internal] Nura Google Ads MCP can change headlines, descriptions, the final URL, and the keyword on a paused campaign. The keyword is replaced and stays paused. The URL stays on nurahelp.com.
 - [internal] Nura Google Ads MCP accepts asset_group_name and long_headline, and read_campaign returns the Performance Max asset group name, final URL, and long headline.
+- [internal] Nura Google Ads MCP confirms a sales ad from what Google stored, refuses a paused name of the other campaign type, and can change a paused Performance Max URL and text.
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

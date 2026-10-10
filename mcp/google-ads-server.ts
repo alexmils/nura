@@ -22,6 +22,7 @@ import {
   buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
   buildPausedSalesMutate,
+  buildPerformanceMaxUpdateMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
   campaignLookupQuery,
@@ -36,6 +37,9 @@ import {
   pausedSalesInput,
   performanceMaxCopy,
   resolvedAssetGroupName,
+  searchAdCopy,
+  searchAdReadQuery,
+  storedSalesProblem,
   pausedCampaignGate,
   pausedKeywordGroups,
   pausedKeywordQuery,
@@ -47,6 +51,7 @@ import {
   validatePausedSalesAd,
   type CampaignUpdateInput,
   type PausedCampaignInput,
+  type PausedSalesInput,
 } from "../lib/google-ads-agent.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -125,6 +130,46 @@ async function adsFetch(token: string, pathName: string, body: unknown): Promise
 async function search(token: string, query: string): Promise<unknown[]> {
   const body = (await adsFetch(token, "googleAds:search", { query })) as { results?: unknown[] };
   return body.results ?? [];
+}
+
+async function readStoredSales(token: string, id: string, format: "search" | "performance_max") {
+  if (format === "performance_max") {
+    return performanceMaxCopy(
+      await search(token, assetGroupReadQuery(id)),
+      await search(token, assetTextReadQuery(id))
+    );
+  }
+  return searchAdCopy(await search(token, searchAdReadQuery(id)));
+}
+
+async function confirmStoredSales(token: string, campaignId: string, draft: PausedSalesInput) {
+  const stored = await readStoredSales(token, campaignId, draft.format);
+  const mismatch = storedSalesProblem(
+    {
+      finalUrl: draft.finalUrl,
+      headlines: draft.headlines,
+      descriptions: draft.descriptions,
+      longHeadline: draft.format === "performance_max" ? draft.longHeadline : undefined,
+      assetGroupName: draft.format === "performance_max" ? resolvedAssetGroupName(draft) : undefined,
+    },
+    stored
+  );
+  const body = {
+    ok: !mismatch,
+    paused: true,
+    customerId: ads.customerId,
+    campaignId,
+    format: draft.format,
+    changed: true,
+    finalUrl: stored?.finalUrl ?? "",
+    assetGroupName: stored?.assetGroupName,
+    longHeadline: stored?.longHeadline,
+    error: mismatch,
+  };
+  if (mismatch) {
+    return { isError: true as const, content: [{ type: "text" as const, text: JSON.stringify(body) }] };
+  }
+  return text(body);
 }
 
 const server = new McpServer({ name: NURA_GOOGLE_ADS_MCP_NAME, version: "1.0.0" });
@@ -207,12 +252,13 @@ server.registerTool(
     try {
       const token = await accessToken();
       const existing = await search(token, campaignByNameQuery(draft.name));
-      const decision = existingCampaignDecision(existing);
+      const decision = existingCampaignDecision(existing, "SEARCH");
       if (decision.action === "reuse") {
         return text({
           ok: true,
           paused: true,
           alreadyExists: true,
+          changed: false,
           customerId: ads.customerId,
           campaignId: decision.campaignId,
         });
@@ -250,7 +296,7 @@ server.registerTool(
     inputSchema: z.object({
       format: z.enum(["search", "performance_max"]).describe("search uses a site and text. performance_max uses a site."),
       name: z.string().describe("Campaign name."),
-      finalUrl: z.string().describe("https landing URL on nurahelp.com."),
+      finalUrl: z.string().optional().describe("https landing URL on nurahelp.com. Same as final_url."),
       headlines: z.array(z.string()).describe("3 to 15 headlines, each up to 30 characters."),
       descriptions: z.array(z.string()).describe("2 to 4 descriptions, each up to 90 characters. Performance Max needs one of 60 characters or fewer."),
       adGroupName: z.string().optional().describe("Required for search. Target group name."),
@@ -269,21 +315,31 @@ server.registerTool(
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
   async (input) => {
-    const draft = pausedSalesInput(input);
+    const parsed = pausedSalesInput(input);
+    if ("error" in parsed) return fail(parsed.error);
+    const draft = parsed.input;
     const problem = validatePausedSalesAd(draft);
     if (problem) return fail(problem);
     try {
       const token = await accessToken();
       const existing = await search(token, campaignByNameQuery(draft.name));
-      const decision = existingCampaignDecision(existing);
+      const decision = existingCampaignDecision(
+        existing,
+        draft.format === "performance_max" ? "PERFORMANCE_MAX" : "SEARCH"
+      );
       if (decision.action === "reuse") {
+        const stored = await readStoredSales(token, decision.campaignId, draft.format);
         return text({
           ok: true,
           paused: true,
           alreadyExists: true,
+          changed: false,
           customerId: ads.customerId,
           campaignId: decision.campaignId,
           format: draft.format,
+          finalUrl: stored?.finalUrl,
+          assetGroupName: stored?.assetGroupName,
+          longHeadline: stored?.longHeadline,
         });
       }
       if (decision.action === "refuse") {
@@ -292,17 +348,9 @@ server.registerTool(
         );
       }
       const created = await adsFetch(token, "googleAds:mutate", buildPausedSalesMutate(ads.customerId, draft));
-      return text({
-        ok: true,
-        paused: true,
-        customerId: ads.customerId,
-        campaignId: campaignIdFromMutate(created),
-        format: draft.format,
-        finalUrl: draft.finalUrl.trim(),
-        assetGroupName: draft.format === "performance_max" ? resolvedAssetGroupName(draft) : undefined,
-        longHeadline: draft.format === "performance_max" ? draft.longHeadline?.trim() : undefined,
-        businessName: draft.format === "performance_max" ? draft.businessName?.trim() || "Nura" : undefined,
-      });
+      const campaignId = campaignIdFromMutate(created);
+      if (!campaignId) return fail("The paused campaign was created, but its id could not be read.");
+      return confirmStoredSales(token, campaignId, draft);
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }
@@ -314,15 +362,18 @@ server.registerTool(
   {
     title: "Update a paused Google Ads campaign",
     description:
-      "Change the name, daily budget, headlines, descriptions, final URL, or keyword of one paused campaign. Budget stays at most 5 USD. The final URL must be https on nurahelp.com. A shared budget is left unchanged. The keyword is replaced and stays paused. This tool cannot enable a campaign.",
+      "Change the name, daily budget, headlines, descriptions, final URL, long headline, or keyword of one paused campaign. Performance Max uses the asset group for the URL and text. Budget stays at most 5 USD. The final URL must be https on nurahelp.com. A shared budget is left unchanged. The keyword is replaced and stays paused. This tool cannot enable a campaign.",
     inputSchema: z.object({
       campaignId: z.string().describe("Digits only."),
       name: z.string().optional().describe("New campaign name."),
       dailyBudgetUsd: z.number().optional().describe("New USD per day. Maximum 5."),
       headlines: z.array(z.string()).optional().describe("3 to 15 headlines, each up to 30 characters. Replaces the paused ad."),
       descriptions: z.array(z.string()).optional().describe("2 to 4 descriptions, each up to 90 characters. Replaces the paused ad."),
-      finalUrl: z.string().optional().describe("https URL on nurahelp.com."),
-      keyword: z.string().optional().describe("New phrase keyword. Replaces the paused keyword."),
+      finalUrl: z.string().optional().describe("https URL on nurahelp.com. Same as final_url."),
+      final_url: z.string().optional().describe("Same as finalUrl."),
+      longHeadline: z.string().optional().describe("Performance Max long headline, 1 to 90 characters. Same as long_headline."),
+      long_headline: z.string().optional().describe("Same as longHeadline."),
+      keyword: z.string().optional().describe("New phrase keyword. Replaces the paused keyword. Search only."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
@@ -334,7 +385,10 @@ server.registerTool(
     if (input.dailyBudgetUsd !== undefined) patch.dailyBudgetUsd = input.dailyBudgetUsd;
     if (input.headlines !== undefined) patch.headlines = input.headlines;
     if (input.descriptions !== undefined) patch.descriptions = input.descriptions;
-    if (input.finalUrl !== undefined) patch.finalUrl = input.finalUrl;
+    if (input.finalUrl !== undefined || input.final_url !== undefined) patch.finalUrl = input.finalUrl ?? input.final_url;
+    if (input.longHeadline !== undefined || input.long_headline !== undefined) {
+      patch.longHeadline = input.longHeadline ?? input.long_headline;
+    }
     if (input.keyword !== undefined) patch.keyword = input.keyword;
     const problem = validateCampaignUpdate(patch);
     if (problem) return fail(problem);
@@ -346,10 +400,31 @@ server.registerTool(
       if (patch.dailyBudgetUsd !== undefined && gate.explicitlyShared) {
         return fail("This campaign uses a shared budget. Nothing was changed.");
       }
-      const hasCopy = patch.headlines !== undefined || patch.descriptions !== undefined || patch.finalUrl !== undefined;
+      const hasCopy = patch.headlines !== undefined || patch.descriptions !== undefined || patch.finalUrl !== undefined || patch.longHeadline !== undefined;
+      const groupRows = hasCopy || patch.keyword !== undefined ? await search(token, assetGroupReadQuery(id)) : [];
+      const textRows = hasCopy ? await search(token, assetTextReadQuery(id)) : [];
+      const performanceMax = performanceMaxCopy(groupRows, textRows);
+      if (patch.keyword !== undefined && performanceMax) {
+        return fail("Performance Max has no keyword. Nothing was changed.");
+      }
       let ad: unknown;
       let keyword: unknown;
-      if (hasCopy) {
+      let sales: unknown;
+      if (hasCopy && performanceMax) {
+        sales = await adsFetch(
+          token,
+          "googleAds:mutate",
+          buildPerformanceMaxUpdateMutate({
+            customerId: ads.customerId,
+            assetGroupResourceName: performanceMax.assetGroupResourceName ?? "",
+            links: textRows,
+            finalUrl: patch.finalUrl,
+            headlines: patch.headlines,
+            descriptions: patch.descriptions,
+            longHeadline: patch.longHeadline,
+          })
+        );
+      } else if (hasCopy) {
         const adIds = pausedAdIds(await search(token, pausedAdQuery(id)));
         ad = await adsFetch(token, "ads:mutate", buildAdUpdateMutate(ads.customerId, adIds, patch));
       }
@@ -373,6 +448,35 @@ server.registerTool(
             dailyBudgetUsd: patch.dailyBudgetUsd,
           })
         );
+      }
+      if (hasCopy && performanceMax) {
+        const stored = await readStoredSales(token, id, "performance_max");
+        const mismatch = storedSalesProblem(
+          {
+            finalUrl: patch.finalUrl,
+            headlines: patch.headlines,
+            descriptions: patch.descriptions,
+            longHeadline: patch.longHeadline,
+          },
+          stored
+        );
+        if (mismatch) {
+          return {
+            isError: true,
+            content: [{ type: "text" as const, text: JSON.stringify({ ok: false, paused: true, campaignId: id, error: mismatch, finalUrl: stored?.finalUrl, longHeadline: stored?.longHeadline, assetGroupName: stored?.assetGroupName }) }],
+          };
+        }
+        return text({
+          ok: true,
+          paused: true,
+          customerId: ads.customerId,
+          campaignId: id,
+          updated,
+          sales,
+          finalUrl: stored?.finalUrl,
+          assetGroupName: stored?.assetGroupName,
+          longHeadline: stored?.longHeadline,
+        });
       }
       return text({ ok: true, paused: true, customerId: ads.customerId, campaignId: id, updated, ad, keyword });
     } catch (err) {
