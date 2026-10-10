@@ -1,8 +1,8 @@
 /**
  * Paused-only Google Ads payloads for the local MCP server.
  * The server reads credentials from the environment. This module never sees them.
+ * Do not import Node-only modules here. The admin page bundles this file.
  */
-import { crc32, deflateSync } from "node:zlib";
 
 export const PAUSED_CAMPAIGN_BUDGET_USD_MAX = 5;
 export const ENGLISH_LANGUAGE = "languageConstants/1000";
@@ -418,6 +418,39 @@ export function campaignBudgetIsShared(row: unknown): boolean {
 export function campaignNameFromRow(row: unknown): string {
   const name = asRecord(asRecord(row)?.campaign)?.name;
   return typeof name === "string" ? name : "";
+}
+
+export function googleAdsFailureText(body: unknown, status: number): string {
+  const err = asRecord(asRecord(body)?.error);
+  const details = Array.isArray(err?.details) ? err.details : [];
+  const parts: string[] = [];
+  for (const detail of details) {
+    const errors = asRecord(detail)?.errors;
+    if (!Array.isArray(errors)) continue;
+    for (const item of errors) {
+      const row = asRecord(item);
+      const message = typeof row?.message === "string" ? row.message : "";
+      if (!message) continue;
+      const elements = asRecord(row?.location)?.fieldPathElements;
+      const path = Array.isArray(elements)
+        ? elements
+            .map((element) => {
+              const field = asRecord(element);
+              const name = typeof field?.fieldName === "string" ? field.fieldName : "";
+              if (!name) return "";
+              return typeof field?.index === "number" ? `${name}[${field.index}]` : name;
+            })
+            .filter(Boolean)
+            .join(".")
+        : "";
+      const hint = message.includes("Enum value 'REMOVED'")
+        ? " Do not set status to REMOVED. Call remove_campaign with the campaign id and the exact name."
+        : "";
+      parts.push(`${path ? `${message} (${path})` : message}${hint}`);
+    }
+  }
+  const fallback = typeof err?.message === "string" ? err.message : "";
+  return parts.join("; ") || fallback || `Google Ads API returned ${status}`;
 }
 
 export function removalNameProblem(row: unknown, name: string): string | null {
@@ -877,48 +910,14 @@ export function buildPerformanceMaxUpdateMutate(input: {
   return { mutateOperations: ops };
 }
 
-function pngChunk(type: string, data: Buffer): Buffer {
-  const length = Buffer.alloc(4);
-  length.writeUInt32BE(data.length, 0);
-  const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
-  const sum = Buffer.alloc(4);
-  sum.writeUInt32BE(crc32(body) >>> 0, 0);
-  return Buffer.concat([length, body, sum]);
-}
+const PLACEHOLDER_PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-/** Small sage PNG with an ink circle. Performance Max requires these sizes. */
-function brandPng(width: number, height: number): string {
-  const sage: [number, number, number] = [132, 176, 103];
-  const ink: [number, number, number] = [42, 48, 32];
-  const cx = width / 2;
-  const cy = height / 2;
-  const radius = Math.min(width, height) * 0.28;
-  const raw = Buffer.alloc((width * 3 + 1) * height);
-  for (let y = 0; y < height; y += 1) {
-    const row = y * (width * 3 + 1);
-    raw[row] = 0;
-    for (let x = 0; x < width; x += 1) {
-      const inside = (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius;
-      const rgb = inside ? ink : sage;
-      const index = row + 1 + x * 3;
-      raw[index] = rgb[0];
-      raw[index + 1] = rgb[1];
-      raw[index + 2] = rgb[2];
-    }
-  }
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(width, 0);
-  ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;
-  ihdr[9] = 2;
-  const png = Buffer.concat([
-    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-    pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", deflateSync(raw)),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ]);
-  return png.toString("base64");
-}
+export type SalesImages = {
+  logo: string;
+  landscape: string;
+  square: string;
+};
 
 function textAssetOp(resourceName: string, text: string): Record<string, unknown> {
   return { assetOperation: { create: { resourceName, textAsset: { text } } } };
@@ -939,7 +938,12 @@ function campaignLink(campaign: string, asset: string, fieldType: string): Recor
 export function buildPausedSalesMutate(
   customerId: string,
   input: PausedSalesInput,
-  now = Date.now()
+  now = Date.now(),
+  images: SalesImages = {
+    logo: PLACEHOLDER_PNG,
+    landscape: PLACEHOLDER_PNG,
+    square: PLACEHOLDER_PNG,
+  }
 ): { mutateOperations: Array<Record<string, unknown>> } {
   const problem = validatePausedSalesAd(input);
   if (problem) throw new Error(problem);
@@ -1012,12 +1016,12 @@ export function buildPausedSalesMutate(
   ops.push(textAssetOp(businessAsset, businessName));
   const logoAsset = asset(next);
   next += 1;
-  ops.push(imageAssetOp(logoAsset, `Nura logo ${now}`, brandPng(128, 128)));
+  ops.push(imageAssetOp(logoAsset, `Nura logo ${now}`, images.logo));
   const landscapeAsset = asset(next);
   next += 1;
-  ops.push(imageAssetOp(landscapeAsset, `Nura landscape ${now}`, brandPng(600, 314)));
+  ops.push(imageAssetOp(landscapeAsset, `Nura landscape ${now}`, images.landscape));
   const squareAsset = asset(next);
-  ops.push(imageAssetOp(squareAsset, `Nura square ${now}`, brandPng(300, 300)));
+  ops.push(imageAssetOp(squareAsset, `Nura square ${now}`, images.square));
   ops.push(campaignLink(campaign, businessAsset, "BUSINESS_NAME"));
   ops.push(campaignLink(campaign, logoAsset, "LOGO"));
   ops.push({

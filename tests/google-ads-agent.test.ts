@@ -17,6 +17,7 @@ import {
   campaignIdFromMutate,
   existingCampaignDecision,
   googleAdsConfigFromEnv,
+  googleAdsFailureText,
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
   nuraGoogleAdsMcpJson,
@@ -194,6 +195,27 @@ describe("google ads paused campaign", () => {
     assert.match(campaignLookupQuery("24335695082"), /explicitly_shared/);
     const removed = JSON.stringify(buildCampaignRemoveMutate("customers/7280736748/campaigns/24335695082"));
     assert.match(removed, /"remove":"customers\/7280736748\/campaigns\/24335695082"/);
+    assert.equal(removed.includes("REMOVED"), false);
+    const enumError = googleAdsFailureText(
+      {
+        error: {
+          message: "Request contains an invalid argument.",
+          details: [
+            {
+              errors: [
+                {
+                  message: "Enum value 'REMOVED' cannot be used.",
+                  location: { fieldPathElements: [{ fieldName: "operations", index: 0 }, { fieldName: "update" }, { fieldName: "status" }] },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      400
+    );
+    assert.match(enumError, /operations\[0\]\.update\.status/);
+    assert.match(enumError, /remove_campaign/);
     const live = pausedCampaignGate(
       [{ campaign: { id: "1", status: "ENABLED" }, campaignBudget: { resourceName: "customers/1/campaignBudgets/2" } }],
       "1",

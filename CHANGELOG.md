@@ -730,6 +730,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Nura Google Ads MCP can change headlines, descriptions, the final URL, and the keyword on a paused campaign. The keyword is replaced and stays paused. The URL stays on nurahelp.com.
 - [internal] Nura Google Ads MCP accepts asset_group_name and long_headline, and read_campaign returns the Performance Max asset group name, final URL, and long headline.
 - [internal] Nura Google Ads MCP confirms a sales ad from what Google stored, refuses a paused name of the other campaign type, and can change a paused Performance Max URL and text.
+- [internal] Performance Max image bytes stay in the local ads MCP, so the admin page no longer pulls node:zlib into the Next build.
+- [internal] Nura Google Ads MCP removes a paused campaign with a remove operation, including when the agent calls delete_campaign. Setting status to REMOVED is rejected by Google.
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

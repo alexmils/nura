@@ -15,6 +15,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { mintGoogleAdsAccessToken } from "../lib/conversions/google-ads.ts";
+import { nuraSalesImages } from "./google-ads-images.ts";
 import {
   buildAdUpdateMutate,
   buildCampaignRemoveMutate,
@@ -26,6 +27,8 @@ import {
   campaignByNameQuery,
   campaignIdFromMutate,
   campaignLookupQuery,
+  campaignStatusFromRow,
+  googleAdsFailureText,
   existingCampaignDecision,
   googleAdsConfigFromEnv,
   latestCampaignRows,
@@ -117,13 +120,7 @@ async function adsFetch(token: string, pathName: string, body: unknown): Promise
   } catch {
     /* keep text */
   }
-  if (!res.ok) {
-    const err = parsed as {
-      error?: { message?: string; details?: Array<{ errors?: Array<{ message?: string }> }> };
-    };
-    const detail = err.error?.details?.flatMap((row) => row.errors?.map((item) => item.message) ?? []) ?? [];
-    throw new Error(detail.filter(Boolean).join("; ") || err.error?.message || `Google Ads API returned ${res.status}`);
-  }
+  if (!res.ok) throw new Error(googleAdsFailureText(parsed, res.status));
   return parsed;
 }
 
@@ -347,7 +344,11 @@ server.registerTool(
           `A campaign named ${draft.name.trim()} already exists (${decision.status}). Nothing was created.`
         );
       }
-      const created = await adsFetch(token, "googleAds:mutate", buildPausedSalesMutate(ads.customerId, draft));
+      const created = await adsFetch(
+        token,
+        "googleAds:mutate",
+        buildPausedSalesMutate(ads.customerId, draft, Date.now(), nuraSalesImages())
+      );
       const campaignId = campaignIdFromMutate(created);
       if (!campaignId) return fail("The paused campaign was created, but its id could not be read.");
       return confirmStoredSales(token, campaignId, draft);
@@ -485,39 +486,44 @@ server.registerTool(
   }
 );
 
-server.registerTool(
-  "remove_campaign",
-  {
-    title: "Remove a paused Google Ads campaign",
-    description:
-      "Remove one paused campaign when the id and the exact name both match. This cannot enable a campaign. A campaign that is not paused is left in place.",
-    inputSchema: z.object({
-      campaignId: z.string().describe("Digits only."),
-      name: z.string().describe("Exact campaign name. Must match this id."),
-    }),
-    annotations: { readOnlyHint: false, destructiveHint: true },
-  },
-  async ({ campaignId, name }) => {
-    const id = campaignId.replace(/\D/g, "");
-    if (!id) return fail("Campaign id is required. Nothing was removed.");
-    try {
-      const token = await accessToken();
-      const rows = await search(token, campaignLookupQuery(id));
-      const gate = pausedCampaignGate(rows, id, "removed");
-      if (!gate.ok) return fail(gate.error);
-      const nameProblem = removalNameProblem(rows[0], name);
-      if (nameProblem) return fail(nameProblem);
-      const removed = await adsFetch(
-        token,
-        "googleAds:mutate",
-        buildCampaignRemoveMutate(`customers/${ads.customerId}/campaigns/${id}`)
-      );
-      return text({ ok: true, removed: true, customerId: ads.customerId, campaignId: id, result: removed });
-    } catch (err) {
-      return fail(err instanceof Error ? err.message : String(err));
+const removeCampaignTool = {
+  title: "Remove a paused Google Ads campaign",
+  description:
+    "Remove one paused campaign when the id and the exact name both match. This sends a remove operation. Do not set campaign status to REMOVED. Google rejects that enum. This cannot enable a campaign. A campaign that is not paused is left in place. A campaign that is already removed is reported as already removed.",
+  inputSchema: z.object({
+    campaignId: z.string().describe("Digits only."),
+    name: z.string().describe("Exact campaign name. Must match this id."),
+  }),
+  annotations: { readOnlyHint: false, destructiveHint: true },
+};
+
+async function removePausedCampaign(campaignId: string, name: string) {
+  const id = campaignId.replace(/\D/g, "");
+  if (!id) return fail("Campaign id is required. Nothing was removed.");
+  try {
+    const token = await accessToken();
+    const rows = await search(token, campaignLookupQuery(id));
+    if (!rows[0]) return fail(`Campaign ${id} was not found. Nothing was removed.`);
+    const nameProblem = removalNameProblem(rows[0], name);
+    if (nameProblem) return fail(nameProblem);
+    if (campaignStatusFromRow(rows[0]) === "REMOVED") {
+      return text({ ok: true, removed: true, alreadyRemoved: true, customerId: ads.customerId, campaignId: id });
     }
+    const gate = pausedCampaignGate(rows, id, "removed");
+    if (!gate.ok) return fail(gate.error);
+    const removed = await adsFetch(
+      token,
+      "googleAds:mutate",
+      buildCampaignRemoveMutate(`customers/${ads.customerId}/campaigns/${id}`)
+    );
+    return text({ ok: true, removed: true, customerId: ads.customerId, campaignId: id, result: removed });
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : String(err));
   }
-);
+}
+
+server.registerTool("remove_campaign", removeCampaignTool, async ({ campaignId, name }) => removePausedCampaign(campaignId, name));
+server.registerTool("delete_campaign", removeCampaignTool, async ({ campaignId, name }) => removePausedCampaign(campaignId, name));
 
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
