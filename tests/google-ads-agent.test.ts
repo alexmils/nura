@@ -7,6 +7,9 @@ import {
   buildKeywordReplaceMutate,
   buildPausedCampaignMutate,
   buildPausedSalesMutate,
+  pausedSalesInput,
+  performanceMaxCopy,
+  resolvedAssetGroupName,
   campaignByNameQuery,
   campaignLookupQuery,
   removalNameProblem,
@@ -280,6 +283,28 @@ describe("google ads paused campaign", () => {
       }) ?? "",
       /nurahelp.com/
     );
+    const fromSnake = pausedSalesInput({
+      format: "performance_max",
+      name: "Nura Performance Max v2",
+      final_url: "https://nurahelp.com",
+      headlines: draft.headlines,
+      descriptions: draft.descriptions,
+      long_headline: "A calm app for guided EMDR sessions.",
+      asset_group_name: "Nura pages",
+    });
+    assert.equal(fromSnake.longHeadline, "A calm app for guided EMDR sessions.");
+    assert.equal(fromSnake.assetGroupName, "Nura pages");
+    assert.equal(resolvedAssetGroupName(fromSnake), "Nura pages");
+    const copy = performanceMaxCopy(
+      [{ assetGroup: { name: "Nura pages", status: "PAUSED", finalUrls: ["https://nurahelp.com"] } }],
+      [
+        { assetGroupAsset: { fieldType: "LONG_HEADLINE" }, asset: { textAsset: { text: "A calm app for guided EMDR sessions." } } },
+        { assetGroupAsset: { fieldType: "HEADLINE" }, asset: { textAsset: { text: "Nura" } } },
+      ]
+    );
+    assert.equal(copy?.assetGroupName, "Nura pages");
+    assert.equal(copy?.longHeadline, "A calm app for guided EMDR sessions.");
+    assert.equal(copy?.finalUrl, "https://nurahelp.com");
   });
 
   it("reads the new campaign id and hides secrets", () => {

@@ -29,8 +29,13 @@ import {
   googleAdsConfigFromEnv,
   latestCampaignRows,
   NURA_GOOGLE_ADS_MCP_NAME,
+  assetGroupReadQuery,
+  assetTextReadQuery,
   pausedAdIds,
   pausedAdQuery,
+  pausedSalesInput,
+  performanceMaxCopy,
+  resolvedAssetGroupName,
   pausedCampaignGate,
   pausedKeywordGroups,
   pausedKeywordQuery,
@@ -42,7 +47,6 @@ import {
   validatePausedSalesAd,
   type CampaignUpdateInput,
   type PausedCampaignInput,
-  type PausedSalesInput,
 } from "../lib/google-ads-agent.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -130,7 +134,7 @@ server.registerTool(
   {
     title: "Read a Google Ads campaign",
     description:
-      `Read one campaign on customer ${ads.customerId}, or the 20 highest campaign ids when campaignId is omitted. One campaign returns a 7-day total for cost, impressions, and clicks, plus its ads. Does not change the account.`,
+      `Read one campaign on customer ${ads.customerId}, or the 20 highest campaign ids when campaignId is omitted. One campaign returns a 7-day total for cost, impressions, and clicks, its Search ads, and for Performance Max the asset group name, final URL, and long headline. Does not change the account.`,
     inputSchema: z.object({
       campaignId: z.string().optional().describe("Digits only. Omit to list campaigns."),
     }),
@@ -147,7 +151,7 @@ server.registerTool(
         );
         return text({ ok: true, customerId: ads.customerId, campaigns: latestCampaignRows(rows) });
       }
-      const [campaignRows, metricRows, adsRows] = await Promise.all([
+      const [campaignRows, metricRows, adsRows, groupRows, textRows] = await Promise.all([
         search(token, campaignLookupQuery(id)),
         search(
           token,
@@ -157,6 +161,8 @@ server.registerTool(
           token,
           `SELECT ad_group.id, ad_group.name, ad_group.status, ad_group_ad.ad.id, ad_group_ad.status, ad_group_ad.ad.final_urls FROM ad_group_ad WHERE campaign.id = ${id}`
         ),
+        search(token, assetGroupReadQuery(id)),
+        search(token, assetTextReadQuery(id)),
       ]);
       const campaign = campaignRows[0] ?? null;
       if (!campaign) {
@@ -169,6 +175,7 @@ server.registerTool(
         campaign,
         last7Days: rollupCampaignWeek(metricRows),
         ads: adsRows,
+        performanceMax: performanceMaxCopy(groupRows, textRows),
       });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
@@ -248,15 +255,21 @@ server.registerTool(
       descriptions: z.array(z.string()).describe("2 to 4 descriptions, each up to 90 characters. Performance Max needs one of 60 characters or fewer."),
       adGroupName: z.string().optional().describe("Required for search. Target group name."),
       keyword: z.string().optional().describe("Search phrase keyword. Defaults to nura."),
-      longHeadline: z.string().optional().describe("Required for performance_max. 1 to 90 characters."),
+      longHeadline: z.string().optional().describe("Required for performance_max. 1 to 90 characters. Same as long_headline."),
+      long_headline: z.string().optional().describe("Same as longHeadline."),
       businessName: z.string().optional().describe("Performance Max business name. Defaults to Nura."),
-      assetGroupName: z.string().optional().describe("Performance Max asset group name."),
+      business_name: z.string().optional().describe("Same as businessName."),
+      assetGroupName: z.string().optional().describe("Performance Max asset group name. Same as asset_group_name."),
+      asset_group_name: z.string().optional().describe("Same as assetGroupName."),
+      final_url: z.string().optional().describe("Same as finalUrl."),
+      ad_group_name: z.string().optional().describe("Same as adGroupName."),
       dailyBudgetUsd: z.number().optional().describe("USD per day. Defaults to 1. Maximum 5."),
+      daily_budget_usd: z.number().optional().describe("Same as dailyBudgetUsd."),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
   async (input) => {
-    const draft: PausedSalesInput = input;
+    const draft = pausedSalesInput(input);
     const problem = validatePausedSalesAd(draft);
     if (problem) return fail(problem);
     try {
@@ -286,7 +299,9 @@ server.registerTool(
         campaignId: campaignIdFromMutate(created),
         format: draft.format,
         finalUrl: draft.finalUrl.trim(),
-        created,
+        assetGroupName: draft.format === "performance_max" ? resolvedAssetGroupName(draft) : undefined,
+        longHeadline: draft.format === "performance_max" ? draft.longHeadline?.trim() : undefined,
+        businessName: draft.format === "performance_max" ? draft.businessName?.trim() || "Nura" : undefined,
       });
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));

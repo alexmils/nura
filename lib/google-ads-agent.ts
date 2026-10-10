@@ -644,6 +644,91 @@ export function validatePausedSalesAd(input: PausedSalesInput): string | null {
   return dailyBudgetProblem(input.dailyBudgetUsd ?? 1, "created");
 }
 
+type SalesToolFields = {
+  format?: string;
+  name?: string;
+  finalUrl?: string;
+  final_url?: string;
+  headlines?: string[];
+  descriptions?: string[];
+  dailyBudgetUsd?: number;
+  daily_budget_usd?: number;
+  adGroupName?: string;
+  ad_group_name?: string;
+  keyword?: string;
+  longHeadline?: string;
+  long_headline?: string;
+  businessName?: string;
+  business_name?: string;
+  assetGroupName?: string;
+  asset_group_name?: string;
+};
+
+/** Accept camelCase and snake_case. The tool schema must list both or Zod drops the snake_case keys. */
+export function pausedSalesInput(raw: SalesToolFields): PausedSalesInput {
+  const budget = raw.dailyBudgetUsd ?? raw.daily_budget_usd;
+  const format = raw.format === "performance_max" ? "performance_max" : "search";
+  return {
+    format,
+    name: raw.name ?? "",
+    finalUrl: raw.finalUrl ?? raw.final_url ?? "",
+    headlines: raw.headlines ?? [],
+    descriptions: raw.descriptions ?? [],
+    dailyBudgetUsd: budget,
+    adGroupName: raw.adGroupName ?? raw.ad_group_name,
+    keyword: raw.keyword,
+    longHeadline: raw.longHeadline ?? raw.long_headline,
+    businessName: raw.businessName ?? raw.business_name,
+    assetGroupName: raw.assetGroupName ?? raw.asset_group_name,
+  };
+}
+
+export function resolvedAssetGroupName(input: PausedSalesInput): string {
+  return (input.assetGroupName?.trim() || `${input.name.trim()} pages`).slice(0, 255);
+}
+
+export function assetGroupReadQuery(campaignId: string): string {
+  if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
+  return `SELECT campaign.id, asset_group.id, asset_group.name, asset_group.status, asset_group.final_urls FROM asset_group WHERE campaign.id = ${campaignId}`;
+}
+
+export function assetTextReadQuery(campaignId: string): string {
+  if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
+  return `SELECT campaign.id, asset_group_asset.field_type, asset.text_asset.text FROM asset_group_asset WHERE campaign.id = ${campaignId}`;
+}
+
+export function performanceMaxCopy(groupRows: unknown[], assetRows: unknown[]): {
+  assetGroupName: string;
+  assetGroupStatus: string;
+  finalUrl: string;
+  longHeadline: string;
+  headlines: string[];
+  descriptions: string[];
+} | null {
+  const groupRow = asRecord(groupRows[0]);
+  const group = asRecord(groupRow?.assetGroup) ?? asRecord(groupRow?.asset_group);
+  if (!group) return null;
+  const urls = group.finalUrls ?? group.final_urls;
+  const texts: Array<{ fieldType: string; text: string }> = [];
+  for (const row of assetRows) {
+    const rec = asRecord(row);
+    const link = asRecord(rec?.assetGroupAsset) ?? asRecord(rec?.asset_group_asset);
+    const asset = asRecord(rec?.asset);
+    const textAsset = asRecord(asset?.textAsset) ?? asRecord(asset?.text_asset);
+    const text = textAsset?.text;
+    const fieldType = String(link?.fieldType ?? link?.field_type ?? "");
+    if (typeof text === "string" && text && fieldType) texts.push({ fieldType, text });
+  }
+  return {
+    assetGroupName: String(group.name ?? ""),
+    assetGroupStatus: String(group.status ?? ""),
+    finalUrl: Array.isArray(urls) ? String(urls[0] ?? "") : "",
+    longHeadline: texts.find((item) => item.fieldType === "LONG_HEADLINE")?.text ?? "",
+    headlines: texts.filter((item) => item.fieldType === "HEADLINE").map((item) => item.text),
+    descriptions: texts.filter((item) => item.fieldType === "DESCRIPTION").map((item) => item.text),
+  };
+}
+
 function pngChunk(type: string, data: Buffer): Buffer {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length, 0);
@@ -791,7 +876,7 @@ export function buildPausedSalesMutate(
     assetGroupOperation: {
       create: {
         resourceName: assetGroup,
-        name: (input.assetGroupName?.trim() || `${input.name.trim()} pages`).slice(0, 255),
+        name: resolvedAssetGroupName(input),
         campaign,
         status: "PAUSED",
         finalUrls: [input.finalUrl.trim()],
