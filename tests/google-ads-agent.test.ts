@@ -29,6 +29,17 @@ import {
   validateCampaignUpdate,
   validatePausedCampaign,
   validatePausedSalesAd,
+  keywordSpecs,
+  buildLocationAddMutate,
+  buildKeywordAddMutate,
+  buildReplaceSearchAdMutate,
+  buildKeepPausedMutate,
+  geoSuggestPlaces,
+  locationTargets,
+  resourcesForCriteria,
+  mergedSearchAd,
+  pickSearchAd,
+  activeAssetGroups,
 } from "../lib/google-ads-agent.ts";
 
 const draft = {
@@ -362,6 +373,100 @@ describe("google ads paused campaign", () => {
     const removeAt = replaced.indexOf("remove");
     const createAt = replaced.indexOf("textAsset");
     assert.ok(removeAt >= 0 && removeAt < createAt);
+  });
+
+  it("targets places and keywords only while a sales ad stays paused", () => {
+    const specs = keywordSpecs(["nura", "hubcast pricing|EXACT"], "PHRASE");
+    assert.deepEqual(specs, [
+      { text: "nura", matchType: "PHRASE" },
+      { text: "hubcast pricing", matchType: "EXACT" },
+    ]);
+    assert.throws(() => keywordSpecs(["nura"], "WIDE"), /EXACT, PHRASE, or BROAD/);
+    const places = JSON.stringify(buildLocationAddMutate("7280736748", "24335695082", ["2688"], true));
+    assert.match(places, /geoTargetConstants\/2688/);
+    assert.match(places, /"negative":true/);
+    assert.match(places, /"status":"PAUSED"/);
+    assert.equal(places.includes("ENABLED"), false);
+    const words = JSON.stringify(
+      buildKeywordAddMutate({
+        customerId: "7280736748",
+        campaignId: "24335695082",
+        adGroupId: "198726548097",
+        keywords: ["nura", "hubcast pricing|EXACT"],
+      })
+    );
+    assert.match(words, /"matchType":"EXACT"/);
+    assert.match(words, /"status":"PAUSED"/);
+    assert.equal(words.includes("campaignCriterionOperation"), false);
+    const blocked = JSON.stringify(
+      buildKeywordAddMutate({
+        customerId: "7280736748",
+        campaignId: "24335695082",
+        keywords: ["nura"],
+        negative: true,
+      })
+    );
+    assert.match(blocked, /campaignCriterionOperation/);
+    assert.equal(blocked.includes("ENABLED"), false);
+    const replaced = JSON.stringify(
+      buildReplaceSearchAdMutate({
+        customerId: "7280736748",
+        adGroupId: "198726548097",
+        oldAdResourceName: "customers/7280736748/adGroupAds/198726548097~827454280033",
+        finalUrl: "https://nurahelp.com",
+        headlines: ["Nura", "EMDR therapy online", "A calm session app"],
+        descriptions: ["Support for therapy. Starting with EMDR.", "A calm app for guided EMDR sessions."],
+      })
+    );
+    assert.match(replaced, /"status":"PAUSED"/);
+    assert.match(replaced, /adGroupAds\/198726548097~827454280033/);
+    assert.equal(replaced.includes("ENABLED"), false);
+    assert.throws(
+      () =>
+        buildReplaceSearchAdMutate({
+          customerId: "7280736748",
+          adGroupId: "198726548097",
+          oldAdResourceName: "customers/7280736748/adGroupAds/198726548097~827454280033",
+          finalUrl: "https://example.com",
+          headlines: ["Nura", "EMDR therapy online", "A calm session app"],
+          descriptions: ["Support for therapy. Starting with EMDR.", "A calm app for guided EMDR sessions."],
+        }),
+      /nurahelp.com/
+    );
+    const kept = mergedSearchAd(
+      {
+        adId: "1",
+        adGroupId: "2",
+        status: "PAUSED",
+        resourceName: "customers/1/adGroupAds/2~1",
+        finalUrl: "https://nurahelp.com",
+        headlines: ["Nura", "EMDR therapy online", "A calm session app"],
+        descriptions: ["Support for therapy. Starting with EMDR.", "A calm app for guided EMDR sessions."],
+      },
+      { headlines: ["Nura", "A calm session", "EMDR online"] }
+    );
+    assert.equal(kept.finalUrl, "https://nurahelp.com");
+    assert.deepEqual(kept.headlines, ["Nura", "A calm session", "EMDR online"]);
+    const listed = locationTargets([
+      {
+        campaignCriterion: {
+          criterionId: "99",
+          negative: true,
+          resourceName: "customers/1/campaignCriteria/5~99",
+          location: { geoTargetConstant: "geoTargetConstants/2688" },
+        },
+      },
+    ]);
+    assert.equal(listed[0]?.locationId, "2688");
+    assert.throws(() => resourcesForCriteria(listed, ["100"], "location"), /not on this campaign/);
+    assert.equal(pickSearchAd([{ adGroupAd: { status: "PAUSED", resourceName: "customers/1/adGroupAds/2~1", ad: { id: "1", finalUrls: ["https://nurahelp.com"] } }, adGroup: { id: "2" } }]).adId, "1");
+    assert.equal(activeAssetGroups([{ assetGroup: { id: "9", status: "REMOVED", resourceName: "customers/1/assetGroups/9" } }]).length, 0);
+    const pause = JSON.stringify(buildKeepPausedMutate("customers/7280736748/campaigns/24335695082"));
+    assert.match(pause, /"status":"PAUSED"/);
+    assert.equal(pause.includes("ENABLED"), false);
+    assert.deepEqual(geoSuggestPlaces({ geoTargetConstantSuggestions: [{ geoTargetConstant: { id: "2688", canonicalName: "Serbia", countryCode: "RS", targetType: "Country" } }] }), [
+      { id: "2688", name: "Serbia", countryCode: "RS", targetType: "Country" },
+    ]);
   });
 
   it("reads the new campaign id and hides secrets", () => {

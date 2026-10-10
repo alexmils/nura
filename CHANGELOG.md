@@ -732,6 +732,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Nura Google Ads MCP confirms a sales ad from what Google stored, refuses a paused name of the other campaign type, and can change a paused Performance Max URL and text.
 - [internal] Performance Max image bytes stay in the local ads MCP, so the admin page no longer pulls node:zlib into the Next build.
 - [internal] Nura Google Ads MCP removes a paused campaign with a remove operation, including when the agent calls delete_campaign. Setting status to REMOVED is rejected by Google.
+- [internal] Nura Google Ads MCP can suggest, add, and remove places, add and remove keywords, and change a paused sales ad. Search text is replaced with a new paused ad. A campaign still cannot be enabled.
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

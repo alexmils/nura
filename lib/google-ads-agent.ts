@@ -332,7 +332,7 @@ export function campaignByNameQuery(name: string): string {
 
 export function campaignLookupQuery(campaignId: string): string {
   if (!/^\d+$/.test(campaignId)) throw new Error("Campaign id must be digits.");
-  return `SELECT campaign.id, campaign.name, campaign.status, campaign_budget.resource_name, campaign_budget.amount_micros, campaign_budget.explicitly_shared FROM campaign WHERE campaign.id = ${campaignId}`;
+  return `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign_budget.resource_name, campaign_budget.amount_micros, campaign_budget.explicitly_shared FROM campaign WHERE campaign.id = ${campaignId}`;
 }
 
 export type CampaignUpdateInput = {
@@ -1041,6 +1041,405 @@ export function buildPausedSalesMutate(
   ops.push(groupLink(assetGroup, landscapeAsset, "MARKETING_IMAGE"));
   ops.push(groupLink(assetGroup, squareAsset, "SQUARE_MARKETING_IMAGE"));
   return { mutateOperations: ops };
+}
+
+const KEYWORD_MATCHES = new Set(["EXACT", "PHRASE", "BROAD"]);
+
+export function campaignChannelFromRow(row: unknown): string {
+  const campaign = asRecord(asRecord(row)?.campaign);
+  return String(campaign?.advertisingChannelType ?? campaign?.advertising_channel_type ?? "");
+}
+
+export function digitIdList(values: string[], label: string): string[] {
+  const found: string[] = [];
+  for (const value of values) {
+    const token = value.trim().split("/").pop() ?? "";
+    if (!/^\d+$/.test(token)) throw new Error(`Each ${label} must be a number. Nothing was changed.`);
+    if (!found.includes(token)) found.push(token);
+  }
+  if (!found.length) throw new Error(`Pass at least one ${label}. Nothing was changed.`);
+  return found;
+}
+
+export function keywordSpecs(
+  keywords: string[],
+  matchType = "PHRASE"
+): Array<{ text: string; matchType: "EXACT" | "PHRASE" | "BROAD" }> {
+  const fallback = matchType.trim().toUpperCase();
+  if (!KEYWORD_MATCHES.has(fallback)) {
+    throw new Error("Match type must be EXACT, PHRASE, or BROAD. Nothing was changed.");
+  }
+  const specs: Array<{ text: string; matchType: "EXACT" | "PHRASE" | "BROAD" }> = [];
+  const seen = new Set<string>();
+  for (const line of keywords) {
+    let text = line.trim();
+    let kind = fallback;
+    const split = text.lastIndexOf("|");
+    if (split > 0) {
+      const right = text.slice(split + 1).trim().toUpperCase();
+      if (KEYWORD_MATCHES.has(right)) {
+        text = text.slice(0, split).trim();
+        kind = right;
+      }
+    }
+    if (!text || text.length > 80) throw new Error("Each keyword must be 1 to 80 characters. Nothing was changed.");
+    const key = `${kind}\n${text.toLowerCase()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    specs.push({ text, matchType: kind as "EXACT" | "PHRASE" | "BROAD" });
+  }
+  if (!specs.length) throw new Error("Pass at least one keyword. Nothing was changed.");
+  return specs;
+}
+
+export function geoSuggestRequest(query: string): { locale: "en"; locationNames: { names: string[] } } {
+  const name = query.trim();
+  if (!name) throw new Error("Type a place name.");
+  return { locale: "en", locationNames: { names: [name] } };
+}
+
+export function geoSuggestPlaces(body: unknown): Array<{ id: string; name: string; countryCode: string; targetType: string }> {
+  const rows = asRecord(body)?.geoTargetConstantSuggestions;
+  const places: Array<{ id: string; name: string; countryCode: string; targetType: string }> = [];
+  if (!Array.isArray(rows)) return places;
+  for (const row of rows) {
+    const geo = asRecord(asRecord(row)?.geoTargetConstant);
+    const id = String(geo?.id ?? "").replace(/\D/g, "");
+    if (!id) continue;
+    places.push({
+      id,
+      name: String(geo?.canonicalName ?? geo?.name ?? ""),
+      countryCode: String(geo?.countryCode ?? ""),
+      targetType: String(geo?.targetType ?? ""),
+    });
+    if (places.length >= 8) break;
+  }
+  return places;
+}
+
+export function locationTargetingQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT campaign_criterion.criterion_id, campaign_criterion.negative, campaign_criterion.resource_name, campaign_criterion.location.geo_target_constant FROM campaign_criterion WHERE campaign.id = ${campaignId} AND campaign_criterion.type = LOCATION`;
+}
+
+export function campaignKeywordTargetingQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT campaign_criterion.criterion_id, campaign_criterion.negative, campaign_criterion.resource_name, campaign_criterion.keyword.text, campaign_criterion.keyword.match_type FROM campaign_criterion WHERE campaign.id = ${campaignId} AND campaign_criterion.type = KEYWORD`;
+}
+
+export function adGroupKeywordTargetingQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT ad_group.id, ad_group_criterion.criterion_id, ad_group_criterion.negative, ad_group_criterion.resource_name, ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type, ad_group_criterion.status FROM ad_group_criterion WHERE campaign.id = ${campaignId} AND ad_group_criterion.type = KEYWORD AND ad_group_criterion.status != REMOVED`;
+}
+
+export function adGroupIdsQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT ad_group.id FROM ad_group WHERE campaign.id = ${campaignId} AND ad_group.status != 'REMOVED'`;
+}
+
+export function searchAdCopyQuery(campaignId: string): string {
+  digitsOnly(campaignId, "Campaign id");
+  return `SELECT ad_group.id, ad_group_ad.status, ad_group_ad.resource_name, ad_group_ad.ad.id, ad_group_ad.ad.final_urls, ad_group_ad.ad.responsive_search_ad.headlines, ad_group_ad.ad.responsive_search_ad.descriptions FROM ad_group_ad WHERE campaign.id = ${campaignId} AND ad_group_ad.status != 'REMOVED'`;
+}
+
+export function geoNameQuery(ids: string[]): string {
+  const clean = ids.filter((id) => /^\d+$/.test(id));
+  if (!clean.length) throw new Error("No location ids.");
+  return `SELECT geo_target_constant.id, geo_target_constant.canonical_name, geo_target_constant.country_code FROM geo_target_constant WHERE geo_target_constant.id IN (${clean.join(",")})`;
+}
+
+export type LocationTarget = {
+  criterionId: string;
+  negative: boolean;
+  resourceName: string;
+  locationId: string;
+  name: string;
+  countryCode: string;
+};
+
+export function locationTargets(rows: unknown[]): LocationTarget[] {
+  const places: LocationTarget[] = [];
+  for (const row of rows) {
+    const criterion = nested(row, "campaignCriterion", "campaign_criterion");
+    const location = asRecord(criterion?.location);
+    const resource = String(location?.geoTargetConstant ?? location?.geo_target_constant ?? "");
+    const locationId = resource.split("/").pop() ?? "";
+    places.push({
+      criterionId: String(criterion?.criterionId ?? criterion?.criterion_id ?? ""),
+      negative: criterion?.negative === true,
+      resourceName: String(criterion?.resourceName ?? criterion?.resource_name ?? ""),
+      locationId: /^\d+$/.test(locationId) ? locationId : "",
+      name: "",
+      countryCode: "",
+    });
+  }
+  return places.filter((place) => place.criterionId);
+}
+
+export type KeywordTarget = {
+  criterionId: string;
+  resourceName: string;
+  text: string;
+  matchType: string;
+  negative: boolean;
+  level: "campaign" | "ad_group";
+  adGroupId: string;
+};
+
+export function keywordTargets(rows: unknown[], level: "campaign" | "ad_group"): KeywordTarget[] {
+  const keywords: KeywordTarget[] = [];
+  for (const row of rows) {
+    const criterion = level === "campaign" ? nested(row, "campaignCriterion", "campaign_criterion") : nested(row, "adGroupCriterion", "ad_group_criterion");
+    const keyword = asRecord(criterion?.keyword);
+    const adGroup = nested(row, "adGroup", "ad_group");
+    const adGroupId = typeof adGroup?.id === "number" ? String(Math.trunc(adGroup.id)) : String(adGroup?.id ?? "").replace(/\D/g, "");
+    keywords.push({
+      criterionId: String(criterion?.criterionId ?? criterion?.criterion_id ?? ""),
+      resourceName: String(criterion?.resourceName ?? criterion?.resource_name ?? ""),
+      text: String(keyword?.text ?? ""),
+      matchType: String(keyword?.matchType ?? keyword?.match_type ?? ""),
+      negative: criterion?.negative === true,
+      level,
+      adGroupId: level === "ad_group" ? adGroupId : "",
+    });
+  }
+  return keywords.filter((item) => item.criterionId);
+}
+
+export type SearchAdTarget = {
+  adId: string;
+  adGroupId: string;
+  status: string;
+  resourceName: string;
+  finalUrl: string;
+  headlines: string[];
+  descriptions: string[];
+};
+
+export function searchAdTargets(rows: unknown[]): SearchAdTarget[] {
+  const ads: SearchAdTarget[] = [];
+  for (const row of rows) {
+    const adGroupAd = nested(row, "adGroupAd", "ad_group_ad");
+    const ad = asRecord(adGroupAd?.ad);
+    const rsa = asRecord(ad?.responsiveSearchAd) ?? asRecord(ad?.responsive_search_ad);
+    const urls = ad?.finalUrls ?? ad?.final_urls;
+    const adGroup = nested(row, "adGroup", "ad_group");
+    const adId = typeof ad?.id === "number" ? String(Math.trunc(ad.id)) : String(ad?.id ?? "").replace(/\D/g, "");
+    const adGroupId = typeof adGroup?.id === "number" ? String(Math.trunc(adGroup.id)) : String(adGroup?.id ?? "").replace(/\D/g, "");
+    if (!adId) continue;
+    ads.push({
+      adId,
+      adGroupId,
+      status: String(adGroupAd?.status ?? ""),
+      resourceName: String(adGroupAd?.resourceName ?? adGroupAd?.resource_name ?? ""),
+      finalUrl: Array.isArray(urls) ? String(urls[0] ?? "") : "",
+      headlines: adTexts(rsa?.headlines),
+      descriptions: adTexts(rsa?.descriptions),
+    });
+  }
+  return ads;
+}
+
+export function soleAdGroupId(rows: unknown[], requested = ""): string {
+  const ids: string[] = [];
+  for (const row of rows) {
+    const adGroup = nested(row, "adGroup", "ad_group");
+    const id = typeof adGroup?.id === "number" ? String(Math.trunc(adGroup.id)) : String(adGroup?.id ?? "").replace(/\D/g, "");
+    if (id && !ids.includes(id)) ids.push(id);
+  }
+  const wanted = requested.replace(/\D/g, "");
+  if (wanted) {
+    if (!ids.includes(wanted)) throw new Error("That ad group is not on this campaign. Nothing was changed.");
+    return wanted;
+  }
+  if (!ids.length) throw new Error("This campaign has no ad group. Keywords belong on a Search ad. Nothing was changed.");
+  if (ids.length > 1) throw new Error("This campaign has more than one ad group. Pass ad_group_id. Nothing was changed.");
+  return ids[0];
+}
+
+export function pickSearchAd(rows: unknown[], adId = ""): SearchAdTarget {
+  const ads = searchAdTargets(rows);
+  const wanted = adId.replace(/\D/g, "");
+  const chosen = wanted ? ads.filter((ad) => ad.adId === wanted) : ads;
+  if (!chosen.length) throw new Error("This campaign has no search ad to change. Nothing was changed.");
+  if (chosen.length > 1) throw new Error("This campaign has more than one ad. Pass ad_id. Nothing was changed.");
+  return chosen[0];
+}
+
+export function mergedSearchAd(
+  current: SearchAdTarget,
+  patch: { finalUrl?: string; headlines?: string[]; descriptions?: string[] }
+): { finalUrl: string; headlines: string[]; descriptions: string[] } {
+  const finalUrl = patch.finalUrl?.trim() || current.finalUrl;
+  const headlines = patch.headlines?.length ? patch.headlines : current.headlines;
+  const descriptions = patch.descriptions?.length ? patch.descriptions : current.descriptions;
+  if (!finalUrl) throw new Error("Pass a final URL. Nothing was changed.");
+  if (headlines.length < 3) throw new Error("This ad does not have enough headlines to replace. Pass new headlines. Nothing was changed.");
+  if (descriptions.length < 2) throw new Error("This ad does not have enough descriptions to replace. Pass new descriptions. Nothing was changed.");
+  return { finalUrl, headlines, descriptions };
+}
+
+export function requireNuraFinalUrl(raw: string): string {
+  const problem = finalUrlProblem(raw);
+  if (problem) throw new Error(`${problem} Nothing was changed.`);
+  return raw.trim();
+}
+
+export function buildLocationAddMutate(
+  customerId: string,
+  campaignId: string,
+  locationIds: string[],
+  negative = false
+): { mutateOperations: Array<Record<string, unknown>> } {
+  digitsOnly(customerId, "Customer id");
+  digitsOnly(campaignId, "Campaign id");
+  return {
+    mutateOperations: digitIdList(locationIds, "location id").map((geoId) => ({
+      campaignCriterionOperation: {
+        create: {
+          campaign: `customers/${customerId}/campaigns/${campaignId}`,
+          status: "PAUSED",
+          negative,
+          location: { geoTargetConstant: `geoTargetConstants/${geoId}` },
+        },
+      },
+    })),
+  };
+}
+
+export function buildKeywordAddMutate(input: {
+  customerId: string;
+  campaignId: string;
+  adGroupId?: string;
+  keywords: string[];
+  matchType?: string;
+  negative?: boolean;
+}): { mutateOperations: Array<Record<string, unknown>> } {
+  digitsOnly(input.customerId, "Customer id");
+  digitsOnly(input.campaignId, "Campaign id");
+  const specs = keywordSpecs(input.keywords, input.matchType ?? "PHRASE");
+  const negative = input.negative === true;
+  if (!negative) digitsOnly(input.adGroupId ?? "", "Ad group id");
+  return {
+    mutateOperations: specs.map((spec) =>
+      negative
+        ? {
+            campaignCriterionOperation: {
+              create: {
+                campaign: `customers/${input.customerId}/campaigns/${input.campaignId}`,
+                status: "PAUSED",
+                negative: true,
+                keyword: { text: spec.text, matchType: spec.matchType },
+              },
+            },
+          }
+        : {
+            adGroupCriterionOperation: {
+              create: {
+                adGroup: `customers/${input.customerId}/adGroups/${input.adGroupId}`,
+                status: "PAUSED",
+                keyword: { text: spec.text, matchType: spec.matchType },
+              },
+            },
+          }
+    ),
+  };
+}
+
+export function buildResourceRemoveMutate(
+  operationKey: "campaignCriterionOperation" | "adGroupCriterionOperation" | "adGroupAdOperation",
+  resourceNames: string[]
+): { mutateOperations: Array<Record<string, unknown>> } {
+  const unique = [...new Set(resourceNames.map((name) => name.trim()).filter(Boolean))];
+  if (!unique.length) throw new Error("Pass at least one id to remove. Nothing was changed.");
+  if (unique.some((name) => !name.startsWith("customers/"))) throw new Error("Missing the item to remove. Nothing was changed.");
+  return { mutateOperations: unique.map((resourceName) => ({ [operationKey]: { remove: resourceName } })) };
+}
+
+export function resourcesForCriteria<T extends { criterionId: string; resourceName: string }>(
+  rows: T[],
+  ids: string[],
+  label: string
+): T[] {
+  const wanted = digitIdList(ids, label);
+  const chosen = rows.filter((row) => wanted.includes(row.criterionId) && row.resourceName);
+  if (chosen.length !== wanted.length) throw new Error(`One of those ${label}s is not on this campaign. Nothing was changed.`);
+  return chosen;
+}
+
+export function buildReplaceSearchAdMutate(input: {
+  customerId: string;
+  adGroupId: string;
+  oldAdResourceName: string;
+  finalUrl: string;
+  headlines: string[];
+  descriptions: string[];
+}): { mutateOperations: Array<Record<string, unknown>> } {
+  digitsOnly(input.customerId, "Customer id");
+  digitsOnly(input.adGroupId, "Ad group id");
+  if (!/^customers\/\d+\/adGroupAds\/\d+~\d+$/.test(input.oldAdResourceName)) {
+    throw new Error("Missing the ad to replace. Nothing was changed.");
+  }
+  const finalUrl = requireNuraFinalUrl(input.finalUrl);
+  if (input.headlines.length < 3 || input.headlines.length > 15 || input.headlines.some((line) => !line.trim() || line.trim().length > 30)) {
+    throw new Error("A responsive search ad needs 3 to 15 headlines, each 1 to 30 characters. Nothing was changed.");
+  }
+  if (input.descriptions.length < 2 || input.descriptions.length > 4 || input.descriptions.some((line) => !line.trim() || line.trim().length > 90)) {
+    throw new Error("A responsive search ad needs 2 to 4 descriptions, each 1 to 90 characters. Nothing was changed.");
+  }
+  return {
+    mutateOperations: [
+      {
+        adGroupAdOperation: {
+          create: {
+            adGroup: `customers/${input.customerId}/adGroups/${input.adGroupId}`,
+            status: "PAUSED",
+            ad: {
+              finalUrls: [finalUrl],
+              responsiveSearchAd: {
+                headlines: input.headlines.map((text) => ({ text: text.trim() })),
+                descriptions: input.descriptions.map((text) => ({ text: text.trim() })),
+              },
+            },
+          },
+        },
+      },
+      { adGroupAdOperation: { remove: input.oldAdResourceName } },
+    ],
+  };
+}
+
+export function buildKeepPausedMutate(campaignResourceName: string): { mutateOperations: Array<Record<string, unknown>> } {
+  if (!/^customers\/\d+\/campaigns\/\d+$/.test(campaignResourceName)) {
+    throw new Error("Campaign id is required. Nothing was changed.");
+  }
+  return {
+    mutateOperations: [
+      {
+        campaignOperation: {
+          update: { resourceName: campaignResourceName, status: "PAUSED" },
+          updateMask: "status",
+        },
+      },
+    ],
+  };
+}
+
+export function activeAssetGroups(rows: unknown[]): Array<{ id: string; resourceName: string; finalUrl: string }> {
+  const groups: Array<{ id: string; resourceName: string; finalUrl: string }> = [];
+  for (const row of rows) {
+    const group = asRecord(asRecord(row)?.assetGroup) ?? asRecord(asRecord(row)?.asset_group);
+    if (!group || String(group.status ?? "") === "REMOVED") continue;
+    const id = typeof group.id === "number" ? String(Math.trunc(group.id)) : String(group.id ?? "").replace(/\D/g, "");
+    const urls = group.finalUrls ?? group.final_urls;
+    if (!id) continue;
+    groups.push({
+      id,
+      resourceName: String(group.resourceName ?? group.resource_name ?? ""),
+      finalUrl: Array.isArray(urls) ? String(urls[0] ?? "") : "",
+    });
+  }
+  return groups;
 }
 
 export function nuraGoogleAdsMcpJson(repoDir: string): string {

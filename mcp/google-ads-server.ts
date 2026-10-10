@@ -17,15 +17,24 @@ import { z } from "zod";
 import { mintGoogleAdsAccessToken } from "../lib/conversions/google-ads.ts";
 import { nuraSalesImages } from "./google-ads-images.ts";
 import {
-  buildAdUpdateMutate,
+  activeAssetGroups,
+  adGroupIdsQuery,
+  adGroupKeywordTargetingQuery,
   buildCampaignRemoveMutate,
   buildCampaignUpdateMutate,
+  buildKeepPausedMutate,
+  buildKeywordAddMutate,
   buildKeywordReplaceMutate,
+  buildLocationAddMutate,
   buildPausedCampaignMutate,
   buildPausedSalesMutate,
   buildPerformanceMaxUpdateMutate,
+  buildReplaceSearchAdMutate,
+  buildResourceRemoveMutate,
   campaignByNameQuery,
   campaignIdFromMutate,
+  campaignChannelFromRow,
+  campaignKeywordTargetingQuery,
   campaignLookupQuery,
   campaignStatusFromRow,
   googleAdsFailureText,
@@ -35,8 +44,14 @@ import {
   NURA_GOOGLE_ADS_MCP_NAME,
   assetGroupReadQuery,
   assetTextReadQuery,
-  pausedAdIds,
-  pausedAdQuery,
+  geoNameQuery,
+  geoSuggestPlaces,
+  geoSuggestRequest,
+  keywordTargets,
+  locationTargetingQuery,
+  locationTargets,
+  mergedSearchAd,
+  pickSearchAd,
   pausedSalesInput,
   performanceMaxCopy,
   resolvedAssetGroupName,
@@ -46,6 +61,10 @@ import {
   pausedCampaignGate,
   pausedKeywordGroups,
   pausedKeywordQuery,
+  resourcesForCriteria,
+  searchAdCopyQuery,
+  searchAdTargets,
+  soleAdGroupId,
   redactSecrets,
   removalNameProblem,
   rollupCampaignWeek,
@@ -108,9 +127,9 @@ function headers(token: string): Record<string, string> {
   return out;
 }
 
-async function adsFetch(token: string, pathName: string, body: unknown): Promise<unknown> {
+async function adsPost(token: string, urlPath: string, body: unknown): Promise<unknown> {
   const res = await fetch(
-    `https://googleads.googleapis.com/${ads.apiVersion}/customers/${ads.customerId}/${pathName}`,
+    `https://googleads.googleapis.com/${ads.apiVersion}/${urlPath}`,
     { method: "POST", headers: headers(token), body: JSON.stringify(body) }
   );
   const raw = await res.text();
@@ -122,6 +141,82 @@ async function adsFetch(token: string, pathName: string, body: unknown): Promise
   }
   if (!res.ok) throw new Error(googleAdsFailureText(parsed, res.status));
   return parsed;
+}
+
+async function adsFetch(token: string, pathName: string, body: unknown): Promise<unknown> {
+  return adsPost(token, `customers/${ads.customerId}/${pathName}`, body);
+}
+
+async function keepPaused(token: string, campaignId: string): Promise<void> {
+  const rows = await search(token, campaignLookupQuery(campaignId));
+  if (campaignStatusFromRow(rows[0]) === "PAUSED") return;
+  await adsFetch(token, "googleAds:mutate", buildKeepPausedMutate(`customers/${ads.customerId}/campaigns/${campaignId}`));
+  const again = await search(token, campaignLookupQuery(campaignId));
+  if (campaignStatusFromRow(again[0]) !== "PAUSED") throw new Error(`Campaign ${campaignId} is not paused.`);
+}
+
+async function replacePausedSearchAd(
+  token: string,
+  campaignId: string,
+  patch: { finalUrl?: string; headlines?: string[]; descriptions?: string[] },
+  adId = ""
+) {
+  const current = pickSearchAd(await search(token, searchAdCopyQuery(campaignId)), adId);
+  const next = mergedSearchAd(current, patch);
+  await adsFetch(
+    token,
+    "googleAds:mutate",
+    buildReplaceSearchAdMutate({
+      customerId: ads.customerId,
+      adGroupId: current.adGroupId,
+      oldAdResourceName: current.resourceName,
+      finalUrl: next.finalUrl,
+      headlines: next.headlines,
+      descriptions: next.descriptions,
+    })
+  );
+  await keepPaused(token, campaignId);
+  const stored = searchAdTargets(await search(token, searchAdCopyQuery(campaignId)));
+  if (stored.some((ad) => ad.adId === current.adId)) throw new Error("The old ad was not replaced. The campaign stays paused.");
+  const saved = stored.find((ad) => ad.finalUrl === next.finalUrl && ad.status === "PAUSED");
+  if (!saved) throw new Error("The new ad does not show the site. The campaign stays paused.");
+  if (next.headlines.some((line) => !saved.headlines.includes(line.trim()))) {
+    throw new Error("The new headlines were not saved. The campaign stays paused.");
+  }
+  return { finalUrl: saved.finalUrl, headlines: saved.headlines, descriptions: saved.descriptions, adId: saved.adId };
+}
+
+async function targetingSnapshot(token: string, campaignId: string) {
+  const [locationRows, campaignKeywordRows, groupKeywordRows] = await Promise.all([
+    search(token, locationTargetingQuery(campaignId)),
+    search(token, campaignKeywordTargetingQuery(campaignId)),
+    search(token, adGroupKeywordTargetingQuery(campaignId)),
+  ]);
+  const locations = locationTargets(locationRows);
+  const ids = locations.map((place) => place.locationId).filter(Boolean);
+  if (ids.length) {
+    try {
+      const named = await search(token, geoNameQuery(ids));
+      const names = new Map<string, { name: string; countryCode: string }>();
+      for (const row of named) {
+        const geo = (row as { geoTargetConstant?: { id?: string | number; canonicalName?: string; countryCode?: string } }).geoTargetConstant;
+        if (!geo?.id) continue;
+        names.set(String(geo.id), { name: geo.canonicalName ?? "", countryCode: geo.countryCode ?? "" });
+      }
+      for (const place of locations) {
+        const extra = names.get(place.locationId);
+        if (!extra) continue;
+        place.name = extra.name;
+        place.countryCode = extra.countryCode;
+      }
+    } catch {
+      /* names are optional */
+    }
+  }
+  return {
+    locations,
+    keywords: [...keywordTargets(campaignKeywordRows, "campaign"), ...keywordTargets(groupKeywordRows, "ad_group")],
+  };
 }
 
 async function search(token: string, query: string): Promise<unknown[]> {
@@ -363,7 +458,7 @@ server.registerTool(
   {
     title: "Update a paused Google Ads campaign",
     description:
-      "Change the name, daily budget, headlines, descriptions, final URL, long headline, or keyword of one paused campaign. Performance Max uses the asset group for the URL and text. Budget stays at most 5 USD. The final URL must be https on nurahelp.com. A shared budget is left unchanged. The keyword is replaced and stays paused. This tool cannot enable a campaign.",
+      "Change the name, daily budget, headlines, descriptions, final URL, long headline, or keyword of one paused campaign. Search ad text is replaced with a new paused ad, because Google does not edit that text in place. Performance Max uses the asset group for the URL and text. Budget stays at most 5 USD. The final URL must be https on nurahelp.com. A shared budget is left unchanged. The keyword is replaced and stays paused. This tool cannot enable a campaign.",
     inputSchema: z.object({
       campaignId: z.string().describe("Digits only."),
       name: z.string().optional().describe("New campaign name."),
@@ -426,8 +521,7 @@ server.registerTool(
           })
         );
       } else if (hasCopy) {
-        const adIds = pausedAdIds(await search(token, pausedAdQuery(id)));
-        ad = await adsFetch(token, "ads:mutate", buildAdUpdateMutate(ads.customerId, adIds, patch));
+        ad = await replacePausedSearchAd(token, id, patch);
       }
       if (patch.keyword !== undefined) {
         const groups = pausedKeywordGroups(await search(token, pausedKeywordQuery(id)));
@@ -480,6 +574,339 @@ server.registerTool(
         });
       }
       return text({ ok: true, paused: true, customerId: ads.customerId, campaignId: id, updated, ad, keyword });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+async function requirePaused(token: string, campaignId: string) {
+  const id = campaignId.replace(/\D/g, "");
+  if (!id) throw new Error("Campaign id is required. Nothing was changed.");
+  const rows = await search(token, campaignLookupQuery(id));
+  const gate = pausedCampaignGate(rows, id, "changed");
+  if (!gate.ok) throw new Error(gate.error);
+  return { id, channel: campaignChannelFromRow(rows[0]) };
+}
+
+server.registerTool(
+  "suggest_locations",
+  {
+    title: "Find Google Ads place ids",
+    description: "Find place ids for a city, region, or country. Serbia is 2688. This does not change a campaign and cannot enable one.",
+    inputSchema: z.object({
+      query: z.string().describe("Place name, such as Serbia or Belgrade."),
+    }),
+    annotations: { readOnlyHint: true },
+  },
+  async ({ query }) => {
+    try {
+      const token = await accessToken();
+      const body = await adsPost(token, "geoTargetConstants:suggest", geoSuggestRequest(query));
+      return text({ ok: true, query: query.trim(), locations: geoSuggestPlaces(body) });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "list_targeting",
+  {
+    title: "List places, keywords, and ad text",
+    description: "List places, keywords, and the current ad text on one campaign. Criterion ids from this list are used to remove places or keywords. Does not change the account.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+    }),
+    annotations: { readOnlyHint: true },
+  },
+  async (input) => {
+    const id = (input.campaignId || input.campaign_id || "").replace(/\D/g, "");
+    if (!id) return fail("Campaign id is required.");
+    try {
+      const token = await accessToken();
+      const rows = await search(token, campaignLookupQuery(id));
+      if (!rows[0]) return fail(`Campaign ${id} was not found.`);
+      const targeting = await targetingSnapshot(token, id);
+      const channel = campaignChannelFromRow(rows[0]);
+      const ads = channel === "SEARCH" ? searchAdTargets(await search(token, searchAdCopyQuery(id))) : [];
+      const assetGroups = channel === "PERFORMANCE_MAX" ? activeAssetGroups(await search(token, assetGroupReadQuery(id))) : [];
+      return text({
+        ok: true,
+        campaignId: id,
+        channelType: channel,
+        status: campaignStatusFromRow(rows[0]),
+        locations: targeting.locations,
+        keywords: targeting.keywords,
+        ads,
+        assetGroups,
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "add_locations",
+  {
+    title: "Add places to a paused campaign",
+    description: "Add places to a paused campaign. location ids come from suggest_locations. negative=true excludes those places. This cannot enable a campaign.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+      locationIds: z.array(z.string()).optional().describe("Place ids from suggest_locations."),
+      location_ids: z.array(z.string()).optional().describe("Same as locationIds."),
+      negative: z.boolean().optional().describe("True excludes the places."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  async (input) => {
+    const ids = input.locationIds ?? input.location_ids ?? [];
+    try {
+      const token = await accessToken();
+      const paused = await requirePaused(token, input.campaignId || input.campaign_id || "");
+      await adsFetch(token, "googleAds:mutate", buildLocationAddMutate(ads.customerId, paused.id, ids, input.negative === true));
+      await keepPaused(token, paused.id);
+      const targeting = await targetingSnapshot(token, paused.id);
+      return text({
+        ok: true,
+        paused: true,
+        campaignId: paused.id,
+        negative: input.negative === true,
+        locations: targeting.locations,
+        note: "Locations updated. The campaign stays paused.",
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "remove_locations",
+  {
+    title: "Remove places from a paused campaign",
+    description: "Remove places from a paused campaign. criterion ids come from list_targeting. This cannot enable a campaign.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+      criterionIds: z.array(z.string()).optional().describe("Location criterion ids from list_targeting."),
+      criterion_ids: z.array(z.string()).optional().describe("Same as criterionIds."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  async (input) => {
+    try {
+      const token = await accessToken();
+      const paused = await requirePaused(token, input.campaignId || input.campaign_id || "");
+      const current = await targetingSnapshot(token, paused.id);
+      const chosen = resourcesForCriteria(current.locations, input.criterionIds ?? input.criterion_ids ?? [], "location");
+      await adsFetch(
+        token,
+        "googleAds:mutate",
+        buildResourceRemoveMutate("campaignCriterionOperation", chosen.map((place) => place.resourceName))
+      );
+      await keepPaused(token, paused.id);
+      const targeting = await targetingSnapshot(token, paused.id);
+      return text({
+        ok: true,
+        paused: true,
+        campaignId: paused.id,
+        locations: targeting.locations,
+        note: "Locations removed. The campaign stays paused.",
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "add_keywords",
+  {
+    title: "Add keywords to a paused campaign",
+    description:
+      "Add keywords to a paused Search campaign. matchType is EXACT, PHRASE, or BROAD. One keyword may end with |EXACT, |PHRASE, or |BROAD. negative=true excludes the words for the whole campaign, including Performance Max. This cannot enable a campaign.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+      keywords: z.array(z.string()).describe("Keyword text. A line may end with |EXACT, |PHRASE, or |BROAD."),
+      matchType: z.string().optional().describe("EXACT, PHRASE, or BROAD. Defaults to PHRASE."),
+      match_type: z.string().optional().describe("Same as matchType."),
+      negative: z.boolean().optional().describe("True adds campaign negative keywords."),
+      adGroupId: z.string().optional().describe("Required when the Search campaign has more than one ad group."),
+      ad_group_id: z.string().optional().describe("Same as adGroupId."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  async (input) => {
+    try {
+      const token = await accessToken();
+      const paused = await requirePaused(token, input.campaignId || input.campaign_id || "");
+      const negative = input.negative === true;
+      let adGroupId = "";
+      if (!negative) {
+        if (paused.channel && paused.channel !== "SEARCH") {
+          throw new Error("Keyword lists are for Search campaigns. Performance Max can take negative keywords. Nothing was changed.");
+        }
+        adGroupId = soleAdGroupId(await search(token, adGroupIdsQuery(paused.id)), input.adGroupId || input.ad_group_id || "");
+      }
+      await adsFetch(
+        token,
+        "googleAds:mutate",
+        buildKeywordAddMutate({
+          customerId: ads.customerId,
+          campaignId: paused.id,
+          adGroupId,
+          keywords: input.keywords,
+          matchType: input.matchType || input.match_type || "PHRASE",
+          negative,
+        })
+      );
+      await keepPaused(token, paused.id);
+      const targeting = await targetingSnapshot(token, paused.id);
+      return text({
+        ok: true,
+        paused: true,
+        campaignId: paused.id,
+        keywords: targeting.keywords,
+        note: "Keywords updated. The campaign stays paused.",
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "remove_keywords",
+  {
+    title: "Remove keywords from a paused campaign",
+    description: "Remove keywords from a paused campaign. criterion ids come from list_targeting. This cannot enable a campaign.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+      criterionIds: z.array(z.string()).optional().describe("Keyword criterion ids from list_targeting."),
+      criterion_ids: z.array(z.string()).optional().describe("Same as criterionIds."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  async (input) => {
+    try {
+      const token = await accessToken();
+      const paused = await requirePaused(token, input.campaignId || input.campaign_id || "");
+      const current = await targetingSnapshot(token, paused.id);
+      const chosen = resourcesForCriteria(current.keywords, input.criterionIds ?? input.criterion_ids ?? [], "keyword");
+      const campaignResources = chosen.filter((item) => item.level === "campaign").map((item) => item.resourceName);
+      const groupResources = chosen.filter((item) => item.level === "ad_group").map((item) => item.resourceName);
+      const ops = [
+        ...(campaignResources.length ? buildResourceRemoveMutate("campaignCriterionOperation", campaignResources).mutateOperations : []),
+        ...(groupResources.length ? buildResourceRemoveMutate("adGroupCriterionOperation", groupResources).mutateOperations : []),
+      ];
+      if (!ops.length) throw new Error("Pass at least one keyword id to remove. Nothing was changed.");
+      await adsFetch(token, "googleAds:mutate", { mutateOperations: ops });
+      await keepPaused(token, paused.id);
+      const targeting = await targetingSnapshot(token, paused.id);
+      return text({
+        ok: true,
+        paused: true,
+        campaignId: paused.id,
+        keywords: targeting.keywords,
+        note: "Keywords removed. The campaign stays paused.",
+      });
+    } catch (err) {
+      return fail(err instanceof Error ? err.message : String(err));
+    }
+  }
+);
+
+server.registerTool(
+  "update_sales_ad",
+  {
+    title: "Change a paused sales ad",
+    description:
+      "Change the site, headlines, or descriptions on a paused sales ad. Leave a field empty to keep it. Search ads are replaced, because Google does not edit that text in place. Performance Max changes the URL on the asset group and replaces headlines and descriptions. The URL must be https on nurahelp.com. This cannot enable a campaign.",
+    inputSchema: z.object({
+      campaignId: z.string().optional().describe("Digits only."),
+      campaign_id: z.string().optional().describe("Same as campaignId."),
+      finalUrl: z.string().optional().describe("https URL on nurahelp.com. Empty keeps the current URL."),
+      final_url: z.string().optional().describe("Same as finalUrl."),
+      headlines: z.array(z.string()).optional().describe("3 to 15 headlines. Empty keeps the current headlines."),
+      descriptions: z.array(z.string()).optional().describe("2 to 4 descriptions. Empty keeps the current descriptions."),
+      adId: z.string().optional().describe("Required when a Search campaign has more than one ad."),
+      ad_id: z.string().optional().describe("Same as adId."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  async (input) => {
+    const finalUrl = (input.finalUrl || input.final_url || "").trim();
+    const headlines = input.headlines?.map((line) => line.trim()).filter(Boolean);
+    const descriptions = input.descriptions?.map((line) => line.trim()).filter(Boolean);
+    if (!finalUrl && !headlines?.length && !descriptions?.length) {
+      return fail("Pass a final URL, headlines, or descriptions. Nothing was changed.");
+    }
+    try {
+      const token = await accessToken();
+      const paused = await requirePaused(token, input.campaignId || input.campaign_id || "");
+      if (paused.channel === "SEARCH" || !paused.channel) {
+        const saved = await replacePausedSearchAd(
+          token,
+          paused.id,
+          { finalUrl: finalUrl || undefined, headlines, descriptions },
+          input.adId || input.ad_id || ""
+        );
+        return text({
+          ok: true,
+          paused: true,
+          campaignId: paused.id,
+          channelType: "SEARCH",
+          ...saved,
+          note: "Replaced the search ad. Google cannot edit the old text in place. The campaign stays paused.",
+        });
+      }
+      if (paused.channel === "PERFORMANCE_MAX") {
+        if (headlines && (headlines.length < 3 || headlines.length > 15 || headlines.some((line) => line.length > 30))) {
+          throw new Error("A sales ad needs 3 to 15 headlines, each 1 to 30 characters. Nothing was changed.");
+        }
+        if (descriptions && (descriptions.length < 2 || descriptions.length > 4 || descriptions.some((line) => line.length > 90))) {
+          throw new Error("A sales ad needs 2 to 4 descriptions, each 1 to 90 characters. Nothing was changed.");
+        }
+        if (descriptions && !descriptions.some((line) => line.length <= 60)) {
+          throw new Error("Performance Max needs one description of 60 characters or fewer. Nothing was changed.");
+        }
+        const groups = activeAssetGroups(await search(token, assetGroupReadQuery(paused.id)));
+        if (groups.length !== 1) throw new Error("This campaign needs one asset group before the ad text can change. Nothing was changed.");
+        const links = await search(token, assetTextReadQuery(paused.id));
+        await adsFetch(
+          token,
+          "googleAds:mutate",
+          buildPerformanceMaxUpdateMutate({
+            customerId: ads.customerId,
+            assetGroupResourceName: groups[0].resourceName,
+            links,
+            finalUrl: finalUrl || undefined,
+            headlines,
+            descriptions,
+          })
+        );
+        await keepPaused(token, paused.id);
+        const stored = await readStoredSales(token, paused.id, "performance_max");
+        const mismatch = storedSalesProblem({ finalUrl: finalUrl || undefined, headlines, descriptions }, stored);
+        if (mismatch) return fail(mismatch);
+        return text({
+          ok: true,
+          paused: true,
+          campaignId: paused.id,
+          channelType: "PERFORMANCE_MAX",
+          finalUrl: stored?.finalUrl,
+          headlines: stored?.headlines,
+          descriptions: stored?.descriptions,
+          note: "Updated the Performance Max ad. The campaign stays paused.",
+        });
+      }
+      return fail("This campaign type has no sales ad to edit. Nothing was changed.");
     } catch (err) {
       return fail(err instanceof Error ? err.message : String(err));
     }
