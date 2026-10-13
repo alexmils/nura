@@ -8,10 +8,43 @@ export type ProtocolPhase =
   | "closure";
 
 export type AnimationMode = "dot" | "flash";
-export type SoundMode = "mute" | "click" | "pulse" | "tone";
+/**
+ * How the set travels. `auto` follows the screen (wide = horizontal, tall = vertical).
+ * `random` picks a new straight path at each end.
+ */
+export type AnimationPath =
+  | "auto"
+  | "horizontal"
+  | "diagonal-up"
+  | "diagonal-down"
+  | "vertical"
+  | "random";
+/** Flash brightness. Standard is a white flash. Off uses the flash color. */
+export type BrightenFlashes = "off" | "standard";
+/** Synthesized stereo sounds. See `lib/bls-sounds.ts`. */
+export type BlsSoundId =
+  | "beep-g3"
+  | "beep-c4"
+  | "beep-a4"
+  | "beep-c5"
+  | "beep-c6"
+  | "piano-g6"
+  | "finger-snap"
+  | "pink-noise"
+  | "sticks"
+  | "hi-hat";
+/**
+ * Old Adjustments sound values. `parseBlsSettings` maps them onto stereo ids.
+ * Not written back to storage.
+ */
+export type LegacySoundMode = "mute" | "click" | "pulse" | "tone";
 /** Finite pass count (1–999) or unlimited. */
 export type RepeatMode = number | "infinity";
-export type VibrationMode = "none" | "soft" | "hard";
+export type RepeatPresetIndex = 0 | 1;
+/**
+ * Off, plus three strengths. Legacy `none` migrates to `off`, `hard` to `normal`.
+ */
+export type VibrationMode = "off" | "subtle" | "soft" | "normal";
 
 /** Session start choice: pending until user picks guided or free. */
 export type SessionKind = "pending" | "guided" | "free";
@@ -21,11 +54,24 @@ export type SpeedPresetIndex = 0 | 1 | 2;
 export interface BlsSettings {
   speedPresets: [number, number, number];
   activeSpeedPreset: SpeedPresetIndex;
+  /** Live repeat count. Always matches `repeatPresets[activeRepeatPreset]`. */
   repeats: RepeatMode;
+  repeatPresets: [RepeatMode, RepeatMode];
+  activeRepeatPreset: RepeatPresetIndex;
   setLengthSec: number;
-  sound: SoundMode;
+  /** Silences the set. Preview buttons still play. */
+  soundMuted: boolean;
+  leftSound: BlsSoundId;
+  rightSound: BlsSoundId;
+  /** Swaps which sound plays on which end. Pan stays with the end. */
+  reverseStereo: boolean;
   animation: AnimationMode;
+  animationPath: AnimationPath;
+  brightenFlashes: BrightenFlashes;
+  /** Circle color. */
   ballColor: string;
+  /** Flash color, used when brighten flashes is off. */
+  flashColor: string;
   ballSize: number;
   background: string;
   vibration: VibrationMode;
@@ -123,10 +169,18 @@ export const DEFAULT_BLS: BlsSettings = {
   speedPresets: [0.1, 1.0, 5.0],
   activeSpeedPreset: 1,
   repeats: 24,
+  repeatPresets: [24, "infinity"],
+  activeRepeatPreset: 0,
   setLengthSec: 38,
-  sound: "click",
+  soundMuted: false,
+  leftSound: "beep-a4",
+  rightSound: "finger-snap",
+  reverseStereo: false,
   animation: "dot",
+  animationPath: "auto",
+  brightenFlashes: "off",
   ballColor: "#111111",
+  flashColor: "#111111",
   ballSize: 48,
   background: "#ffffff",
   vibration: "soft",

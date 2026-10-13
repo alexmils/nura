@@ -1,35 +1,27 @@
 "use client";
 
-import { forwardRef, useEffect, useState, type KeyboardEvent, type ReactNode } from "react";
+import { forwardRef, type ReactNode } from "react";
 import {
-  Activity,
   ChevronDown,
   ChevronUp,
   Circle,
-  CircleDot,
   Infinity as InfinityIcon,
   Minus,
-  Music2,
   SlidersHorizontal,
   Square,
   Vibrate,
+  Volume2,
   VolumeX,
 } from "lucide-react";
 import type {
   AnimationMode,
   BlsSettings,
-  SoundMode,
+  RepeatPresetIndex,
   SpeedPresetIndex,
   VibrationMode,
 } from "@/lib/types";
 import type { BlsToolbarField } from "@/lib/bls-toolbar-nav";
-import {
-  adjustRepeatMode,
-  BLS_REPEATS_DEFAULT,
-  BLS_REPEATS_MAX,
-  BLS_REPEATS_MIN,
-  clampBlsRepeatsCount,
-} from "@/lib/bls-repeats";
+import { selectRepeatPreset } from "@/lib/bls-repeats";
 import { useGamepadConnected } from "@/lib/useGamepadConnected";
 
 interface BlsToolbarProps {
@@ -47,11 +39,9 @@ interface BlsToolbarProps {
 
 const SPEED_FIELDS: BlsToolbarField[] = ["speed0", "speed1", "speed2"];
 
-const SOUND_OPTIONS: { value: SoundMode; label: string; icon: ReactNode }[] = [
-  { value: "mute", label: "Mute", icon: <VolumeX size={16} strokeWidth={2} /> },
-  { value: "click", label: "Click", icon: <CircleDot size={16} strokeWidth={2} /> },
-  { value: "pulse", label: "Pulse", icon: <Activity size={16} strokeWidth={2} /> },
-  { value: "tone", label: "Tone", icon: <Music2 size={16} strokeWidth={2} /> },
+const SOUND_OPTIONS: { muted: boolean; label: string; icon: ReactNode }[] = [
+  { muted: true, label: "Mute", icon: <VolumeX size={16} strokeWidth={2} /> },
+  { muted: false, label: "On", icon: <Volume2 size={16} strokeWidth={2} /> },
 ];
 
 const ANIMATION_OPTIONS: {
@@ -72,17 +62,10 @@ const VIBRATION_OPTIONS: {
   label: string;
   icon: ReactNode;
 }[] = [
-  { value: "none", label: "Off", icon: <Minus size={16} strokeWidth={2.25} /> },
-  {
-    value: "soft",
-    label: "Soft",
-    icon: <Vibrate size={15} strokeWidth={2} />,
-  },
-  {
-    value: "hard",
-    label: "Hard",
-    icon: <Vibrate size={17} strokeWidth={2.5} />,
-  },
+  { value: "off", label: "Off", icon: <Minus size={16} strokeWidth={2.25} /> },
+  { value: "subtle", label: "Subtle", icon: <Vibrate size={13} strokeWidth={1.75} /> },
+  { value: "soft", label: "Soft", icon: <Vibrate size={15} strokeWidth={2} /> },
+  { value: "normal", label: "Normal", icon: <Vibrate size={17} strokeWidth={2.5} /> },
 ];
 
 function BlsGroup({
@@ -164,57 +147,20 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
   ) {
     const gamepadConnected = useGamepadConnected();
     const showVibration = gamepadConnected || previewVibration;
-    const [repeatsDraft, setRepeatsDraft] = useState(
-      typeof bls.repeats === "number" ? bls.repeats : BLS_REPEATS_DEFAULT
-    );
-
-    useEffect(() => {
-      if (typeof bls.repeats === "number") {
-        setRepeatsDraft(bls.repeats);
-      }
-    }, [bls.repeats]);
 
     const selectSpeed = (index: SpeedPresetIndex) => {
       onFocusField(SPEED_FIELDS[index]);
       onChange({ activeSpeedPreset: index });
     };
 
-    const commitRepeatsCount = (raw: number) => {
-      const next = clampBlsRepeatsCount(raw);
-      setRepeatsDraft(next);
+    const selectRepeat = (index: RepeatPresetIndex) => {
       onFocusField("repeats");
-      onChange({ repeats: next });
+      onChange(selectRepeatPreset(bls.repeatPresets, index));
     };
 
-    const selectInfinity = () => {
-      onFocusField("repeats");
-      onChange({ repeats: "infinity" });
-    };
-
-    const onRepeatsKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-        e.preventDefault();
-        e.stopPropagation();
-        const direction = e.key === "ArrowUp" ? 1 : -1;
-        const base =
-          bls.repeats === "infinity" ? repeatsDraft : bls.repeats;
-        const next = adjustRepeatMode(base, direction);
-        if (typeof next === "number") {
-          setRepeatsDraft(next);
-          onChange({ repeats: next });
-        }
-        onFocusField("repeats");
-        return;
-      }
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        // Keep caret movement local; do not bubble to dock field nav.
-        e.stopPropagation();
-      }
-    };
-
-    const selectSound = (value: SoundMode) => {
+    const selectSound = (muted: boolean) => {
       onFocusField("sound");
-      onChange({ sound: value });
+      onChange({ soundMuted: muted });
     };
 
     const selectAnimation = (value: AnimationMode) => {
@@ -243,8 +189,6 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
         </div>
       );
     }
-
-    const repeatsFinite = bls.repeats !== "infinity";
 
     return (
       <div
@@ -286,63 +230,39 @@ export const BlsToolbar = forwardRef<HTMLDivElement, BlsToolbarProps>(
             </BlsGroup>
 
             <BlsGroup label="Repeats" field="repeats" focused={focusedField === "repeats"}>
-              <input
-                type="number"
-                inputMode="numeric"
-                min={BLS_REPEATS_MIN}
-                max={BLS_REPEATS_MAX}
-                step={1}
-                value={repeatsDraft}
-                aria-label="Repeat count"
-                title="Repeat count"
-                className={`bls-seg-btn bls-repeats-input ${
-                  repeatsFinite ? "bls-seg-btn-active" : ""
-                } ${
-                  focusedField === "repeats" && repeatsFinite
-                    ? "bls-seg-btn-focused"
-                    : ""
-                }`}
-                onFocus={() => {
-                  onFocusField("repeats");
-                  if (bls.repeats === "infinity") {
-                    onChange({ repeats: clampBlsRepeatsCount(repeatsDraft) });
-                  }
-                }}
-                onKeyDown={onRepeatsKeyDown}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  if (raw === "") return;
-                  const n = Number(raw);
-                  if (!Number.isFinite(n)) return;
-                  commitRepeatsCount(n);
-                }}
-                onBlur={(e) => {
-                  const n = Number(e.target.value);
-                  commitRepeatsCount(
-                    Number.isFinite(n) ? n : repeatsDraft
-                  );
-                }}
-              />
-              <SegBtn
-                selected={bls.repeats === "infinity"}
-                focused={
-                  focusedField === "repeats" && bls.repeats === "infinity"
-                }
-                ariaLabel="Infinite repeats"
-                onClick={selectInfinity}
-              >
-                <InfinityIcon size={16} strokeWidth={2} />
-              </SegBtn>
+              {bls.repeatPresets.map((preset, index) => {
+                const i = index as RepeatPresetIndex;
+                const unlimited = preset === "infinity";
+                return (
+                  <SegBtn
+                    key={i}
+                    selected={bls.activeRepeatPreset === i}
+                    focused={focusedField === "repeats" && bls.activeRepeatPreset === i}
+                    ariaLabel={
+                      unlimited
+                        ? `Repeat preset ${i + 1}, unlimited`
+                        : `Repeat preset ${i + 1}, ${preset}`
+                    }
+                    onClick={() => selectRepeat(i)}
+                  >
+                    {unlimited ? (
+                      <InfinityIcon size={16} strokeWidth={2} />
+                    ) : (
+                      preset
+                    )}
+                  </SegBtn>
+                );
+              })}
             </BlsGroup>
 
             <BlsGroup label="Stereo sound" field="sound" focused={focusedField === "sound"}>
               {SOUND_OPTIONS.map((opt) => (
                 <SegBtn
-                  key={opt.value}
-                  selected={bls.sound === opt.value}
-                  focused={focusedField === "sound" && bls.sound === opt.value}
-                  ariaLabel={`Sound ${opt.label}`}
-                  onClick={() => selectSound(opt.value)}
+                  key={opt.label}
+                  selected={bls.soundMuted === opt.muted}
+                  focused={focusedField === "sound" && bls.soundMuted === opt.muted}
+                  ariaLabel={opt.muted ? "Mute sound" : "Stereo sound on"}
+                  onClick={() => selectSound(opt.muted)}
                 >
                   {opt.icon}
                 </SegBtn>

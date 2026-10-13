@@ -3,15 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import type {
   AnimationMode,
+  AnimationPath,
+  BlsSoundId,
+  BrightenFlashes,
   RepeatMode,
-  SoundMode,
   VibrationMode,
 } from "@/lib/types";
 import { BlsAudioEngine } from "@/lib/bls-audio";
-import { rumble } from "@/lib/gamepad";
+import { edgeSound } from "@/lib/bls-sounds";
+import { pulseVibration } from "@/lib/bls-vibrate";
 import {
+  ballTravelOffset,
+  flashClipPaths,
+  flashPaint,
   motionAxisFromSize,
+  pickRandomAnimationPath,
+  resolveAnimationPath,
   type BlsMotionAxis,
+  type ConcreteAnimationPath,
 } from "@/lib/bls-motion";
 import {
   BLS_BALL_MAX_DT_SEC,
@@ -27,7 +36,13 @@ interface BallCanvasProps {
   ballSize: number;
   background: string;
   animation: AnimationMode;
-  sound: SoundMode;
+  animationPath: AnimationPath;
+  brightenFlashes: BrightenFlashes;
+  flashColor: string;
+  soundMuted: boolean;
+  leftSound: BlsSoundId;
+  rightSound: BlsSoundId;
+  reverseStereo: boolean;
   setLengthSec: number;
   repeats: RepeatMode;
   vibration: VibrationMode;
@@ -72,27 +87,41 @@ function paintBall(
   el: HTMLDivElement | null,
   container: HTMLElement | null,
   pos: number,
-  horizontal: boolean,
+  path: ConcreteAnimationPath,
   ballSize: number
 ) {
   if (!el || !container) return;
-  const travel = Math.max(
-    0,
-    (horizontal ? container.clientWidth : container.clientHeight) - ballSize
-  );
-  const px = pos * travel;
-  el.style.transform = horizontal
-    ? `translate3d(${px}px, -50%, 0)`
-    : `translate3d(-50%, ${px}px, 0)`;
+  const travelX = Math.max(0, container.clientWidth - ballSize);
+  const travelY = Math.max(0, container.clientHeight - ballSize);
+  const { x, y } = ballTravelOffset(path, pos, travelX, travelY);
+  el.style.left = "0px";
+  el.style.top = "0px";
+  el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
 }
 
 function paintFlash(
   a: HTMLDivElement | null,
   b: HTMLDivElement | null,
-  pos: number
+  pos: number,
+  path: ConcreteAnimationPath,
+  brighten: BrightenFlashes,
+  flashColor: string,
+  background: string
 ) {
-  if (a) a.style.opacity = pos < 0.5 ? "1" : "0.15";
-  if (b) b.style.opacity = pos >= 0.5 ? "1" : "0.15";
+  const clips = flashClipPaths(path);
+  const startOn = pos < 0.5;
+  const startPaint = flashPaint(brighten, flashColor, startOn, background);
+  const endPaint = flashPaint(brighten, flashColor, !startOn, background);
+  if (a) {
+    a.style.clipPath = clips.start;
+    a.style.background = startPaint.color;
+    a.style.opacity = startPaint.opacity;
+  }
+  if (b) {
+    b.style.clipPath = clips.end;
+    b.style.background = endPaint.color;
+    b.style.opacity = endPaint.opacity;
+  }
 }
 
 export function BallCanvas({
@@ -102,7 +131,13 @@ export function BallCanvas({
   ballSize,
   background,
   animation,
-  sound,
+  animationPath,
+  brightenFlashes,
+  flashColor,
+  soundMuted,
+  leftSound,
+  rightSound,
+  reverseStereo,
   setLengthSec,
   repeats,
   vibration,
@@ -124,20 +159,53 @@ export function BallCanvas({
   const lastSide = useRef<"left" | "right" | null>(null);
   const rafRef = useRef<number>(0);
   const speedRef = useRef(speedHz);
-  const soundRef = useRef(sound);
   const vibrationRef = useRef(vibration);
   const onCompleteRef = useRef(onSetComplete);
   const axisRef = useRef(axis);
   const ballSizeRef = useRef(ballSize);
   const animationRef = useRef(animation);
+  const pathRef = useRef(animationPath);
+  const brightenRef = useRef(brightenFlashes);
+  const flashColorRef = useRef(flashColor);
+  const backgroundRef = useRef(background);
+  const mutedRef = useRef(soundMuted);
+  const leftRef = useRef(leftSound);
+  const rightRef = useRef(rightSound);
+  const reverseRef = useRef(reverseStereo);
+  const randomPathRef = useRef<ConcreteAnimationPath>("horizontal");
 
   speedRef.current = speedHz;
-  soundRef.current = sound;
   vibrationRef.current = vibration;
   onCompleteRef.current = onSetComplete;
   axisRef.current = axis;
   ballSizeRef.current = ballSize;
   animationRef.current = animation;
+  pathRef.current = animationPath;
+  brightenRef.current = brightenFlashes;
+  flashColorRef.current = flashColor;
+  backgroundRef.current = background;
+  mutedRef.current = soundMuted;
+  leftRef.current = leftSound;
+  rightRef.current = rightSound;
+  reverseRef.current = reverseStereo;
+
+  const pathNow = (): ConcreteAnimationPath => {
+    const box = containerRef.current;
+    const width = box?.clientWidth || (axisRef.current === "vertical" ? 390 : 844);
+    const height = box?.clientHeight || (axisRef.current === "vertical" ? 844 : 390);
+    return resolveAnimationPath(
+      pathRef.current,
+      width,
+      height,
+      randomPathRef.current
+    );
+  };
+
+  const playEnd = (side: "left" | "right") => {
+    if (mutedRef.current) return;
+    const edge = edgeSound(side, leftRef.current, rightRef.current, reverseRef.current);
+    audioRef.current?.play(edge.id, edge.pan);
+  };
 
   useEffect(() => {
     audioRef.current = new BlsAudioEngine();
@@ -161,21 +229,30 @@ export function BallCanvas({
     lastSide.current = null;
     posRef.current = 0.5;
     dirRef.current = 1;
-    audioRef.current?.playPan("left", soundRef.current);
+    randomPathRef.current = pickRandomAnimationPath();
+    playEnd("left");
     lastSide.current = "left";
 
     const paint = () => {
-      const horizontal = axisRef.current === "horizontal";
+      const path = pathNow();
       if (animationRef.current === "dot") {
         paintBall(
           ballRef.current,
           containerRef.current,
           posRef.current,
-          horizontal,
+          path,
           ballSizeRef.current
         );
       } else {
-        paintFlash(flashARef.current, flashBRef.current, posRef.current);
+        paintFlash(
+          flashARef.current,
+          flashBRef.current,
+          posRef.current,
+          path,
+          brightenRef.current,
+          flashColorRef.current,
+          backgroundRef.current
+        );
       }
     };
 
@@ -195,20 +272,17 @@ export function BallCanvas({
         const step = blsBallStep(speedRef.current, dt);
         let next = posRef.current + dirRef.current * step;
 
-        if (next >= 1) {
-          next = 1;
-          dirRef.current = -1;
+        if (next >= 1 || next <= 0) {
+          const side = next >= 1 ? "right" : "left";
+          next = side === "right" ? 1 : 0;
+          dirRef.current = side === "right" ? -1 : 1;
           repeatCount.current += 1;
-          if (vibrationRef.current !== "none") rumble(vibrationRef.current);
-          audioRef.current?.playPan("right", soundRef.current);
-          lastSide.current = "right";
-        } else if (next <= 0) {
-          next = 0;
-          dirRef.current = 1;
-          repeatCount.current += 1;
-          if (vibrationRef.current !== "none") rumble(vibrationRef.current);
-          audioRef.current?.playPan("left", soundRef.current);
-          lastSide.current = "left";
+          if (pathRef.current === "random") {
+            randomPathRef.current = pickRandomAnimationPath();
+          }
+          pulseVibration(vibrationRef.current);
+          playEnd(side);
+          lastSide.current = side;
         }
 
         posRef.current = next;
@@ -238,16 +312,16 @@ export function BallCanvas({
       el.style.height = `${ballSize}px`;
       el.style.background = ballColor;
     }
-    paintBall(
-      ballRef.current,
-      containerRef.current,
-      posRef.current,
-      axis === "horizontal",
-      ballSize
+    const box = containerRef.current;
+    const path = resolveAnimationPath(
+      animationPath,
+      box?.clientWidth || (axis === "vertical" ? 390 : 844),
+      box?.clientHeight || (axis === "vertical" ? 844 : 390),
+      randomPathRef.current
     );
-  }, [running, animation, ballSize, ballColor, axis]);
+    paintBall(ballRef.current, containerRef.current, posRef.current, path, ballSize);
+  }, [running, animation, animationPath, ballSize, ballColor, axis]);
 
-  const horizontal = axis === "horizontal";
   const idleHintOnDark = blsBackgroundIsDark(background);
 
   return (
@@ -275,33 +349,20 @@ export function BallCanvas({
       className="workspace-canvas relative h-full min-h-0 flex-1 overflow-hidden outline-none"
       style={{ background }}
       data-bls-axis={axis}
+      data-bls-path={animationPath}
       data-guide="canvas"
     >
-      {animation === "flash" && running && horizontal && (
+      {animation === "flash" && running && (
         <>
           <div
             ref={flashARef}
-            className="absolute inset-y-0 left-0 w-1/2"
-            style={{ background: "rgba(0,0,0,0.06)", opacity: 1 }}
+            className="pointer-events-none absolute inset-0"
+            style={{ background: flashColor, opacity: 0.55 }}
           />
           <div
             ref={flashBRef}
-            className="absolute inset-y-0 right-0 w-1/2"
-            style={{ background: "rgba(0,0,0,0.06)", opacity: 0.15 }}
-          />
-        </>
-      )}
-      {animation === "flash" && running && !horizontal && (
-        <>
-          <div
-            ref={flashARef}
-            className="absolute inset-x-0 top-0 h-1/2"
-            style={{ background: "rgba(0,0,0,0.06)", opacity: 1 }}
-          />
-          <div
-            ref={flashBRef}
-            className="absolute inset-x-0 bottom-0 h-1/2"
-            style={{ background: "rgba(0,0,0,0.06)", opacity: 0.15 }}
+            className="pointer-events-none absolute inset-0"
+            style={{ background: flashColor, opacity: 0.08 }}
           />
         </>
       )}
@@ -314,9 +375,8 @@ export function BallCanvas({
             height: ballSize,
             background: ballColor,
             willChange: "transform",
-            ...(horizontal
-              ? { left: 0, top: "50%", transform: "translate3d(0, -50%, 0)" }
-              : { top: 0, left: "50%", transform: "translate3d(-50%, 0, 0)" }),
+            left: 0,
+            top: 0,
           }}
         />
       )}

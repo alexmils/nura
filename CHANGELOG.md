@@ -139,6 +139,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Marketing opens one campaign as a full report: name, status, type, landing site, spend, clicks, and its ad groups or ads
 - [internal] Local Google Ads MCP reads `.env` and can list a campaign or create one that stays paused. It cannot enable an ad.
 - [internal] Nura Google Ads MCP can create a paused sales ad: Search with a landing URL and text, or Performance Max with a landing URL. Neither can be enabled. The existing Search create stays.
+- Adjustments remember two repeat presets, a left and right sound with a preview, the path of the set, and vibration strength
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -397,6 +398,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Home + `/blog` cards: Balancia-style image fade overlay (white gradient + soft frosted blur)
 - [internal] Admin Meta and Google Ads cards use larger type so the title, KPIs, search, and filters are readable
 - [internal] Admin Meta and Google campaign search turns a word into a removable tag on Enter and keeps a campaign when that word is in the name, account, status, type, or landing site
+- Stereo sound rows in Adjustments: the sound name sits with its menu arrow, and the round play button stays on the right edge
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

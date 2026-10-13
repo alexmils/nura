@@ -1,4 +1,4 @@
-import type { RepeatMode } from "@/lib/types";
+import type { RepeatMode, RepeatPresetIndex } from "@/lib/types";
 
 export const BLS_REPEATS_MIN = 1;
 export const BLS_REPEATS_MAX = 999;
@@ -41,4 +41,52 @@ export function repeatsLimit(repeats: RepeatMode): number {
 
 export function formatRepeatsLabel(repeats: RepeatMode): string {
   return repeats === "infinity" ? "∞" : String(repeats);
+}
+
+/**
+ * A blank preset is unlimited. Used for the two repeat boxes, not for a
+ * missing legacy `repeats` field (that still falls back to the default count).
+ */
+export function parseRepeatPresetValue(raw: unknown): RepeatMode | null {
+  if (raw === "infinity" || raw === null) return "infinity";
+  if (typeof raw === "number" && Number.isFinite(raw)) return clampBlsRepeatsCount(raw);
+  if (typeof raw === "string") {
+    const trimmed = raw.trim();
+    if (trimmed === "" || trimmed === "infinity") return "infinity";
+    if (/^\d+$/.test(trimmed)) return clampBlsRepeatsCount(Number(trimmed));
+  }
+  return null;
+}
+
+export function selectRepeatPreset(
+  presets: [RepeatMode, RepeatMode],
+  index: RepeatPresetIndex
+): {
+  repeatPresets: [RepeatMode, RepeatMode];
+  activeRepeatPreset: RepeatPresetIndex;
+  repeats: RepeatMode;
+} {
+  return {
+    repeatPresets: [presets[0], presets[1]],
+    activeRepeatPreset: index,
+    repeats: presets[index],
+  };
+}
+
+export function writeRepeatPreset(
+  presets: [RepeatMode, RepeatMode],
+  index: RepeatPresetIndex,
+  value: RepeatMode
+): {
+  repeatPresets: [RepeatMode, RepeatMode];
+  activeRepeatPreset: RepeatPresetIndex;
+  repeats: RepeatMode;
+} {
+  const next: [RepeatMode, RepeatMode] = [presets[0], presets[1]];
+  next[index] = value;
+  return {
+    repeatPresets: next,
+    activeRepeatPreset: index,
+    repeats: next[index],
+  };
 }

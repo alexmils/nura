@@ -11,9 +11,10 @@ export interface GamepadLoopHandlers {
 }
 
 export const VIBRATION_INTENSITY: Record<VibrationMode, number> = {
-  none: 0,
+  off: 0,
+  subtle: 0.15,
   soft: 0.35,
-  hard: 1,
+  normal: 1,
 };
 
 /** @deprecated Use rumble(mode) profiles instead */
@@ -27,18 +28,20 @@ export interface RumbleProfile {
   strongMagnitude: number;
 }
 
-/** Per-mode rumble — soft is a short light tap, hard is a longer strong pulse. */
-export const RUMBLE_PROFILE: Record<
-  VibrationMode,
-  RumbleProfile | null
-> = {
-  none: null,
+/** Per-mode rumble. Subtle is a light tap, normal is a longer strong pulse. */
+export const RUMBLE_PROFILE: Record<VibrationMode, RumbleProfile | null> = {
+  off: null,
+  subtle: {
+    duration: 22,
+    weakMagnitude: 0.16,
+    strongMagnitude: 0.04,
+  },
   soft: {
     duration: 45,
     weakMagnitude: 0.28,
     strongMagnitude: 0.1,
   },
-  hard: {
+  normal: {
     duration: 140,
     weakMagnitude: 0.55,
     strongMagnitude: 1,
