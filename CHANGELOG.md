@@ -404,6 +404,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Live preview keeps moving when you switch between dot and flash, or change speed, color, path, sound, or vibration while it is playing
 - Selected Adjustments chips use a lighter sage fill, with dark text, so the choice stays clear on the green panel
 - Repeat counts in Adjustments use the same sage fill and dark text as the other selected controls
+- [internal] GitHub Actions purges the Cloudflare cache after Coolify deploy so marketing HTML cannot keep the previous deploy's chunk URLs for an hour
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

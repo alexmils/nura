@@ -131,6 +131,7 @@ Rolling updates require: **no host port mapping**, no consistent/custom containe
 | `COOLIFY_TOKEN` | Coolify personal access token (Bearer) |
 | `COOLIFY_APP_UUID` | `epufvmx1j8jold5gdpfak85m` |
 | `COOLIFY_API_URL` | `https://server.nurahelp.com` |
+| `CLOUDFLARE_API_TOKEN` | Zone cache purge for `nurahelp.com`. Without it the deploy job fails after Coolify, and marketing HTML can stay cached for an hour (cache rule 4). |
 
 `GITHUB_TOKEN` is used automatically for GHCR push (`packages: write`). Package visibility has been **public** so Coolify can pull without a registry login (revisit if made private).
 
