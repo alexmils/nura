@@ -3581,7 +3581,7 @@ body:has(.app-shell.session-immersive) .help-fab {
   position: absolute;
   inset-block: 0;
   width: 50%;
-  background: rgba(0, 0, 0, 0.07);
+  background: transparent;
   pointer-events: none;
   transition: opacity 0.08s linear;
 }
@@ -3733,10 +3733,10 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .gear-choice-active {
-  background: var(--bg-elevated);
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 0 0 1px var(--accent-subtle);
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
+  font-weight: 700;
 }
 
 .gear-choice-row {
@@ -3752,9 +3752,10 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .gear-choice-row .gear-choice-active {
-  background: var(--accent-subtle);
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  color: var(--text);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .gear-repeats-input {
@@ -3824,6 +3825,10 @@ body:has(.app-shell.session-immersive) .help-fab {
   font-size: 0.6875rem;
   font-weight: 500;
   color: var(--text-muted);
+}
+
+.gear-choice-active .gear-choice-stack small {
+  color: color-mix(in srgb, var(--ink) 78%, var(--accent));
 }
 
 .gear-details-label {
@@ -4044,13 +4049,13 @@ body:has(.app-shell.session-immersive) .help-fab {
 
 .gear-repeat-box {
   width: 4.75rem;
-  background: var(--ink);
-  color: var(--bg-page);
-  border-color: var(--ink);
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
 }
 
 .gear-repeat-box::placeholder {
-  color: color-mix(in srgb, var(--bg-page) 72%, transparent);
+  color: color-mix(in srgb, var(--ink) 72%, transparent);
 }
 
 .gear-path-row {
@@ -4064,6 +4069,17 @@ body:has(.app-shell.session-immersive) .help-fab {
   padding: 0.35rem 0.15rem;
   border-color: var(--border);
   background: var(--bg-elevated);
+}
+
+.gear-path-row .gear-choice-active,
+.gear-quick-seg .gear-choice-active,
+.gear-choice-active:hover,
+.gear-choice-row .gear-choice-active:hover,
+.gear-path-row .gear-choice-active:hover,
+.gear-quick-seg .gear-choice-active:hover {
+  background: var(--accent);
+  color: var(--ink);
+  border-color: var(--accent);
 }
 
 .gear-sound-row {
@@ -4134,34 +4150,32 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .gear-switch {
-  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
   width: 2.75rem;
   height: 1.6rem;
   flex-shrink: 0;
-  border: 1px solid var(--border);
+  border: 1.5px solid #6d7a58;
   border-radius: 999px;
-  background: var(--bg-elevated);
-  padding: 0;
+  background: #8f9878;
+  padding: 2px;
 }
 
 .gear-switch[aria-checked="true"] {
+  justify-content: flex-end;
   background: var(--accent);
   border-color: var(--accent);
 }
 
 .gear-switch-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
   border-radius: 999px;
-  background: var(--bg-page);
-  transition: transform 0.15s ease;
-}
-
-.gear-switch[aria-checked="true"] .gear-switch-thumb {
-  transform: translateX(1.05rem);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(42, 48, 32, 0.28);
 }
 
 .gear-restore {
@@ -12724,6 +12738,27 @@ html[data-a11y-contrast="high"] .frontend-home {
 html[data-a11y-contrast="high"] :focus-visible {
   outline: 3px solid #2a3020;
   outline-offset: 2px;
+}
+
+/* Selected chips stay sage, but the darker contrast accent needs light text. */
+html[data-a11y-contrast="high"] .gear-choice-active,
+html[data-a11y-contrast="high"] .gear-choice-row .gear-choice-active,
+html[data-a11y-contrast="high"] .gear-path-row .gear-choice-active,
+html[data-a11y-contrast="high"] .gear-quick-seg .gear-choice-active,
+html[data-a11y-contrast="high"] .gear-choice-active:hover,
+html[data-a11y-contrast="high"] .gear-choice-row .gear-choice-active:hover,
+html[data-a11y-contrast="high"] .gear-path-row .gear-choice-active:hover,
+html[data-a11y-contrast="high"] .gear-quick-seg .gear-choice-active:hover,
+html[data-a11y-contrast="high"] .gear-repeat-box {
+  color: var(--on-accent);
+}
+
+html[data-a11y-contrast="high"] .gear-repeat-box::placeholder {
+  color: color-mix(in srgb, var(--on-accent) 82%, transparent);
+}
+
+html[data-a11y-contrast="high"] .gear-choice-active .gear-choice-stack small {
+  color: color-mix(in srgb, var(--on-accent) 82%, transparent);
 }
 
 /* —— Larger targets —— */

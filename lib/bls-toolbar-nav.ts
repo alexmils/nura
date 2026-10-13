@@ -16,7 +16,7 @@ export type BlsToolbarField =
   | "animation"
   | "vibration";
 
-const VIBRATION_ORDER: VibrationMode[] = ["off", "subtle", "soft", "normal"];
+const VIBRATION_ORDER: VibrationMode[] = ["off", "subtle", "soft", "normal", "hard"];
 
 export function speedFieldIndex(field: BlsToolbarField): SpeedPresetIndex | null {
   if (field === "speed0") return 0;

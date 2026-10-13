@@ -114,6 +114,7 @@ const VIBRATION_OPTIONS: { value: VibrationMode; label: string }[] = [
   { value: "subtle", label: "Subtle" },
   { value: "soft", label: "Soft" },
   { value: "normal", label: "Normal" },
+  { value: "hard", label: "Hard" },
 ];
 
 function formatHz(hz: number): string {
@@ -329,10 +330,8 @@ function PreviewStage({
   onEdgeRef.current = onEdge;
 
   useEffect(() => {
-    const ball = ballRef.current;
-    const flashA = flashARef.current;
-    const flashB = flashBRef.current;
     if (!playing) {
+      const ball = ballRef.current;
       if (ball) ball.style.transform = "translate3d(-50%, -50%, 0)";
       return;
     }
@@ -345,8 +344,12 @@ function PreviewStage({
 
     const paint = () => {
       const stage = stageRef.current;
+      const ball = ballRef.current;
+      const flashA = flashARef.current;
+      const flashB = flashBRef.current;
       const current = blsRef.current;
       if (!stage) return;
+      const showDot = current.animation === "dot";
       const size = Math.max(18, Math.round(current.ballSize * 0.45));
       const travelX = Math.max(0, stage.clientWidth - size);
       const travelY = Math.max(0, stage.clientHeight - size);
@@ -356,14 +359,17 @@ function PreviewStage({
         stage.clientHeight,
         surpriseRef.current
       );
-      if (current.animation === "dot" && ball) {
+      if (ball) ball.style.visibility = showDot ? "visible" : "hidden";
+      if (flashA) flashA.style.visibility = showDot ? "hidden" : "visible";
+      if (flashB) flashB.style.visibility = showDot ? "hidden" : "visible";
+      if (showDot && ball) {
         const offset = ballTravelOffset(path, pos, travelX, travelY);
         ball.style.width = `${size}px`;
         ball.style.height = `${size}px`;
         ball.style.background = current.ballColor;
         ball.style.transform = `translate3d(${offset.x}px, ${offset.y}px, 0)`;
       }
-      if (current.animation === "flash") {
+      if (!showDot) {
         const clips = flashClipPaths(path);
         const start = flashPaint(
           current.brightenFlashes,
@@ -424,24 +430,37 @@ function PreviewStage({
       style={{ background: bls.background }}
       aria-hidden="true"
     >
-      {bls.animation === "flash" && playing ? (
+      {playing ? (
         <>
-          <div ref={flashARef} className="gear-preview-flash gear-preview-flash-full" />
-          <div ref={flashBRef} className="gear-preview-flash gear-preview-flash-full" />
+          <div
+            ref={flashARef}
+            className="gear-preview-flash gear-preview-flash-full"
+            style={{
+              visibility: bls.animation === "flash" ? "visible" : "hidden",
+              background: bls.flashColor,
+            }}
+          />
+          <div
+            ref={flashBRef}
+            className="gear-preview-flash gear-preview-flash-full"
+            style={{
+              visibility: bls.animation === "flash" ? "visible" : "hidden",
+              background: bls.flashColor,
+            }}
+          />
+          <div
+            ref={ballRef}
+            className="gear-preview-ball"
+            style={{
+              width: previewSize,
+              height: previewSize,
+              background: bls.ballColor,
+              left: 0,
+              top: 0,
+              visibility: bls.animation === "dot" ? "visible" : "hidden",
+            }}
+          />
         </>
-      ) : null}
-      {bls.animation === "dot" && playing ? (
-        <div
-          ref={ballRef}
-          className="gear-preview-ball"
-          style={{
-            width: previewSize,
-            height: previewSize,
-            background: bls.ballColor,
-            left: 0,
-            top: 0,
-          }}
-        />
       ) : null}
       {!playing ? (
         <div className="gear-preview-idle">
@@ -878,7 +897,9 @@ export function GearPanel({
                   Standard
                 </ChoiceChip>
               </div>
-              <p className="gear-help">Standard is a white flash. Off uses the flash color.</p>
+              <p className="gear-help">
+                Standard brightens the flash color. Off uses it as you set it.
+              </p>
               <RestoreDefaults onClick={() => onChange(blsSectionDefaultPatch("animation"))} />
             </GearSection>
 

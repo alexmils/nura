@@ -19,7 +19,7 @@ export type AnimationPath =
   | "diagonal-down"
   | "vertical"
   | "random";
-/** Flash brightness. Standard is a white flash. Off uses the flash color. */
+/** Flash brightness. Standard brightens the flash color. Off uses that color as set. */
 export type BrightenFlashes = "off" | "standard";
 /** Synthesized stereo sounds. See `lib/bls-sounds.ts`. */
 export type BlsSoundId =
@@ -42,9 +42,11 @@ export type LegacySoundMode = "mute" | "click" | "pulse" | "tone";
 export type RepeatMode = number | "infinity";
 export type RepeatPresetIndex = 0 | 1;
 /**
- * Off, plus three strengths. Legacy `none` migrates to `off`, `hard` to `normal`.
+ * Off, then Subtle, Soft, Normal, and Hard.
+ * Hard is the strongest pulse the device can play.
+ * Legacy `none` migrates to `off`.
  */
-export type VibrationMode = "off" | "subtle" | "soft" | "normal";
+export type VibrationMode = "off" | "subtle" | "soft" | "normal" | "hard";
 
 /** Session start choice: pending until user picks guided or free. */
 export type SessionKind = "pending" | "guided" | "free";

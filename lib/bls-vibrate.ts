@@ -7,6 +7,8 @@ export const DEVICE_VIBRATE_MS: Record<VibrationMode, number | number[]> = {
   subtle: 12,
   soft: 28,
   normal: [40, 30, 55],
+  /** Longest pulse. The Vibration API has no amplitude, so duration is the ceiling. */
+  hard: 250,
 };
 
 export function deviceVibrationSupported(): boolean {

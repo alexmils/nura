@@ -91,6 +91,34 @@ export function flashClipPaths(path: ConcreteAnimationPath): {
   }
 }
 
+/**
+ * Lift a #rrggbb flash toward white while keeping most of its hue.
+ * Already-white (and any mix that rounds to white) stays #ffffff.
+ * Anything that is not #rrggbb is returned unchanged.
+ */
+export function brightenFlashColor(hex: string): string {
+  const match = /^#([0-9a-fA-F]{6})$/.exec(hex.trim());
+  if (!match) return hex;
+  const n = parseInt(match[1], 16);
+  const keep = 0.62;
+  const mix = (channel: number) => Math.round(channel * keep + 255 * (1 - keep));
+  const r = mix((n >> 16) & 255);
+  const g = mix((n >> 8) & 255);
+  const b = mix(n & 255);
+  const byte = (channel: number) =>
+    Math.max(0, Math.min(255, channel)).toString(16).padStart(2, "0");
+  return `#${byte(r)}${byte(g)}${byte(b)}`;
+}
+
+/**
+ * Paint one half of a flash.
+ *
+ * Off always uses flashColor (stronger on the lit half).
+ * Standard still brightens: the lit half is flashColor lifted toward white,
+ * and that result is pure white only when the chosen color is already white.
+ * The resting half stays flashColor, softer on a light background and hidden
+ * on a dark one, so the set is never forced to black and white.
+ */
 export function flashPaint(
   brighten: BrightenFlashes,
   flashColor: string,
@@ -98,12 +126,10 @@ export function flashPaint(
   background = "#ffffff"
 ): { color: string; opacity: string } {
   if (brighten === "standard") {
-    if (active) return { color: "#ffffff", opacity: "1" };
-    // A white flash disappears on a light canvas. Darken the resting side so
-    // the lit side still reads as a brightness change.
+    if (active) return { color: brightenFlashColor(flashColor), opacity: "1" };
     return blsBackgroundIsDark(background)
-      ? { color: "#000000", opacity: "0" }
-      : { color: "#000000", opacity: "0.28" };
+      ? { color: flashColor, opacity: "0" }
+      : { color: flashColor, opacity: "0.28" };
   }
   return { color: flashColor, opacity: active ? "0.55" : "0.08" };
 }

@@ -140,6 +140,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Local Google Ads MCP reads `.env` and can list a campaign or create one that stays paused. It cannot enable an ad.
 - [internal] Nura Google Ads MCP can create a paused sales ad: Search with a landing URL and text, or Performance Max with a landing URL. Neither can be enabled. The existing Search create stays.
 - Adjustments remember two repeat presets, a left and right sound with a preview, the path of the set, and vibration strength
+- Adjustments vibration has a Hard level
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -399,6 +400,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Meta and Google Ads cards use larger type so the title, KPIs, search, and filters are readable
 - [internal] Admin Meta and Google campaign search turns a word into a removable tag on Enter and keeps a campaign when that word is in the name, account, status, type, or landing site
 - Stereo sound rows in Adjustments: the sound name sits with its menu arrow, and the round play button stays on the right edge
+- Mute and Reverse switches use a muted olive track while off, so the white knob reads on the light green panel
+- Live preview keeps moving when you switch between dot and flash, or change speed, color, path, sound, or vibration while it is playing
+- Selected Adjustments chips use a lighter sage fill, with dark text, so the choice stays clear on the green panel
+- Repeat counts in Adjustments use the same sage fill and dark text as the other selected controls
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
@@ -735,6 +740,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Performance Max image bytes stay in the local ads MCP, so the admin page no longer pulls node:zlib into the Next build.
 - [internal] Nura Google Ads MCP removes a paused campaign with a remove operation, including when the agent calls delete_campaign. Setting status to REMOVED is rejected by Google.
 - [internal] Nura Google Ads MCP can suggest, add, and remove places, add and remove keywords, and change a paused sales ad. Search text is replaced with a new paused ad. A campaign still cannot be enabled.
+- Adjustments: the selected animation, path, and flash choice is filled in so you can see which one is on
+- Live preview flashes keep the color you pick. Standard still brightens that color, and only a white flash color stays white
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

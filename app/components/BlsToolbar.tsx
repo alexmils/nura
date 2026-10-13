@@ -66,6 +66,7 @@ const VIBRATION_OPTIONS: {
   { value: "subtle", label: "Subtle", icon: <Vibrate size={13} strokeWidth={1.75} /> },
   { value: "soft", label: "Soft", icon: <Vibrate size={15} strokeWidth={2} /> },
   { value: "normal", label: "Normal", icon: <Vibrate size={17} strokeWidth={2.5} /> },
+  { value: "hard", label: "Hard", icon: <Vibrate size={19} strokeWidth={2.75} /> },
 ];
 
 function BlsGroup({

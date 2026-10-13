@@ -34,7 +34,7 @@ const PATHS = new Set<AnimationPath>([
   "vertical",
   "random",
 ]);
-const VIBRATIONS = new Set<VibrationMode>(["off", "subtle", "soft", "normal"]);
+const VIBRATIONS = new Set<VibrationMode>(["off", "subtle", "soft", "normal", "hard"]);
 
 export type BlsPrefsSection =
   | "speed"
@@ -52,13 +52,12 @@ function cloneBls(bls: BlsSettings): BlsSettings {
   };
 }
 
-/** Legacy none → off, hard → normal. Unknown values fall back to the default. */
+/** Legacy none → off. Unknown values fall back to the default. */
 export function migrateVibrationMode(raw: unknown): VibrationMode {
   if (typeof raw === "string" && VIBRATIONS.has(raw as VibrationMode)) {
     return raw as VibrationMode;
   }
   if (raw === "none") return "off";
-  if (raw === "hard") return "normal";
   return DEFAULT_BLS.vibration;
 }
 

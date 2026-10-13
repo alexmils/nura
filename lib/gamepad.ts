@@ -15,6 +15,8 @@ export const VIBRATION_INTENSITY: Record<VibrationMode, number> = {
   subtle: 0.15,
   soft: 0.35,
   normal: 1,
+  /** Actuator magnitudes cap at 1. Hard uses that ceiling on both motors. */
+  hard: 1,
 };
 
 /** @deprecated Use rumble(mode) profiles instead */
@@ -28,7 +30,7 @@ export interface RumbleProfile {
   strongMagnitude: number;
 }
 
-/** Per-mode rumble. Subtle is a light tap, normal is a longer strong pulse. */
+/** Per-mode rumble. Hard pins both motors at the dual-rumble ceiling (1). */
 export const RUMBLE_PROFILE: Record<VibrationMode, RumbleProfile | null> = {
   off: null,
   subtle: {
@@ -44,6 +46,11 @@ export const RUMBLE_PROFILE: Record<VibrationMode, RumbleProfile | null> = {
   normal: {
     duration: 140,
     weakMagnitude: 0.55,
+    strongMagnitude: 1,
+  },
+  hard: {
+    duration: 250,
+    weakMagnitude: 1,
     strongMagnitude: 1,
   },
 };

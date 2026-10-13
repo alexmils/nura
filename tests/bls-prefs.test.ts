@@ -28,6 +28,9 @@ import {
   writeRepeatPreset,
 } from "../lib/bls-repeats.ts";
 import { edgeSound } from "../lib/bls-sounds.ts";
+import { DEVICE_VIBRATE_MS } from "../lib/bls-vibrate.ts";
+import { adjustBlsToolbarField } from "../lib/bls-toolbar-nav.ts";
+import { RUMBLE_PROFILE, VIBRATION_INTENSITY } from "../lib/gamepad.ts";
 import { DEFAULT_BLS } from "../lib/types.ts";
 
 function memoryStorage(): Storage {
@@ -202,7 +205,7 @@ describe("parseBlsSettings", () => {
     assert.equal(pulse!.leftSound, "beep-g3");
     assert.equal(pulse!.rightSound, "beep-g3");
     assert.equal(pulse!.soundMuted, false);
-    assert.equal(pulse!.vibration, "normal");
+    assert.equal(pulse!.vibration, "hard");
 
     const tone = parseBlsSettings({ sound: "tone", vibration: "none" });
     assert.equal(tone!.leftSound, "beep-a4");
@@ -215,7 +218,43 @@ describe("parseBlsSettings", () => {
     assert.equal(muted!.rightSound, DEFAULT_BLS.rightSound);
 
     assert.equal(migrateVibrationMode("subtle"), "subtle");
+    assert.equal(migrateVibrationMode("hard"), "hard");
     assert.equal(migrateVibrationMode("mega"), "soft");
+  });
+
+  it("keeps Hard as the strongest vibration and persists it", () => {
+    const parsed = parseBlsSettings({ vibration: "hard" });
+    assert.equal(parsed!.vibration, "hard");
+
+    const stored = memoryStorage();
+    saveBlsPrefs("user-1", { ...DEFAULT_BLS, vibration: "hard" }, stored);
+    assert.equal(loadBlsPrefs("user-1", stored).vibration, "hard");
+
+    const normal = RUMBLE_PROFILE.normal;
+    const hard = RUMBLE_PROFILE.hard;
+    assert.ok(normal && hard);
+    assert.equal(hard.weakMagnitude, 1);
+    assert.equal(hard.strongMagnitude, 1);
+    assert.ok(hard.weakMagnitude > normal.weakMagnitude);
+    assert.ok(hard.strongMagnitude >= normal.strongMagnitude);
+    assert.ok(hard.duration > normal.duration);
+    assert.equal(VIBRATION_INTENSITY.hard, 1);
+    assert.ok(VIBRATION_INTENSITY.hard >= VIBRATION_INTENSITY.normal);
+
+    const normalOn = Array.isArray(DEVICE_VIBRATE_MS.normal)
+      ? DEVICE_VIBRATE_MS.normal.filter((_, i) => i % 2 === 0).reduce((sum, ms) => sum + ms, 0)
+      : DEVICE_VIBRATE_MS.normal;
+    const hardOn = Array.isArray(DEVICE_VIBRATE_MS.hard)
+      ? DEVICE_VIBRATE_MS.hard.filter((_, i) => i % 2 === 0).reduce((sum, ms) => sum + ms, 0)
+      : DEVICE_VIBRATE_MS.hard;
+    assert.ok(hardOn > normalOn);
+
+    const stepped = adjustBlsToolbarField(
+      { ...DEFAULT_BLS, vibration: "normal" },
+      "vibration",
+      1
+    );
+    assert.equal(stepped.vibration, "hard");
   });
 
   it("keeps explicit stereo presets and a blank unlimited slot", () => {

@@ -207,7 +207,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     placement: "top",
     kicker: "Controller",
     title: "Joystick and tappers",
-    body: "Connect a joystick, tappers, or a gamepad and this control turns on: Off, Subtle, Soft, or Normal, when the set reaches each end. iPhone Safari cannot vibrate. Until a controller is connected it reads Disconnected. The main button starts and pauses, and the stick or D-pad moves between controls.",
+    body: "Connect a joystick, tappers, or a gamepad and this control turns on: Off, Subtle, Soft, Normal, or Hard, when the set reaches each end. iPhone Safari cannot vibrate. Until a controller is connected it reads Disconnected. The main button starts and pauses, and the stick or D-pad moves between controls.",
     group: "session",
     prepare: ["chooseSelfGuided"],
   },
