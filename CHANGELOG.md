@@ -398,6 +398,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Home + `/blog` cards: Balancia-style image fade overlay (white gradient + soft frosted blur)
 - [internal] Admin Meta and Google Ads cards use larger type so the title, KPIs, search, and filters are readable
 - [internal] Admin Meta and Google campaign search turns a word into a removable tag on Enter and keeps a campaign when that word is in the name, account, status, type, or landing site
+- Stereo sound rows in Adjustments: the sound name sits with its menu arrow, and the round play button stays on the right edge
 
 ### Fixed
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)

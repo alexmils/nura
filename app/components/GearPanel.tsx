@@ -500,7 +500,7 @@ function SoundSelect({
         aria-label={`Play ${blsSoundLabel(id)}`}
         onClick={() => onPreview(id)}
       >
-        <Play size={14} strokeWidth={2.25} />
+        <Play size={15} strokeWidth={2.25} className="gear-play-icon" />
       </button>
     </div>
   );
