@@ -3,7 +3,6 @@ import { adjustRepeatMode } from "./bls-repeats";
 import type {
   AnimationMode,
   BlsSettings,
-  SoundMode,
   SpeedPresetIndex,
   VibrationMode,
 } from "./types";
@@ -17,8 +16,7 @@ export type BlsToolbarField =
   | "animation"
   | "vibration";
 
-const SOUND_ORDER: SoundMode[] = ["mute", "click", "pulse", "tone"];
-const VIBRATION_ORDER: VibrationMode[] = ["none", "soft", "hard"];
+const VIBRATION_ORDER: VibrationMode[] = ["off", "subtle", "soft", "normal"];
 
 export function speedFieldIndex(field: BlsToolbarField): SpeedPresetIndex | null {
   if (field === "speed0") return 0;
@@ -71,10 +69,17 @@ export function adjustBlsToolbarField(
   }
 
   switch (field) {
-    case "repeats":
-      return { repeats: adjustRepeatMode(bls.repeats, direction) };
+    case "repeats": {
+      const next = adjustRepeatMode(bls.repeats, direction);
+      const repeatPresets: BlsSettings["repeatPresets"] = [
+        bls.repeatPresets[0],
+        bls.repeatPresets[1],
+      ];
+      repeatPresets[bls.activeRepeatPreset] = next;
+      return { repeats: next, repeatPresets };
+    }
     case "sound":
-      return { sound: cycle(SOUND_ORDER, bls.sound, direction) };
+      return { soundMuted: !bls.soundMuted };
     case "animation":
       return {
         animation: cycle<AnimationMode>(["dot", "flash"], bls.animation, direction),

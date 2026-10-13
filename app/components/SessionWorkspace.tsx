@@ -849,7 +849,13 @@ export function SessionWorkspace() {
           ballSize={bls.ballSize}
           background={bls.background}
           animation={bls.animation}
-          sound={bls.sound}
+          animationPath={bls.animationPath}
+          brightenFlashes={bls.brightenFlashes}
+          flashColor={bls.flashColor}
+          soundMuted={bls.soundMuted}
+          leftSound={bls.leftSound}
+          rightSound={bls.rightSound}
+          reverseStereo={bls.reverseStereo}
           setLengthSec={bls.setLengthSec}
           repeats={bls.repeats}
           vibration={bls.vibration}

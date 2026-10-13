@@ -5,21 +5,62 @@
  */
 
 import { normalizeSpeedPresets } from "@/lib/bls-speed";
-import { parseRepeatMode } from "@/lib/bls-repeats";
+import {
+  parseRepeatMode,
+  parseRepeatPresetValue,
+  BLS_REPEATS_DEFAULT,
+} from "@/lib/bls-repeats";
+import { isBlsSoundId, migrateLegacySound } from "@/lib/bls-sounds";
 import {
   DEFAULT_BLS,
   type AnimationMode,
+  type AnimationPath,
   type BlsSettings,
-  type SoundMode,
+  type BrightenFlashes,
+  type RepeatMode,
+  type RepeatPresetIndex,
   type SpeedPresetIndex,
   type VibrationMode,
 } from "@/lib/types";
 
 export const BLS_PREFS_STORAGE_PREFIX = "emdr_bls_prefs_v1";
 
-const SOUND_MODES = new Set<SoundMode>(["mute", "click", "pulse", "tone"]);
 const ANIMATIONS = new Set<AnimationMode>(["dot", "flash"]);
-const VIBRATIONS = new Set<VibrationMode>(["none", "soft", "hard"]);
+const PATHS = new Set<AnimationPath>([
+  "auto",
+  "horizontal",
+  "diagonal-up",
+  "diagonal-down",
+  "vertical",
+  "random",
+]);
+const VIBRATIONS = new Set<VibrationMode>(["off", "subtle", "soft", "normal"]);
+
+export type BlsPrefsSection =
+  | "speed"
+  | "repeats"
+  | "sound"
+  | "animation"
+  | "look"
+  | "vibration";
+
+function cloneBls(bls: BlsSettings): BlsSettings {
+  return {
+    ...bls,
+    speedPresets: [...bls.speedPresets],
+    repeatPresets: [bls.repeatPresets[0], bls.repeatPresets[1]],
+  };
+}
+
+/** Legacy none → off, hard → normal. Unknown values fall back to the default. */
+export function migrateVibrationMode(raw: unknown): VibrationMode {
+  if (typeof raw === "string" && VIBRATIONS.has(raw as VibrationMode)) {
+    return raw as VibrationMode;
+  }
+  if (raw === "none") return "off";
+  if (raw === "hard") return "normal";
+  return DEFAULT_BLS.vibration;
+}
 
 export function blsPrefsStorageKey(userId: string | null): string {
   return userId
@@ -60,35 +101,145 @@ export function parseBlsSettings(raw: unknown): BlsSettings | null {
     activeSpeedPreset = o.activeSpeedPreset;
   }
 
-  const repeats = parseRepeatMode(o.repeats);
+  const repeats = parseRepeatFields(o);
 
-  const sound =
-    typeof o.sound === "string" && SOUND_MODES.has(o.sound as SoundMode)
-      ? (o.sound as SoundMode)
-      : DEFAULT_BLS.sound;
+  const stereo = parseStereo(o);
 
   const animation =
     typeof o.animation === "string" && ANIMATIONS.has(o.animation as AnimationMode)
       ? (o.animation as AnimationMode)
       : DEFAULT_BLS.animation;
 
-  const vibration =
-    typeof o.vibration === "string" && VIBRATIONS.has(o.vibration as VibrationMode)
-      ? (o.vibration as VibrationMode)
-      : DEFAULT_BLS.vibration;
+  const animationPath =
+    typeof o.animationPath === "string" && PATHS.has(o.animationPath as AnimationPath)
+      ? (o.animationPath as AnimationPath)
+      : DEFAULT_BLS.animationPath;
+
+  const brightenFlashes: BrightenFlashes =
+    o.brightenFlashes === "standard" ? "standard" : "off";
+
+  const vibration = migrateVibrationMode(o.vibration);
 
   return {
     speedPresets,
     activeSpeedPreset,
-    repeats,
+    repeats: repeats.repeats,
+    repeatPresets: repeats.repeatPresets,
+    activeRepeatPreset: repeats.activeRepeatPreset,
     setLengthSec: clampSetLengthSec(Number(o.setLengthSec)),
-    sound,
+    soundMuted: stereo.soundMuted,
+    leftSound: stereo.leftSound,
+    rightSound: stereo.rightSound,
+    reverseStereo: stereo.reverseStereo,
     animation,
+    animationPath,
+    brightenFlashes,
     ballColor: isHexColor(o.ballColor) ? o.ballColor.toLowerCase() : DEFAULT_BLS.ballColor,
+    flashColor: isHexColor(o.flashColor) ? o.flashColor.toLowerCase() : DEFAULT_BLS.flashColor,
     ballSize: clampBallSize(Number(o.ballSize)),
     background: isHexColor(o.background) ? o.background.toLowerCase() : DEFAULT_BLS.background,
     vibration,
   };
+}
+
+function parseRepeatFields(o: Record<string, unknown>): {
+  repeatPresets: [RepeatMode, RepeatMode];
+  activeRepeatPreset: RepeatPresetIndex;
+  repeats: RepeatMode;
+} {
+  if (Array.isArray(o.repeatPresets) && o.repeatPresets.length >= 2) {
+    const first = parseRepeatPresetValue(o.repeatPresets[0]);
+    const second = parseRepeatPresetValue(o.repeatPresets[1]);
+    if (first !== null && second !== null) {
+      const repeatPresets: [RepeatMode, RepeatMode] = [first, second];
+      const activeRepeatPreset: RepeatPresetIndex = o.activeRepeatPreset === 1 ? 1 : 0;
+      return {
+        repeatPresets,
+        activeRepeatPreset,
+        repeats: repeatPresets[activeRepeatPreset],
+      };
+    }
+  }
+
+  const legacy = o.repeats === undefined ? DEFAULT_BLS.repeats : parseRepeatMode(o.repeats);
+  const count = legacy === "infinity" ? BLS_REPEATS_DEFAULT : legacy;
+  const repeatPresets: [RepeatMode, RepeatMode] = [count, "infinity"];
+  const activeRepeatPreset: RepeatPresetIndex = legacy === "infinity" ? 1 : 0;
+  return {
+    repeatPresets,
+    activeRepeatPreset,
+    repeats: repeatPresets[activeRepeatPreset],
+  };
+}
+
+function parseStereo(o: Record<string, unknown>): {
+  soundMuted: boolean;
+  leftSound: BlsSettings["leftSound"];
+  rightSound: BlsSettings["rightSound"];
+  reverseStereo: boolean;
+} {
+  const legacy = migrateLegacySound(o.sound);
+  const explicitLeft = isBlsSoundId(o.leftSound) ? o.leftSound : null;
+  const explicitRight = isBlsSoundId(o.rightSound) ? o.rightSound : null;
+  const reverseStereo = o.reverseStereo === true;
+
+  if (legacy?.muted && !explicitLeft && !explicitRight) {
+    return {
+      soundMuted: true,
+      leftSound: DEFAULT_BLS.leftSound,
+      rightSound: DEFAULT_BLS.rightSound,
+      reverseStereo,
+    };
+  }
+
+  const fallback = legacy?.sound;
+  const leftSound = explicitLeft ?? fallback ?? DEFAULT_BLS.leftSound;
+  const rightSound = explicitRight ?? fallback ?? DEFAULT_BLS.rightSound;
+  const soundMuted =
+    typeof o.soundMuted === "boolean" ? o.soundMuted : legacy ? legacy.muted : DEFAULT_BLS.soundMuted;
+
+  return { soundMuted, leftSound, rightSound, reverseStereo };
+}
+
+/** Reset one adjustments section without touching the others. */
+export function blsSectionDefaultPatch(section: BlsPrefsSection): Partial<BlsSettings> {
+  const d = DEFAULT_BLS;
+  switch (section) {
+    case "speed":
+      return {
+        speedPresets: [...d.speedPresets],
+        activeSpeedPreset: d.activeSpeedPreset,
+      };
+    case "repeats":
+      return {
+        repeatPresets: [d.repeatPresets[0], d.repeatPresets[1]],
+        activeRepeatPreset: d.activeRepeatPreset,
+        repeats: d.repeats,
+        setLengthSec: d.setLengthSec,
+      };
+    case "sound":
+      return {
+        soundMuted: d.soundMuted,
+        leftSound: d.leftSound,
+        rightSound: d.rightSound,
+        reverseStereo: d.reverseStereo,
+      };
+    case "animation":
+      return {
+        animation: d.animation,
+        animationPath: d.animationPath,
+        brightenFlashes: d.brightenFlashes,
+      };
+    case "look":
+      return {
+        ballColor: d.ballColor,
+        flashColor: d.flashColor,
+        ballSize: d.ballSize,
+        background: d.background,
+      };
+    case "vibration":
+      return { vibration: d.vibration };
+  }
 }
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -100,17 +251,15 @@ export function loadBlsPrefs(
   const store =
     storage ??
     (typeof window !== "undefined" ? window.localStorage : null);
-  if (!store) return { ...DEFAULT_BLS, speedPresets: [...DEFAULT_BLS.speedPresets] };
+  if (!store) return cloneBls(DEFAULT_BLS);
 
   try {
     const raw = store.getItem(blsPrefsStorageKey(userId));
-    if (!raw) {
-      return { ...DEFAULT_BLS, speedPresets: [...DEFAULT_BLS.speedPresets] };
-    }
+    if (!raw) return cloneBls(DEFAULT_BLS);
     const parsed = parseBlsSettings(JSON.parse(raw) as unknown);
-    return parsed ?? { ...DEFAULT_BLS, speedPresets: [...DEFAULT_BLS.speedPresets] };
+    return parsed ?? cloneBls(DEFAULT_BLS);
   } catch {
-    return { ...DEFAULT_BLS, speedPresets: [...DEFAULT_BLS.speedPresets] };
+    return cloneBls(DEFAULT_BLS);
   }
 }
 
@@ -164,10 +313,19 @@ export function isDefaultBlsSettings(bls: BlsSettings): boolean {
   return (
     bls.activeSpeedPreset === d.activeSpeedPreset &&
     bls.repeats === d.repeats &&
+    bls.activeRepeatPreset === d.activeRepeatPreset &&
+    bls.repeatPresets[0] === d.repeatPresets[0] &&
+    bls.repeatPresets[1] === d.repeatPresets[1] &&
     bls.setLengthSec === d.setLengthSec &&
-    bls.sound === d.sound &&
+    bls.soundMuted === d.soundMuted &&
+    bls.leftSound === d.leftSound &&
+    bls.rightSound === d.rightSound &&
+    bls.reverseStereo === d.reverseStereo &&
     bls.animation === d.animation &&
+    bls.animationPath === d.animationPath &&
+    bls.brightenFlashes === d.brightenFlashes &&
     bls.ballColor.toLowerCase() === d.ballColor.toLowerCase() &&
+    bls.flashColor.toLowerCase() === d.flashColor.toLowerCase() &&
     bls.ballSize === d.ballSize &&
     bls.background.toLowerCase() === d.background.toLowerCase() &&
     bls.vibration === d.vibration &&
