@@ -157,6 +157,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Focus no longer treats everyday words like relation or sorgfältig as a theme, and it counts en and en-US as one language before the 3-person line
 - [internal] Focus drops the long method note and shows a short aim line above the table
 - [internal] Places puts the map beside Sign-ins and New accounts so the page is one row, not three stacked blocks
+- [internal] Places is two rows: a smaller map, then Sign-ins and New accounts side by side
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

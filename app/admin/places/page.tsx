@@ -148,8 +148,10 @@ export default function AdminPlacesPage() {
                 <p className="admin-panel-sub">No sign-ins in this window yet.</p>
               )}
             </section>
-            <BucketBlock title="Sign-ins" bucket={summary.signIns} />
-            <BucketBlock title="New accounts" bucket={summary.signups} />
+            <div className="admin-places-split">
+              <BucketBlock title="Sign-ins" bucket={summary.signIns} />
+              <BucketBlock title="New accounts" bucket={summary.signups} />
+            </div>
           </div>
         ) : null}
       </main>
