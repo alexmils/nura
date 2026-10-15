@@ -103,6 +103,14 @@ export type EmailTemplateData = {
     headline: string;
     adminUserUrl: string;
   };
+  admin_subscription_resumed: {
+    customerName: string;
+    customerEmail: string;
+    planLabel: string;
+    renewsAt: string;
+    mode: string;
+    adminUserUrl: string;
+  };
 };
 
 const brandColor = BRAND_COLORS.earth;
@@ -544,6 +552,32 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         headline,
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) · <strong>${plan}</strong> (${mode}).</p>
          ${accessLine}
+         ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
+      );
+      return { subject, html, text };
+    }
+    case "admin_subscription_resumed": {
+      const d = data as EmailTemplateData["admin_subscription_resumed"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const plan = escapeEmailHtml(d.planLabel);
+      const mode = escapeEmailHtml(d.mode);
+      const renewLine = d.renewsAt?.trim()
+        ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Renews: ${escapeEmailHtml(d.renewsAt)}</p>`
+        : "";
+      const subject = `Subscription kept: ${d.planLabel} · ${d.mode}`;
+      const text = [
+        `${d.customerName} <${d.customerEmail}> kept their ${d.planLabel} subscription (${d.mode}).`,
+        ...(d.renewsAt?.trim() ? [`Renews: ${d.renewsAt}`] : []),
+        "",
+        `Open user: ${d.adminUserUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Subscription kept",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) kept <strong>${plan}</strong> (${mode}).</p>
+         ${renewLine}
          ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
         "This note is for the platform admin."
       );

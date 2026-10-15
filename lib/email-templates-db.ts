@@ -142,6 +142,15 @@ function sampleData(id: EmailTemplateId) {
         headline: "Subscription cancel scheduled",
         adminUserUrl: "https://example.com/admin/users/u1",
       };
+    case "admin_subscription_resumed":
+      return {
+        customerName: "Alex",
+        customerEmail: "alex@example.com",
+        planLabel: "Monthly",
+        renewsAt: "October 22, 2026",
+        mode: "Live",
+        adminUserUrl: "https://example.com/admin/users/u1",
+      };
   }
 }
 

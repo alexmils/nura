@@ -301,6 +301,49 @@ export async function notifyAdminsOfSubscriptionCancel(input: {
   }
 }
 
+export async function notifyAdminsOfSubscriptionResume(input: {
+  userId: string;
+  plan?: string | null;
+  renewsAt?: string | Date | null;
+  livemode: boolean;
+}): Promise<{ sent: number; reason?: string }> {
+  try {
+    const user = await getUserById(input.userId);
+    if (!user?.email) return { sent: 0, reason: "no customer" };
+
+    const renews =
+      input.renewsAt == null
+        ? ""
+        : formatReceiptDate(
+            input.renewsAt instanceof Date
+              ? input.renewsAt
+              : new Date(input.renewsAt)
+          );
+
+    const customerName =
+      user.name?.trim() || user.email.split("@")[0] || "Customer";
+    const copy = await renderStoredTemplate("admin_subscription_resumed", {
+      customerName,
+      customerEmail: user.email,
+      planLabel: receiptPlanLabel(input.plan),
+      renewsAt: renews,
+      mode: input.livemode ? "Live" : "Sandbox",
+      adminUserUrl: await getAppUrl(`/admin/users/${input.userId}`),
+    });
+
+    return await sendToOperatorRecipients({
+      ...copy,
+      logLabel: "admin subscription resume notify",
+    });
+  } catch (err) {
+    console.error("[email] admin subscription resume notify failed", err);
+    return {
+      sent: 0,
+      reason: err instanceof Error ? err.message : "send failed",
+    };
+  }
+}
+
 export async function notifyAdminsOfSignup(input: {
   userId: string;
   email: string;

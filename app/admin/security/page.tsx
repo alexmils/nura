@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
@@ -37,7 +37,7 @@ const OUTCOME_LABEL: Record<string, string> = {
   locked: "Locked",
 };
 
-export default function AdminSecurityPage() {
+function AdminSecurityPageInner() {
   const [tab, setTab] = useAdminTab(
     TABS.map((item) => item.id),
     "limits"
@@ -375,5 +375,19 @@ export default function AdminSecurityPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AdminSecurityPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="admin-page flex min-h-screen items-center justify-center">
+          <p className="text-[var(--text-secondary)]">Loading…</p>
+        </div>
+      }
+    >
+      <AdminSecurityPageInner />
+    </Suspense>
   );
 }

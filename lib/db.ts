@@ -228,6 +228,7 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_livemode BOOLEAN;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminder_sent_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_notice_sent_at TIMESTAMPTZ;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS brevo_contact_synced_at TIMESTAMPTZ;
@@ -298,6 +299,28 @@ async function runSchemaMigrations(db: PoolClient) {
       ON billing_events(user_id, occurred_at DESC);
     CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_events_stripe_event_id
       ON billing_events(stripe_event_id);
+    CREATE TABLE IF NOT EXISTS subscription_cancel_feedback (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      stripe_subscription_id TEXT,
+      reason_ids TEXT[] NOT NULL DEFAULT '{}',
+      comment TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscription_cancel_feedback_user_created
+      ON subscription_cancel_feedback(user_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS subscription_retention_events (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      stripe_subscription_id TEXT,
+      plan TEXT NOT NULL,
+      action TEXT NOT NULL,
+      reason_ids TEXT[] NOT NULL DEFAULT '{}',
+      comment TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_subscription_retention_events_plan_action
+      ON subscription_retention_events(plan, action, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_audit_events_actor_created
       ON audit_events(actor_user_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS llm_usage_events (

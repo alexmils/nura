@@ -10,6 +10,7 @@ import {
   type BillingPlanMeta,
 } from "@/lib/billing-constants";
 import { shouldOfferBillingPortal } from "@/lib/checkout-rules";
+import { billingSummaryStatusLabel } from "@/lib/billing-status-display";
 import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
@@ -28,6 +29,8 @@ type Status = {
   status: string;
   trialEndsAt: string | null;
   renewsAt: string | null;
+  cancelAtPeriodEnd?: boolean;
+  accessEndsAt?: string | null;
   guidedUsed: number;
   guidedLimit: number;
   guidedRemaining: number;
@@ -167,7 +170,7 @@ function BillingPageInner() {
       const data = await res.json();
       if (!res.ok) {
         if (data.code === "use_portal") {
-          setMsg(data.error ?? "Open Manage billing to continue.");
+          setMsg(data.error ?? "Open Manage billing to update your card.");
           return;
         }
         setMsg(data.error ?? "Checkout unavailable");
@@ -186,24 +189,6 @@ function BillingPageInner() {
       }
     } catch {
       setMsg("Could not start checkout.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const openPortal = async () => {
-    setBusy(true);
-    setMsg("");
-    try {
-      const res = await fetch("/api/billing/portal", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setMsg(data.error ?? "Portal unavailable");
-        return;
-      }
-      if (data.url) window.location.href = data.url;
-    } catch {
-      setMsg("Could not open billing portal.");
     } finally {
       setBusy(false);
     }
@@ -246,12 +231,29 @@ function BillingPageInner() {
                 </div>
                 <div className="settings-row settings-kv">
                   <span>Status</span>
-                  <strong className="capitalize">
-                    {status.status.replace(/_/g, " ")}
+                  <strong
+                    className={
+                      status.cancelAtPeriodEnd ? "billing-kv-canceling" : "capitalize"
+                    }
+                  >
+                    {billingSummaryStatusLabel(
+                      status.status,
+                      Boolean(status.cancelAtPeriodEnd)
+                    )}
                   </strong>
                 </div>
+                {status.cancelAtPeriodEnd && status.accessEndsAt ? (
+                  <div className="settings-row settings-kv">
+                    <span>Access ends</span>
+                    <strong>
+                      {new Date(status.accessEndsAt).toLocaleDateString()}
+                    </strong>
+                  </div>
+                ) : null}
                 {/* Once billing starts the trial end is history, not status. */}
-                {status.trialEndsAt && status.status === "trialing" && (
+                {status.trialEndsAt &&
+                  status.status === "trialing" &&
+                  !status.cancelAtPeriodEnd && (
                   <div className="settings-row settings-kv">
                     <span>Trial ends</span>
                     <strong>
@@ -259,7 +261,7 @@ function BillingPageInner() {
                     </strong>
                   </div>
                 )}
-                {status.renewsAt && (
+                {status.renewsAt && !status.cancelAtPeriodEnd && (
                   <div className="settings-row settings-kv">
                     <span>Renews</span>
                     <strong>
@@ -267,6 +269,12 @@ function BillingPageInner() {
                     </strong>
                   </div>
                 )}
+                {status.cancelAtPeriodEnd ? (
+                  <p className="billing-summary-cancel-note">
+                    Renewal is off. You keep access until the date above. Turn
+                    it back on in Manage billing.
+                  </p>
+                ) : null}
                 {status.isTrialLimited && (
                   <>
                     <div className="settings-row settings-kv">
@@ -341,14 +349,9 @@ function BillingPageInner() {
                 )}
 
                 {shouldOfferBillingPortal({ status: status?.status }) && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void openPortal()}
-                    className="btn-secondary"
-                  >
+                  <Link href="/app/billing/manage" className="btn-secondary">
                     Manage billing
-                  </button>
+                  </Link>
                 )}
 
                 {status?.needsOnboarding && (

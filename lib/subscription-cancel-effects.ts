@@ -1,5 +1,9 @@
 import { recordBillingEvent, type BillingEventStatus } from "@/lib/billing-events";
-import { notifyAdminsOfSubscriptionCancel } from "@/lib/email/admin-payment-notify";
+import {
+  notifyAdminsOfSubscriptionCancel,
+  notifyAdminsOfSubscriptionResume,
+} from "@/lib/email/admin-payment-notify";
+import { billingEventDescriptionWithReasons } from "@/lib/subscription-cancel-feedback";
 import { ensureSchemaReady, getPool } from "@/lib/db";
 
 const SCHEDULED_STATUS: BillingEventStatus = "subscription_cancel_scheduled";
@@ -31,6 +35,7 @@ export async function runSubscriptionCancelAdminEffects(input: {
   keepsAccess: boolean;
   livemode: boolean;
   occurredAt?: Date | string | number | null;
+  reasonSummary?: string | null;
 }): Promise<{ ran: boolean; reason?: string }> {
   const subId = input.stripeSubscriptionId;
   if (!subId) return { ran: false, reason: "no subscription" };
@@ -47,6 +52,10 @@ export async function runSubscriptionCancelAdminEffects(input: {
     input.accessEndsAt && !Number.isNaN(input.accessEndsAt.getTime())
       ? input.accessEndsAt.toISOString()
       : null;
+  const description = billingEventDescriptionWithReasons(
+    endLabel,
+    input.reasonSummary ?? null
+  );
 
   const { recorded } = await recordBillingEvent({
     userId: input.userId,
@@ -55,7 +64,7 @@ export async function runSubscriptionCancelAdminEffects(input: {
     status,
     amountCents: 0,
     currency: "USD",
-    description: endLabel,
+    description,
     subscriptionId: subId,
     livemode: input.livemode,
     occurredAt: input.occurredAt,
@@ -70,6 +79,54 @@ export async function runSubscriptionCancelAdminEffects(input: {
     plan: input.plan,
     accessEndsAt: input.accessEndsAt,
     keepsAccess: input.keepsAccess,
+    livemode: input.livemode,
+  });
+
+  return { ran: true };
+}
+
+/** Admin activity bell + operator email when a customer keeps their subscription. */
+export async function runSubscriptionResumeAdminEffects(input: {
+  userId: string;
+  stripeEventId: string;
+  stripeSubscriptionId: string;
+  eventType: string;
+  plan?: string | null;
+  renewsAt: Date | null;
+  livemode: boolean;
+  occurredAt?: Date | string | number | null;
+}): Promise<{ ran: boolean; reason?: string }> {
+  const subId = input.stripeSubscriptionId;
+  if (!subId) return { ran: false, reason: "no subscription" };
+
+  const endLabel =
+    input.renewsAt && !Number.isNaN(input.renewsAt.getTime())
+      ? input.renewsAt.toISOString()
+      : null;
+
+  const { recorded } = await recordBillingEvent({
+    userId: input.userId,
+    stripeEventId: input.stripeEventId,
+    eventType: input.eventType,
+    status: "subscription_resumed",
+    amountCents: 0,
+    currency: "USD",
+    description: endLabel,
+    subscriptionId: subId,
+    livemode: input.livemode,
+    occurredAt: input.occurredAt,
+  });
+
+  if (!recorded) {
+    return { ran: false, reason: "dedup race" };
+  }
+
+  await clearSubscriptionCancelScheduledActivity(subId);
+
+  await notifyAdminsOfSubscriptionResume({
+    userId: input.userId,
+    plan: input.plan,
+    renewsAt: input.renewsAt,
     livemode: input.livemode,
   });
 

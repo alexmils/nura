@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, CreditCard, UserRound } from "lucide-react";
+import { Bell, CreditCard, UserRound, Volume2, VolumeX } from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
 import type { AdminActivityItem } from "@/lib/admin-activity-format";
+import {
+  isAdminNotificationSoundMuted,
+  playAdminNotificationBeep,
+  setAdminNotificationSoundMuted,
+} from "@/lib/admin-notification-sound";
 
 const POLL_MS = 20_000;
 const SEEN_KEY = "nura-admin-activity-seen";
+const DROPDOWN_LIMIT = 10;
 
 function readSeen(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -37,13 +43,17 @@ export function AdminActivityBell() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AdminActivityItem[]>([]);
   const [unread, setUnread] = useState(0);
+  const [soundMuted, setSoundMuted] = useState(() =>
+    typeof window !== "undefined" ? isAdminNotificationSoundMuted() : false
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   const seededRef = useRef(false);
+  const prevUnreadRef = useRef(0);
 
   const poll = useCallback(async () => {
     try {
       const data = await fetchJson<{ items: AdminActivityItem[] }>(
-        "/api/admin/activity?limit=12"
+        `/api/admin/activity?limit=${DROPDOWN_LIMIT}`
       );
       const next = data.items ?? [];
       setItems(next);
@@ -53,9 +63,15 @@ export function AdminActivityBell() {
         const ids = next.map((item) => item.id);
         writeSeen([...ids, ...seen].slice(0, 80));
         setUnread(0);
+        prevUnreadRef.current = 0;
         return;
       }
-      setUnread(next.filter((item) => !seen.has(item.id)).length);
+      const newUnread = next.filter((item) => !seen.has(item.id)).length;
+      if (newUnread > prevUnreadRef.current) {
+        playAdminNotificationBeep();
+      }
+      prevUnreadRef.current = newUnread;
+      setUnread(newUnread);
     } catch {
       // Next poll retries.
     }
@@ -86,10 +102,20 @@ export function AdminActivityBell() {
     };
   }, [open]);
 
+  const toggleSound = () => {
+    const next = !soundMuted;
+    setSoundMuted(next);
+    setAdminNotificationSoundMuted(next);
+    if (!next) {
+      playAdminNotificationBeep();
+    }
+  };
+
   const markSeen = () => {
     const seen = readSeen();
     const ids = items.map((item) => item.id);
     writeSeen([...ids, ...seen]);
+    prevUnreadRef.current = 0;
     setUnread(0);
   };
 
@@ -120,32 +146,58 @@ export function AdminActivityBell() {
       {open ? (
         <div className="admin-activity-menu" role="menu">
           <p className="admin-activity-menu-title">Activity</p>
-          {items.length === 0 ? (
-            <p className="admin-activity-empty">Nothing yet.</p>
-          ) : (
-            <ul>
-              {items.map((item) => (
-                <li key={item.id}>
-                  <Link href={item.href} onClick={() => setOpen(false)}>
-                    <span className="admin-activity-icon" aria-hidden>
-                      {item.kind === "billing" ? (
-                        <CreditCard size={14} strokeWidth={2} />
-                      ) : (
-                        <UserRound size={14} strokeWidth={2} />
-                      )}
-                    </span>
-                    <span className="admin-activity-copy">
-                      <span className="admin-activity-row">
-                        <strong>{item.title}</strong>
-                        <time dateTime={item.at}>{ago(item.at)}</time>
+          <div className="admin-activity-menu-scroll">
+            {items.length === 0 ? (
+              <p className="admin-activity-empty">Nothing yet.</p>
+            ) : (
+              <ul>
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <Link href={item.href} onClick={() => setOpen(false)}>
+                      <span className="admin-activity-icon" aria-hidden>
+                        {item.kind === "billing" ? (
+                          <CreditCard size={14} strokeWidth={2} />
+                        ) : (
+                          <UserRound size={14} strokeWidth={2} />
+                        )}
                       </span>
-                      <span className="admin-activity-detail">{item.detail}</span>
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+                      <span className="admin-activity-copy">
+                        <span className="admin-activity-row">
+                          <strong>{item.title}</strong>
+                          <time dateTime={item.at}>{ago(item.at)}</time>
+                        </span>
+                        <span className="admin-activity-detail">
+                          {item.detail}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="admin-activity-menu-footer">
+            <button
+              type="button"
+              className="admin-activity-sound-toggle"
+              aria-pressed={!soundMuted}
+              onClick={toggleSound}
+            >
+              {soundMuted ? (
+                <VolumeX size={16} strokeWidth={2} aria-hidden />
+              ) : (
+                <Volume2 size={16} strokeWidth={2} aria-hidden />
+              )}
+              {soundMuted ? "Sound off" : "Sound on"}
+            </button>
+            <Link
+              href="/admin/activity"
+              className="admin-activity-see-all"
+              onClick={() => setOpen(false)}
+            >
+              See all
+            </Link>
+          </div>
         </div>
       ) : null}
     </div>

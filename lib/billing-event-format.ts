@@ -38,6 +38,8 @@ export function paymentStatusLabel(status: string): string {
       return "Cancel scheduled";
     case "subscription_canceled":
       return "Subscription ended";
+    case "subscription_resumed":
+      return "Subscription kept";
     case "checkout":
       return "Checkout";
     default:

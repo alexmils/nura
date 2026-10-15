@@ -26,6 +26,8 @@ export type EntitlementSnapshot = {
   status: SubscriptionStatus;
   trialEndsAt: string | null;
   renewsAt: string | null;
+  cancelAtPeriodEnd: boolean;
+  accessEndsAt: string | null;
   guidedUsed: number;
   guidedLimit: number;
   guidedRemaining: number;
@@ -42,6 +44,7 @@ type SubRow = {
   renews_at: string | null;
   trial_ends_at: string | null;
   access_tier: string | null;
+  cancel_at_period_end: boolean;
 };
 
 type UsageRow = {
@@ -114,6 +117,7 @@ export function buildEntitlementSnapshot(input: {
   accessTier: string | null;
   trialEndsAt: string | null;
   renewsAt: string | null;
+  cancelAtPeriodEnd?: boolean;
   guidedUsed: number;
   blsSecondsUsed: number;
   now?: Date;
@@ -140,6 +144,9 @@ export function buildEntitlementSnapshot(input: {
     accessTier === "trialing" ||
     accessTier === "active";
   const needsPayment = accessTier === "blocked" || accessTier === "none";
+  const cancelAtPeriodEnd = Boolean(input.cancelAtPeriodEnd);
+  const renewsAt = asIso(input.renewsAt);
+  const accessEndsAt = cancelAtPeriodEnd ? renewsAt : null;
 
   return {
     accessTier,
@@ -149,7 +156,9 @@ export function buildEntitlementSnapshot(input: {
     plan: input.plan || "free",
     status: normalizeStatus(input.status),
     trialEndsAt: asIso(input.trialEndsAt),
-    renewsAt: asIso(input.renewsAt),
+    renewsAt,
+    cancelAtPeriodEnd,
+    accessEndsAt,
     guidedUsed,
     guidedLimit: isTrialLimited ? TRIAL_GUIDED_SESSIONS : -1,
     guidedRemaining: isTrialLimited ? guidedRemaining : -1,
@@ -171,7 +180,8 @@ export async function getEntitlementForUser(input: {
 
   const [{ rows: subRows }, { rows: usageRows }] = await Promise.all([
     pool.query<SubRow>(
-      `SELECT plan, status, renews_at, trial_ends_at, access_tier
+      `SELECT plan, status, renews_at, trial_ends_at, access_tier,
+              COALESCE(cancel_at_period_end, FALSE) AS cancel_at_period_end
        FROM subscriptions WHERE user_id = $1`,
       [input.userId]
     ),
@@ -193,6 +203,7 @@ export async function getEntitlementForUser(input: {
     accessTier: sub?.access_tier ?? null,
     trialEndsAt: sub?.trial_ends_at ?? null,
     renewsAt: sub?.renews_at ?? null,
+    cancelAtPeriodEnd: Boolean(sub?.cancel_at_period_end),
     guidedUsed: Number(usage?.guided_sessions_used ?? 0),
     blsSecondsUsed: Number(usage?.bls_seconds_used ?? 0),
   });
@@ -208,6 +219,8 @@ export function publicEntitlement(snapshot: EntitlementSnapshot) {
     status: snapshot.status,
     trialEndsAt: snapshot.trialEndsAt,
     renewsAt: snapshot.renewsAt,
+    cancelAtPeriodEnd: snapshot.cancelAtPeriodEnd,
+    accessEndsAt: snapshot.accessEndsAt,
     guidedUsed: snapshot.guidedUsed,
     guidedLimit: snapshot.guidedLimit,
     guidedRemaining: snapshot.guidedRemaining,

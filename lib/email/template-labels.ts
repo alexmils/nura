@@ -20,6 +20,7 @@ export const EMAIL_TEMPLATE_IDS = [
   "admin_trial",
   "admin_payment",
   "admin_subscription_canceled",
+  "admin_subscription_resumed",
 ] as const;
 
 export type EmailTemplateId = (typeof EMAIL_TEMPLATE_IDS)[number];
@@ -42,6 +43,7 @@ export const EMAIL_TEMPLATE_AUDIENCE: Record<EmailTemplateId, EmailTemplateAudie
   admin_trial: "admin",
   admin_payment: "admin",
   admin_subscription_canceled: "admin",
+  admin_subscription_resumed: "admin",
 };
 
 export function isEmailTemplateId(value: unknown): value is EmailTemplateId {
@@ -67,6 +69,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   admin_trial: "Trial started",
   admin_payment: "Payment received",
   admin_subscription_canceled: "Subscription canceled",
+  admin_subscription_resumed: "Subscription kept",
 };
 
 /** Log filter. User is customer mail plus broadcasts. */

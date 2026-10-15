@@ -1,4 +1,5 @@
 import { receiptPlanLabel, formatReceiptAmount, formatReceiptDate } from "@/lib/email/purchase-receipt";
+import { parseBillingEventDescription } from "@/lib/subscription-cancel-feedback";
 
 export type AdminActivityKind = "signup" | "billing";
 
@@ -88,15 +89,29 @@ export function formatActivityBilling(input: {
     parts.push(`Paid ${amount}`, plan);
   } else if (input.status === "subscription_cancel_scheduled") {
     parts.push(`Cancel scheduled`, plan);
-    const endIso = input.accessEndsAt?.trim() || null;
-    if (endIso) {
-      const end = new Date(endIso);
+    const parsed = parseBillingEventDescription(
+      input.accessEndsAt?.trim() || null
+    );
+    if (parsed.accessEndsAt) {
+      const end = new Date(parsed.accessEndsAt);
       if (!Number.isNaN(end.getTime())) {
         parts.push(`access until ${formatReceiptDate(end)}`);
       }
     }
+    if (parsed.reasonSummary) {
+      parts.push(parsed.reasonSummary);
+    }
   } else if (input.status === "subscription_canceled") {
     parts.push(`Subscription ended`, plan);
+  } else if (input.status === "subscription_resumed") {
+    parts.push(`Kept subscription`, plan);
+    const endIso = input.accessEndsAt?.trim() || input.trialEndsAt?.trim() || null;
+    if (endIso) {
+      const end = new Date(endIso);
+      if (!Number.isNaN(end.getTime())) {
+        parts.push(`renews ${formatReceiptDate(end)}`);
+      }
+    }
   } else {
     parts.push(`Checkout`, amount, plan);
   }

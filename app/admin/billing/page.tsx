@@ -15,6 +15,7 @@ import type {
 import type { StripeCredentialSet } from "@/lib/platform-settings";
 import type { UserUsageRow } from "@/lib/usage";
 import type { LlmUsageTotals } from "@/lib/llm-usage";
+import type { RetentionOfferStats } from "@/lib/subscription-retention-shared";
 import { fetchJson } from "@/lib/fetch-json";
 import { DEFAULT_STRIPE_CREDENTIALS } from "@/lib/stripe-config";
 function emptyEnvView(): StripeEnvAdminView {
@@ -54,6 +55,12 @@ function AdminBillingPageInner() {
   const [webhookReady, setWebhookReady] = useState(false);
   const [stripe, setStripe] = useState<StripeAdminView>(EMPTY_STRIPE);
   const [canEdit, setCanEdit] = useState(false);
+  const [retentionStats, setRetentionStats] = useState<RetentionOfferStats>({
+    offered: 0,
+    accepted: 0,
+    declined: 0,
+    acceptanceRate: null,
+  });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [usageBusy, setUsageBusy] = useState(false);
@@ -88,6 +95,7 @@ function AdminBillingPageInner() {
         webhookReady?: boolean;
         stripe?: StripeAdminView;
         canEdit?: boolean;
+        retentionStats?: RetentionOfferStats;
       }>("/api/admin/billing"),
       fetchJson<{
         usage: UserUsageRow[];
@@ -105,6 +113,9 @@ function AdminBillingPageInner() {
     ]);
     setRows(billingRes.rows ?? []);
     setCanEdit(billingRes.canEdit ?? false);
+    if (billingRes.retentionStats) {
+      setRetentionStats(billingRes.retentionStats);
+    }
     setUsage(usageRes.usage ?? []);
     setLlmAll(usageRes.llm?.allTime ?? null);
     setLlmMonth(usageRes.llm?.thisMonth ?? null);
@@ -291,6 +302,21 @@ function AdminBillingPageInner() {
                     : "Off"}
                 </p>
                 <p className="admin-stat-hint">{stripeHint}</p>
+              </article>
+              <article className="admin-stat-card">
+                <p className="admin-stat-label">Retention 50% offered</p>
+                <p className="admin-stat-value">{retentionStats.offered}</p>
+                <p className="admin-stat-hint">Monthly, too expensive</p>
+              </article>
+              <article className="admin-stat-card">
+                <p className="admin-stat-label">Retention accepted</p>
+                <p className="admin-stat-value">{retentionStats.accepted}</p>
+                <p className="admin-stat-hint">
+                  {retentionStats.declined} declined
+                  {retentionStats.acceptanceRate != null
+                    ? ` · ${retentionStats.acceptanceRate}% take rate`
+                    : ""}
+                </p>
               </article>
             </section>
             {!stripeConfigured && (

@@ -20,6 +20,7 @@ export type SyncSubscriptionInput = {
   /** true = live Stripe account; false = test/sandbox. */
   stripeLivemode?: boolean | null;
   eventCreatedAt?: number | null;
+  cancelAtPeriodEnd?: boolean;
 };
 
 function accessTierForStatus(status: string, explicit?: string): string {
@@ -82,8 +83,8 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
     `INSERT INTO subscriptions (
        user_id, plan, status, amount_cents, currency, renews_at, trial_ends_at,
        access_tier, stripe_customer_id, stripe_subscription_id, stripe_price_id,
-       stripe_livemode, last_stripe_event_at, created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW(),NOW())
+       stripe_livemode, last_stripe_event_at, cancel_at_period_end, created_at, updated_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        plan = EXCLUDED.plan,
        status = EXCLUDED.status,
@@ -92,6 +93,7 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
        renews_at = EXCLUDED.renews_at,
        trial_ends_at = EXCLUDED.trial_ends_at,
        access_tier = EXCLUDED.access_tier,
+       cancel_at_period_end = EXCLUDED.cancel_at_period_end,
        stripe_customer_id = CASE
          WHEN EXCLUDED.stripe_livemode IS DISTINCT FROM subscriptions.stripe_livemode
            AND EXCLUDED.stripe_livemode IS NOT NULL
@@ -132,6 +134,7 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
       input.stripePriceId ?? null,
       typeof input.stripeLivemode === "boolean" ? input.stripeLivemode : null,
       eventAt,
+      Boolean(input.cancelAtPeriodEnd),
     ]
   );
   return { skipped: (rowCount ?? 0) === 0 ? (true as const) : (false as const) };
@@ -205,6 +208,7 @@ export function mapStripeSubscription(
     };
     current_period_end?: number | null;
     trial_end?: number | null;
+    cancel_at_period_end?: boolean;
     metadata?: { user_id?: string; user_email?: string; plan?: string };
   },
   priceIds: StripePriceIds = {}
@@ -235,6 +239,7 @@ export function mapStripeSubscription(
       typeof sub.customer === "string" ? sub.customer : sub.customer.id,
     stripeSubscriptionId: sub.id,
     stripePriceId: priceId,
+    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
   };
 }
 

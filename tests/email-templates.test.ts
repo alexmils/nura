@@ -33,7 +33,13 @@ describe("emailLogTemplateIds", () => {
   it("splits admin operator mail from user mail", () => {
     const admin = emailLogTemplateIds("admin");
     const user = emailLogTemplateIds("user");
-    assert.deepEqual(admin, ["admin_signup", "admin_trial", "admin_payment"]);
+    assert.deepEqual(admin, [
+      "admin_signup",
+      "admin_trial",
+      "admin_payment",
+      "admin_subscription_canceled",
+      "admin_subscription_resumed",
+    ]);
     assert.equal(user.includes("welcome"), true);
     assert.equal(user.includes("broadcast"), true);
     assert.equal(user.some((id) => admin.includes(id)), false);
@@ -120,6 +126,24 @@ const FIXTURES: Record<string, Record<string, string | boolean>> = {
     planLabel: "Monthly",
     amount: "$14.99",
     paidAt: "September 21, 2026",
+    adminUserUrl: "https://nurahelp.com/admin/users/u1",
+  },
+  admin_subscription_canceled: {
+    customerName: "Alex",
+    customerEmail: "alex@example.com",
+    planLabel: "Monthly",
+    accessEndsAt: "October 22, 2026",
+    keepsAccess: true,
+    mode: "Live",
+    headline: "Subscription cancel scheduled",
+    adminUserUrl: "https://nurahelp.com/admin/users/u1",
+  },
+  admin_subscription_resumed: {
+    customerName: "Alex",
+    customerEmail: "alex@example.com",
+    planLabel: "Monthly",
+    renewsAt: "October 22, 2026",
+    mode: "Live",
     adminUserUrl: "https://nurahelp.com/admin/users/u1",
   },
 };

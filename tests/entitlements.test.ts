@@ -68,6 +68,24 @@ describe("resolveAccessTier", () => {
 });
 
 describe("buildEntitlementSnapshot", () => {
+  it("exposes access end when cancel at period end is set", () => {
+    const ends = new Date(Date.now() + 86400000 * 5).toISOString();
+    const snap = buildEntitlementSnapshot({
+      role: "user",
+      onboardingCompletedAt: new Date().toISOString(),
+      plan: "weekly",
+      status: "trialing",
+      accessTier: "trialing",
+      trialEndsAt: ends,
+      renewsAt: ends,
+      cancelAtPeriodEnd: true,
+      guidedUsed: 0,
+      blsSecondsUsed: 0,
+    });
+    assert.equal(snap.cancelAtPeriodEnd, true);
+    assert.equal(snap.accessEndsAt, ends);
+  });
+
   it("limits trial guided sessions and BLS seconds", () => {
     const snap = buildEntitlementSnapshot({
       role: "user",

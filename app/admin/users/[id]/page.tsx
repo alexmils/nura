@@ -16,6 +16,7 @@ import {
   formatUsdMicros,
 } from "@/lib/admin-llm-format";
 import type { AdminUserDetail } from "@/lib/admin-user-detail";
+import { formatRetentionActionLabel } from "@/lib/subscription-retention-shared";
 import { fetchJson } from "@/lib/fetch-json";
 
 function shortStripeId(id: string | null): string {
@@ -330,6 +331,41 @@ export default function AdminUserDetailPage() {
               </dd>
             </div>
           </dl>
+          {detail.retentionEvents.length > 0 ? (
+            <div className="admin-cancel-feedback mt-4">
+              <h3 className="admin-cancel-feedback-title">
+                Retention offer (monthly)
+              </h3>
+              <ul className="admin-cancel-feedback-list">
+                {detail.retentionEvents.map((ev, i) => (
+                  <li key={`${ev.at}-${ev.action}-${i}`}>
+                    {formatDateTime(ev.at)} ·{" "}
+                    {formatRetentionActionLabel(
+                      ev.action as "offered" | "accepted" | "declined"
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {detail.latestCancelFeedback ? (
+            <div className="admin-cancel-feedback mt-4">
+              <h3 className="admin-cancel-feedback-title">Latest cancel feedback</h3>
+              <p className="admin-panel-sub">
+                {formatDateTime(detail.latestCancelFeedback.at)}
+              </p>
+              <ul className="admin-cancel-feedback-list">
+                {detail.latestCancelFeedback.labels.map((label) => (
+                  <li key={label}>{label}</li>
+                ))}
+              </ul>
+              {detail.latestCancelFeedback.comment ? (
+                <p className="admin-cancel-feedback-comment">
+                  {detail.latestCancelFeedback.comment}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </section>
 
         <section className="admin-panel">

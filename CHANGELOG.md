@@ -789,6 +789,20 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Guide steps that point at the visual set open a Self-guided session first, instead of sitting on Start a session
 - The guide card sits above the session controls so it does not cover their labels
 - [internal] Admin activity bell shows subscription cancel scheduled and ended events, with operator email (`admin_subscription_canceled`)
+- Manage billing opens on-site: change plan, update card, cancel or resume renewal (no Stripe customer portal redirect)
+- Manage billing: cancel at period end only (access until renewal date)
+- [internal] Admin activity bell and operator email fire when someone schedules cancel in Manage billing, not only from the Stripe webhook
+- [internal] Same admin ping when someone taps Keep subscription in Manage billing
+- Cancel at period end asks why you are leaving (preset reasons) before it is scheduled
+- [internal] Cancel feedback is stored and shown on the admin user under Subscription
+- Manage billing layout is tighter on phone: plan chips in one row, card row, compact cancel actions
+- [internal] Admin Activity bell dropdown shows 10 items with a sticky **See all** link to full activity
+- [internal] Admin Activity dropdown: Sound on/off for notification beeps; new activity plays a short beep when sound is on
+- Your billing card shows **Canceling at period end** and **Access ends** when renewal is turned off (not a normal renew date)
+- Manage billing shows a warmer message after you schedule cancel, with a clear path to keep your subscription
+- Monthly cancel for **Too expensive** can offer 50% off the next month to stay (weekly and yearly skip the offer)
+- [internal] Admin Billing overview shows retention offer counts (offered, accepted, declined, take rate)
+- [internal] Admin user Subscription shows retention offer clicks (saw offer, accepted, declined)
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

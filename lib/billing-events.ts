@@ -6,7 +6,8 @@ export type BillingEventStatus =
   | "checkout"
   | "trial_started"
   | "subscription_cancel_scheduled"
-  | "subscription_canceled";
+  | "subscription_canceled"
+  | "subscription_resumed";
 
 export type BillingEvent = {
   id: string;

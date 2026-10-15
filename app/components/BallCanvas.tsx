@@ -224,6 +224,7 @@ export function BallCanvas({
       return;
     }
 
+    audioRef.current?.resume();
     startTime.current = performance.now();
     lastFrameRef.current = startTime.current;
     lastSide.current = null;

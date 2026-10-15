@@ -17,15 +17,17 @@ import {
   type StripeConfigPatch,
 } from "@/lib/stripe-admin-settings";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
+import { getRetentionOfferStats } from "@/lib/subscription-retention";
 
 export async function GET() {
   const auth = await requireAdminAccess();
   if (!isAuthContext(auth)) return auth;
 
   try {
-    const [rows, settings] = await Promise.all([
+    const [rows, settings, retentionStats] = await Promise.all([
       listAdminBilling(),
       getPlatformSettings(),
+      getRetentionOfferStats(),
     ]);
     const canEdit = auth.user.role === "platform_admin";
     const status = stripeAdminStatus(settings.stripe);
@@ -38,6 +40,7 @@ export async function GET() {
       activeEnv: status.activeEnv,
       stripe: toStripeAdminView(settings.stripe, canEdit),
       canEdit,
+      retentionStats,
     });
   } catch (err) {
     console.error("[admin/billing]", err);

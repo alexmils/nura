@@ -74,7 +74,7 @@ export async function sendPurchaseReceipt(input: {
       planLabel: receiptPlanLabel(input.plan),
       amount: formatReceiptAmount(input.amountCents, input.currency),
       paidAt: formatReceiptDate(input.paidAt),
-      manageBillingUrl: await getAppUrl("/app/billing"),
+      manageBillingUrl: await getAppUrl("/app/billing/manage"),
       supportEmail: configuredSupport.trim() || BRAND_SUPPORT_EMAIL,
     });
     console.info(`[email] purchase receipt sent to ${user.email}`);

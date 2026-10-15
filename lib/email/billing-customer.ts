@@ -74,7 +74,7 @@ export async function sendTrialStartedEmail(input: {
       planLabel: receiptPlanLabel(input.plan),
       amount: formatReceiptAmount(input.amountCents, input.currency),
       trialEndsAt: end || "the end of the trial",
-      manageBillingUrl: await getAppUrl("/app/billing"),
+      manageBillingUrl: await getAppUrl("/app/billing/manage"),
       supportEmail: await supportEmail(),
     },
     { dedupKey: dedup }
@@ -101,7 +101,7 @@ export async function sendPaymentFailedEmail(input: {
     {
       name: who.name,
       amount: formatReceiptAmount(input.amountCents, input.currency),
-      manageBillingUrl: await getAppUrl("/app/billing"),
+      manageBillingUrl: await getAppUrl("/app/billing/manage"),
       supportEmail: await supportEmail(),
     },
     { dedupKey: dedup }
@@ -244,7 +244,7 @@ export async function sendDueTrialChargeReminders(
           planLabel: receiptPlanLabel(row.plan),
           amount: formatReceiptAmount(row.amount_cents, row.currency),
           chargeDate: formatReceiptDate(new Date(row.trial_ends_at)),
-          manageBillingUrl: await getAppUrl("/app/billing"),
+          manageBillingUrl: await getAppUrl("/app/billing/manage"),
         },
         { dedupKey: dedup }
       );

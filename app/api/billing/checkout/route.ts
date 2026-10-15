@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: needsPortal
-          ? "Update your payment method in Manage billing"
+          ? "Update your payment method on Manage billing"
           : "You already have an active subscription",
         code: needsPortal ? "use_portal" : "already_subscribed",
       },

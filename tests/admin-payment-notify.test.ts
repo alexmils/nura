@@ -118,6 +118,23 @@ describe("admin activity lines", () => {
     assert.match(detail, /Live/);
   });
 
+  it("formats subscription kept with renew date", () => {
+    const { detail } = formatActivityBilling({
+      name: "Alex",
+      email: "alex@example.com",
+      plan: "weekly",
+      amountCents: 0,
+      currency: "USD",
+      status: "subscription_resumed",
+      livemode: true,
+      trialEndsAt: null,
+      accessEndsAt: "2026-10-22T06:30:18.000Z",
+    });
+    assert.match(detail, /Kept subscription/);
+    assert.match(detail, /Weekly/);
+    assert.match(detail, /October 22, 2026/);
+  });
+
   it("formats cancel scheduled with access end", () => {
     const { detail } = formatActivityBilling({
       name: "Alex",

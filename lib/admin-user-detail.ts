@@ -12,6 +12,11 @@ import {
   listBillingEventsForUser,
   type BillingEvent,
 } from "@/lib/billing-events";
+import {
+  describeCancelFeedback,
+  getLatestCancelFeedbackForUser,
+} from "@/lib/subscription-cancel-feedback";
+import { listRetentionEventsForUser } from "@/lib/subscription-retention";
 
 export type AdminUserLoginEvent = UserAuthEvent;
 
@@ -59,6 +64,18 @@ export type AdminUserDetail = {
   paymentHistory: AdminUserPaymentEvent[];
   /** Shown when subscription exists but no payment rows yet. */
   paymentHistoryNote: string | null;
+  latestCancelFeedback: {
+    at: string;
+    summary: string;
+    labels: string[];
+    comment: string | null;
+  } | null;
+  retentionEvents: {
+    action: string;
+    at: string;
+    reasonIds: string[];
+    comment: string | null;
+  }[];
 };
 
 function mapPayment(ev: BillingEvent): AdminUserPaymentEvent {
@@ -82,8 +99,17 @@ export async function getAdminUserDetail(
   if (!user) return null;
 
   const pool = getPool();
-  const [threads, messages, sub, llm, loginHistory, paymentHistory, excluded] =
-    await Promise.all([
+  const [
+    threads,
+    messages,
+    sub,
+    llm,
+    loginHistory,
+    paymentHistory,
+    excluded,
+    cancelFeedback,
+    retentionEvents,
+  ] = await Promise.all([
       pool.query<{ c: number }>(
         "SELECT COUNT(*)::int AS c FROM threads WHERE user_id = $1",
         [userId]
@@ -121,6 +147,8 @@ export async function getAdminUserDetail(
          FROM users WHERE id = $1`,
         [userId]
       ),
+      getLatestCancelFeedbackForUser(userId),
+      listRetentionEventsForUser(userId, 8),
     ]);
 
   const latestLoginEvent =
@@ -191,5 +219,13 @@ export async function getAdminUserDetail(
     loginHistory,
     paymentHistory: paymentHistory.map(mapPayment),
     paymentHistoryNote,
+    latestCancelFeedback: cancelFeedback
+      ? {
+          at: cancelFeedback.createdAt,
+          ...describeCancelFeedback(cancelFeedback),
+          comment: cancelFeedback.comment,
+        }
+      : null,
+    retentionEvents,
   };
 }

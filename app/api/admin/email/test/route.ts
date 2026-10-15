@@ -137,6 +137,15 @@ export async function POST(request: Request) {
         headline: "Subscription cancel scheduled",
         adminUserUrl: await getAppUrl("/admin/users/u1"),
       });
+    } else if (id === "admin_subscription_resumed") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "alex@example.com",
+        planLabel: "Monthly",
+        renewsAt: "October 22, 2026",
+        mode: "Live",
+        adminUserUrl: await getAppUrl("/admin/users/u1"),
+      });
     } else {
       await sendTemplateEmail(to.trim(), "welcome", {
         name: sample.name,
