@@ -10,6 +10,7 @@ import {
   type AnalyticsRangeDays,
 } from "@/lib/admin-analytics-format";
 import { sharePct } from "@/lib/admin-finance-format";
+import { sqlRowCountsInStats, sqlUserCountsInStats } from "@/lib/stats-scope";
 
 function startOfUtcDay(d: Date): Date {
   const next = new Date(d);
@@ -44,17 +45,20 @@ const ACTIVE_USERS_SQL = `
   WHERE action = 'user.login'
     AND created_at >= $1 AND created_at < $2
     AND actor_user_id IS NOT NULL
+    AND ${sqlRowCountsInStats("actor_user_id")}
   UNION
   SELECT user_id
   FROM threads
   WHERE created_at >= $1 AND created_at < $2
     AND user_id IS NOT NULL
+    AND ${sqlRowCountsInStats("user_id")}
   UNION
   SELECT t.user_id
   FROM messages m
   JOIN threads t ON t.id = m.thread_id
   WHERE m.created_at >= $1 AND m.created_at < $2
     AND t.user_id IS NOT NULL
+    AND ${sqlRowCountsInStats("t.user_id")}
 `;
 
 async function periodKpis(start: string, end: string) {
@@ -65,17 +69,23 @@ async function periodKpis(start: string, end: string) {
       [start, end]
     ),
     pool.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM threads WHERE created_at >= $1 AND created_at < $2`,
+      `SELECT COUNT(*)::int AS c FROM threads
+       WHERE created_at >= $1 AND created_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [start, end]
     ),
     pool.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM messages WHERE created_at >= $1 AND created_at < $2`,
+      `SELECT COUNT(*)::int AS c FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= $1 AND m.created_at < $2
+         AND ${sqlRowCountsInStats("t.user_id")}`,
       [start, end]
     ),
     pool.query<{ c: number }>(
       `SELECT COUNT(*)::int AS c
        FROM threads t
        WHERE t.created_at >= $1 AND t.created_at < $2
+         AND ${sqlRowCountsInStats("t.user_id")}
          AND EXISTS (
            SELECT 1 FROM messages m
            WHERE m.thread_id = t.id AND m.role = 'user'
@@ -85,7 +95,8 @@ async function periodKpis(start: string, end: string) {
     pool.query<{ c: number }>(
       `SELECT COUNT(DISTINCT user_id)::int AS c
        FROM billing_events
-       WHERE status = 'succeeded' AND occurred_at >= $1 AND occurred_at < $2`,
+       WHERE status = 'succeeded' AND occurred_at >= $1 AND occurred_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [start, end]
     ),
   ]);
@@ -172,6 +183,7 @@ export async function getAdminAnalyticsDashboard(
               )::int AS engaged
        FROM threads t
        WHERE t.created_at >= $1 AND t.created_at < $2
+         AND ${sqlRowCountsInStats("t.user_id")}
        GROUP BY 1`,
       [win.start, win.end]
     ),
@@ -186,37 +198,50 @@ export async function getAdminAnalyticsDashboard(
               )::int AS engaged
        FROM threads t
        WHERE t.created_at >= $1 AND t.created_at < $2
+         AND ${sqlRowCountsInStats("t.user_id")}
        GROUP BY 1`,
       [win.prevStart, win.prevEnd]
     ),
     pool.query<{ h: string; u: number; a: number }>(
-      `SELECT to_char(date_trunc('hour', created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD HH24') AS h,
-              COUNT(*) FILTER (WHERE role = 'user')::int AS u,
-              COUNT(*) FILTER (WHERE role <> 'user')::int AS a
-       FROM messages
-       WHERE created_at >= $1
+      `SELECT to_char(date_trunc('hour', m.created_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD HH24') AS h,
+              COUNT(*) FILTER (WHERE m.role = 'user')::int AS u,
+              COUNT(*) FILTER (WHERE m.role <> 'user')::int AS a
+       FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= $1
+         AND ${sqlRowCountsInStats("t.user_id")}
        GROUP BY 1`,
       [dayAgo]
     ),
     pool.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM messages WHERE created_at >= $1`,
+      `SELECT COUNT(*)::int AS c FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= $1
+         AND ${sqlRowCountsInStats("t.user_id")}`,
       [hourAgo]
     ),
     pool.query<{ mode: string; c: number }>(
       `SELECT COALESCE(mode, 'guided') AS mode, COUNT(*)::int AS c
        FROM threads
        WHERE created_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [dayAgo]
     ),
     pool.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM help_threads WHERE created_at >= $1`,
+      `SELECT COUNT(*)::int AS c FROM help_threads
+       WHERE created_at >= $1
+         AND (
+           user_id IS NULL
+           OR ${sqlRowCountsInStats("user_id")}
+         )`,
       [dayAgo]
     ),
     pool.query<{ c: number }>(
       `SELECT COUNT(*)::int AS c
        FROM audit_events
-       WHERE action = 'user.login' AND created_at >= $1`,
+       WHERE action = 'user.login' AND created_at >= $1
+         AND ${sqlRowCountsInStats("actor_user_id")}`,
       [dayAgo]
     ),
     pool.query<{
@@ -236,6 +261,7 @@ export async function getAdminAnalyticsDashboard(
               )::int AS bounced
        FROM threads
        WHERE created_at >= $1 AND created_at < $2
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [win.start, win.end]
     ),
@@ -244,7 +270,11 @@ export async function getAdminAnalyticsDashboard(
               COALESCE(AVG(EXTRACT(EPOCH FROM (updated_at - created_at))), 0) AS avg_s,
               COUNT(*) FILTER (WHERE status = 'open')::int AS bounced
        FROM help_threads
-       WHERE created_at >= $1 AND created_at < $2`,
+       WHERE created_at >= $1 AND created_at < $2
+         AND (
+           user_id IS NULL
+           OR ${sqlRowCountsInStats("user_id")}
+         )`,
       [win.start, win.end]
     ),
     pool.query<{
@@ -284,7 +314,8 @@ export async function getAdminAnalyticsDashboard(
              )
          )::int AS other
        FROM users u
-       WHERE u.created_at >= $1 AND u.created_at < $2`,
+       WHERE u.created_at >= $1 AND u.created_at < $2
+         AND ${sqlUserCountsInStats("u")}`,
       [win.start, win.end]
     ),
     pool.query<{ plan: string; c: number }>(
@@ -299,6 +330,7 @@ export async function getAdminAnalyticsDashboard(
       `SELECT status, COUNT(*)::int AS c
        FROM billing_events
        WHERE occurred_at >= $1 AND occurred_at < $2
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [win.start, win.end]
     ),
@@ -334,9 +366,9 @@ export async function getAdminAnalyticsDashboard(
   }
 
   const modeLabel = (mode: string) => {
-    if (mode === "free") return "Free";
+    if (mode === "free") return "Self-guided";
     if (mode === "pending") return "Not started";
-    return "Guided";
+    return "AI agent-guided";
   };
 
   const mix: AdminAnalyticsMix[] = [

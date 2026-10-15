@@ -85,3 +85,17 @@ export async function updateAdminUser(
 
   return { ok: true };
 }
+
+export async function setUserStatsExcluded(
+  targetId: string,
+  excluded: boolean
+): Promise<{ ok: true } | { error: string }> {
+  await ensureSchemaReady();
+  const target = await getUserById(targetId);
+  if (!target) return { error: "User not found" };
+  await getPool().query(
+    `UPDATE users SET stats_excluded = $1, updated_at = NOW() WHERE id = $2`,
+    [excluded, targetId]
+  );
+  return { ok: true };
+}

@@ -58,6 +58,26 @@ export default function AdminUserDetailPage() {
 
   const canWrite = myRole === "platform_admin";
 
+  const toggleStats = async () => {
+    if (!detail) return;
+    const next = !detail.statsExcluded;
+    setBusy(true);
+    setMsg("");
+    try {
+      await fetchJson(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statsExcluded: next }),
+      });
+      setMsg(next ? "Ignored in stats." : "Counted in stats.");
+      await load();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const toggleStatus = async () => {
     if (!detail) return;
     const next = detail.status === "disabled" ? "active" : "disabled";
@@ -202,6 +222,10 @@ export default function AdminUserDetailPage() {
               <dt>Email verified</dt>
               <dd>{detail.emailVerified ? "Yes" : "No"}</dd>
             </div>
+            <div>
+              <dt>Stats</dt>
+              <dd>{detail.statsExcluded ? "Ignored" : "Counted"}</dd>
+            </div>
           </dl>
 
           {canWrite && (
@@ -216,6 +240,14 @@ export default function AdminUserDetailPage() {
                   Resend invite
                 </button>
               )}
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => void toggleStats()}
+              >
+                {detail.statsExcluded ? "Count in stats" : "Ignore in stats"}
+              </button>
               <button
                 type="button"
                 className={

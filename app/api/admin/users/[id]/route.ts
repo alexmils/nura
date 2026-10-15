@@ -5,7 +5,7 @@ import {
   isAuthContext,
 } from "@/lib/api-auth";
 import { getAdminUserDetail } from "@/lib/admin-user-detail";
-import { updateAdminUser } from "@/lib/admin-users";
+import { setUserStatsExcluded, updateAdminUser } from "@/lib/admin-users";
 import { isValidUserRole, type UserRole } from "@/lib/roles";
 import type { UserStatus } from "@/lib/users";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
@@ -43,7 +43,29 @@ export async function PATCH(
       name?: string;
       role?: UserRole;
       status?: UserStatus;
+      statsExcluded?: boolean;
     };
+
+    if (typeof body.statsExcluded === "boolean") {
+      const flagged = await setUserStatsExcluded(id, body.statsExcluded);
+      if ("error" in flagged) {
+        return NextResponse.json({ error: flagged.error }, { status: 400 });
+      }
+      await writeAuditEvent({
+        actorUserId: auth.user.id,
+        targetUserId: id,
+        action: "user.updated",
+        detail: { statsExcluded: body.statsExcluded },
+        ip: clientIp(request),
+      });
+      if (
+        body.name === undefined &&
+        body.role === undefined &&
+        body.status === undefined
+      ) {
+        return NextResponse.json({ ok: true, statsExcluded: body.statsExcluded });
+      }
+    }
 
     if (body.role !== undefined && !isValidUserRole(body.role)) {
       return NextResponse.json({ error: "Invalid role" }, { status: 400 });

@@ -222,6 +222,20 @@ function AdminUsersPageInner() {
     }
   };
 
+  const setStatsExcluded = async (u: AdminUserRow, statsExcluded: boolean) => {
+    setMenuFor(null);
+    try {
+      await fetchJson(`/api/admin/users/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statsExcluded }),
+      });
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Update failed");
+    }
+  };
+
   const setUserStatus = async (u: AdminUserRow, status: "active" | "disabled") => {
     setMenuFor(null);
     try {
@@ -308,6 +322,15 @@ function AdminUsersPageInner() {
             {canWrite && (
               <button type="button" role="menuitem" onClick={() => openEditUser(u)}>
                 Edit
+              </button>
+            )}
+            {canWrite && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => void setStatsExcluded(u, !u.statsExcluded)}
+              >
+                {u.statsExcluded ? "Count in stats" : "Ignore in stats"}
               </button>
             )}
             {canWrite && kind === "pending" && (
@@ -609,6 +632,9 @@ function AdminUsersPageInner() {
                                 <span>
                                   <strong>{u.name || u.email.split("@")[0]}</strong>
                                   <em>{u.email}</em>
+                                  {u.statsExcluded ? (
+                                    <em className="admin-users-ignored">Ignored in stats</em>
+                                  ) : null}
                                 </span>
                               </Link>
                             </td>

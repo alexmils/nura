@@ -1,5 +1,6 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import { ensureLlmUsageSchema, getLlmUsageTotals } from "@/lib/llm-usage";
+import { sqlRowCountsInStats, sqlUserCountsInStats } from "@/lib/stats-scope";
 import { getStripe, getStripeConfig } from "@/lib/stripe";
 import { stripeAdminStatus } from "@/lib/stripe-admin-settings";
 import {
@@ -107,21 +108,27 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
     stripeCfg,
     stripeBal,
   ] = await Promise.all([
-    pool.query<{ c: number }>("SELECT COUNT(*)::int AS c FROM users"),
+    pool.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM users WHERE ${sqlUserCountsInStats("users")}`
+    ),
     pool.query<{ plan: string; status: string; amount_cents: number }>(
-      `SELECT plan, status, COALESCE(amount_cents, 0)::int AS amount_cents
-       FROM subscriptions`
+      `SELECT s.plan, s.status, COALESCE(s.amount_cents, 0)::int AS amount_cents
+       FROM subscriptions s
+       JOIN users u ON u.id = s.user_id
+       WHERE ${sqlUserCountsInStats("u")}`
     ),
     pool.query<{ c: number }>(
       `SELECT COALESCE(SUM(amount_cents), 0)::int AS c
        FROM billing_events
-       WHERE status = 'succeeded' AND occurred_at >= $1`,
+       WHERE status = 'succeeded' AND occurred_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}`,
       [monthStart.toISOString()]
     ),
     pool.query<{ c: number }>(
       `SELECT COALESCE(SUM(amount_cents), 0)::int AS c
        FROM billing_events
-       WHERE status = 'succeeded' AND occurred_at >= $1 AND occurred_at < $2`,
+       WHERE status = 'succeeded' AND occurred_at >= $1 AND occurred_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [lastMonthStart.toISOString(), monthStart.toISOString()]
     ),
     pool.query<{ d: string; c: number }>(
@@ -129,6 +136,7 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
               COALESCE(SUM(amount_cents), 0)::int AS c
        FROM billing_events
        WHERE status = 'succeeded' AND occurred_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [sevenDaysAgo.toISOString()]
     ),
@@ -137,6 +145,7 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
               COALESCE(SUM(amount_cents), 0)::int AS c
        FROM billing_events
        WHERE status = 'succeeded' AND occurred_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [eightWeeksAgo.toISOString()]
     ),
@@ -146,6 +155,7 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
               COUNT(*)::int AS n
        FROM billing_events
        WHERE status = 'succeeded'
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY livemode`
     ),
     pool.query<{
@@ -165,24 +175,29 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
        WHERE s.renews_at IS NOT NULL
          AND s.status = ANY($1)
          AND s.renews_at >= NOW()
+         AND ${sqlUserCountsInStats("u")}
        ORDER BY s.renews_at ASC
        LIMIT 12`,
       [UPCOMING_STATUSES]
     ),
     pool.query<{ c: number }>(
       `SELECT COUNT(*)::int AS c
-       FROM subscriptions
-       WHERE status = ANY($1)
-         AND renews_at >= date_trunc('month', NOW())
-         AND renews_at < date_trunc('month', NOW()) + interval '1 month'`,
+       FROM subscriptions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.status = ANY($1)
+         AND s.renews_at >= date_trunc('month', NOW())
+         AND s.renews_at < date_trunc('month', NOW()) + interval '1 month'
+         AND ${sqlUserCountsInStats("u")}`,
       [UPCOMING_STATUSES]
     ),
     pool.query<{ c: number }>(
-      `SELECT COALESCE(SUM(amount_cents), 0)::int AS c
-       FROM subscriptions
-       WHERE status = ANY($1)
-         AND renews_at IS NOT NULL
-         AND (renews_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date`,
+      `SELECT COALESCE(SUM(s.amount_cents), 0)::int AS c
+       FROM subscriptions s
+       JOIN users u ON u.id = s.user_id
+       WHERE s.status = ANY($1)
+         AND s.renews_at IS NOT NULL
+         AND (s.renews_at AT TIME ZONE 'UTC')::date = (NOW() AT TIME ZONE 'UTC')::date
+         AND ${sqlUserCountsInStats("u")}`,
       [PAID_STATUSES]
     ),
     pool.query<{
@@ -201,6 +216,7 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
               be.currency, be.description, be.livemode, be.occurred_at
        FROM billing_events be
        JOIN users u ON u.id = be.user_id
+       WHERE ${sqlUserCountsInStats("u")}
        ORDER BY be.occurred_at DESC
        LIMIT 80`
     ),
@@ -217,7 +233,8 @@ export async function getAdminFinanceDashboard(): Promise<AdminFinanceDashboard>
     pool.query<{ cost_usd_micros: string }>(
       `SELECT COALESCE(SUM(cost_usd_micros), 0) AS cost_usd_micros
        FROM llm_usage_events
-       WHERE created_at >= $1 AND created_at < $2`,
+       WHERE created_at >= $1 AND created_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [lastMonthStart.toISOString(), monthStart.toISOString()]
     ),
     getStripeConfig(),

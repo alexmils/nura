@@ -1,5 +1,6 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import { ensureLlmUsageSchema, getLlmUsageTotals } from "@/lib/llm-usage";
+import { sqlRowCountsInStats, sqlUserCountsInStats } from "@/lib/stats-scope";
 
 export type AdminDayPoint = {
   date: string; // YYYY-MM-DD
@@ -75,6 +76,7 @@ export type AdminUserRow = {
   amountCents: number;
   hasPassword: boolean;
   hasGoogle: boolean;
+  statsExcluded: boolean;
 };
 
 const PURPOSE_LABELS: Record<string, string> = {
@@ -148,7 +150,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     purposeRows,
     providerRows,
   ] = await Promise.all([
-    pool.query<{ c: number }>("SELECT COUNT(*)::int AS c FROM users"),
+    pool.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM users WHERE ${sqlUserCountsInStats("users")}`
+    ),
     pool.query<{ c: number }>(
       "SELECT COUNT(*)::int AS c FROM users WHERE role = 'platform_admin'"
     ),
@@ -156,27 +160,40 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       "SELECT COUNT(*)::int AS c FROM users WHERE role = 'support'"
     ),
     pool.query<{ c: number }>(
-      "SELECT COUNT(*)::int AS c FROM users WHERE created_at >= date_trunc('month', NOW())"
+      `SELECT COUNT(*)::int AS c FROM users
+       WHERE created_at >= date_trunc('month', NOW())
+         AND ${sqlUserCountsInStats("users")}`
     ),
     pool.query<{ c: number }>(
       `SELECT COUNT(*)::int AS c FROM users
        WHERE created_at >= date_trunc('month', NOW() - interval '1 month')
-         AND created_at < date_trunc('month', NOW())`
-    ),
-    pool.query<{ c: number }>("SELECT COUNT(*)::int AS c FROM threads"),
-    pool.query<{ c: number }>(
-      "SELECT COUNT(*)::int AS c FROM messages WHERE created_at >= date_trunc('month', NOW())"
+         AND created_at < date_trunc('month', NOW())
+         AND ${sqlUserCountsInStats("users")}`
     ),
     pool.query<{ c: number }>(
-      `SELECT COUNT(*)::int AS c FROM messages
-       WHERE created_at >= date_trunc('month', NOW() - interval '1 month')
-         AND created_at < date_trunc('month', NOW())`
+      `SELECT COUNT(*)::int AS c FROM threads t
+       WHERE ${sqlRowCountsInStats("t.user_id")}`
+    ),
+    pool.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= date_trunc('month', NOW())
+         AND ${sqlRowCountsInStats("t.user_id")}`
+    ),
+    pool.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= date_trunc('month', NOW() - interval '1 month')
+         AND m.created_at < date_trunc('month', NOW())
+         AND ${sqlRowCountsInStats("t.user_id")}`
     ),
     pool.query<{ active_paid: number; mrr_cents: number }>(`
       SELECT
-        COUNT(*) FILTER (WHERE status = 'active' AND plan <> 'free')::int AS active_paid,
-        COALESCE(SUM(amount_cents) FILTER (WHERE status = 'active' AND plan <> 'free'), 0)::int AS mrr_cents
-      FROM subscriptions
+        COUNT(*) FILTER (WHERE s.status = 'active' AND s.plan <> 'free')::int AS active_paid,
+        COALESCE(SUM(s.amount_cents) FILTER (WHERE s.status = 'active' AND s.plan <> 'free'), 0)::int AS mrr_cents
+      FROM subscriptions s
+      JOIN users u ON u.id = s.user_id
+      WHERE ${sqlUserCountsInStats("u")}
     `),
     getLlmUsageTotals({ since: monthStart }),
     pool.query<{
@@ -186,7 +203,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       `SELECT COALESCE(SUM(total_tokens), 0) AS total_tokens,
               COALESCE(SUM(cost_usd_micros), 0) AS cost_usd_micros
        FROM llm_usage_events
-       WHERE created_at >= $1 AND created_at < $2`,
+       WHERE created_at >= $1 AND created_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [lastMonthStart.toISOString(), monthStart.toISOString()]
     ),
     getLlmUsageTotals(),
@@ -200,7 +218,8 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
               COALESCE(SUM(cost_usd_micros), 0) AS cost_usd_micros
        FROM llm_usage_events
        WHERE purpose <> 'voice'
-         AND created_at >= $1 AND created_at < $2`,
+         AND created_at >= $1 AND created_at < $2
+         AND ${sqlRowCountsInStats("user_id")}`,
       [lastMonthStart.toISOString(), monthStart.toISOString()]
     ),
     getLlmUsageTotals({ excludePurposes: ["voice"] }),
@@ -208,10 +227,12 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     getLlmUsageTotals({ since: monthStart, purposes: ["voice"] }),
     getLlmUsageTotals({ since: sevenDaysAgo, purposes: ["voice"] }),
     pool.query<{ d: string; c: number }>(
-      `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d,
+      `SELECT to_char(m.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d,
               COUNT(*)::int AS c
-       FROM messages
-       WHERE created_at >= $1
+       FROM messages m
+       JOIN threads t ON t.id = m.thread_id
+       WHERE m.created_at >= $1
+         AND ${sqlRowCountsInStats("t.user_id")}
        GROUP BY 1`,
       [sevenDaysAgo.toISOString()]
     ),
@@ -220,6 +241,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
               COUNT(*)::int AS c
        FROM users
        WHERE created_at >= $1
+         AND ${sqlUserCountsInStats("users")}
        GROUP BY 1`,
       [sevenDaysAgo.toISOString()]
     ),
@@ -229,6 +251,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
               COALESCE(SUM(cost_usd_micros), 0) AS cost
        FROM llm_usage_events
        WHERE created_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY 1`,
       [sevenDaysAgo.toISOString()]
     ),
@@ -244,6 +267,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
               COUNT(*)::int AS calls
        FROM llm_usage_events
        WHERE created_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY purpose
        ORDER BY SUM(cost_usd_micros) DESC`,
       [monthStart.toISOString()]
@@ -260,6 +284,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
               COUNT(*)::int AS calls
        FROM llm_usage_events
        WHERE created_at >= $1
+         AND ${sqlRowCountsInStats("user_id")}
        GROUP BY provider
        ORDER BY SUM(cost_usd_micros) DESC`,
       [monthStart.toISOString()]
@@ -369,13 +394,15 @@ export async function listAdminUsers(limit = 200): Promise<AdminUserRow[]> {
     amount_cents: number | null;
     has_password: boolean;
     has_google: boolean;
+    stats_excluded: boolean;
   }>(
     `SELECT u.id, u.email, u.name, u.avatar_url, u.role, u.status, u.created_at, u.last_login_at,
             COALESCE(s.plan, 'free') AS plan,
             COALESCE(s.status, 'none') AS subscription_status,
             COALESCE(s.amount_cents, 0) AS amount_cents,
             (u.password_hash IS NOT NULL) AS has_password,
-            (u.google_sub IS NOT NULL) AS has_google
+            (u.google_sub IS NOT NULL) AS has_google,
+            COALESCE(u.stats_excluded, FALSE) AS stats_excluded
      FROM users u
      LEFT JOIN subscriptions s ON s.user_id = u.id
      ORDER BY u.created_at DESC
@@ -399,5 +426,6 @@ export async function listAdminUsers(limit = 200): Promise<AdminUserRow[]> {
     amountCents: r.amount_cents ?? 0,
     hasPassword: Boolean(r.has_password),
     hasGoogle: Boolean(r.has_google),
+    statsExcluded: Boolean(r.stats_excluded),
   }));
 }

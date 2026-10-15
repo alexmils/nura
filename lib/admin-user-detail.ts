@@ -36,6 +36,7 @@ export type AdminUserDetail = {
   lastLoginAt: string | null;
   emailVerified: boolean;
   hasPassword: boolean;
+  statsExcluded: boolean;
   plan: string;
   subscriptionStatus: string;
   amountCents: number;
@@ -81,7 +82,7 @@ export async function getAdminUserDetail(
   if (!user) return null;
 
   const pool = getPool();
-  const [threads, messages, sub, llm, loginHistory, paymentHistory] =
+  const [threads, messages, sub, llm, loginHistory, paymentHistory, excluded] =
     await Promise.all([
       pool.query<{ c: number }>(
         "SELECT COUNT(*)::int AS c FROM threads WHERE user_id = $1",
@@ -115,6 +116,11 @@ export async function getAdminUserDetail(
       getUserLlmUsage(userId),
       listUserAuthEvents(userId, 40),
       listBillingEventsForUser(userId, 40),
+      pool.query<{ stats_excluded: boolean }>(
+        `SELECT COALESCE(stats_excluded, FALSE) AS stats_excluded
+         FROM users WHERE id = $1`,
+        [userId]
+      ),
     ]);
 
   const latestLoginEvent =
@@ -154,6 +160,7 @@ export async function getAdminUserDetail(
     lastLoginAt,
     emailVerified: user.emailVerified,
     hasPassword: Boolean(user.passwordHash),
+    statsExcluded: Boolean(excluded.rows[0]?.stats_excluded),
     plan,
     subscriptionStatus,
     amountCents: subRow?.amount_cents ?? 0,

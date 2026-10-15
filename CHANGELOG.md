@@ -744,6 +744,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Adjustments: the selected animation, path, and flash choice is filled in so you can see which one is on
 - Live preview flashes keep the color you pick. Standard still brightens that color, and only a white flash color stays white
 - [internal] First Google sign-up, email sign-up, and password reset now record a sign-in. The first session used to leave Last login as Never and Login history empty
+- [internal] Admin Overview Last 7 days opens Analytics. The chart stays on the dashboard, and a click goes to the full report
+- [internal] Ignore in stats on a user, their profile, and Billing usage. Dashboard, analytics, finance, and AI totals skip that account. Count in stats puts them back
+- [internal] Last 7 days opens Analytics from the title. The day chart stays hoverable. Usage totals limit counted accounts on their own, and Ignore errors stay on the Usage tab
+- [internal] Analytics Audience, Acquisition, Engagement, and Conversions show a total, a plain line for each row, and that row’s share. Session types use AI agent-guided and Self-guided
+- [internal] Finance toolbar no longer shows a stray up-down scrollbar beside Updated just now
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

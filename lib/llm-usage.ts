@@ -1,5 +1,6 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import { estimateCostUsdMicros } from "@/lib/llm-pricing";
+import { sqlRowCountsInStats } from "@/lib/stats-scope";
 
 export type LlmUsagePurpose =
   | "guided_chat"
@@ -142,6 +143,7 @@ export async function getLlmUsageTotals(opts?: {
     params.push(opts.provider);
     clauses.push(`provider = $${params.length}`);
   }
+  clauses.push(sqlRowCountsInStats("user_id"));
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
   const { rows } = await getPool().query<{
     call_count: number;
@@ -209,6 +211,7 @@ export async function listUserLlmUsage(
             MAX(e.created_at) AS last_call_at
      FROM users u
      INNER JOIN llm_usage_events e ON e.user_id = u.id
+     WHERE u.stats_excluded IS NOT TRUE
      GROUP BY u.id, u.email, u.name
      ORDER BY SUM(e.cost_usd_micros) DESC, SUM(e.total_tokens) DESC
      LIMIT $1`,

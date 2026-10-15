@@ -90,6 +90,76 @@ function MixBars({ rows }: { rows: { key: string; label: string; value: number }
   );
 }
 
+const SOURCE_NOTES: Record<string, string> = {
+  google: "Signed up with Google",
+  email: "Signed up with email and a password",
+  invite: "Opened an invite you sent",
+  other: "No Google sign-in and no password",
+};
+
+const PLAN_NOTES: Record<string, string> = {
+  weekly: "Weekly plan",
+  monthly: "Monthly plan",
+  yearly: "Yearly plan",
+  free: "No paid plan",
+  none: "No paid plan",
+  legacy: "Older account, kept on the old plan",
+};
+
+const BILLING_NOTES: Record<string, string> = {
+  succeeded: "A payment went through",
+  failed: "A payment failed",
+  checkout: "Opened checkout",
+  trial_started: "A trial started",
+};
+
+function Breakdown({
+  title,
+  hint,
+  totalLabel,
+  rows,
+  notes,
+  empty,
+}: {
+  title: string;
+  hint: string;
+  totalLabel: string;
+  rows: { key: string; label: string; value: number }[];
+  notes: Record<string, string>;
+  empty: string;
+}) {
+  const total = rows.reduce((sum, row) => sum + row.value, 0);
+  return (
+    <section className="admin-fin-card">
+      <h2 className="admin-fin-card-title">{title}</h2>
+      <p className="admin-fin-hint">{hint}</p>
+      <p className="admin-an-break-total">{formatCountCompact(total)}</p>
+      <p className="admin-fin-hint">{totalLabel}</p>
+      {total === 0 ? <p className="admin-fin-empty">{empty}</p> : null}
+      <ul className="admin-an-breakdown">
+        {rows.map((row) => {
+          const share = total > 0 ? Math.round((row.value / total) * 1000) / 10 : 0;
+          return (
+            <li key={row.key}>
+              <div>
+                <p className="admin-an-break-name">{row.label}</p>
+                <p className="admin-an-break-hint">{notes[row.key] ?? row.label}</p>
+              </div>
+              <span className="admin-an-source-track" aria-hidden>
+                <i style={{ width: `${total > 0 ? (row.value / total) * 100 : 0}%` }} />
+              </span>
+              <div className="admin-an-break-count">
+                <strong>{formatCountCompact(row.value)}</strong>
+                <span>{formatPct(share)}</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function AdminAnalyticsPageInner() {
   const [tab, setTab] = useAdminTab(TABS, "overview");
   const [days, setDays] = useState<AnalyticsRangeDays>(28);
@@ -389,44 +459,95 @@ function AdminAnalyticsPageInner() {
         )}
 
         {tab === "audience" && (
-          <section className="admin-fin-card">
-            <h2 className="admin-fin-card-title">Active users by plan</h2>
-            <p className="admin-fin-hint">People who signed in or started a session in this range.</p>
-            <MixBars rows={data.audience} />
-          </section>
+          <Breakdown
+            title="Who was active"
+            hint={`Signed in, or started a session, in ${rangeLabel(data.days).toLowerCase()}.`}
+            totalLabel="People"
+            rows={data.audience}
+            notes={PLAN_NOTES}
+            empty="Nobody signed in or started a session in this range."
+          />
         )}
 
         {tab === "acquisition" && (
-          <section className="admin-fin-card">
-            <h2 className="admin-fin-card-title">How new users arrived</h2>
-            <p className="admin-fin-hint">Accounts created in this range. Invite wins over Google or email.</p>
-            <MixBars rows={data.sources} />
-          </section>
+          <Breakdown
+            title="New accounts"
+            hint={`Accounts created in ${rangeLabel(data.days).toLowerCase()}.`}
+            totalLabel="New accounts"
+            rows={data.sources}
+            notes={SOURCE_NOTES}
+            empty="No new accounts in this range."
+          />
         )}
 
         {tab === "engagement" && (
-          <section className="admin-fin-card">
-            <h2 className="admin-fin-card-title">Sessions that got a reply</h2>
-            <AdminLineChart
-              points={data.quality}
-              compare={compareQuality}
-              markers={false}
-              fill={false}
-              ariaLabel="Engagement over time"
-            />
-          </section>
+          <>
+            <section className="admin-fin-card">
+              <h2 className="admin-fin-card-title">Sessions with a reply</h2>
+              <p className="admin-fin-hint">
+                A session counts when the person wrote at least one message.
+              </p>
+              <p className="admin-an-break-total">{formatPct(data.kpis.engagementPct)}</p>
+              <p className="admin-fin-hint">
+                {formatCountCompact(data.kpis.sessions)} sessions in{" "}
+                {rangeLabel(data.days).toLowerCase()}
+              </p>
+              <AdminLineChart
+                points={data.quality}
+                compare={compareQuality}
+                markers={false}
+                fill={false}
+                ariaLabel="Share of sessions with a reply, by day"
+              />
+            </section>
+            <section className="admin-fin-card">
+              <h2 className="admin-fin-card-title">By session type</h2>
+              <p className="admin-fin-hint">
+                Average time is how long the session stayed open. Bounce means they left without writing.
+              </p>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Session</th>
+                      <th>Count</th>
+                      <th>Average time</th>
+                      <th>Left without writing</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.surfaces.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="admin-table-empty">
+                          No sessions in this range.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.surfaces.map((s) => (
+                        <tr key={s.key}>
+                          <td>{s.label}</td>
+                          <td>{formatCountCompact(s.count)}</td>
+                          <td>{formatAvgDuration(s.avgSeconds)}</td>
+                          <td>{formatPct(s.bouncePct)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
         )}
 
         {tab === "conversions" && (
-          <section className="admin-fin-card">
-            <h2 className="admin-fin-card-title">Billing events</h2>
-            <p className="admin-fin-hint">Checkout, trial, paid, and failed invoices in this range.</p>
-            {data.conversions.length === 0 ? (
-              <p className="admin-fin-empty">No billing events in this range.</p>
-            ) : (
-              <MixBars rows={data.conversions} />
-            )}
-          </section>
+          <Breakdown
+            title="Billing"
+            hint={`Checkout, trial, paid, and failed charges in ${rangeLabel(data.days).toLowerCase()}.`}
+            totalLabel="Events"
+            rows={data.conversions}
+            notes={BILLING_NOTES}
+            empty="No checkout, trial, or charge in this range."
+          />
         )}
       </main>
     </div>

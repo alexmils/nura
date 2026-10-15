@@ -56,6 +56,8 @@ function AdminBillingPageInner() {
   const [canEdit, setCanEdit] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [usageBusy, setUsageBusy] = useState(false);
+  const [usageMsg, setUsageMsg] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [msg, setMsg] = useState("");
   const [editorEnv, setEditorEnv] = useState<EnvKey>("sandbox");
@@ -121,6 +123,24 @@ function AdminBillingPageInner() {
       }
     })();
   }, [load]);
+  const countedUsage = usage.filter((u) => !u.statsExcluded);
+  const ignoredUsage = usage.filter((u) => u.statsExcluded);
+  const setStatsExcluded = async (userId: string, statsExcluded: boolean) => {
+    setUsageBusy(true);
+    setUsageMsg("");
+    try {
+      await fetchJson(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statsExcluded }),
+      });
+      await load();
+    } catch (err) {
+      setUsageMsg(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setUsageBusy(false);
+    }
+  };
   const active = stripe[editorEnv];
   const patchEnv = (partial: Partial<StripeCredentialSet>) =>
     setStripe((s) => ({
@@ -636,6 +656,7 @@ function AdminBillingPageInner() {
                 </article>
               </div>
             )}
+            {usageMsg ? <p className="admin-panel-sub">{usageMsg}</p> : null}
             <div className="admin-table-wrap">
               <table className="admin-table">
                 <thead>
@@ -648,10 +669,11 @@ function AdminBillingPageInner() {
                     <th>Voice chars</th>
                     <th>Est. voice cost</th>
                     <th>Last activity</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {usage.map((u) => (
+                  {countedUsage.map((u) => (
                     <tr key={u.userId}>
                       <td>
                         <Link
@@ -684,11 +706,60 @@ function AdminBillingPageInner() {
                       </td>
                       <td>{formatUsdMicros(u.voiceCostUsdMicros ?? 0)}</td>
                       <td>{formatDateTime(u.lastActivityAt)}</td>
+                      <td>
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            className="admin-link"
+                            disabled={usageBusy}
+                            onClick={() => void setStatsExcluded(u.userId, true)}
+                          >
+                            Ignore in stats
+                          </button>
+                        ) : null}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {ignoredUsage.length > 0 && (
+              <div className="admin-table-wrap">
+                <p className="admin-panel-sub">Ignored in stats</p>
+                <table className="admin-table">
+                  <tbody>
+                    {ignoredUsage.map((u) => (
+                      <tr key={u.userId}>
+                        <td>
+                          <Link
+                            href={`/admin/users/${u.userId}`}
+                            className="admin-link"
+                          >
+                            {u.email}
+                          </Link>
+                        </td>
+                        <td>
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              className="admin-link"
+                              disabled={usageBusy}
+                              onClick={() =>
+                                void setStatsExcluded(u.userId, false)
+                              }
+                            >
+                              Count in stats
+                            </button>
+                          ) : (
+                            "Ignored"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </section>
         )}
       </main>

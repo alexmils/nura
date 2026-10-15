@@ -179,12 +179,19 @@ export default function AdminOverviewPage() {
           <section className="admin-panel">
             <div className="admin-panel-head-row">
               <div>
-                <h2 className="admin-panel-title">Last 7 days</h2>
+                <h2 className="admin-panel-title">
+                  <Link href="/admin/analytics" className="admin-panel-title-link">
+                    Last 7 days
+                  </Link>
+                </h2>
                 <p className="admin-panel-sub">
                   Messages, tokens (÷100), new users (×5). Hover a day for exact
                   counts.
                 </p>
               </div>
+              <Link href="/admin/analytics" className="admin-link">
+                Analytics
+              </Link>
             </div>
             <div className="admin-chart-wrap">
               <AdminStackedBars points={chartPoints} />
