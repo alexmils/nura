@@ -196,6 +196,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   threadsRef.current = threads;
   activeThreadIdRef.current = activeThreadId;
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   /**
    * True while a hard refresh is re-opening the session that was open before.
    * The UI shows a quiet placeholder instead of the Home screen, which would
@@ -909,6 +911,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   /** Thread the tour opened just to have a session screen to point at. */
   const guideScratchRef = useRef<string | null>(null);
 
+  const discardGuideScratchThread = useCallback(async () => {
+    const id = guideScratchRef.current;
+    guideScratchRef.current = null;
+    if (!id) return;
+
+    const active = activeThreadIdRef.current;
+    const msgs = active === id ? messagesRef.current : [];
+    if (msgs.some((m) => m.role === "user")) return;
+
+    if (active === id) {
+      clearActiveThreadRaw();
+    }
+
+    setThreads((list) => list.filter((t) => t.id !== id));
+    threadsRef.current = threadsRef.current.filter((t) => t.id !== id);
+
+    try {
+      await fetch("/api/threads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id }),
+      });
+    } catch (err) {
+      console.error("discardGuideScratchThread failed:", err);
+    }
+    await refreshThreads(null);
+  }, [clearActiveThreadRaw, refreshThreads]);
+
   const openGuideSession = async (
     kind: "free" | "guided",
     selector: string
@@ -958,16 +988,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return false;
     },
-    // Leaving the tour must not litter Recent with the scratch session. It is
-    // cleared, then the list is refetched without a protected id so the server
-    // prune removes it right away instead of on the next unrelated fetch.
     cleanupSession: () => {
-      const id = guideScratchRef.current;
-      guideScratchRef.current = null;
-      if (!id || id !== activeThreadId) return;
-      if (messages.some((m) => m.role === "user")) return;
-      clearActiveThreadRaw();
-      void refreshThreads(null);
+      void discardGuideScratchThread();
     },
     chooseSelfGuided: () => openGuideSession("free", '[data-guide="canvas"]'),
     chooseGuided: () => openGuideSession("guided", '[data-guide="composer"]'),
