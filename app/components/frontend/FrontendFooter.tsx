@@ -12,9 +12,14 @@ import { BrandLockup } from "@/app/components/BrandLockup";
 import { BrandSocialLinks } from "@/app/components/BrandSocialLinks";
 import { CookieSettingsButton } from "@/app/components/frontend/CookieBanner";
 import { LetterRevealHeading } from "@/app/components/frontend/LetterRevealHeading";
+import {
+  TurnstileField,
+  type TurnstileFieldHandle,
+} from "@/app/components/TurnstileField";
 import { appPath, LOGIN_PATH } from "@/lib/app-base";
 import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import { TRIAL_DAYS } from "@/lib/billing-constants";
+import { TURNSTILE_TOKEN_FIELD } from "@/lib/turnstile-shared";
 import "./frontend-footer.css";
 
 const FOOTER_COLS = [
@@ -56,6 +61,11 @@ const FOOTER_REVEAL_LOGO = "/brand/Nura%20Logo.svg";
 export function FrontendFooter() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [note, setNote] = useState("");
+  const [newsOptIn, setNewsOptIn] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [newsBusy, setNewsBusy] = useState(false);
+  const turnstileRef = useRef<TurnstileFieldHandle>(null);
   const [spotlightOn, setSpotlightOn] = useState(false);
   const footerRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef(0);
@@ -75,13 +85,35 @@ export function FrontendFooter() {
     });
   }, []);
 
-  function onNewsletter(e: FormEvent<HTMLFormElement>) {
+  async function onNewsletter(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const trimmed = email.trim();
-    if (!trimmed) return;
-    const q = new URLSearchParams({ email: trimmed });
-    window.location.href = `${appPath("/create-account")}?${q.toString()}`;
-    setSent(true);
+    if (!trimmed || !newsOptIn || !turnstileToken || newsBusy) return;
+    setNewsBusy(true);
+    setNote("");
+    try {
+      const res = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: trimmed,
+          marketingEmailOptIn: true,
+          [TURNSTILE_TOKEN_FIELD]: turnstileToken,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setNote(data.error ?? "Could not subscribe.");
+        turnstileRef.current?.reset();
+        return;
+      }
+      setSent(true);
+    } catch {
+      setNote("Network error. Try again.");
+      turnstileRef.current?.reset();
+    } finally {
+      setNewsBusy(false);
+    }
   }
 
   return (
@@ -164,16 +196,14 @@ export function FrontendFooter() {
             <div className="fe-site-footer-newsletter">
               <p className="fe-site-footer-newsletter-title">Newsletter</p>
               <p className="fe-site-footer-newsletter-hint">
-                Occasional notes — no spam.
+                Product news by email. Not an account.
               </p>
               {sent ? (
-                <p className="fe-site-footer-newsletter-done">
-                  Continue in create account to stay in touch.
-                </p>
+                <p className="fe-site-footer-newsletter-done">Thanks.</p>
               ) : (
                 <form
                   className="fe-site-footer-form"
-                  onSubmit={onNewsletter}
+                  onSubmit={(e) => void onNewsletter(e)}
                   noValidate
                 >
                   <label className="fe-site-footer-sr" htmlFor="fe-footer-email">
@@ -190,9 +220,30 @@ export function FrontendFooter() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="fe-site-footer-input"
                   />
-                  <button type="submit" className="fe-site-footer-send">
-                    Send
+                  <button
+                    type="submit"
+                    className="fe-site-footer-send"
+                    disabled={newsBusy || !newsOptIn || !turnstileToken}
+                  >
+                    {newsBusy ? "Sending" : "Send"}
                   </button>
+                  <label className="fe-site-footer-newsletter-hint" style={{ display: "flex", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={newsOptIn}
+                      onChange={(e) => setNewsOptIn(e.target.checked)}
+                    />
+                    <span>
+                      Send me occasional product news.{" "}
+                      <Link href="/privacy">Privacy</Link>
+                    </span>
+                  </label>
+                  <TurnstileField
+                    ref={turnstileRef}
+                    action="newsletter"
+                    onToken={setTurnstileToken}
+                  />
+                  {note ? <p className="fe-site-footer-newsletter-hint">{note}</p> : null}
                 </form>
               )}
             </div>

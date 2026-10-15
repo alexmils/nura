@@ -29,11 +29,17 @@ const ADMIN_TEMPLATE_IDS = EMAIL_TEMPLATE_IDS.filter(
 );
 const ADMIN_TEST_TO = "amilosavljevic09@gmail.com";
 
+const DELIVERY_PANES = [
+  { id: "sender", label: "Sender" },
+  { id: "brevo", label: "Brevo" },
+  { id: "gmail", label: "Gmail" },
+] as const;
+type DeliveryPane = (typeof DELIVERY_PANES)[number]["id"];
+
 type EmailFormState = EmailAdminView;
 
-function sourceLabel(source: "stored" | "env" | "none"): string {
-  if (source === "stored") return "saved in admin";
-  if (source === "env") return "from .env";
+function sourceLabel(source: "stored" | "none"): string {
+  if (source === "stored") return "saved";
   return "not set";
 }
 
@@ -60,8 +66,11 @@ function AdminEmailPageInner() {
   const [logStatus, setLogStatus] = useState<"all" | "sent" | "failed">("all");
   const [logAudience, setLogAudience] = useState<"all" | "user" | "admin">("all");
   const [msg, setMsg] = useState("");
+  const [marketing, setMarketing] = useState<{ users: number; leads: number } | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deliveryPane, setDeliveryPane] = useState<DeliveryPane>("sender");
 
   const load = useCallback(async () => {
     const [settingsRes, templatesRes] = await Promise.all([
@@ -69,6 +78,8 @@ function AdminEmailPageInner() {
         status: EmailAdminStatus;
         email: EmailAdminView;
         canEdit: boolean;
+        marketing?: { users: number; leads: number };
+        webhookUrl?: string;
       }>("/api/admin/email/settings"),
       fetchJson<{
         templates: {
@@ -83,6 +94,8 @@ function AdminEmailPageInner() {
     setStatus(settingsRes.status);
     setForm(settingsRes.email);
     setCanEdit(settingsRes.canEdit);
+    setMarketing(settingsRes.marketing ?? null);
+    setWebhookUrl(settingsRes.webhookUrl ?? "");
     const list = templatesRes.templates ?? [];
     setTemplates(list);
     setSelectedTemplate(
@@ -134,8 +147,12 @@ function AdminEmailPageInner() {
     try {
       const emailPatch: Record<string, string> = {
         replyTo: form.replyTo,
+        brevoMarketingListId: form.brevoMarketingListId,
       };
       if (form.brevoApiKey.trim()) emailPatch.brevoApiKey = form.brevoApiKey.trim();
+      if (form.brevoWebhookSecret.trim()) {
+        emailPatch.brevoWebhookSecret = form.brevoWebhookSecret.trim();
+      }
       if (form.gmailClientId.trim())
         emailPatch.gmailClientId = form.gmailClientId.trim();
       if (form.gmailClientSecret.trim())
@@ -258,11 +275,9 @@ function AdminEmailPageInner() {
               </div>
               <p className="admin-panel-sub">
                 Brevo is the primary sender. Gmail API is the fallback on quota.
-                Secrets can be saved here (preferred) or left in{" "}
-                <code className="admin-code">.env</code>
                 {canEdit
-                  ? " — leave secret fields blank to keep the saved value."
-                  : " — view only (secrets hidden; platform admin can edit)."}
+                  ? " Leave a secret field blank to keep the saved value."
+                  : " View only (secrets hidden; platform admin can edit)."}
               </p>
               <dl className="admin-kv-list">
                 <div className="admin-kv-row">
@@ -295,127 +310,177 @@ function AdminEmailPageInner() {
             </section>
 
             <form
-              className="admin-form-stack admin-panel"
+              className="admin-form-stack admin-panel admin-email-delivery"
               onSubmit={(e) => void saveDelivery(e)}
             >
-              <h2 className="admin-panel-title">Send as</h2>
-              <p className="admin-panel-sub">
-                Outgoing From name and address. Default:{" "}
-                <code className="admin-code">hi@contact.nurahelp.com</code>
-              </p>
-              <label className="admin-field-label">
-                From name
-                <input
-                  type="text"
-                  value={form.fromName}
-                  disabled={!canEdit}
-                  onChange={(e) => patchForm({ fromName: e.target.value })}
-                  className="field"
-                  placeholder="Nura"
-                />
-              </label>
-              <label className="admin-field-label">
-                Send-as address
-                <input
-                  type="email"
-                  value={form.fromAddress}
-                  disabled={!canEdit}
-                  onChange={(e) => patchForm({ fromAddress: e.target.value })}
-                  className="field"
-                  placeholder="hi@contact.nurahelp.com"
-                />
-              </label>
-              <label className="admin-field-label">
-                Reply-To (optional)
-                <input
-                  type="email"
-                  value={form.replyTo}
-                  disabled={!canEdit}
-                  onChange={(e) => patchForm({ replyTo: e.target.value })}
-                  className="field"
-                  placeholder="Leave blank to use From"
-                />
-              </label>
+              <AdminTabs
+                tabs={DELIVERY_PANES}
+                value={deliveryPane}
+                onChange={(id) => setDeliveryPane(id as DeliveryPane)}
+              />
 
-              <h2 className="admin-panel-title" style={{ marginTop: "1rem" }}>
-                Brevo (primary)
-              </h2>
-              <label className="admin-field-label">
-                API key
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={form.brevoApiKey}
-                  disabled={!canEdit}
-                  onChange={(e) => patchForm({ brevoApiKey: e.target.value })}
-                  className="field"
-                  placeholder={
-                    form.hasBrevoApiKey
-                      ? "•••• saved — paste to replace"
-                      : status.env.brevoApiKey
-                        ? "Using .env — paste to store in admin"
-                        : "xkeysib-…"
-                  }
-                />
-              </label>
+              {deliveryPane === "sender" && (
+                <>
+                  <p className="admin-panel-sub">
+                    Outgoing From name and address. Default:{" "}
+                    <code className="admin-code">hi@contact.nurahelp.com</code>
+                  </p>
+                  <label className="admin-field-label">
+                    From name
+                    <input
+                      type="text"
+                      value={form.fromName}
+                      disabled={!canEdit}
+                      onChange={(e) => patchForm({ fromName: e.target.value })}
+                      className="field"
+                      placeholder="Nura"
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Send-as address
+                    <input
+                      type="email"
+                      value={form.fromAddress}
+                      disabled={!canEdit}
+                      onChange={(e) => patchForm({ fromAddress: e.target.value })}
+                      className="field"
+                      placeholder="hi@contact.nurahelp.com"
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Reply-To (optional)
+                    <input
+                      type="email"
+                      value={form.replyTo}
+                      disabled={!canEdit}
+                      onChange={(e) => patchForm({ replyTo: e.target.value })}
+                      className="field"
+                      placeholder="Leave blank to use From"
+                    />
+                  </label>
+                </>
+              )}
 
-              <h2 className="admin-panel-title" style={{ marginTop: "1rem" }}>
-                Gmail API (fallback)
-              </h2>
-              <label className="admin-field-label">
-                Client ID
-                <input
-                  type="text"
-                  autoComplete="off"
-                  value={form.gmailClientId}
-                  disabled={!canEdit}
-                  onChange={(e) => patchForm({ gmailClientId: e.target.value })}
-                  className="field"
-                  placeholder={
-                    form.hasGmailClientId
-                      ? "•••• saved — paste to replace"
-                      : status.env.gmailOauth
-                        ? "Using .env — paste to store in admin"
-                        : "….apps.googleusercontent.com"
-                  }
-                />
-              </label>
-              <label className="admin-field-label">
-                Client secret
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={form.gmailClientSecret}
-                  disabled={!canEdit}
-                  onChange={(e) =>
-                    patchForm({ gmailClientSecret: e.target.value })
-                  }
-                  className="field"
-                  placeholder={
-                    form.hasGmailClientSecret
-                      ? "•••• saved — paste to replace"
-                      : "GOCSPX-…"
-                  }
-                />
-              </label>
-              <label className="admin-field-label">
-                Refresh token
-                <input
-                  type="password"
-                  autoComplete="off"
-                  value={form.gmailRefreshToken}
-                  disabled={!canEdit}
-                  onChange={(e) =>
-                    patchForm({ gmailRefreshToken: e.target.value })
-                  }
-                  className="field"
-                  placeholder={
-                    form.hasGmailRefreshToken
-                      ? "•••• saved — paste to replace"
-                      : "1//…"
-                  }
-                />
-              </label>
+              {deliveryPane === "brevo" && (
+                <>
+                  <p className="admin-panel-sub">
+                    Primary sender, marketing list, and unsubscribe webhook.
+                  </p>
+                  <label className="admin-field-label">
+                    API key
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={form.brevoApiKey}
+                      disabled={!canEdit}
+                      onChange={(e) => patchForm({ brevoApiKey: e.target.value })}
+                      className="field"
+                      placeholder={
+                        form.hasBrevoApiKey
+                          ? "Saved. Paste to replace"
+                          : "xkeysib-…"
+                      }
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Marketing list ID
+                    <input
+                      value={form.brevoMarketingListId}
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        patchForm({ brevoMarketingListId: e.target.value })
+                      }
+                      className="field"
+                      placeholder="Brevo list number"
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Webhook secret
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={form.brevoWebhookSecret}
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        patchForm({ brevoWebhookSecret: e.target.value })
+                      }
+                      className="field"
+                      placeholder={
+                        form.hasBrevoWebhookSecret
+                          ? "Saved. Paste to replace"
+                          : "Secret Brevo sends with the unsubscribe webhook"
+                      }
+                    />
+                  </label>
+                  <p className="admin-help">
+                    Opted-in accounts: {marketing?.users ?? 0}. Newsletter leads:{" "}
+                    {marketing?.leads ?? 0}.
+                    {webhookUrl
+                      ? ` Unsubscribe webhook: ${webhookUrl}. Send the secret as x-brevo-secret or Bearer.`
+                      : ""}
+                  </p>
+                </>
+              )}
+
+              {deliveryPane === "gmail" && (
+                <>
+                  <p className="admin-panel-sub">
+                    Fallback when Brevo hits its send quota.
+                  </p>
+                  <label className="admin-field-label">
+                    Client ID
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value={form.gmailClientId}
+                      disabled={!canEdit}
+                      onChange={(e) => patchForm({ gmailClientId: e.target.value })}
+                      className="field"
+                      placeholder={
+                        form.hasGmailClientId
+                          ? "Saved. Paste to replace"
+                          : "….apps.googleusercontent.com"
+                      }
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Client secret
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={form.gmailClientSecret}
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        patchForm({ gmailClientSecret: e.target.value })
+                      }
+                      className="field"
+                      placeholder={
+                        form.hasGmailClientSecret
+                          ? "Saved. Paste to replace"
+                          : "GOCSPX-…"
+                      }
+                    />
+                  </label>
+                  <label className="admin-field-label">
+                    Refresh token
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={form.gmailRefreshToken}
+                      disabled={!canEdit}
+                      onChange={(e) =>
+                        patchForm({ gmailRefreshToken: e.target.value })
+                      }
+                      className="field"
+                      placeholder={
+                        form.hasGmailRefreshToken
+                          ? "Saved. Paste to replace"
+                          : "1//…"
+                      }
+                    />
+                  </label>
+                </>
+              )}
 
               {canEdit && (
                 <button type="submit" disabled={busy} className="btn-primary w-fit">
@@ -423,55 +488,6 @@ function AdminEmailPageInner() {
                 </button>
               )}
             </form>
-
-            <section className="admin-panel">
-              <h2 className="admin-panel-title">Environment fallbacks</h2>
-              <p className="admin-panel-sub">
-                Read-only. Used when a value is not saved in admin yet.
-              </p>
-              <dl className="admin-kv-list">
-                <div className="admin-kv-row">
-                  <dt>
-                    <code className="admin-code">BREVO_API_KEY</code>
-                  </dt>
-                  <dd>{status.env.brevoApiKey ? "set in .env" : "not in .env"}</dd>
-                </div>
-                <div className="admin-kv-row">
-                  <dt>
-                    <code className="admin-code">GMAIL_CLIENT_*</code>
-                  </dt>
-                  <dd>
-                    {status.env.gmailOauth ? "OAuth set in .env" : "not in .env"}
-                  </dd>
-                </div>
-                <div className="admin-kv-row">
-                  <dt>
-                    <code className="admin-code">EMAIL_FROM_ADDRESS</code>
-                  </dt>
-                  <dd>
-                    {status.env.emailFromAddress
-                      ? "set in .env"
-                      : "not in .env"}
-                  </dd>
-                </div>
-                <div className="admin-kv-row">
-                  <dt>
-                    <code className="admin-code">EMAIL_FROM_NAME</code>
-                  </dt>
-                  <dd>
-                    {status.env.emailFromName ? "set in .env" : "not in .env"}
-                  </dd>
-                </div>
-                <div className="admin-kv-row">
-                  <dt>
-                    <code className="admin-code">GMAIL_SENDER</code>
-                  </dt>
-                  <dd>
-                    {status.env.gmailSender ? "set in .env" : "not in .env"}
-                  </dd>
-                </div>
-              </dl>
-            </section>
           </>
         )}
 

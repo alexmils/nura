@@ -24,7 +24,7 @@ export async function sendViaBrevo(
   const apiKey = await getResolvedBrevoApiKey();
   if (!apiKey) {
     throw new Error(
-      "Brevo API key is not set. Add it in Admin → Email or BREVO_API_KEY."
+      "Brevo API key is not set. Add it in Admin → Email."
     );
   }
 

@@ -42,7 +42,8 @@ export type LegalDocType =
   | "terms"
   | "privacy"
   | "informed_session"
-  | "age_18";
+  | "age_18"
+  | "marketing_email";
 
 /** Bump when Terms / Privacy / informed-consent copy materially changes. */
 export const LEGAL_DOC_VERSION = {
@@ -50,6 +51,7 @@ export const LEGAL_DOC_VERSION = {
   privacy: "privacy@2026-09-13b",
   informed_session: "informed_session@2026-09-12",
   age_18: "age_18@2026-09-12",
+  marketing_email: "marketing_email@2026-10-15",
 } as const satisfies Record<LegalDocType, string>;
 
 export type ClinicalAdvisor = {

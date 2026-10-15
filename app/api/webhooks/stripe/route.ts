@@ -26,6 +26,13 @@ import {
   notifyAdminsOfTrial,
 } from "@/lib/email/admin-payment-notify";
 import { sendPurchaseReceipt } from "@/lib/email/purchase-receipt";
+import {
+  clearSubscriptionCancelNotice,
+  sendPaymentFailedEmail,
+  sendSubscriptionCanceledEmail,
+  sendTrialStartedEmail,
+} from "@/lib/email/billing-customer";
+import { syncBrevoContactForUser } from "@/lib/email/brevo-contacts";
 
 function verifyStripeEvent(
   body: string,
@@ -165,7 +172,19 @@ export async function POST(request: Request) {
           trialEndsAt: mapped.trialEndsAt,
           livemode: event.livemode,
         });
+        await sendTrialStartedEmail({
+          userId,
+          plan: mapped.plan,
+          amountCents: mapped.amountCents ?? 0,
+          currency: session.currency ?? mapped.currency,
+          trialEndsAt: mapped.trialEndsAt,
+          livemode: event.livemode,
+          stripeEventId: event.id,
+        });
       }
+      void syncBrevoContactForUser(userId).catch((err) =>
+        console.error("[brevo] sync after checkout", err)
+      );
     }
 
     if (
@@ -188,6 +207,7 @@ export async function POST(request: Request) {
         };
         current_period_end?: number;
         trial_end?: number | null;
+        cancel_at_period_end?: boolean;
         metadata?: { user_id?: string; user_email?: string; plan?: string };
       };
 
@@ -210,6 +230,16 @@ export async function POST(request: Request) {
           stripeLivemode: event.livemode,
           eventCreatedAt: event.created,
         });
+        const periodEnd = sub.current_period_end
+          ? new Date(sub.current_period_end * 1000)
+          : null;
+        await sendSubscriptionCanceledEmail({
+          userId,
+          accessEndsAt: periodEnd,
+          stripeSubscriptionId: sub.id,
+          livemode: event.livemode,
+          keepsAccess: false,
+        });
       } else {
         const mapped = mapStripeSubscription(sub, priceIds);
         await syncSubscriptionFromStripe({
@@ -221,7 +251,24 @@ export async function POST(request: Request) {
         if (mapped.status === "trialing" || mapped.status === "active") {
           await markOnboardingCompleted(userId);
         }
+        if (sub.cancel_at_period_end) {
+          const periodEnd = sub.current_period_end
+            ? new Date(sub.current_period_end * 1000)
+            : null;
+          await sendSubscriptionCanceledEmail({
+            userId,
+            accessEndsAt: periodEnd,
+            stripeSubscriptionId: sub.id,
+            livemode: event.livemode,
+            keepsAccess: true,
+          });
+        } else if (mapped.status === "trialing" || mapped.status === "active") {
+          await clearSubscriptionCancelNotice(userId, sub.id);
+        }
       }
+      void syncBrevoContactForUser(userId).catch((err) =>
+        console.error("[brevo] sync after subscription", err)
+      );
     }
 
     if (
@@ -309,6 +356,20 @@ export async function POST(request: Request) {
             livemode: event.livemode,
           });
         }
+
+        if (event.type === "invoice.payment_failed") {
+          await sendPaymentFailedEmail({
+            userId,
+            amountCents,
+            currency: invoice.currency ?? mapped.currency,
+            livemode: event.livemode,
+            stripeEventId: event.id,
+          });
+        }
+
+        void syncBrevoContactForUser(userId).catch((err) =>
+          console.error("[brevo] sync after invoice", err)
+        );
 
         if (firstPaidCharge && invoice.id) {
           // Nobody else can see this charge: the browser is long gone, so the

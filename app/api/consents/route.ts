@@ -43,6 +43,7 @@ export async function POST(request: Request) {
       action?: string;
       docType?: string;
       checks?: Partial<Record<InformedConsentKey, boolean>>;
+      optedIn?: boolean;
     };
 
     const ip = clientIp(request);
@@ -73,6 +74,34 @@ export async function POST(request: Request) {
           docVersion: r.docVersion,
           acceptedAt: r.acceptedAt,
         })),
+      });
+    }
+
+    if (body.action === "marketing_email") {
+      if (body.optedIn !== true && body.optedIn !== false) {
+        return NextResponse.json(
+          { error: "optedIn is required" },
+          { status: 400 }
+        );
+      }
+      const { setMarketingEmailPreference } = await import(
+        "@/lib/marketing-email-preference"
+      );
+      const { syncBrevoContactForUser } = await import(
+        "@/lib/email/brevo-contacts"
+      );
+      const user = await setMarketingEmailPreference({
+        userId: ctx.user.id,
+        optedIn: body.optedIn,
+        source: "onboarding",
+        ip,
+        userAgent,
+      });
+      void syncBrevoContactForUser(ctx.user.id).catch((err) =>
+        console.error("[brevo] onboarding sync", err)
+      );
+      return NextResponse.json({
+        optedIn: Boolean(user?.marketingEmailOptIn),
       });
     }
 

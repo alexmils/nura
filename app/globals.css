@@ -7011,6 +7011,12 @@ a.admin-panel-title-link:hover {
   gap: 0.35rem;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.admin-email-delivery .admin-tabs {
+  margin: 0 0 1rem;
 }
 
 .admin-tab {
@@ -7023,6 +7029,7 @@ a.admin-panel-title-link:hover {
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .admin-tab-active {

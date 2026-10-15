@@ -60,6 +60,7 @@ export async function sendEmail(
       templateId: input.templateId ?? null,
       provider: result.provider,
       status: "sent",
+      dedupKey: input.dedupKey ?? null,
     });
     return result;
   } catch (err) {
@@ -79,9 +80,17 @@ export async function sendTemplateEmail<
 >(
   to: string,
   templateId: T,
-  data: import("./templates").EmailTemplateData[T]
+  data: import("./templates").EmailTemplateData[T],
+  options?: { dedupKey?: string | null }
 ): Promise<SendEmailResult> {
   const { renderStoredTemplate } = await import("@/lib/email-templates-db");
   const { subject, html, text } = await renderStoredTemplate(templateId, data);
-  return sendEmail({ to, subject, html, text, templateId });
+  return sendEmail({
+    to,
+    subject,
+    html,
+    text,
+    templateId,
+    dedupKey: options?.dedupKey ?? null,
+  });
 }

@@ -18,6 +18,8 @@ import { clientIp, recordUserLogin, writeAuditEvent } from "@/lib/audit-log";
 import { recordAuthPlaces } from "@/lib/auth-place";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { notifyAdminsOfSignup } from "@/lib/email/admin-payment-notify";
+import { syncBrevoContactForUser } from "@/lib/email/brevo-contacts";
+import { setMarketingEmailPreference } from "@/lib/marketing-email-preference";
 import { LOGIN_PATH } from "@/lib/app-base";
 import { ensureUserAccessStub } from "@/lib/user-access";
 import { persistAttributionFromCookie } from "@/lib/attribution-server";
@@ -41,6 +43,7 @@ export async function POST(request: Request) {
       password?: string;
       name?: string;
       "cf-turnstile-response"?: string;
+      marketingEmailOptIn?: boolean;
     };
 
     const gate = await verifyTurnstileToken({
@@ -83,10 +86,23 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = await createUser(email, name, "user");
+    let user = await createUser(email, name, "user");
     const passwordHash = await hashPassword(password);
     await setUserPassword(user.id, passwordHash);
     await ensureUserAccessStub(user.id);
+    if (body.marketingEmailOptIn === true) {
+      user =
+        (await setMarketingEmailPreference({
+          userId: user.id,
+          optedIn: true,
+          source: "signup",
+          ip: clientIp(request),
+          userAgent: request.headers.get("user-agent"),
+        })) ?? user;
+      void syncBrevoContactForUser(user.id).catch((err) =>
+        console.error("[brevo] signup sync", err)
+      );
+    }
     // Stash the ad click that brought them here; the charge lands days later.
     await persistAttributionFromCookie(
       user.id,

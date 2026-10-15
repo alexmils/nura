@@ -17,7 +17,7 @@ Related: local ports in [README](../README.md), brand in [brand.md](./brand.md).
 | Container image | `ghcr.io/alexmils/nura:latest` (+ short SHA tags) |
 | App listens | **3471** inside container → host `127.0.0.1:3471` |
 | Dev (local) | `localhost:3471` · Postgres Docker **5434** |
-| Dev tunnel | https://dev.nurahelp.com → local 3471 (Cloudflare Tunnel + Access) |
+| Dev tunnel | https://dev.nurahelp.com → this PC `localhost:3471` via the local Cloudflared service (Cloudflare Access in front). DNS CNAME targets that tunnel, not `staging-receptly`. |
 
 ---
 
@@ -189,10 +189,11 @@ Set in Coolify → **nurahelp** → Environment (values not in git):
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Public Turnstile sitekey |
 | `TURNSTILE_SECRET` | Turnstile widget secret (Coolify only; never git) |
 | `TURNSTILE_HOSTNAMES` | Prod: `nurahelp.com,www.nurahelp.com` (no localhost) |
-| `CRON_SECRET` | Shared secret for scheduled jobs (e.g. guest help transcript cron) |
+| `CRON_SECRET` | Shared secret for scheduled jobs (guest help transcript, trial charge reminder) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Optional Web Push keys for Admin Help alerts (PWA). If unset, keys are auto-generated and stored in platform settings on first use |
 | `VAPID_SUBJECT` | Optional `mailto:` or `https://` contact for VAPID (defaults to `APP_URL`) |
-| Email / Stripe | Prefer **Admin → Email / Billing** in DB; optional env bootstrap |
+| Email | Admin → Email only (From, Brevo, Gmail). Blank secrets copy once from env into settings on startup, then sending ignores env |
+| Stripe | Prefer **Admin → Billing** in DB; optional env bootstrap |
 | `COOLIFY_TOKEN` | Same PAT as GitHub Actions; lets Admin Overview read live app status |
 | `COOLIFY_API_URL` | `https://server.nurahelp.com` (Access must allow `/api/v1*`) |
 | `COOLIFY_APP_UUID` | `epufvmx1j8jold5gdpfak85m` (optional; this is the default) |
@@ -242,6 +243,8 @@ bash /data/nura-edge/ensure-after-deploy.sh
 - Stripe webhook URL: `https://nurahelp.com/api/webhooks/stripe`
 - Public marketing routes vs `/app` console: middleware + `lib/public-paths.ts`.
 - **Guest help transcript cron:** Coolify (or any scheduler) every **10–15 minutes** → `GET` or `POST` `https://nurahelp.com/api/cron/help-guest-transcripts` with `Authorization: Bearer $CRON_SECRET` or header `x-cron-secret: $CRON_SECRET`. Do **not** put the secret in the query string. Sends one chat transcript email ~1 hour after last guest activity when email was captured.
+- **Trial charge reminder cron:** daily → `GET` or `POST` `https://nurahelp.com/api/cron/trial-charge-reminders` with the same `CRON_SECRET`. Sends one mail about two days before a live trial's first charge.
+- **Brevo unsubscribe:** In Admin → Email set the marketing list ID and webhook secret. In Brevo, point the marketing webhook at `https://nurahelp.com/api/webhooks/brevo` and send that secret as `x-brevo-secret` or `Authorization: Bearer`.
 - **Admin Help push:** install / open Admin as PWA (manifest `/admin/manifest.webmanifest`), then turn on **Alerts** in the admin top bar. Push fires on every new user help message; email is once per thread (guests: new IP only).
 
 ---

@@ -67,6 +67,7 @@ describe("toEmailAdminView", () => {
       {
         ...DEFAULT_PLATFORM_EMAIL,
         brevoApiKey: "secret-key",
+        brevoWebhookSecret: "hook-secret",
         gmailClientId: "cid",
         gmailClientSecret: "csecret",
         gmailRefreshToken: "rtoken",
@@ -75,6 +76,8 @@ describe("toEmailAdminView", () => {
       true
     );
     assert.equal(view.brevoApiKey, "");
+    assert.equal(view.brevoWebhookSecret, "");
+    assert.equal(view.hasBrevoWebhookSecret, true);
     assert.equal(view.gmailClientSecret, "");
     assert.equal(view.gmailRefreshToken, "");
     assert.equal(view.hasBrevoApiKey, true);
@@ -121,6 +124,7 @@ describe("emailFromEnvFallback", () => {
         brevoApiKey: "db-key",
       });
       assert.equal(kept.brevoApiKey, "db-key");
+      assert.equal(resolveBrevoApiKey(DEFAULT_PLATFORM_EMAIL), null);
     } finally {
       if (prev === undefined) delete process.env.BREVO_API_KEY;
       else process.env.BREVO_API_KEY = prev;

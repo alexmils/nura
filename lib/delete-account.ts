@@ -1,7 +1,7 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import { getSubscriptionByUserId } from "@/lib/stripe-admin";
 import { resolveStripeClient } from "@/lib/stripe";
-import { getUserById, type User } from "@/lib/users";
+import { removeBrevoContact } from "@/lib/email/brevo-contacts";
 import { verifyPassword } from "@/lib/auth/password";
 import {
   DELETE_CONFIRM_PHRASE,
@@ -72,6 +72,12 @@ export async function cancelStripeFromSnapshot(
       snap.subscriptionId
     );
     if (!TERMINAL_SUB_STATUSES.has(existing.status)) {
+      await getPool().query(
+        `UPDATE subscriptions
+         SET cancel_notice_sent_at = COALESCE(cancel_notice_sent_at, NOW())
+         WHERE stripe_subscription_id = $1`,
+        [snap.subscriptionId]
+      );
       await resolved.stripe.subscriptions.cancel(snap.subscriptionId);
     }
 
@@ -189,6 +195,11 @@ export async function deleteUserAccount(opts: {
   }
 
   await getPool().query("DELETE FROM users WHERE id = $1", [user.id]);
+  try {
+    await removeBrevoContact(user.email);
+  } catch (err) {
+    console.warn("[delete-account] Brevo contact", err);
+  }
 
   return { ok: true, user, stripe };
 }

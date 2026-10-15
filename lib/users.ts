@@ -15,6 +15,9 @@ export type User = {
   status: UserStatus;
   lastLoginAt: string | null;
   onboardingCompletedAt: string | null;
+  marketingEmailOptIn: boolean;
+  marketingEmailOptInAt: string | null;
+  brevoContactSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -41,6 +44,13 @@ function rowToUser(row: Record<string, unknown>): User {
     onboardingCompletedAt: row.onboarding_completed_at
       ? new Date(row.onboarding_completed_at as string).toISOString()
       : null,
+    marketingEmailOptIn: Boolean(row.marketing_email_opt_in),
+    marketingEmailOptInAt: row.marketing_email_opt_in_at
+      ? new Date(row.marketing_email_opt_in_at as string).toISOString()
+      : null,
+    brevoContactSyncedAt: row.brevo_contact_synced_at
+      ? new Date(row.brevo_contact_synced_at as string).toISOString()
+      : null,
     createdAt: new Date(row.created_at as string).toISOString(),
     updatedAt: new Date(row.updated_at as string).toISOString(),
   };
@@ -57,6 +67,7 @@ export function publicUser(user: User) {
     status: user.status,
     hasPassword: Boolean(user.passwordHash),
     onboardingCompletedAt: user.onboardingCompletedAt,
+    marketingEmailOptIn: user.marketingEmailOptIn,
   };
 }
 

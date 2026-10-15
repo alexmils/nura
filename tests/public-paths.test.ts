@@ -111,6 +111,12 @@ describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
       isUnauthenticatedPublicPath("/api/cron/help-guest-transcripts"),
       true
     );
+    assert.equal(
+      isUnauthenticatedPublicPath("/api/cron/trial-charge-reminders"),
+      true
+    );
+    assert.equal(isUnauthenticatedPublicPath("/api/newsletter/subscribe"), true);
+    assert.equal(isUnauthenticatedPublicPath("/api/webhooks/brevo"), true);
   });
 
   it("allows brand asset routes", () => {

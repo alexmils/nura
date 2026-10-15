@@ -71,6 +71,9 @@ const API_PUBLIC_PREFIXES = [
   "/api/help/chat",
   "/api/help/guest-contact",
   "/api/cron/help-guest-transcripts",
+  "/api/cron/trial-charge-reminders",
+  "/api/newsletter/subscribe",
+  "/api/webhooks/brevo",
 ] as const;
 
 /** Exact paths that never require a session. */

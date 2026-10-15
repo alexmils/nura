@@ -1,6 +1,7 @@
 /**
- * Email delivery credentials — Admin → Email.
- * Secrets live in `app_settings.email`; env vars remain optional bootstrap / fallback.
+ * Email delivery credentials — Admin → Email only.
+ * Blank secrets may be copied once from env into `app_settings` on load.
+ * Sending never reads env after that.
  */
 
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
@@ -16,6 +17,10 @@ export type PlatformEmailConfig = {
    * deliberately wants no Reply-To header.
    */
   replyTo: string;
+  /** Brevo list id for marketing contacts. Empty means contacts sync without a list. */
+  brevoMarketingListId: string;
+  /** Shared secret Brevo sends as x-brevo-secret or Bearer. Empty rejects the webhook. */
+  brevoWebhookSecret: string;
 };
 
 export const DEFAULT_PLATFORM_EMAIL: PlatformEmailConfig = {
@@ -26,6 +31,8 @@ export const DEFAULT_PLATFORM_EMAIL: PlatformEmailConfig = {
   // Replies to any transactional mail — a receipt, a password reset — should
   // land in the inbox someone actually reads.
   replyTo: BRAND_SUPPORT_EMAIL,
+  brevoMarketingListId: "",
+  brevoWebhookSecret: "",
 };
 
 export function normalizeEmailConfig(raw: unknown): PlatformEmailConfig {
@@ -46,14 +53,13 @@ export function normalizeEmailConfig(raw: unknown): PlatformEmailConfig {
       typeof r.replyTo === "string"
         ? str(r.replyTo)
         : DEFAULT_PLATFORM_EMAIL.replyTo,
+    brevoMarketingListId: str(r.brevoMarketingListId),
+    brevoWebhookSecret: str(r.brevoWebhookSecret),
   };
 }
 
 /**
- * True when no delivery credential is set. `replyTo` is deliberately not part
- * of this: it is optional presentation, not a credential, and it now defaults
- * to the support inbox — counting it would make every config look non-empty and
- * silently switch off the `.env` bootstrap below.
+ * True when no delivery credential is stored. `replyTo` is not a credential.
  */
 export function isEmailConfigEmpty(cfg: PlatformEmailConfig): boolean {
   return (
@@ -64,7 +70,7 @@ export function isEmailConfigEmpty(cfg: PlatformEmailConfig): boolean {
   );
 }
 
-/** One-time / gap-fill from .env when DB fields are blank. */
+/** Copy blank stored secrets from env. Does not overwrite a saved value. */
 export function emailFromEnvFallback(
   current: PlatformEmailConfig
 ): PlatformEmailConfig {
@@ -76,25 +82,25 @@ export function emailFromEnvFallback(
     gmailClientSecret: pick(current.gmailClientSecret, "GMAIL_CLIENT_SECRET"),
     gmailRefreshToken: pick(current.gmailRefreshToken, "GMAIL_REFRESH_TOKEN"),
     replyTo: current.replyTo,
+    brevoMarketingListId: current.brevoMarketingListId,
+    brevoWebhookSecret: current.brevoWebhookSecret,
   };
 }
 
 export function isBrevoConfigured(cfg: PlatformEmailConfig): boolean {
-  return Boolean(cfg.brevoApiKey.trim() || process.env.BREVO_API_KEY?.trim());
+  return Boolean(cfg.brevoApiKey.trim());
 }
 
 export function isGmailCredentialsConfigured(cfg: PlatformEmailConfig): boolean {
-  const id = cfg.gmailClientId.trim() || process.env.GMAIL_CLIENT_ID?.trim();
-  const secret =
-    cfg.gmailClientSecret.trim() || process.env.GMAIL_CLIENT_SECRET?.trim();
-  const refresh =
-    cfg.gmailRefreshToken.trim() || process.env.GMAIL_REFRESH_TOKEN?.trim();
-  return Boolean(id && secret && refresh);
+  return Boolean(
+    cfg.gmailClientId.trim() &&
+      cfg.gmailClientSecret.trim() &&
+      cfg.gmailRefreshToken.trim()
+  );
 }
 
 export function resolveBrevoApiKey(cfg: PlatformEmailConfig): string | null {
-  const key = cfg.brevoApiKey.trim() || process.env.BREVO_API_KEY?.trim();
-  return key || null;
+  return cfg.brevoApiKey.trim() || null;
 }
 
 export function resolveGmailCredentials(cfg: PlatformEmailConfig): {
@@ -102,44 +108,22 @@ export function resolveGmailCredentials(cfg: PlatformEmailConfig): {
   clientSecret: string;
   refreshToken: string;
 } | null {
-  const clientId =
-    cfg.gmailClientId.trim() || process.env.GMAIL_CLIENT_ID?.trim() || "";
-  const clientSecret =
-    cfg.gmailClientSecret.trim() ||
-    process.env.GMAIL_CLIENT_SECRET?.trim() ||
-    "";
-  const refreshToken =
-    cfg.gmailRefreshToken.trim() ||
-    process.env.GMAIL_REFRESH_TOKEN?.trim() ||
-    "";
+  const clientId = cfg.gmailClientId.trim();
+  const clientSecret = cfg.gmailClientSecret.trim();
+  const refreshToken = cfg.gmailRefreshToken.trim();
   if (!clientId || !clientSecret || !refreshToken) return null;
   return { clientId, clientSecret, refreshToken };
 }
 
-export type EmailCredentialSource = "stored" | "env" | "none";
+export type EmailCredentialSource = "stored" | "none";
 
 export function brevoKeySource(cfg: PlatformEmailConfig): EmailCredentialSource {
-  if (cfg.brevoApiKey.trim()) return "stored";
-  if (process.env.BREVO_API_KEY?.trim()) return "env";
-  return "none";
+  return cfg.brevoApiKey.trim() ? "stored" : "none";
 }
 
 export function gmailCredsSource(
   cfg: PlatformEmailConfig
 ): EmailCredentialSource {
-  const stored =
-    cfg.gmailClientId.trim() &&
-    cfg.gmailClientSecret.trim() &&
-    cfg.gmailRefreshToken.trim();
-  if (stored) return "stored";
-  if (
-    process.env.GMAIL_CLIENT_ID?.trim() &&
-    process.env.GMAIL_CLIENT_SECRET?.trim() &&
-    process.env.GMAIL_REFRESH_TOKEN?.trim()
-  ) {
-    return "env";
-  }
-  // Partial stored still counts as stored if any piece is in DB
   if (
     cfg.gmailClientId.trim() ||
     cfg.gmailClientSecret.trim() ||

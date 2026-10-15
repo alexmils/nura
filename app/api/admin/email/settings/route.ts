@@ -18,6 +18,7 @@ import {
 import type { PlatformEmailConfig } from "@/lib/email-config";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 import { chromeBrandName } from "@/lib/brand";
+import { countMarketingOptIns } from "@/lib/email/brevo-contacts";
 
 export async function GET() {
   const auth = await requireAdminAccess();
@@ -36,6 +37,10 @@ export async function GET() {
       /* optional until configured */
     }
     const appUrl = await getPublicAppUrl();
+    const marketing = await countMarketingOptIns().catch(() => ({
+      users: 0,
+      leads: 0,
+    }));
     const status = emailAdminStatus(settings.email, {
       fromName: settings.fromName,
       fromAddress: settings.fromAddress,
@@ -55,6 +60,8 @@ export async function GET() {
         canEdit
       ),
       canEdit,
+      marketing,
+      webhookUrl: `${appUrl}/api/webhooks/brevo`,
     });
   } catch (err) {
     console.error("[admin/email/settings GET]", err);

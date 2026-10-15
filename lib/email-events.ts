@@ -29,6 +29,9 @@ export async function ensureEmailEventsSchema() {
       created_at TIMESTAMPTZ NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_email_events_created ON email_events(created_at DESC);
+    ALTER TABLE email_events ADD COLUMN IF NOT EXISTS dedup_key TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_email_events_dedup
+      ON email_events(dedup_key);
   `);
 }
 
@@ -38,11 +41,13 @@ export async function logEmailEvent(input: {
   provider?: string | null;
   status: EmailEventStatus;
   error?: string | null;
+  dedupKey?: string | null;
 }) {
   await ensureEmailEventsSchema();
   await getPool().query(
-    `INSERT INTO email_events (id, to_email, template_id, provider, status, error, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+    `INSERT INTO email_events (id, to_email, template_id, provider, status, error, created_at, dedup_key)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7)
+     ON CONFLICT (dedup_key) DO NOTHING`,
     [
       crypto.randomUUID(),
       input.toEmail,
@@ -50,8 +55,21 @@ export async function logEmailEvent(input: {
       input.provider ?? null,
       input.status,
       input.error ?? null,
+      input.dedupKey ?? null,
     ]
   );
+}
+
+/** True when a successful send already claimed this key. */
+export async function hasSentEmailDedup(dedupKey: string): Promise<boolean> {
+  await ensureEmailEventsSchema();
+  const { rows } = await getPool().query<{ id: string }>(
+    `SELECT id FROM email_events
+     WHERE dedup_key = $1 AND status = 'sent'
+     LIMIT 1`,
+    [dedupKey]
+  );
+  return Boolean(rows[0]);
 }
 
 export async function listEmailEvents(options?: {

@@ -51,7 +51,7 @@ describe("keepEmailTemplateId", () => {
 });
 
 /** Minimal fixtures — enough for each template to render. */
-const FIXTURES: Record<string, Record<string, string>> = {
+const FIXTURES: Record<string, Record<string, string | boolean>> = {
   password_reset: { name: "Alex", resetUrl: "https://nurahelp.com/r", expiresIn: "72 hours" },
   welcome_invite: { name: "Alex", createPasswordUrl: "https://nurahelp.com/p", expiresIn: "72 hours" },
   password_changed: { name: "Alex", loginUrl: "https://nurahelp.com/app/login" },
@@ -69,6 +69,35 @@ const FIXTURES: Record<string, Record<string, string>> = {
     paidAt: "September 21, 2026",
     manageBillingUrl: "https://nurahelp.com/app/billing",
     supportEmail: BRAND_SUPPORT_EMAIL,
+  },
+  trial_started: {
+    name: "Alex",
+    planLabel: "Monthly",
+    amount: "$14.99",
+    trialEndsAt: "October 22, 2026",
+    manageBillingUrl: "https://nurahelp.com/app/billing",
+    supportEmail: BRAND_SUPPORT_EMAIL,
+  },
+  payment_failed: {
+    name: "Alex",
+    amount: "$14.99",
+    manageBillingUrl: "https://nurahelp.com/app/billing",
+    supportEmail: BRAND_SUPPORT_EMAIL,
+  },
+  trial_charge_reminder: {
+    name: "Alex",
+    planLabel: "Monthly",
+    amount: "$14.99",
+    chargeDate: "October 22, 2026",
+    manageBillingUrl: "https://nurahelp.com/app/billing",
+  },
+  subscription_canceled: {
+    name: "Alex",
+    accessEndsAt: "October 22, 2026",
+    homeUrl: "https://nurahelp.com/",
+    supportEmail: BRAND_SUPPORT_EMAIL,
+    billingNote: "Your plan will not renew.",
+    keepsAccess: false,
   },
   admin_signup: {
     customerName: "Sam",

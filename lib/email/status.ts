@@ -47,32 +47,6 @@ export async function getEmailProviderStatus(): Promise<
   };
 }
 
-/** @deprecated use getEmailProviderStatus — sync env-only check */
-export function getEmailProviderEnvStatus(): Pick<
-  EmailProviderStatus,
-  | "gmailConfigured"
-  | "brevoConfigured"
-  | "gmailFallbackConfigured"
-  | "primaryProvider"
-> {
-  const gmailConfigured = Boolean(
-    process.env.GMAIL_CLIENT_ID?.trim() &&
-      process.env.GMAIL_CLIENT_SECRET?.trim() &&
-      process.env.GMAIL_REFRESH_TOKEN?.trim()
-  );
-  const brevoConfigured = Boolean(process.env.BREVO_API_KEY?.trim());
-  return {
-    gmailConfigured,
-    brevoConfigured,
-    gmailFallbackConfigured: gmailConfigured,
-    primaryProvider: brevoConfigured
-      ? "brevo"
-      : gmailConfigured
-        ? "gmail"
-        : "none",
-  };
-}
-
 export async function getResolvedBrevoApiKey(): Promise<string | null> {
   return resolveBrevoApiKey(await getEmailConfig());
 }

@@ -6,6 +6,8 @@ export type SendEmailInput = {
   html: string;
   text: string;
   templateId?: string | null;
+  /** Stable key so a retry does not send the same mail twice. */
+  dedupKey?: string | null;
 };
 
 export type SendEmailResult = {
@@ -36,20 +38,15 @@ export function isQuotaError(err: unknown): boolean {
 
 export async function getFromAddress(): Promise<{ email: string; name: string }> {
   const platform = await getPlatformSettings();
-  const email =
-    platform.fromAddress.trim() || process.env.EMAIL_FROM_ADDRESS?.trim();
+  const email = platform.fromAddress.trim();
   if (!email) {
     throw new Error(
-      "Sender address is not configured. Set it in Admin → Email or EMAIL_FROM_ADDRESS."
+      "Sender address is not configured. Set it in Admin → Email."
     );
   }
   return {
     email,
-    name:
-      platform.fromName.trim() ||
-      process.env.EMAIL_FROM_NAME?.trim() ||
-      platform.siteName ||
-      "Nura",
+    name: platform.fromName.trim() || platform.siteName || "Nura",
   };
 }
 

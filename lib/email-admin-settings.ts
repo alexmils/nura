@@ -12,7 +12,10 @@ export type EmailAdminView = {
   fromName: string;
   fromAddress: string;
   replyTo: string;
+  brevoMarketingListId: string;
   /** Write-only — always empty on GET. */
+  brevoWebhookSecret: string;
+  hasBrevoWebhookSecret: boolean;
   brevoApiKey: string;
   gmailClientId: string;
   gmailClientSecret: string;
@@ -21,8 +24,8 @@ export type EmailAdminView = {
   hasGmailClientId: boolean;
   hasGmailClientSecret: boolean;
   hasGmailRefreshToken: boolean;
-  brevoSource: "stored" | "env" | "none";
-  gmailSource: "stored" | "env" | "none";
+  brevoSource: "stored" | "none";
+  gmailSource: "stored" | "none";
 };
 
 export type EmailAdminStatus = {
@@ -35,14 +38,6 @@ export type EmailAdminStatus = {
   fromAddress: string | null;
   replyTo: string | null;
   appUrl: string;
-  /** Env-only fallbacks (read-only indicators). */
-  env: {
-    emailFromAddress: boolean;
-    emailFromName: boolean;
-    gmailSender: boolean;
-    brevoApiKey: boolean;
-    gmailOauth: boolean;
-  };
 };
 
 export function emailAdminStatus(
@@ -70,17 +65,6 @@ export function emailAdminStatus(
     fromAddress: opts.resolvedFromAddress,
     replyTo: email.replyTo.trim() || null,
     appUrl: opts.appUrl,
-    env: {
-      emailFromAddress: Boolean(process.env.EMAIL_FROM_ADDRESS?.trim()),
-      emailFromName: Boolean(process.env.EMAIL_FROM_NAME?.trim()),
-      gmailSender: Boolean(process.env.GMAIL_SENDER?.trim()),
-      brevoApiKey: Boolean(process.env.BREVO_API_KEY?.trim()),
-      gmailOauth: Boolean(
-        process.env.GMAIL_CLIENT_ID?.trim() &&
-          process.env.GMAIL_CLIENT_SECRET?.trim() &&
-          process.env.GMAIL_REFRESH_TOKEN?.trim()
-      ),
-    },
   };
 }
 
@@ -94,6 +78,9 @@ export function toEmailAdminView(
     fromName: sender.fromName,
     fromAddress: sender.fromAddress,
     replyTo: email.replyTo,
+    brevoMarketingListId: email.brevoMarketingListId,
+    brevoWebhookSecret: "",
+    hasBrevoWebhookSecret: Boolean(email.brevoWebhookSecret.trim()),
     brevoApiKey: "",
     gmailClientId: "",
     gmailClientSecret: "",
@@ -121,6 +108,9 @@ export function mergeEmailConfigPatch(
   if (typeof patch.brevoApiKey === "string" && patch.brevoApiKey.trim()) {
     next.brevoApiKey = patch.brevoApiKey.trim();
   }
+  if (typeof patch.brevoWebhookSecret === "string" && patch.brevoWebhookSecret.trim()) {
+    next.brevoWebhookSecret = patch.brevoWebhookSecret.trim();
+  }
   if (typeof patch.gmailClientId === "string" && patch.gmailClientId.trim()) {
     next.gmailClientId = patch.gmailClientId.trim();
   }
@@ -138,6 +128,9 @@ export function mergeEmailConfigPatch(
   }
   if (typeof patch.replyTo === "string") {
     next.replyTo = patch.replyTo.trim();
+  }
+  if (typeof patch.brevoMarketingListId === "string") {
+    next.brevoMarketingListId = patch.brevoMarketingListId.trim();
   }
 
   return next;

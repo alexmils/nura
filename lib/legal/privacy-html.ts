@@ -78,8 +78,19 @@ const NURA_PRIVACY_ADDENDUM = `
     Clarity) may load in a limited mode so vendors can verify installation. Full
     cookies and cross-session tracking start only after you allow analytics or
     marketing cookies in the banner. You can change that choice anytime via
-    Cookie settings in the site footer. Session cookies for signing in to the app
+    Cookie settings in the site footer.     Session cookies for signing in to the app
     are required for the product to work.
+  </p>
+
+  <h3 id="nura-marketing-email">Marketing emails</h3>
+  <p>
+    Product news is optional and off unless you check the box when you create an
+    account, on the first setup step, in Settings, or in the site footer
+    newsletter. Cookie choices for ads are separate and do not sign you up for
+    email. Billing and account messages (trial, receipts, password, payment
+    problems) are part of the subscription and do not use that checkbox. You can
+    turn product news off in Settings or with the unsubscribe link in those
+    emails. We send marketing email through Brevo.
   </p>
 
   <h3 id="nura-storage">Where data is stored</h3>
@@ -114,7 +125,7 @@ const NURA_PRIVACY_ADDENDUM = `
   <h3 id="nura-bases">Legal bases (product summary)</h3>
   <ul>
     <li><strong>Contract</strong> — account, sessions, billing</li>
-    <li><strong>Consent</strong> — special category session content; non-essential cookies</li>
+    <li><strong>Consent</strong> — special category session content; non-essential cookies; optional marketing email</li>
     <li><strong>Legitimate interests</strong> — security, fraud prevention, product integrity</li>
     <li><strong>Legal obligation</strong> — tax / accounting where required</li>
   </ul>

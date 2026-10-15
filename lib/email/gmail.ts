@@ -10,11 +10,7 @@ import { getResolvedGmailCredentials } from "./status";
 
 async function buildRawMessage(input: SendEmailInput): Promise<string> {
   const from = await getFromAddress();
-  // Send-as: Admin → Email "From address", then GMAIL_SENDER / EMAIL_FROM_ADDRESS.
-  const sender =
-    from.email ||
-    process.env.GMAIL_SENDER?.trim() ||
-    process.env.EMAIL_FROM_ADDRESS?.trim();
+  const sender = from.email;
   if (!sender) {
     throw new Error(
       "Gmail send-as address is not set. Configure Admin → Email → From address."
@@ -47,15 +43,6 @@ async function buildRawMessage(input: SendEmailInput): Promise<string> {
   return lines.join("\r\n");
 }
 
-/** Sync env-only check — prefer async isGmailReady() for DB + env. */
-export function isGmailConfigured(): boolean {
-  return Boolean(
-    process.env.GMAIL_CLIENT_ID &&
-      process.env.GMAIL_CLIENT_SECRET &&
-      process.env.GMAIL_REFRESH_TOKEN
-  );
-}
-
 export async function isGmailReady(): Promise<boolean> {
   return Boolean(await getResolvedGmailCredentials());
 }
@@ -67,7 +54,7 @@ export async function sendViaGmail(
 
   if (!creds) {
     throw new Error(
-      "Gmail API not configured. Set credentials in Admin → Email or GMAIL_CLIENT_ID / SECRET / REFRESH_TOKEN."
+      "Gmail API not configured. Set credentials in Admin → Email."
     );
   }
 

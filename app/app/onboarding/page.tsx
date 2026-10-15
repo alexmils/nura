@@ -59,6 +59,7 @@ function OnboardingFlow() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const refreshStatus = useCallback(async () => {
     const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
@@ -187,6 +188,13 @@ function OnboardingFlow() {
       if (!res.ok) {
         setError(data.error ?? "Could not save confirmation");
         return;
+      }
+      if (marketingOptIn) {
+        await fetch("/api/consents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "marketing_email", optedIn: true }),
+        });
       }
       setStep(afterAgeStep);
     } catch {
@@ -317,6 +325,17 @@ function OnboardingFlow() {
             <AuthLink href="/terms">Terms</AuthLink> and{" "}
             <AuthLink href="/privacy">Privacy</AuthLink>.
           </p>
+          <label className="ob-age-check">
+            <input
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+            />
+            <span>
+              Send me occasional product news and tips by email. Optional. Turn
+              this off anytime in Settings.
+            </span>
+          </label>
           <button
             type="button"
             className="frontend-btn-primary ob-cta"

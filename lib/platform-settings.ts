@@ -33,7 +33,6 @@ import {
 import {
   DEFAULT_PLATFORM_EMAIL,
   emailFromEnvFallback,
-  isEmailConfigEmpty,
   normalizeEmailConfig,
   type PlatformEmailConfig,
 } from "@/lib/email-config";
@@ -412,13 +411,13 @@ export async function getPlatformSettings(): Promise<PlatformSettings> {
   }
   const rawEmail = raw && typeof raw === "object" ? raw.email : null;
   const emailMissing = !rawEmail || typeof rawEmail !== "object";
-  const emailEmpty = isEmailConfigEmpty(settings.email);
-  const emailBootstrapped = emailEmpty
-    ? emailFromEnvFallback(settings.email)
-    : settings.email;
+  const emailBootstrapped = emailFromEnvFallback(settings.email);
   const needsEmailPersist =
     emailMissing ||
-    (emailEmpty && !isEmailConfigEmpty(emailBootstrapped));
+    emailBootstrapped.brevoApiKey !== settings.email.brevoApiKey ||
+    emailBootstrapped.gmailClientId !== settings.email.gmailClientId ||
+    emailBootstrapped.gmailClientSecret !== settings.email.gmailClientSecret ||
+    emailBootstrapped.gmailRefreshToken !== settings.email.gmailRefreshToken;
   if (needsEmailPersist) {
     settings = { ...settings, email: emailBootstrapped };
   }

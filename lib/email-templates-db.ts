@@ -72,6 +72,39 @@ function sampleData(id: EmailTemplateId) {
         manageBillingUrl: "https://example.com/app/billing",
         supportEmail: base.supportEmail,
       };
+    case "trial_started":
+      return {
+        name: base.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        trialEndsAt: "October 22, 2026",
+        manageBillingUrl: "https://example.com/app/billing",
+        supportEmail: base.supportEmail,
+      };
+    case "payment_failed":
+      return {
+        name: base.name,
+        amount: "$14.99",
+        manageBillingUrl: "https://example.com/app/billing",
+        supportEmail: base.supportEmail,
+      };
+    case "trial_charge_reminder":
+      return {
+        name: base.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        chargeDate: "October 22, 2026",
+        manageBillingUrl: "https://example.com/app/billing",
+      };
+    case "subscription_canceled":
+      return {
+        name: base.name,
+        accessEndsAt: "October 22, 2026",
+        homeUrl: base.homeUrl,
+        supportEmail: base.supportEmail,
+        billingNote: "Your plan will not renew.",
+        keepsAccess: false,
+      };
     case "admin_signup":
       return {
         customerName: "Sam",

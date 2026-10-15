@@ -67,6 +67,39 @@ export async function POST(request: Request) {
         manageBillingUrl: await getAppUrl("/app/billing"),
         supportEmail: sample.supportEmail,
       });
+    } else if (id === "trial_started") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        trialEndsAt: "October 22, 2026",
+        manageBillingUrl: await getAppUrl("/app/billing"),
+        supportEmail: sample.supportEmail,
+      });
+    } else if (id === "payment_failed") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        amount: "$14.99",
+        manageBillingUrl: await getAppUrl("/app/billing"),
+        supportEmail: sample.supportEmail,
+      });
+    } else if (id === "trial_charge_reminder") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        planLabel: "Monthly",
+        amount: "$14.99",
+        chargeDate: "October 22, 2026",
+        manageBillingUrl: await getAppUrl("/app/billing"),
+      });
+    } else if (id === "subscription_canceled") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        accessEndsAt: "October 22, 2026",
+        homeUrl: sample.homeUrl,
+        supportEmail: sample.supportEmail,
+        billingNote: "Your plan will not renew.",
+        keepsAccess: false,
+      });
     } else if (id === "admin_signup") {
       await sendTemplateEmail(to.trim(), id, {
         customerName: sample.name,

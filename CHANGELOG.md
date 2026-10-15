@@ -159,6 +159,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Places puts the map beside Sign-ins and New accounts so the page is one row, not three stacked blocks
 - [internal] Places is two rows: a smaller map, then Sign-ins and New accounts side by side
 - [internal] New menu icons sit centered in their tiles again
+- Optional email updates on create account, setup, and Settings. The footer newsletter asks before it adds you. Billing mail still arrives without that choice
+- [internal] Brevo marketing contacts, unsubscribe webhook, and trial, failed payment, charge reminder, and canceled subscription emails
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -767,6 +769,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Last 7 days opens Analytics from the title. The day chart stays hoverable. Usage totals limit counted accounts on their own, and Ignore errors stay on the Usage tab
 - [internal] Analytics Audience, Acquisition, Engagement, and Conversions show a total, a plain line for each row, and that row’s share. Session types use AI agent-guided and Self-guided
 - [internal] Finance toolbar no longer shows a stray up-down scrollbar beside Updated just now
+- A canceled plan says you can keep using Nura until the date it stops, when that time is still ahead
+- [internal] Billing cancel mail retries if sending fails. Brevo contacts are created only after email opt-in. The trial reminder covers the last two days. A bounced receipt does not turn off product news
+- [internal] Brevo marketing list ID and unsubscribe webhook secret are set in Admin → Email, not in env
+- [internal] Admin Email delivery splits Sender, Brevo, Gmail, and Environment into tabs instead of one stacked form
+- [internal] Email sending uses Admin → Email only. The Environment tab is gone. Blank Brevo and Gmail secrets copy once from env into settings
+- [internal] dev.nurahelp.com points at the local Cloudflared tunnel and localhost 3471. The old staging tunnel was returning 502
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

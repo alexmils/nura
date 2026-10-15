@@ -61,6 +61,8 @@ function SettingsPageContent() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [emailUpdates, setEmailUpdates] = useState(false);
+  const [emailUpdatesBusy, setEmailUpdatesBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const tabs = ALL_TABS.filter((t) => t.id !== "memory" || memoryEnabled);
@@ -79,6 +81,12 @@ function SettingsPageContent() {
 
   useEffect(() => {
     void load();
+    void fetch("/api/settings/marketing-email")
+      .then((res) => res.json())
+      .then((data: { optedIn?: boolean }) => {
+        setEmailUpdates(Boolean(data.optedIn));
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -299,6 +307,38 @@ function SettingsPageContent() {
                 >
                   {profileSaving ? "Saving…" : "Save profile"}
                 </button>
+              </div>
+              <div className="settings-row flex items-start justify-between gap-4">
+                <div>
+                  <p className="settings-body-text">Email updates</p>
+                  <p className="mt-1 settings-help">
+                    Occasional product news and tips. Billing and account mail
+                    still arrives either way.
+                  </p>
+                </div>
+                <AppleToggle
+                  checked={emailUpdates}
+                  disabled={emailUpdatesBusy}
+                  label="Email updates"
+                  onChange={(next) => {
+                    setEmailUpdatesBusy(true);
+                    void fetch("/api/settings/marketing-email", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ optedIn: next }),
+                    })
+                      .then(async (res) => {
+                        const data = (await res.json()) as { optedIn?: boolean };
+                        if (!res.ok) throw new Error("Could not save");
+                        setEmailUpdates(Boolean(data.optedIn));
+                        toast(next ? "Email updates on" : "Email updates off");
+                      })
+                      .catch(() => {
+                        toast("Could not save email updates", "error");
+                      })
+                      .finally(() => setEmailUpdatesBusy(false));
+                  }}
+                />
               </div>
               {profileError && (
                 <p className="settings-row settings-body-text text-[var(--destructive)]">

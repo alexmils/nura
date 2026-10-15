@@ -226,6 +226,29 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_price_id TEXT;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_stripe_event_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_livemode BOOLEAN;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminder_sent_at TIMESTAMPTZ;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_notice_sent_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in_at TIMESTAMPTZ;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS brevo_contact_synced_at TIMESTAMPTZ;
+  `);
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS newsletter_leads (
+      email TEXT PRIMARY KEY,
+      opted_in_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      opted_out_at TIMESTAMPTZ,
+      ip_hash TEXT,
+      source TEXT NOT NULL DEFAULT 'footer',
+      brevo_synced_at TIMESTAMPTZ
+    );
+    CREATE TABLE IF NOT EXISTS newsletter_attempts (
+      id TEXT PRIMARY KEY,
+      ip_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_newsletter_attempts_ip
+      ON newsletter_attempts(ip_hash, created_at DESC);
   `);
 
   await db.query(`

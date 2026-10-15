@@ -39,6 +39,7 @@ function CreateAccountForm() {
   const [error, setError] = useState(oauthError ?? "");
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
   const turnstileRef = useRef<TurnstileFieldHandle>(null);
 
   useEffect(() => {
@@ -86,6 +87,7 @@ function CreateAccountForm() {
           email,
           password,
           name: name.trim() || undefined,
+          marketingEmailOptIn: marketingOptIn,
           [TURNSTILE_TOKEN_FIELD]: turnstileToken,
         }),
       });
@@ -212,6 +214,18 @@ function CreateAccountForm() {
           action="signup"
           onToken={setTurnstileToken}
         />
+        <label className="auth-method-legal" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <input
+            type="checkbox"
+            checked={marketingOptIn}
+            onChange={(e) => setMarketingOptIn(e.target.checked)}
+          />
+          <span>
+            Send me occasional product news and tips by email. You can turn this
+            off anytime in Settings.{" "}
+            <AuthLink href="/privacy">Privacy</AuthLink>
+          </span>
+        </label>
         <button
           type="submit"
           disabled={loading || !turnstileToken}

@@ -40,6 +40,36 @@ export type EmailTemplateData = {
     manageBillingUrl: string;
     supportEmail: string;
   };
+  trial_started: {
+    name: string;
+    planLabel: string;
+    amount: string;
+    trialEndsAt: string;
+    manageBillingUrl: string;
+    supportEmail: string;
+  };
+  payment_failed: {
+    name: string;
+    amount: string;
+    manageBillingUrl: string;
+    supportEmail: string;
+  };
+  trial_charge_reminder: {
+    name: string;
+    planLabel: string;
+    amount: string;
+    chargeDate: string;
+    manageBillingUrl: string;
+  };
+  subscription_canceled: {
+    name: string;
+    accessEndsAt: string;
+    homeUrl: string;
+    supportEmail: string;
+    billingNote: string;
+    /** True while the paid period is still open. */
+    keepsAccess: boolean;
+  };
   admin_signup: {
     customerName: string;
     customerEmail: string;
@@ -296,6 +326,112 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          ${ctaButton(d.manageBillingUrl, "Manage billing")}
          <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:${mutedColor};">Questions about this charge? Reply to this email or write to <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>`,
         `This is a receipt for a charge on your ${escapeEmailHtml(siteName)} subscription. Manage it any time from Billing.`
+      );
+      return { subject, html, text };
+    }
+    case "trial_started": {
+      const d = data as EmailTemplateData["trial_started"];
+      const safeName = escapeEmailHtml(d.name);
+      const safePlan = escapeEmailHtml(d.planLabel);
+      const safeAmount = escapeEmailHtml(d.amount);
+      const safeEnd = escapeEmailHtml(d.trialEndsAt);
+      const safeSupport = escapeEmailHtml(d.supportEmail);
+      const subject = "Your trial has started";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        `Your ${d.planLabel} trial is on. The first charge of ${d.amount} is scheduled for ${d.trialEndsAt}.`,
+        "",
+        `Manage billing: ${d.manageBillingUrl}`,
+        `Questions: ${d.supportEmail}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Your trial has started",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your <strong>${safePlan}</strong> trial is on. The first charge of <strong>${safeAmount}</strong> is scheduled for ${safeEnd}.</p>
+         ${ctaButton(d.manageBillingUrl, "Manage billing")}
+         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions? <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a></p>`,
+        "This note is about your trial. Billing emails are separate from optional product news."
+      );
+      return { subject, html, text };
+    }
+    case "payment_failed": {
+      const d = data as EmailTemplateData["payment_failed"];
+      const safeName = escapeEmailHtml(d.name);
+      const safeAmount = escapeEmailHtml(d.amount);
+      const safeSupport = escapeEmailHtml(d.supportEmail);
+      const subject = "We could not process your payment";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        `We could not charge ${d.amount}. Update your card in Manage billing so your plan stays active.`,
+        "",
+        d.manageBillingUrl,
+        "",
+        d.supportEmail,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Payment did not go through",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">We could not charge <strong>${safeAmount}</strong>. Update your card so your plan stays active.</p>
+         ${ctaButton(d.manageBillingUrl, "Manage billing")}
+         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions? <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a></p>`
+      );
+      return { subject, html, text };
+    }
+    case "trial_charge_reminder": {
+      const d = data as EmailTemplateData["trial_charge_reminder"];
+      const safeName = escapeEmailHtml(d.name);
+      const safePlan = escapeEmailHtml(d.planLabel);
+      const safeAmount = escapeEmailHtml(d.amount);
+      const safeDate = escapeEmailHtml(d.chargeDate);
+      const subject = "Your trial ends soon";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        `Your ${d.planLabel} trial ends on ${d.chargeDate}. The first charge will be ${d.amount}.`,
+        "",
+        `Manage billing: ${d.manageBillingUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Your trial ends soon",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your <strong>${safePlan}</strong> trial ends on ${safeDate}. The first charge will be <strong>${safeAmount}</strong>.</p>
+         ${ctaButton(d.manageBillingUrl, "Manage billing")}`,
+        "Cancel or change the plan in Manage billing before that date if you do not want the charge."
+      );
+      return { subject, html, text };
+    }
+    case "subscription_canceled": {
+      const d = data as EmailTemplateData["subscription_canceled"];
+      const safeName = escapeEmailHtml(d.name);
+      const safeEnd = escapeEmailHtml(d.accessEndsAt);
+      const safeNote = escapeEmailHtml(d.billingNote);
+      const safeSupport = escapeEmailHtml(d.supportEmail);
+      const subject = d.keepsAccess
+        ? "Your plan will not renew"
+        : "Your subscription has ended";
+      const title = d.keepsAccess ? "Your plan will not renew" : "Subscription canceled";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        d.billingNote,
+        `Access: ${d.accessEndsAt}`,
+        "",
+        d.homeUrl,
+        d.supportEmail,
+      ].join("\n");
+      const html = layout(
+        brand,
+        title,
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">${safeNote}</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Access: ${safeEnd}</p>
+         ${ctaButton(d.homeUrl, "Back to home")}
+         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions? <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a></p>`
       );
       return { subject, html, text };
     }
