@@ -743,6 +743,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Nura Google Ads MCP can suggest, add, and remove places, add and remove keywords, and change a paused sales ad. Search text is replaced with a new paused ad. A campaign still cannot be enabled.
 - Adjustments: the selected animation, path, and flash choice is filled in so you can see which one is on
 - Live preview flashes keep the color you pick. Standard still brightens that color, and only a white flash color stays white
+- [internal] First Google sign-up, email sign-up, and password reset now record a sign-in. The first session used to leave Last login as Never and Login history empty
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

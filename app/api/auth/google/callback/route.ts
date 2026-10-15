@@ -221,12 +221,12 @@ export async function GET(request: Request) {
 
     const { user, isNew } = resolved;
 
-    if (!isNew) {
-      await recordUserLogin(user.id, clientIp(request));
-      if (user.role === "user") {
-        await ensureUserAccessStub(user.id);
-      }
+    if (!isNew && user.role === "user") {
+      await ensureUserAccessStub(user.id);
     }
+    // First Google visit is a sign-in too. Skipping it left Last login as Never
+    // for the whole first session (37 messages, zero user.login rows).
+    await recordUserLogin(user.id, clientIp(request));
 
     const token = await createSessionToken({
       sub: user.id,

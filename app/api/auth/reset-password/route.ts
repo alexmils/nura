@@ -11,7 +11,7 @@ import {
 } from "@/lib/auth/session";
 import { getUserById, publicUser, setUserPassword } from "@/lib/users";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
-import { clientIp } from "@/lib/audit-log";
+import { clientIp, recordUserLogin } from "@/lib/audit-log";
 import {
   extractTurnstileToken,
   verifyTurnstileToken,
@@ -81,6 +81,7 @@ export async function POST(request: Request) {
     });
     const jar = await cookies();
     jar.set(sessionCookieOptions(sessionToken));
+    await recordUserLogin(user.id, clientIp(request));
 
     return NextResponse.json({ user: publicUser({ ...user, passwordHash }) });
   } catch (err) {
