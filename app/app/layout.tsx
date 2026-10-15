@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { AppAccessGate } from "@/app/components/AppAccessGate";
-import { FeedbackPromptHost } from "@/app/components/FeedbackPromptHost";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
 import { ProductGuideProvider } from "@/app/components/guide/ProductGuide";
 import { ToastProvider } from "@/app/components/Toast";
@@ -27,7 +26,6 @@ export default function AppConsoleLayout({
         <ToastProvider>
           <ProductGuideProvider>
             {children}
-            <FeedbackPromptHost />
             <HelpChatWidget showFab />
             {/* /app docks the ribbon right, clear of the Help pill. */}
             <AccessibilityWidget defaultEdge="right" />

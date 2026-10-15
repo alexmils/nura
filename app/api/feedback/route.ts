@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { isAuthContext, requireAuth } from "@/lib/api-auth";
+import { parseFeedbackSubmitSource } from "@/lib/feedback-eligibility";
 import {
+  getFeedbackPageState,
   getFeedbackPromptForUser,
   markFeedbackSessionEnd,
   recordFeedbackShown,
@@ -9,15 +11,25 @@ import {
 } from "@/lib/feedback-db";
 import { isValidFeedbackScore } from "@/lib/feedback";
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAuth();
   if (!isAuthContext(auth)) return auth;
+
+  const { searchParams } = new URL(request.url);
+  const fromTrial = searchParams.get("source") === "trial";
+
+  const page = await getFeedbackPageState({
+    userId: auth.user.id,
+    userCreatedAt: auth.user.createdAt,
+    allowTrialLink: fromTrial,
+  });
 
   const prompt = await getFeedbackPromptForUser({
     userId: auth.user.id,
     userCreatedAt: auth.user.createdAt,
   });
-  return NextResponse.json(prompt);
+
+  return NextResponse.json({ ...page, show: prompt.show, source: prompt.source });
 }
 
 export async function POST(request: Request) {
@@ -28,6 +40,7 @@ export async function POST(request: Request) {
     action?: string;
     score?: number;
     comment?: string | null;
+    source?: string;
   };
 
   if (body.action === "session_end") {
@@ -49,17 +62,24 @@ export async function POST(request: Request) {
     if (!isValidFeedbackScore(body.score)) {
       return NextResponse.json({ error: "Invalid score" }, { status: 400 });
     }
+    const sourceOverride = parseFeedbackSubmitSource(body.source);
+    const allowTrialLink = sourceOverride === "trial_end_email";
     const result = await submitFeedbackResponse({
       userId: auth.user.id,
       userCreatedAt: auth.user.createdAt,
       score: body.score,
       comment: body.comment,
+      sourceOverride,
+      allowTrialLink,
     });
     if (!result.ok) {
-      return NextResponse.json(
-        { error: result.error },
-        { status: 409 }
-      );
+      const status =
+        result.error === "already_submitted"
+          ? 409
+          : result.error === "not_eligible"
+            ? 403
+            : 400;
+      return NextResponse.json({ error: result.error }, { status });
     }
     return NextResponse.json({ ok: true, feedback: result.feedback });
   }

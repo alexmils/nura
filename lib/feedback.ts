@@ -1,16 +1,20 @@
 /** Private NPS feedback — product only, never public Stories. */
 
 export const FEEDBACK_SNOOZE_DAYS = 7;
+/** In-app / organic feedback only after this many days on the account. */
 export const FEEDBACK_DAYS_ELAPSED = 4;
-/** Earliest day count before a post-session NPS prompt (avoids onboarding / guide). */
-export const FEEDBACK_SESSION_END_MIN_DAYS = 1;
 export const FEEDBACK_SCORE_MIN = 1;
 export const FEEDBACK_SCORE_MAX = 10;
 
 /** CSS selector for an active immersive set — class is on `.app-shell`, not body. */
 export const FEEDBACK_IMMERSIVE_SELECTOR = ".app-shell.session-immersive";
 
-export type FeedbackSource = "session_end" | "days_elapsed" | "forced";
+export type FeedbackSource =
+  | "session_end"
+  | "days_elapsed"
+  | "forced"
+  | "trial_end_email"
+  | "page";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -57,9 +61,13 @@ export function resolveFeedbackSubmitSource(input: {
   forceShow: boolean;
   pendingSource: FeedbackSource | null;
   userCreatedAt: string;
+  sourceOverride?: FeedbackSource | null;
   now?: number;
 }): FeedbackSource {
+  if (input.sourceOverride) return input.sourceOverride;
   if (input.forceShow) return "forced";
+  if (input.pendingSource === "trial_end_email") return "trial_end_email";
+  if (input.pendingSource === "page") return "page";
   if (input.pendingSource === "session_end") return "session_end";
   if (
     accountAgeEligible(input.userCreatedAt, FEEDBACK_DAYS_ELAPSED, input.now)
@@ -67,11 +75,11 @@ export function resolveFeedbackSubmitSource(input: {
     return "days_elapsed";
   }
   if (input.pendingSource === "days_elapsed") return "days_elapsed";
-  return "days_elapsed";
+  return "page";
 }
 
 /**
- * Pure eligibility for the soft NPS popup.
+ * In-app popup eligibility (disabled in product UI; trial email + /app/feedback).
  * Force overrides prior submit + snooze (demo / support).
  */
 export function shouldOfferPrompt(input: {
@@ -80,6 +88,7 @@ export function shouldOfferPrompt(input: {
   snoozeUntil: string | null;
   pendingSource: FeedbackSource | null;
   userCreatedAt: string;
+  hasQualifyingSession: boolean;
   now?: number;
 }): { show: boolean; source: FeedbackSource | null } {
   const now = input.now ?? Date.now();
@@ -92,29 +101,16 @@ export function shouldOfferPrompt(input: {
     return { show: false, source: null };
   }
 
+  if (!input.hasQualifyingSession) {
+    return { show: false, source: null };
+  }
+
   if (isSnoozeActive(input.snoozeUntil, now)) {
     return { show: false, source: null };
   }
 
-  if (input.pendingSource === "session_end") {
-    if (
-      !accountAgeEligible(
-        input.userCreatedAt,
-        FEEDBACK_SESSION_END_MIN_DAYS,
-        now
-      )
-    ) {
-      return { show: false, source: null };
-    }
-    return { show: true, source: "session_end" };
-  }
-
-  if (accountAgeEligible(input.userCreatedAt, FEEDBACK_DAYS_ELAPSED, now)) {
-    return { show: true, source: "days_elapsed" };
-  }
-
-  if (input.pendingSource === "days_elapsed") {
-    return { show: true, source: "days_elapsed" };
+  if (!accountAgeEligible(input.userCreatedAt, FEEDBACK_DAYS_ELAPSED, now)) {
+    return { show: false, source: null };
   }
 
   return { show: false, source: null };

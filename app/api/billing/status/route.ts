@@ -19,6 +19,7 @@ import { runCheckoutTrialEffects } from "@/lib/checkout-trial-effects";
 import { markOnboardingCompleted } from "@/lib/users";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { publicAdsConfig } from "@/lib/ads";
+import { syncSubscriptionDefaultPaymentMethod } from "@/lib/billing-manage-server";
 import { shouldApplyCheckoutSessionSync } from "@/lib/checkout-rules";
 
 export async function GET(request: Request) {
@@ -72,6 +73,19 @@ export async function GET(request: Request) {
               stripeLivemode: resolved.livemode,
               eventCreatedAt: created,
             });
+            const customerId =
+              typeof session.customer === "string"
+                ? session.customer
+                : session.customer?.id ?? existing?.stripe_customer_id ?? null;
+            if (customerId) {
+              void syncSubscriptionDefaultPaymentMethod(
+                resolved.stripe,
+                subObj.id,
+                customerId
+              ).catch((err) =>
+                console.error("[billing/status] default payment method", err)
+              );
+            }
             if (!auth.user.onboardingCompletedAt) {
               await markOnboardingCompleted(auth.user.id);
               auth.user.onboardingCompletedAt = new Date().toISOString();

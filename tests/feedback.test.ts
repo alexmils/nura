@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { canSubmitFeedback } from "../lib/feedback-eligibility.ts";
 import {
   FEEDBACK_DAYS_ELAPSED,
   FEEDBACK_IMMERSIVE_SELECTOR,
-  FEEDBACK_SESSION_END_MIN_DAYS,
   FEEDBACK_SNOOZE_DAYS,
   accountAgeEligible,
   isSnoozeActive,
@@ -15,6 +15,9 @@ import {
 
 describe("feedback eligibility", () => {
   const now = Date.parse("2026-09-12T12:00:00.000Z");
+  const oldAccount = new Date(
+    now - FEEDBACK_DAYS_ELAPSED * 24 * 60 * 60 * 1000
+  ).toISOString();
 
   it("validates NPS scores", () => {
     assert.equal(isValidFeedbackScore(1), true);
@@ -39,11 +42,8 @@ describe("feedback eligibility", () => {
 
   it("requires account age for days_elapsed", () => {
     const young = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
-    const old = new Date(
-      now - FEEDBACK_DAYS_ELAPSED * 24 * 60 * 60 * 1000
-    ).toISOString();
     assert.equal(accountAgeEligible(young, FEEDBACK_DAYS_ELAPSED, now), false);
-    assert.equal(accountAgeEligible(old, FEEDBACK_DAYS_ELAPSED, now), true);
+    assert.equal(accountAgeEligible(oldAccount, FEEDBACK_DAYS_ELAPSED, now), true);
   });
 
   it("force overrides prior response and snooze", () => {
@@ -53,56 +53,33 @@ describe("feedback eligibility", () => {
       snoozeUntil: snoozeUntilIso(7, now),
       pendingSource: null,
       userCreatedAt: new Date(now).toISOString(),
+      hasQualifyingSession: true,
       now,
     });
     assert.deepEqual(r, { show: true, source: "forced" });
   });
 
-  it("hides after response unless forced", () => {
+  it("never shows in-app popup except forced", () => {
     const r = shouldOfferPrompt({
-      hasResponse: true,
+      hasResponse: false,
       forceShow: false,
       snoozeUntil: null,
       pendingSource: "session_end",
-      userCreatedAt: new Date(0).toISOString(),
+      userCreatedAt: oldAccount,
+      hasQualifyingSession: true,
       now,
     });
     assert.deepEqual(r, { show: false, source: null });
   });
 
-  it("defers session_end until account is at least one day old", () => {
-    const young = new Date(now).toISOString();
-    const rYoung = shouldOfferPrompt({
-      hasResponse: false,
-      forceShow: false,
-      snoozeUntil: null,
-      pendingSource: "session_end",
-      userCreatedAt: young,
-      now,
-    });
-    assert.deepEqual(rYoung, { show: false, source: null });
-
-    const old = new Date(
-      now - FEEDBACK_SESSION_END_MIN_DAYS * 24 * 60 * 60 * 1000
-    ).toISOString();
-    const rOld = shouldOfferPrompt({
-      hasResponse: false,
-      forceShow: false,
-      snoozeUntil: null,
-      pendingSource: "session_end",
-      userCreatedAt: old,
-      now,
-    });
-    assert.deepEqual(rOld, { show: true, source: "session_end" });
-  });
-
-  it("respects snooze even with session_end pending", () => {
+  it("requires a qualifying session for any non-forced prompt", () => {
     const r = shouldOfferPrompt({
       hasResponse: false,
       forceShow: false,
-      snoozeUntil: snoozeUntilIso(7, now),
-      pendingSource: "session_end",
-      userCreatedAt: new Date(0).toISOString(),
+      snoozeUntil: null,
+      pendingSource: null,
+      userCreatedAt: oldAccount,
+      hasQualifyingSession: false,
       now,
     });
     assert.deepEqual(r, { show: false, source: null });
@@ -121,22 +98,56 @@ describe("feedback eligibility", () => {
     assert.equal(
       resolveFeedbackSubmitSource({
         forceShow: false,
-        pendingSource: "session_end",
+        pendingSource: null,
+        sourceOverride: "trial_end_email",
         userCreatedAt: new Date(now).toISOString(),
         now,
       }),
-      "session_end"
+      "trial_end_email"
     );
     assert.equal(
       resolveFeedbackSubmitSource({
         forceShow: false,
         pendingSource: null,
-        userCreatedAt: new Date(
-          now - FEEDBACK_DAYS_ELAPSED * 24 * 60 * 60 * 1000
-        ).toISOString(),
+        sourceOverride: "page",
+        userCreatedAt: new Date(now).toISOString(),
         now,
       }),
-      "days_elapsed"
+      "page"
+    );
+  });
+
+  it("page submit needs sessions and account age unless trial link", () => {
+    const young = new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString();
+    assert.equal(
+      canSubmitFeedback({
+        hasResponse: false,
+        hasQualifyingSession: true,
+        userCreatedAt: young,
+        allowTrialLink: false,
+        now,
+      }).reason,
+      "account_too_new"
+    );
+    assert.equal(
+      canSubmitFeedback({
+        hasResponse: false,
+        hasQualifyingSession: false,
+        userCreatedAt: oldAccount,
+        allowTrialLink: true,
+        now,
+      }).reason,
+      "no_sessions"
+    );
+    assert.equal(
+      canSubmitFeedback({
+        hasResponse: false,
+        hasQualifyingSession: true,
+        userCreatedAt: young,
+        allowTrialLink: true,
+        now,
+      }).canSubmit,
+      true
     );
   });
 });

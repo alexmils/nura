@@ -13726,6 +13726,33 @@ a.help-drawer-signin.btn-primary {
   gap: 0.5rem;
 }
 
+/* Feedback page + legacy modal styles */
+.feedback-page {
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem 3rem;
+}
+
+.feedback-page-inner {
+  width: min(28rem, 100%);
+}
+
+.feedback-page-card {
+  width: 100%;
+  padding: 1.35rem 1.4rem 1.25rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(42, 48, 32, 0.1);
+  box-shadow: 0 8px 28px rgba(42, 48, 32, 0.08);
+}
+
+.feedback-page-home {
+  margin-top: 1rem;
+  display: inline-flex;
+}
+
 /* Private NPS feedback prompt */
 .feedback-nps-overlay {
   position: fixed;

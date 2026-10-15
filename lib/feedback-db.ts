@@ -1,5 +1,9 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import {
+  canSubmitFeedback,
+  userHasQualifyingSession,
+} from "@/lib/feedback-eligibility";
+import {
   type FeedbackSource,
   resolveFeedbackSubmitSource,
   shouldOfferPrompt,
@@ -33,7 +37,9 @@ function parseSource(value: unknown): FeedbackSource | null {
   if (
     value === "session_end" ||
     value === "days_elapsed" ||
-    value === "forced"
+    value === "forced" ||
+    value === "trial_end_email" ||
+    value === "page"
   ) {
     return value;
   }
@@ -143,7 +149,7 @@ async function upsertPromptState(
   return next;
 }
 
-async function userHasResponse(userId: string): Promise<boolean> {
+export async function userHasSubmittedFeedback(userId: string): Promise<boolean> {
   await ensureFeedbackSchema();
   const { rows } = await getPool().query<{ count: string }>(
     `SELECT COUNT(*)::text AS count FROM feedback_responses WHERE user_id = $1`,
@@ -156,9 +162,10 @@ export async function getFeedbackPromptForUser(input: {
   userId: string;
   userCreatedAt: string;
 }): Promise<{ show: boolean; source: FeedbackSource | null }> {
-  const [hasResponse, state] = await Promise.all([
-    userHasResponse(input.userId),
+  const [hasResponse, state, hasQualifyingSession] = await Promise.all([
+    userHasSubmittedFeedback(input.userId),
     getPromptState(input.userId),
+    userHasQualifyingSession(input.userId),
   ]);
 
   return shouldOfferPrompt({
@@ -167,36 +174,32 @@ export async function getFeedbackPromptForUser(input: {
     snoozeUntil: state?.snoozeUntil ?? null,
     pendingSource: state?.pendingSource ?? null,
     userCreatedAt: input.userCreatedAt,
+    hasQualifyingSession,
   });
 }
 
+export async function getFeedbackPageState(input: {
+  userId: string;
+  userCreatedAt: string;
+  allowTrialLink: boolean;
+}) {
+  const [hasResponse, hasQualifyingSession] = await Promise.all([
+    userHasSubmittedFeedback(input.userId),
+    userHasQualifyingSession(input.userId),
+  ]);
+  return canSubmitFeedback({
+    hasResponse,
+    hasQualifyingSession,
+    userCreatedAt: input.userCreatedAt,
+    allowTrialLink: input.allowTrialLink,
+  });
+}
+
+/** Session closure no longer opens the in-app NPS popup. */
 export async function markFeedbackSessionEnd(
-  userId: string
+  _userId: string
 ): Promise<{ show: boolean; source: FeedbackSource | null }> {
-  const hasResponse = await userHasResponse(userId);
-  const state = await getPromptState(userId);
-  if (hasResponse && !state?.forceShow) {
-    return { show: false, source: null };
-  }
-  if (state?.forceShow) {
-    return { show: true, source: "forced" };
-  }
-  // Respect active snooze — do not clear it on session end.
-  if (state?.snoozeUntil) {
-    const snoozed = shouldOfferPrompt({
-      hasResponse: false,
-      forceShow: false,
-      snoozeUntil: state.snoozeUntil,
-      pendingSource: "session_end",
-      userCreatedAt: new Date(0).toISOString(),
-    });
-    if (!snoozed.show) {
-      await upsertPromptState(userId, { pendingSource: "session_end" });
-      return { show: false, source: null };
-    }
-  }
-  await upsertPromptState(userId, { pendingSource: "session_end" });
-  return { show: true, source: "session_end" };
+  return { show: false, source: null };
 }
 
 export async function snoozeFeedbackPrompt(userId: string): Promise<void> {
@@ -217,23 +220,38 @@ export async function submitFeedbackResponse(input: {
   userCreatedAt: string;
   score: number;
   comment?: string | null;
+  sourceOverride?: FeedbackSource | null;
+  allowTrialLink?: boolean;
 }): Promise<
   | { ok: true; feedback: FeedbackResponse }
-  | { ok: false; error: "already_submitted" }
+  | { ok: false; error: "already_submitted" | "not_eligible" }
 > {
   await ensureFeedbackSchema();
-  const [hasResponse, state] = await Promise.all([
-    userHasResponse(input.userId),
+  const [hasResponse, state, hasQualifyingSession] = await Promise.all([
+    userHasSubmittedFeedback(input.userId),
     getPromptState(input.userId),
+    userHasQualifyingSession(input.userId),
   ]);
   if (hasResponse && !state?.forceShow) {
     return { ok: false, error: "already_submitted" };
   }
 
+  const pageState = canSubmitFeedback({
+    hasResponse: false,
+    hasQualifyingSession,
+    userCreatedAt: input.userCreatedAt,
+    allowTrialLink: Boolean(input.allowTrialLink),
+  });
+  const forced = state?.forceShow ?? false;
+  if (!forced && !pageState.canSubmit) {
+    return { ok: false, error: "not_eligible" };
+  }
+
   const source = resolveFeedbackSubmitSource({
-    forceShow: state?.forceShow ?? false,
+    forceShow: forced,
     pendingSource: state?.pendingSource ?? null,
     userCreatedAt: input.userCreatedAt,
+    sourceOverride: input.sourceOverride ?? null,
   });
 
   const id = crypto.randomUUID();

@@ -17,9 +17,12 @@ type Item = {
 };
 
 function sourceLabel(source: string): string {
+  if (source === "trial_end_email") return "Trial end email";
+  if (source === "page") return "Feedback page";
   if (source === "session_end") return "After session";
   if (source === "forced") return "Forced";
-  return "Days elapsed";
+  if (source === "days_elapsed") return "Days elapsed";
+  return source;
 }
 
 export default function AdminFeedbackPage() {
@@ -55,7 +58,7 @@ export default function AdminFeedbackPage() {
     <div className="admin-page">
       <AdminPageHeader
         title="Feedback"
-        subtitle="Scores and notes from the in-app prompt."
+        subtitle="NPS scores, trial emails, and member notes (suggestions and bugs)."
       />
       <main className="admin-main">
         {msg ? <p className="admin-inline-msg">{msg}</p> : null}

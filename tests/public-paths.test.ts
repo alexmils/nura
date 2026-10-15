@@ -117,6 +117,10 @@ describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
       isUnauthenticatedPublicPath("/api/cron/trial-charge-reminders"),
       true
     );
+    assert.equal(
+      isUnauthenticatedPublicPath("/api/cron/trial-feedback"),
+      true
+    );
     assert.equal(isUnauthenticatedPublicPath("/api/newsletter/subscribe"), true);
     assert.equal(isUnauthenticatedPublicPath("/api/webhooks/brevo"), true);
   });

@@ -259,3 +259,84 @@ export async function sendDueTrialChargeReminders(
   }
   return { scanned: rows.length, sent };
 }
+
+/**
+ * One satisfaction ask when the 7-day trial ends. Skips members with no real
+ * sessions and anyone who already submitted feedback.
+ */
+export async function sendDueTrialFeedbackEmails(
+  now: Date = new Date()
+): Promise<{ scanned: number; sent: number; skipped: number }> {
+  await ensureSchemaReady();
+  const { ensureFeedbackSchema, userHasSubmittedFeedback } = await import(
+    "@/lib/feedback-db"
+  );
+  const { userHasQualifyingSession } = await import("@/lib/feedback-eligibility");
+  await ensureFeedbackSchema();
+  const windowStart = new Date(now.getTime() - 3 * MS_DAY);
+  const { rows } = await getPool().query<{
+    user_id: string;
+    stripe_subscription_id: string;
+  }>(
+    `SELECT user_id, stripe_subscription_id
+     FROM subscriptions
+     WHERE trial_ends_at IS NOT NULL
+       AND trial_ends_at <= $1
+       AND trial_ends_at >= $2
+       AND trial_feedback_sent_at IS NULL
+       AND stripe_livemode IS TRUE`,
+    [now, windowStart]
+  );
+
+  let sent = 0;
+  let skipped = 0;
+  for (const row of rows) {
+    const markSent = async () => {
+      await getPool().query(
+        `UPDATE subscriptions SET trial_feedback_sent_at = NOW() WHERE user_id = $1`,
+        [row.user_id]
+      );
+    };
+
+    const who = await displayName(row.user_id);
+    if (!who?.email || !row.stripe_subscription_id) {
+      skipped += 1;
+      await markSent();
+      continue;
+    }
+
+    const [hasSession, submitted] = await Promise.all([
+      userHasQualifyingSession(row.user_id),
+      userHasSubmittedFeedback(row.user_id),
+    ]);
+    if (!hasSession || submitted) {
+      skipped += 1;
+      await markSent();
+      continue;
+    }
+
+    const dedup = `trial_feedback:${row.stripe_subscription_id}`;
+    if (await hasSentEmailDedup(dedup)) {
+      await markSent();
+      continue;
+    }
+
+    try {
+      const feedbackUrl = await getAppUrl("/app/feedback?source=trial");
+      await sendTemplateEmail(
+        who.email,
+        "trial_feedback",
+        {
+          name: who.name,
+          feedbackUrl,
+        },
+        { dedupKey: dedup }
+      );
+      await markSent();
+      sent += 1;
+    } catch (err) {
+      console.error("[email] trial feedback failed", row.user_id, err);
+    }
+  }
+  return { scanned: rows.length, sent, skipped };
+}

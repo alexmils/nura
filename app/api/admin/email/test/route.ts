@@ -91,6 +91,11 @@ export async function POST(request: Request) {
         chargeDate: "October 22, 2026",
         manageBillingUrl: await getAppUrl("/app/billing"),
       });
+    } else if (id === "trial_feedback") {
+      await sendTemplateEmail(to.trim(), id, {
+        name: sample.name,
+        feedbackUrl: await getAppUrl("/app/feedback?source=trial"),
+      });
     } else if (id === "subscription_canceled") {
       await sendTemplateEmail(to.trim(), id, {
         name: sample.name,

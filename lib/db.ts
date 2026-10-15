@@ -227,6 +227,7 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS last_stripe_event_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS stripe_livemode BOOLEAN;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_reminder_sent_at TIMESTAMPTZ;
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_feedback_sent_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_notice_sent_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;

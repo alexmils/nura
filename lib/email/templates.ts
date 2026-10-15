@@ -61,6 +61,10 @@ export type EmailTemplateData = {
     chargeDate: string;
     manageBillingUrl: string;
   };
+  trial_feedback: {
+    name: string;
+    feedbackUrl: string;
+  };
   subscription_canceled: {
     name: string;
     accessEndsAt: string;
@@ -420,6 +424,28 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your <strong>${safePlan}</strong> trial ends on ${safeDate}. The first charge will be <strong>${safeAmount}</strong>.</p>
          ${ctaButton(d.manageBillingUrl, "Manage billing")}`,
         "Cancel or change the plan in Manage billing before that date if you do not want the charge."
+      );
+      return { subject, html, text };
+    }
+    case "trial_feedback": {
+      const d = data as EmailTemplateData["trial_feedback"];
+      const safeName = escapeEmailHtml(d.name);
+      const safeUrl = escapeEmailHtml(d.feedbackUrl);
+      const subject = "How was your first week with Nura?";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        "Your 7-day trial just wrapped. We would love a quick rating and any notes on what worked or what we should fix.",
+        "",
+        `Share feedback: ${d.feedbackUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "How was your first week?",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your trial week is over. A 1–10 score and a short note on suggestions or bugs helps us improve Nura.</p>
+         ${ctaButton(d.feedbackUrl, "Share feedback")}`,
+        `Or open this link: <a href="${safeUrl}" style="color:${brandColor};">${safeUrl}</a>`
       );
       return { subject, html, text };
     }

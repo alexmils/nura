@@ -96,6 +96,11 @@ function sampleData(id: EmailTemplateId) {
         chargeDate: "October 22, 2026",
         manageBillingUrl: "https://example.com/app/billing",
       };
+    case "trial_feedback":
+      return {
+        name: base.name,
+        feedbackUrl: "https://example.com/app/feedback?source=trial",
+      };
     case "subscription_canceled":
       return {
         name: base.name,

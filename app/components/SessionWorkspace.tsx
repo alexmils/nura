@@ -19,7 +19,6 @@ import {
   ResumeClosureBanner,
   SessionClosureModal,
 } from "./SessionClosureModal";
-import { signalFeedbackSessionEnd } from "./FeedbackPromptHost";
 import { startGamepadLoop, stopGamepadLoop } from "@/lib/gamepad";
 import { displayNameFor, useCurrentUser } from "./useCurrentUser";
 import {
@@ -217,28 +216,6 @@ export function SessionWorkspace() {
   useEffect(() => {
     setResumeDismissed(false);
   }, [thread?.id]);
-
-  // Signal NPS only when *this* thread transitions into closure — not when
-  // switching to a thread that is already closed, and not on first hydrate.
-  const prevThreadMetaRef = useRef<{
-    id: string | undefined;
-    phase: string | undefined;
-  }>({ id: undefined, phase: undefined });
-  useEffect(() => {
-    const id = thread?.id;
-    const phase = thread?.phase;
-    const prev = prevThreadMetaRef.current;
-    prevThreadMetaRef.current = { id, phase };
-
-    if (!id || id !== prev.id) return;
-    if (
-      phase === "closure" &&
-      prev.phase !== "closure" &&
-      thread.incomplete !== true
-    ) {
-      void signalFeedbackSessionEnd();
-    }
-  }, [thread?.id, thread?.phase, thread?.incomplete]);
 
   useEffect(() => {
     const onBeforeUnload = (e: BeforeUnloadEvent) => {

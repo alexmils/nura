@@ -806,8 +806,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Product tour auto-starts after onboarding for each account (not blocked by another login on the same browser)
 - NPS feedback no longer opens on top of the product tour; post-session prompts wait until your account is at least one day old
 - Ending the product tour (finish, skip, or close) removes the demo session from Recent right away
+- Manage billing shows the card saved at checkout during trial (reads customer default, not only subscription default)
+- Feedback moves to `/app/feedback` and a trial-end email (no popup). We only ask after 4+ days and at least one real session; trial week ends with one email link to rate and leave suggestions or bugs
+- [internal] Admin Feedback lists trial email and page sources; cron `POST /api/cron/trial-feedback`; template `trial_feedback`
 
 ### Removed
+- [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout
+
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow
 - Marketing footer social row: drop the `mailto:hello@nurahelp.com` envelope icon (Instagram + Facebook remain)
 - Marketing footer nav: drop **How we write** (`/editorial` stays public; still linked from About and articles)

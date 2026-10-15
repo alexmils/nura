@@ -97,6 +97,10 @@ const FIXTURES: Record<string, Record<string, string | boolean>> = {
     chargeDate: "October 22, 2026",
     manageBillingUrl: "https://nurahelp.com/app/billing",
   },
+  trial_feedback: {
+    name: "Alex",
+    feedbackUrl: "https://nurahelp.com/app/feedback?source=trial",
+  },
   subscription_canceled: {
     name: "Alex",
     accessEndsAt: "October 22, 2026",

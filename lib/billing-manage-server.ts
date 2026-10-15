@@ -43,6 +43,108 @@ export function paymentMethodFromStripe(
   };
 }
 
+/** Trialing subs often keep the card on the customer, not on the subscription. */
+export async function resolveDefaultCardPaymentMethod(
+  stripe: Stripe,
+  input: {
+    subscription: Stripe.Subscription;
+    customerId: string | null;
+  }
+): Promise<Stripe.PaymentMethod | null> {
+  const subPm = input.subscription.default_payment_method;
+  if (subPm && typeof subPm !== "string" && subPm.type === "card") {
+    return subPm;
+  }
+  if (typeof subPm === "string") {
+    try {
+      const pm = await stripe.paymentMethods.retrieve(subPm);
+      if (pm.type === "card") return pm;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const customerId = input.customerId;
+  if (!customerId) return null;
+
+  try {
+    const customer = await stripe.customers.retrieve(customerId, {
+      expand: ["invoice_settings.default_payment_method"],
+    });
+    if (customer && !customer.deleted) {
+      const inv = customer.invoice_settings?.default_payment_method;
+      if (inv && typeof inv !== "string" && inv.type === "card") {
+        return inv;
+      }
+      if (typeof inv === "string") {
+        const pm = await stripe.paymentMethods.retrieve(inv);
+        if (pm.type === "card") return pm;
+      }
+    }
+  } catch {
+    /* fall through */
+  }
+
+  try {
+    const list = await stripe.paymentMethods.list({
+      customer: customerId,
+      type: "card",
+      limit: 1,
+    });
+    const card = list.data[0];
+    if (card?.type === "card") return card;
+  } catch {
+    /* no card */
+  }
+
+  return null;
+}
+
+/** Copy customer card onto the subscription so renewals and Manage billing agree. */
+export async function attachResolvedPaymentMethodToSubscription(
+  stripe: Stripe,
+  input: {
+    subscriptionId: string;
+    customerId: string | null;
+    paymentMethodId: string | null;
+    subscriptionHasDefault: boolean;
+  }
+): Promise<void> {
+  if (!input.paymentMethodId || input.subscriptionHasDefault) return;
+  try {
+    await stripe.subscriptions.update(input.subscriptionId, {
+      default_payment_method: input.paymentMethodId,
+    });
+    if (input.customerId) {
+      await stripe.customers.update(input.customerId, {
+        invoice_settings: { default_payment_method: input.paymentMethodId },
+      });
+    }
+  } catch (err) {
+    console.error("[billing/manage] attach default_payment_method", err);
+  }
+}
+
+export async function syncSubscriptionDefaultPaymentMethod(
+  stripe: Stripe,
+  subscriptionId: string,
+  customerId: string | null
+): Promise<void> {
+  const stripeSub = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["default_payment_method"],
+  });
+  const pm = await resolveDefaultCardPaymentMethod(stripe, {
+    subscription: stripeSub,
+    customerId,
+  });
+  await attachResolvedPaymentMethodToSubscription(stripe, {
+    subscriptionId,
+    customerId,
+    paymentMethodId: pm?.id ?? null,
+    subscriptionHasDefault: Boolean(stripeSub.default_payment_method),
+  });
+}
+
 export async function loadBillingManageSnapshot(
   userId: string
 ): Promise<
@@ -64,11 +166,17 @@ export async function loadBillingManageSnapshot(
   const trialEnd = stripeSub.trial_end
     ? new Date(stripeSub.trial_end * 1000).toISOString()
     : null;
-  const defaultPm =
-    stripeSub.default_payment_method &&
-    typeof stripeSub.default_payment_method !== "string"
-      ? stripeSub.default_payment_method
-      : null;
+  const defaultPm = await resolveDefaultCardPaymentMethod(resolved.stripe, {
+    subscription: stripeSub,
+    customerId: sub.stripe_customer_id,
+  });
+
+  await attachResolvedPaymentMethodToSubscription(resolved.stripe, {
+    subscriptionId: sub.stripe_subscription_id!,
+    customerId: sub.stripe_customer_id,
+    paymentMethodId: defaultPm?.id ?? null,
+    subscriptionHasDefault: Boolean(stripeSub.default_payment_method),
+  });
 
   const mapped = await mapStripeSubscriptionWithConfig(
     stripeSub,
