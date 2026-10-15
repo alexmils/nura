@@ -19,6 +19,7 @@ import {
   DeltaBadge,
 } from "@/app/components/admin/AdminCharts";
 import { AdminTasksOverviewCard } from "@/app/components/admin/AdminTasksOverviewCard";
+import { PlacesOverviewCard } from "@/app/components/admin/PlacesOverviewCard";
 import {
   MarketingAds,
   MarketingBoard,
@@ -343,6 +344,8 @@ export default function AdminOverviewPage() {
               })}
             </ul>
           </section>
+
+          <PlacesOverviewCard />
 
           <OverviewSideHealth />
           <MarketingRail />

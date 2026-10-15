@@ -3,12 +3,13 @@ import { describe, it } from "node:test";
 import {
   EMAIL_TEMPLATE_IDS,
   EMAIL_TEMPLATE_LABELS,
+  emailLogTemplateIds,
   emailTemplateLabel,
   keepEmailTemplateId,
   type EmailTemplateId,
 } from "../lib/email/template-labels.ts";
 import { renderEmailTemplate } from "../lib/email/templates.ts";
-import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH } from "../lib/brand-assets.ts";
+import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH, rewriteEmailLogoSrc } from "../lib/brand-assets.ts";
 import { BRAND_SUPPORT_EMAIL } from "../lib/brand.ts";
 
 const IDS: readonly EmailTemplateId[] = EMAIL_TEMPLATE_IDS;
@@ -25,6 +26,17 @@ describe("emailTemplateLabel", () => {
 
   it("passes through unknown ids", () => {
     assert.equal(emailTemplateLabel("custom_blast"), "custom_blast");
+  });
+});
+
+describe("emailLogTemplateIds", () => {
+  it("splits admin operator mail from user mail", () => {
+    const admin = emailLogTemplateIds("admin");
+    const user = emailLogTemplateIds("user");
+    assert.deepEqual(admin, ["admin_signup", "admin_trial", "admin_payment"]);
+    assert.equal(user.includes("welcome"), true);
+    assert.equal(user.includes("broadcast"), true);
+    assert.equal(user.some((id) => admin.includes(id)), false);
   });
 });
 
@@ -57,6 +69,29 @@ const FIXTURES: Record<string, Record<string, string>> = {
     paidAt: "September 21, 2026",
     manageBillingUrl: "https://nurahelp.com/app/billing",
     supportEmail: BRAND_SUPPORT_EMAIL,
+  },
+  admin_signup: {
+    customerName: "Sam",
+    customerEmail: "sam@example.com",
+    source: "Google",
+    adminUserUrl: "https://nurahelp.com/admin/users/u1",
+  },
+  admin_trial: {
+    customerName: "Sam",
+    customerEmail: "sam@example.com",
+    planLabel: "Weekly",
+    amount: "$0",
+    trialEndsAt: "October 22, 2026",
+    mode: "Live",
+    adminUserUrl: "https://nurahelp.com/admin/users/u1",
+  },
+  admin_payment: {
+    customerName: "Alex",
+    customerEmail: "alex@example.com",
+    planLabel: "Monthly",
+    amount: "$14.99",
+    paidAt: "September 21, 2026",
+    adminUserUrl: "https://nurahelp.com/admin/users/u1",
   },
 };
 
@@ -137,6 +172,28 @@ describe("email brand header", () => {
     );
     assert.match(html, new RegExp(`src="${ORIGIN}${EMAIL_LOGO_PATH}"`));
     assert.equal(html.includes(`${ORIGIN}//brand`), false);
+  });
+
+  it("keeps the logo on the public site when the app origin is gated", () => {
+    const { html } = renderEmailTemplate(
+      "welcome",
+      FIXTURES.welcome as never,
+      "Nura",
+      "https://dev.nurahelp.com"
+    );
+    assert.match(html, new RegExp(`src="${ORIGIN}${EMAIL_LOGO_PATH}"`));
+    assert.equal(html.includes("dev.nurahelp.com/brand"), false);
+    assert.match(html, /href="https:\/\/dev\.nurahelp\.com"/);
+  });
+
+  it("rewrites a saved logo url before the mail leaves", () => {
+    const html = rewriteEmailLogoSrc(
+      '<img src="https://dev.nurahelp.com/brand/nura-wave-logo.png" />'
+    );
+    assert.equal(
+      html,
+      '<img src="https://nurahelp.com/brand/nura-wave-logo.png" />'
+    );
   });
 
   it("ships the support inbox, not a placeholder address", () => {

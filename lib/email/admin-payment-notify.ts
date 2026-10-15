@@ -7,12 +7,13 @@
 
 import { getPool } from "@/lib/db";
 import { sendEmail, getAppUrl } from "@/lib/email";
+import { renderStoredTemplate } from "@/lib/email-templates-db";
+import { renderEmailTemplate } from "@/lib/email/templates";
 import {
   formatReceiptAmount,
   formatReceiptDate,
   receiptPlanLabel,
 } from "@/lib/email/purchase-receipt";
-import { escapeHtml } from "@/lib/help-format";
 import { getUserById } from "@/lib/users";
 
 /**
@@ -44,18 +45,83 @@ export function buildAdminPaymentNotifyCopy(input: {
   paidAt: string;
   adminUserUrl: string;
 }): { subject: string; text: string; html: string } {
-  const who = `${input.customerName} <${input.customerEmail}>`;
-  const subject = `Payment received: ${input.amount} · ${input.planLabel}`;
-  const text = [
-    `${who} paid ${input.amount} for ${input.planLabel}.`,
-    `Date: ${input.paidAt}`,
-    "",
-    `Open user: ${input.adminUserUrl}`,
-  ].join("\n");
-  const html = `<p><strong>${escapeHtml(input.customerName)}</strong> (${escapeHtml(input.customerEmail)}) paid <strong>${escapeHtml(input.amount)}</strong> for <strong>${escapeHtml(input.planLabel)}</strong>.</p>
-<p>Date: ${escapeHtml(input.paidAt)}</p>
-<p><a href="${escapeHtml(input.adminUserUrl)}">Open user in admin</a></p>`;
-  return { subject, text, html };
+  return renderEmailTemplate("admin_payment", {
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    planLabel: input.planLabel,
+    amount: input.amount,
+    paidAt: input.paidAt,
+    adminUserUrl: input.adminUserUrl,
+  });
+}
+
+export function buildAdminTrialNotifyCopy(input: {
+  customerEmail: string;
+  customerName: string;
+  planLabel: string;
+  amount: string;
+  trialEndsAt: string | null;
+  mode: "Live" | "Sandbox";
+  adminUserUrl: string;
+}): { subject: string; text: string; html: string } {
+  return renderEmailTemplate("admin_trial", {
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    planLabel: input.planLabel,
+    amount: input.amount,
+    trialEndsAt: input.trialEndsAt ?? "",
+    mode: input.mode,
+    adminUserUrl: input.adminUserUrl,
+  });
+}
+
+/**
+ * Email the operator when checkout starts a trial, including a $0 sandbox trial.
+ * A later real charge still uses notifyAdminsOfPayment.
+ */
+export async function notifyAdminsOfTrial(input: {
+  userId: string;
+  plan?: string | null;
+  amountCents: number;
+  currency?: string | null;
+  trialEndsAt?: string | Date | null;
+  livemode: boolean;
+}): Promise<{ sent: number; reason?: string }> {
+  try {
+    const user = await getUserById(input.userId);
+    if (!user?.email) return { sent: 0, reason: "no customer" };
+
+    const end =
+      input.trialEndsAt == null
+        ? null
+        : formatReceiptDate(
+            input.trialEndsAt instanceof Date
+              ? input.trialEndsAt
+              : new Date(input.trialEndsAt)
+          );
+    const customerName =
+      user.name?.trim() || user.email.split("@")[0] || "Customer";
+    const copy = await renderStoredTemplate("admin_trial", {
+      customerName,
+      customerEmail: user.email,
+      planLabel: receiptPlanLabel(input.plan),
+      amount: formatReceiptAmount(input.amountCents, input.currency),
+      trialEndsAt: end && !end.includes("Invalid") ? end : "",
+      mode: input.livemode ? "Live" : "Sandbox",
+      adminUserUrl: await getAppUrl(`/admin/users/${input.userId}`),
+    });
+
+    return await sendToOperatorRecipients({
+      ...copy,
+      logLabel: "admin trial notify",
+    });
+  } catch (err) {
+    console.error("[email] admin trial notify failed", err);
+    return {
+      sent: 0,
+      reason: err instanceof Error ? err.message : "send failed",
+    };
+  }
 }
 
 export function signupSourceLabel(source: AdminSignupSource): string {
@@ -68,16 +134,12 @@ export function buildAdminSignupNotifyCopy(input: {
   source: AdminSignupSource;
   adminUserUrl: string;
 }): { subject: string; text: string; html: string } {
-  const via = signupSourceLabel(input.source);
-  const subject = `New account: ${input.customerEmail}`;
-  const text = [
-    `${input.customerName} <${input.customerEmail}> created a Nura account (${via}).`,
-    "",
-    `Open user: ${input.adminUserUrl}`,
-  ].join("\n");
-  const html = `<p><strong>${escapeHtml(input.customerName)}</strong> (${escapeHtml(input.customerEmail)}) created a Nura account via <strong>${escapeHtml(via)}</strong>.</p>
-<p><a href="${escapeHtml(input.adminUserUrl)}">Open user in admin</a></p>`;
-  return { subject, text, html };
+  return renderEmailTemplate("admin_signup", {
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    source: signupSourceLabel(input.source),
+    adminUserUrl: input.adminUserUrl,
+  });
 }
 
 async function sendToOperatorRecipients(input: {
@@ -134,9 +196,9 @@ export async function notifyAdminsOfPayment(input: {
 
     const customerName =
       user.name?.trim() || user.email.split("@")[0] || "Customer";
-    const copy = buildAdminPaymentNotifyCopy({
-      customerEmail: user.email,
+    const copy = await renderStoredTemplate("admin_payment", {
       customerName,
+      customerEmail: user.email,
       planLabel: receiptPlanLabel(input.plan),
       amount: formatReceiptAmount(input.amountCents, input.currency),
       paidAt: formatReceiptDate(input.paidAt),
@@ -169,10 +231,10 @@ export async function notifyAdminsOfSignup(input: {
   try {
     const customerName =
       input.name?.trim() || input.email.split("@")[0] || "Customer";
-    const copy = buildAdminSignupNotifyCopy({
-      customerEmail: input.email.trim().toLowerCase(),
+    const copy = await renderStoredTemplate("admin_signup", {
       customerName,
-      source: input.source,
+      customerEmail: input.email.trim().toLowerCase(),
+      source: signupSourceLabel(input.source),
       adminUserUrl: await getAppUrl(`/admin/users/${input.userId}`),
     });
 

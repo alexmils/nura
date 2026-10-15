@@ -1,5 +1,5 @@
 import { BRAND_COLORS, BRAND_SPOKEN, chromeBrandName } from "@/lib/brand";
-import { EMAIL_LOGO_PATH, EMAIL_LOGO_WIDTH } from "@/lib/brand-assets";
+import { EMAIL_LOGO_WIDTH, emailLogoSrcForOrigin } from "@/lib/brand-assets";
 import type { EmailTemplateId } from "@/lib/email/template-labels";
 
 export type { EmailTemplateId } from "@/lib/email/template-labels";
@@ -40,6 +40,29 @@ export type EmailTemplateData = {
     manageBillingUrl: string;
     supportEmail: string;
   };
+  admin_signup: {
+    customerName: string;
+    customerEmail: string;
+    source: string;
+    adminUserUrl: string;
+  };
+  admin_trial: {
+    customerName: string;
+    customerEmail: string;
+    planLabel: string;
+    amount: string;
+    trialEndsAt: string;
+    mode: string;
+    adminUserUrl: string;
+  };
+  admin_payment: {
+    customerName: string;
+    customerEmail: string;
+    planLabel: string;
+    amount: string;
+    paidAt: string;
+    adminUserUrl: string;
+  };
 };
 
 const brandColor = BRAND_COLORS.earth;
@@ -75,15 +98,14 @@ function brandHeader(brand: EmailBrand): string {
     return `<p style="margin:0 0 8px;font-size:13px;font-weight:500;color:${mutedColor};">${safeName}</p>`;
   }
   const height = Math.round((EMAIL_LOGO_WIDTH * 363) / 1600);
-  // A fixed-width cell is the only thing every client agrees on: it holds the
-  // logo to size even where inline styles are stripped, and `align="left"`
-  // keeps it flush with the copy below instead of floating off-centre. The
-  // bottom padding does the spacing, because table `margin` is unreliable.
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" align="left" style="border-collapse:collapse;">
+  const logoSrc = emailLogoSrcForOrigin(origin);
+  // Full-width row so the title starts under the logo. A shrink-wrapped
+  // left-aligned table lets the heading sit beside the image.
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-collapse:collapse;">
                 <tr>
-                  <td width="${EMAIL_LOGO_WIDTH}" align="left" style="width:${EMAIL_LOGO_WIDTH}px;padding:0 0 20px;">
+                  <td align="left" style="padding:0 0 20px;">
                     <a href="${origin}" style="display:block;text-decoration:none;border:0;">
-                      <img src="${origin}${EMAIL_LOGO_PATH}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${height}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;max-width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
+                      <img src="${logoSrc}" alt="${safeName}" width="${EMAIL_LOGO_WIDTH}" height="${height}" style="display:block;width:${EMAIL_LOGO_WIDTH}px;max-width:${EMAIL_LOGO_WIDTH}px;height:auto;border:0;outline:none;text-decoration:none;" />
                     </a>
                   </td>
                 </tr>
@@ -274,6 +296,77 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          ${ctaButton(d.manageBillingUrl, "Manage billing")}
          <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:${mutedColor};">Questions about this charge? Reply to this email or write to <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a>.</p>`,
         `This is a receipt for a charge on your ${escapeEmailHtml(siteName)} subscription. Manage it any time from Billing.`
+      );
+      return { subject, html, text };
+    }
+    case "admin_signup": {
+      const d = data as EmailTemplateData["admin_signup"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const via = escapeEmailHtml(d.source);
+      const subject = `New account: ${d.customerEmail}`;
+      const text = [
+        `${d.customerName} <${d.customerEmail}> created a Nura account (${d.source}).`,
+        "",
+        `Open user: ${d.adminUserUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "New account",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) created a Nura account via <strong>${via}</strong>.</p>
+         ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
+      );
+      return { subject, html, text };
+    }
+    case "admin_trial": {
+      const d = data as EmailTemplateData["admin_trial"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const plan = escapeEmailHtml(d.planLabel);
+      const amount = escapeEmailHtml(d.amount);
+      const mode = escapeEmailHtml(d.mode);
+      const end = d.trialEndsAt?.trim()
+        ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Trial ends: ${escapeEmailHtml(d.trialEndsAt)}</p>`
+        : "";
+      const subject = `Trial started: ${d.planLabel} · ${d.amount} · ${d.mode}`;
+      const text = [
+        `${d.customerName} <${d.customerEmail}> started a ${d.planLabel} trial (${d.amount}, ${d.mode}).`,
+        ...(d.trialEndsAt?.trim() ? [`Trial ends: ${d.trialEndsAt}`] : []),
+        "",
+        `Open user: ${d.adminUserUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Trial started",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) started a <strong>${plan}</strong> trial for <strong>${amount}</strong> (${mode}).</p>
+         ${end}
+         ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
+      );
+      return { subject, html, text };
+    }
+    case "admin_payment": {
+      const d = data as EmailTemplateData["admin_payment"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const plan = escapeEmailHtml(d.planLabel);
+      const amount = escapeEmailHtml(d.amount);
+      const paidAt = escapeEmailHtml(d.paidAt);
+      const subject = `Payment received: ${d.amount} · ${d.planLabel}`;
+      const text = [
+        `${d.customerName} <${d.customerEmail}> paid ${d.amount} for ${d.planLabel}.`,
+        `Date: ${d.paidAt}`,
+        "",
+        `Open user: ${d.adminUserUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "Payment received",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) paid <strong>${amount}</strong> for <strong>${plan}</strong>.</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Date: ${paidAt}</p>
+         ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
       );
       return { subject, html, text };
     }

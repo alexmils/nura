@@ -7,7 +7,9 @@ import {
   BookOpen,
   ChevronDown,
   CreditCard,
+  Globe,
   BarChart3,
+  PieChart,
   LayoutGrid,
   ListTodo,
   Megaphone,
@@ -42,7 +44,12 @@ import {
   type AdminNavItem,
 } from "@/lib/admin-nav";
 import { AdminSearch } from "@/app/components/admin/AdminSearch";
-import { AdminPushToggle } from "@/app/components/admin/AdminPushToggle";
+import { AdminActivityBell } from "@/app/components/admin/AdminActivityBell";
+import {
+  AdminInboxLink,
+  AdminNewMenu,
+  AdminUserMenu,
+} from "@/app/components/admin/AdminTopMenus";
 
 type AdminUser = {
   email: string;
@@ -56,6 +63,8 @@ const NAV_ICONS: Record<AdminNavIcon, LucideIcon> = {
   tasks: ListTodo,
   marketing: Megaphone,
   analytics: BarChart3,
+  focus: PieChart,
+  places: Globe,
   users: Users,
   help: LifeBuoy,
   feedback: MessageSquareQuote,
@@ -426,7 +435,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         ) : null}
         <div className="admin-topbar">
           <AdminSearch isPlatformAdmin={user?.role === "platform_admin"} />
-          <AdminPushToggle />
+          <div className="admin-topbar-tools">
+            <AdminNewMenu />
+            <AdminInboxLink unread={helpUnread} />
+            <AdminActivityBell />
+            <AdminUserMenu user={user} onLogout={() => void logout()} />
+          </div>
         </div>
         {children}
       </div>

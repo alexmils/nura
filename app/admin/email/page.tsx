@@ -5,22 +5,29 @@ import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import type { EmailEvent } from "@/lib/email-events";
-import { EMAIL_TEMPLATE_IDS, emailTemplateLabel, keepEmailTemplateId, type EmailTemplateId } from "@/lib/email/template-labels";
+import { EMAIL_TEMPLATE_AUDIENCE, EMAIL_TEMPLATE_IDS, emailTemplateLabel, keepEmailTemplateId, type EmailTemplateId } from "@/lib/email/template-labels";
 import type { EmailAdminView } from "@/lib/email-admin-settings";
 import type { EmailAdminStatus } from "@/lib/email-admin-settings";
 import { fetchJson } from "@/lib/fetch-json";
 import { BroadcastForm, TemplateEditor } from "@/app/components/admin/EmailTools";
 
-const TABS = ["delivery", "send", "templates", "log"] as const;
+const TABS = ["delivery", "send", "templates", "admin", "log"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_ITEMS = [
   { id: "delivery", label: "Delivery" },
   { id: "send", label: "Send" },
   { id: "templates", label: "Templates" },
+  { id: "admin", label: "Admin" },
   { id: "log", label: "Log" },
 ] as const;
 
-const TEMPLATE_IDS = EMAIL_TEMPLATE_IDS;
+const CUSTOMER_TEMPLATE_IDS = EMAIL_TEMPLATE_IDS.filter(
+  (id) => EMAIL_TEMPLATE_AUDIENCE[id] === "customer"
+);
+const ADMIN_TEMPLATE_IDS = EMAIL_TEMPLATE_IDS.filter(
+  (id) => EMAIL_TEMPLATE_AUDIENCE[id] === "admin"
+);
+const ADMIN_TEST_TO = "amilosavljevic09@gmail.com";
 
 type EmailFormState = EmailAdminView;
 
@@ -51,6 +58,7 @@ function AdminEmailPageInner() {
   const [testTemplate, setTestTemplate] =
     useState<EmailTemplateId>("welcome");
   const [logStatus, setLogStatus] = useState<"all" | "sent" | "failed">("all");
+  const [logAudience, setLogAudience] = useState<"all" | "user" | "admin">("all");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -85,11 +93,12 @@ function AdminEmailPageInner() {
   const loadLog = useCallback(async () => {
     const params = new URLSearchParams({ limit: "50" });
     if (logStatus !== "all") params.set("status", logStatus);
+    if (logAudience !== "all") params.set("audience", logAudience);
     const res = await fetchJson<{ events: EmailEvent[] }>(
       `/api/admin/email/events?${params.toString()}`
     );
     setEvents(res.events ?? []);
-  }, [logStatus]);
+  }, [logStatus, logAudience]);
 
   useEffect(() => {
     void (async () => {
@@ -104,6 +113,14 @@ function AdminEmailPageInner() {
   useEffect(() => {
     void loadLog();
   }, [loadLog]);
+
+  useEffect(() => {
+    const ids = tab === "admin" ? ADMIN_TEMPLATE_IDS : CUSTOMER_TEMPLATE_IDS;
+    if (tab !== "templates" && tab !== "admin") return;
+    setSelectedTemplate((current) =>
+      ids.includes(current) ? current : ids[0]!
+    );
+  }, [tab]);
 
   const patchForm = (patch: Partial<EmailFormState>) => {
     setForm((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -152,15 +169,24 @@ function AdminEmailPageInner() {
 
   const sendTest = async (e: React.FormEvent) => {
     e.preventDefault();
+    await deliverTest(testTo, testTemplate);
+  };
+
+  const sendAdminTest = async () => {
+    if (!ADMIN_TEMPLATE_IDS.includes(selectedTemplate)) return;
+    await deliverTest(ADMIN_TEST_TO, selectedTemplate);
+  };
+
+  const deliverTest = async (to: string, templateId: EmailTemplateId) => {
     setBusy(true);
     setMsg("");
     try {
       await fetchJson("/api/admin/email/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: testTo, templateId: testTemplate }),
+        body: JSON.stringify({ to, templateId }),
       });
-      setMsg("Test email sent.");
+      setMsg(`Test sent to ${to}.`);
       await loadLog();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Send failed");
@@ -185,7 +211,7 @@ function AdminEmailPageInner() {
       />
       <main
         className={
-          tab === "templates"
+          tab === "templates" || tab === "admin"
             ? "admin-main admin-main-wide admin-main-templates"
             : "admin-main"
         }
@@ -492,11 +518,20 @@ function AdminEmailPageInner() {
                   }
                   className="field"
                 >
-                  {TEMPLATE_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {emailTemplateLabel(id)}
-                    </option>
-                  ))}
+                  <optgroup label="Customer">
+                    {CUSTOMER_TEMPLATE_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {emailTemplateLabel(id)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Admin">
+                    {ADMIN_TEMPLATE_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {emailTemplateLabel(id)}
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
                 <button type="submit" disabled={busy} className="btn-primary shrink-0">
                   {busy ? "Sending…" : "Send test"}
@@ -518,24 +553,50 @@ function AdminEmailPageInner() {
           </>
         )}
 
-        {tab === "templates" && (
+        {(tab === "templates" || tab === "admin") && (
           <section className="admin-panel admin-templates-panel">
-            <h2 className="admin-panel-title">Template preview & editor</h2>
+            <div className="admin-panel-head-row">
+              <h2 className="admin-panel-title">
+                {tab === "admin"
+                  ? "Mail to the platform admin"
+                  : "Template preview & editor"}
+              </h2>
+              {tab === "admin" ? (
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0"
+                  disabled={busy}
+                  onClick={() => void sendAdminTest()}
+                >
+                  {busy ? "Sending…" : "Send test"}
+                </button>
+              ) : null}
+            </div>
+            {tab === "admin" ? (
+              <p className="admin-panel-sub">
+                Sends the open mail to {ADMIN_TEST_TO}.
+              </p>
+            ) : null}
             <div className="admin-templates-layout">
-              <nav className="admin-templates-nav" aria-label="Email templates">
-                {TEMPLATE_IDS.map((id) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`admin-templates-nav-item${
-                      selectedTemplate === id ? " is-active" : ""
-                    }`}
-                    aria-current={selectedTemplate === id ? "true" : undefined}
-                    onClick={() => setSelectedTemplate(id)}
-                  >
-                    {emailTemplateLabel(id)}
-                  </button>
-                ))}
+              <nav
+                className="admin-templates-nav"
+                aria-label={tab === "admin" ? "Admin emails" : "Customer emails"}
+              >
+                {(tab === "admin" ? ADMIN_TEMPLATE_IDS : CUSTOMER_TEMPLATE_IDS).map(
+                  (id) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`admin-templates-nav-item${
+                        selectedTemplate === id ? " is-active" : ""
+                      }`}
+                      aria-current={selectedTemplate === id ? "true" : undefined}
+                      onClick={() => setSelectedTemplate(id)}
+                    >
+                      {emailTemplateLabel(id)}
+                    </button>
+                  )
+                )}
               </nav>
               <div className="admin-templates-main">
                 {templates.find((t) => t.id === selectedTemplate) && (
@@ -557,18 +618,35 @@ function AdminEmailPageInner() {
 
         {tab === "log" && (
           <section className="admin-panel">
-            <div className="admin-filters">
-              <select
-                value={logStatus}
-                onChange={(e) =>
-                  setLogStatus(e.target.value as "all" | "sent" | "failed")
-                }
-                className="field admin-filter-field"
-              >
-                <option value="all">All</option>
-                <option value="sent">Sent</option>
-                <option value="failed">Failed</option>
-              </select>
+            <div className="admin-filters admin-log-filters">
+              <label className="admin-filter-label">
+                Status
+                <select
+                  value={logStatus}
+                  onChange={(e) =>
+                    setLogStatus(e.target.value as "all" | "sent" | "failed")
+                  }
+                  className="field"
+                >
+                  <option value="all">All</option>
+                  <option value="sent">Sent</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </label>
+              <label className="admin-filter-label">
+                Mail
+                <select
+                  value={logAudience}
+                  onChange={(e) =>
+                    setLogAudience(e.target.value as "all" | "user" | "admin")
+                  }
+                  className="field"
+                >
+                  <option value="all">All</option>
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
               <button
                 type="button"
                 className="btn-secondary shrink-0"
@@ -593,7 +671,9 @@ function AdminEmailPageInner() {
                   {events.length === 0 && (
                     <tr>
                       <td colSpan={6} className="admin-table-empty">
-                        No email events yet
+                        {logStatus === "all" && logAudience === "all"
+                          ? "No email events yet"
+                          : "No matching emails"}
                       </td>
                     </tr>
                   )}

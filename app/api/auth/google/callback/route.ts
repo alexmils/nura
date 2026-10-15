@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { APP_BASE, LOGIN_PATH } from "@/lib/app-base";
 import { resolveAccessRedirect } from "@/lib/access-gate";
 import { clientIp, recordUserLogin, writeAuditEvent } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import {
   canAutoLinkGoogleAccount,
   clearGoogleOAuthCookieOptions,
@@ -227,6 +228,7 @@ export async function GET(request: Request) {
     // First Google visit is a sign-in too. Skipping it left Last login as Never
     // for the whole first session (37 messages, zero user.login rows).
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, isNew);
 
     const token = await createSessionToken({
       sub: user.id,

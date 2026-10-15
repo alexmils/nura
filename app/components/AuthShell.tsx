@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
 import { AuthSessionMockup } from "@/app/components/AuthSessionMockup";
 import { ConversionTags } from "@/app/components/ConversionTags";
+import { stampBrowserPlace } from "@/lib/browser-place-client";
 
 type AuthShellProps = {
   title: string;
@@ -26,6 +27,9 @@ export function AuthShell({
   hideVisual = false,
   align = "start",
 }: AuthShellProps) {
+  useEffect(() => {
+    stampBrowserPlace();
+  }, []);
   const isCenter = align === "center";
   const alignClass = isCenter ? " auth-shell-main--center" : "";
 

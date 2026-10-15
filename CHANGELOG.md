@@ -141,6 +141,21 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Nura Google Ads MCP can create a paused sales ad: Search with a landing URL and text, or Performance Max with a landing URL. Neither can be enabled. The existing Search create stays.
 - Adjustments remember two repeat presets, a left and right sound with a preview, the path of the set, and vibration strength
 - Adjustments vibration has a Hard level
+- [internal] Admin top bar activity bell lists new accounts and Stripe events with plan, amount, trial or charge, and Live or Sandbox. Accounts ignored in stats stay out. A trial start emails the operator, including a $0 sandbox trial
+- [internal] Email preview loads the Nura logo from this site. The public dev host was returning a login page instead of the image
+- [internal] Admin email tab can send a test of the open mail to amilosavljevic09@gmail.com
+- [internal] Email log can filter User and Admin mail, along with sent and failed
+- [internal] Email logo in sent mail uses the public nurahelp.com image so Gmail can load it
+- [internal] Admin Places uses a world map with country outlines, plus languages, time zones, and browsers, with a summary to copy for marketing agents
+- [internal] Overview world map sits in the right column under AI cost mix, at a smaller size
+- [internal] A new account counts as a sign-in on the places map. Country is taken only from a trusted proxy, and language tags share one row
+- [internal] Places world map outlines are rebuilt from absolute coordinates so countries keep their shape
+- [internal] Hover a country on Places to see people and cities. The overview map adds a pin when a sign-in has a country
+- [internal] Admin Focus counts which words sessions use (PTSD, trauma, and other themes) for marketing. It does not open messages or show who said what
+- [internal] Focus hides a topic until 3 people used those words, and no longer counts post-traumatic as trauma or a bare crash or partner mention
+- [internal] Focus lists every theme with a search phrase and blog category, plus session languages, so search and ads can aim at words people already use
+- [internal] Focus no longer treats everyday words like relation or sorgfältig as a theme, and it counts en and en-US as one language before the 3-person line
+- [internal] Focus drops the long method note and shows a short aim line above the table
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

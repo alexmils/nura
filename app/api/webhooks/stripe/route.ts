@@ -21,7 +21,10 @@ import {
   dispatchConversion,
   isFirstPaidCharge,
 } from "@/lib/conversions/dispatch";
-import { notifyAdminsOfPayment } from "@/lib/email/admin-payment-notify";
+import {
+  notifyAdminsOfPayment,
+  notifyAdminsOfTrial,
+} from "@/lib/email/admin-payment-notify";
 import { sendPurchaseReceipt } from "@/lib/email/purchase-receipt";
 
 function verifyStripeEvent(
@@ -153,6 +156,16 @@ export async function POST(request: Request) {
         livemode: event.livemode,
         occurredAt: event.created,
       });
+      if (isTrial) {
+        await notifyAdminsOfTrial({
+          userId,
+          plan: mapped.plan,
+          amountCents,
+          currency: session.currency ?? mapped.currency,
+          trialEndsAt: mapped.trialEndsAt,
+          livemode: event.livemode,
+        });
+      }
     }
 
     if (

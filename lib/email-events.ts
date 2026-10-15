@@ -1,4 +1,8 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
+import {
+  emailLogTemplateIds,
+  type EmailLogAudience,
+} from "@/lib/email/template-labels";
 
 export type EmailEventStatus = "sent" | "failed";
 
@@ -53,6 +57,7 @@ export async function logEmailEvent(input: {
 export async function listEmailEvents(options?: {
   limit?: number;
   status?: EmailEventStatus;
+  audience?: EmailLogAudience;
   days?: number;
 }): Promise<EmailEvent[]> {
   await ensureEmailEventsSchema();
@@ -64,6 +69,10 @@ export async function listEmailEvents(options?: {
   if (options?.status) {
     conditions.push(`status = $${idx++}`);
     params.push(options.status);
+  }
+  if (options?.audience === "admin" || options?.audience === "user") {
+    conditions.push(`template_id = ANY($${idx++}::text[])`);
+    params.push(emailLogTemplateIds(options.audience));
   }
   if (options?.days) {
     conditions.push(`created_at >= NOW() - ($${idx++}::int || ' days')::interval`);

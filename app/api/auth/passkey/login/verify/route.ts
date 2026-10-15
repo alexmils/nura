@@ -15,6 +15,7 @@ import {
 } from "@/lib/passkeys";
 import { getUserById, publicUser } from "@/lib/users";
 import { clientIp, recordUserLogin } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import {
   getEntitlementForUser,
   publicEntitlement,
@@ -81,6 +82,7 @@ export async function POST(request: Request) {
     const jar = await cookies();
     jar.set(sessionCookieOptions(token));
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, false);
 
     if (user.role === "user") {
       await ensureUserAccessStub(user.id);

@@ -4,6 +4,7 @@ import { createSessionToken, sessionCookieOptions } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
 import { getUserByEmail, publicUser } from "@/lib/users";
 import { clientIp, recordUserLogin } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import {
   getEntitlementForUser,
   publicEntitlement,
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
     jar.set(sessionCookieOptions(token));
 
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, false);
 
     if (user.role === "user") {
       await ensureUserAccessStub(user.id);

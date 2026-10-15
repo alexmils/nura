@@ -12,9 +12,27 @@ export const EMAIL_TEMPLATE_IDS = [
   "welcome",
   "account_deleted",
   "payment_receipt",
+  "admin_signup",
+  "admin_trial",
+  "admin_payment",
 ] as const;
 
 export type EmailTemplateId = (typeof EMAIL_TEMPLATE_IDS)[number];
+
+/** Who receives the mail. Admin rows go to the platform operator. */
+export type EmailTemplateAudience = "customer" | "admin";
+
+export const EMAIL_TEMPLATE_AUDIENCE: Record<EmailTemplateId, EmailTemplateAudience> = {
+  password_reset: "customer",
+  welcome_invite: "customer",
+  password_changed: "customer",
+  welcome: "customer",
+  account_deleted: "customer",
+  payment_receipt: "customer",
+  admin_signup: "admin",
+  admin_trial: "admin",
+  admin_payment: "admin",
+};
 
 export function isEmailTemplateId(value: unknown): value is EmailTemplateId {
   return (
@@ -31,7 +49,23 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   welcome: "Welcome",
   account_deleted: "Account deleted",
   payment_receipt: "Purchase receipt",
+  admin_signup: "New account",
+  admin_trial: "Trial started",
+  admin_payment: "Payment received",
 };
+
+/** Log filter. User is customer mail plus broadcasts. */
+export type EmailLogAudience = "user" | "admin";
+
+export function emailLogTemplateIds(audience: EmailLogAudience): string[] {
+  if (audience === "admin") {
+    return EMAIL_TEMPLATE_IDS.filter((id) => EMAIL_TEMPLATE_AUDIENCE[id] === "admin");
+  }
+  return [
+    ...EMAIL_TEMPLATE_IDS.filter((id) => EMAIL_TEMPLATE_AUDIENCE[id] === "customer"),
+    "broadcast",
+  ];
+}
 
 export function emailTemplateLabel(id: string): string {
   return EMAIL_TEMPLATE_LABELS[id as EmailTemplateId] ?? id;

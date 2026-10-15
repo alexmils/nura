@@ -6,6 +6,14 @@ import { fetchJson } from "@/lib/fetch-json";
 
 const PREVIEW_DEBOUNCE_MS = 120;
 
+/** Preview iframe cannot load a host that returns a login page instead of the PNG. */
+function previewLogoHtml(html: string): string {
+  return html.replace(
+    /https?:\/\/[^"'\s]+\/brand\/nura-wave-logo\.png/g,
+    "/brand/nura-wave-logo.png"
+  );
+}
+
 export function TemplateEditor({
   template,
   onSaved,
@@ -22,7 +30,9 @@ export function TemplateEditor({
   const [subject, setSubject] = useState(template.subject);
   const [html, setHtml] = useState(template.html);
   const [text, setText] = useState(template.text);
-  const [previewHtml, setPreviewHtml] = useState(template.html);
+  const [previewHtml, setPreviewHtml] = useState(() =>
+    previewLogoHtml(template.html)
+  );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -30,12 +40,15 @@ export function TemplateEditor({
     setSubject(template.subject);
     setHtml(template.html);
     setText(template.text);
-    setPreviewHtml(template.html);
+    setPreviewHtml(previewLogoHtml(template.html));
   }, [template]);
 
   // Live preview from draft HTML (light debounce so iframe srcDoc stays usable while typing)
   useEffect(() => {
-    const id = window.setTimeout(() => setPreviewHtml(html), PREVIEW_DEBOUNCE_MS);
+    const id = window.setTimeout(
+      () => setPreviewHtml(previewLogoHtml(html)),
+      PREVIEW_DEBOUNCE_MS
+    );
     return () => window.clearTimeout(id);
   }, [html]);
 

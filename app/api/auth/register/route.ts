@@ -15,6 +15,7 @@ import {
   setUserPassword,
 } from "@/lib/users";
 import { clientIp, recordUserLogin, writeAuditEvent } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { notifyAdminsOfSignup } from "@/lib/email/admin-payment-notify";
 import { LOGIN_PATH } from "@/lib/app-base";
@@ -125,6 +126,7 @@ export async function POST(request: Request) {
       ip: clientIp(request),
     });
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, true);
 
     const entitlement = await getEntitlementForUser({
       userId: user.id,

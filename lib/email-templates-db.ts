@@ -72,6 +72,32 @@ function sampleData(id: EmailTemplateId) {
         manageBillingUrl: "https://example.com/app/billing",
         supportEmail: base.supportEmail,
       };
+    case "admin_signup":
+      return {
+        customerName: "Sam",
+        customerEmail: "sam@example.com",
+        source: "Google",
+        adminUserUrl: "https://example.com/admin/users/u1",
+      };
+    case "admin_trial":
+      return {
+        customerName: "Sam",
+        customerEmail: "sam@example.com",
+        planLabel: "Weekly",
+        amount: "$0",
+        trialEndsAt: "October 22, 2026",
+        mode: "Live",
+        adminUserUrl: "https://example.com/admin/users/u1",
+      };
+    case "admin_payment":
+      return {
+        customerName: "Alex",
+        customerEmail: "alex@example.com",
+        planLabel: "Monthly",
+        amount: "$14.99",
+        paidAt: "September 21, 2026",
+        adminUserUrl: "https://example.com/admin/users/u1",
+      };
   }
 }
 

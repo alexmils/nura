@@ -1,5 +1,7 @@
 "use client";
 
+import { stampBrowserPlace } from "@/lib/browser-place-client";
+
 type GoogleAuthButtonProps = {
   /** Post-login /app path */
   next?: string;
@@ -65,7 +67,11 @@ export function GoogleAuthButton({
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
       onClick={(e) => {
-        if (disabled) e.preventDefault();
+        if (disabled) {
+          e.preventDefault();
+          return;
+        }
+        stampBrowserPlace();
       }}
       style={disabled ? { opacity: 0.6, pointerEvents: "none" } : undefined}
     >

@@ -12,6 +12,7 @@ import {
 import { getUserById, publicUser, setUserPassword } from "@/lib/users";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { clientIp, recordUserLogin } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import {
   extractTurnstileToken,
   verifyTurnstileToken,
@@ -82,6 +83,7 @@ export async function POST(request: Request) {
     const jar = await cookies();
     jar.set(sessionCookieOptions(sessionToken));
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, false);
 
     return NextResponse.json({ user: publicUser({ ...user, passwordHash }) });
   } catch (err) {

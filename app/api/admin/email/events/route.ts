@@ -4,6 +4,7 @@ import {
   isAuthContext,
 } from "@/lib/api-auth";
 import { listEmailEvents, type EmailEventStatus } from "@/lib/email-events";
+import type { EmailLogAudience } from "@/lib/email/template-labels";
 
 export async function GET(request: Request) {
   const auth = await requirePlatformSettingsAccess();
@@ -16,6 +17,11 @@ export async function GET(request: Request) {
       Math.max(1, Number(searchParams.get("limit") ?? 50))
     );
     const status = searchParams.get("status") as EmailEventStatus | null;
+    const audienceParam = searchParams.get("audience");
+    const audience: EmailLogAudience | undefined =
+      audienceParam === "admin" || audienceParam === "user"
+        ? audienceParam
+        : undefined;
     const days = searchParams.get("days")
       ? Number(searchParams.get("days"))
       : undefined;
@@ -23,6 +29,7 @@ export async function GET(request: Request) {
     const events = await listEmailEvents({
       limit,
       status: status === "sent" || status === "failed" ? status : undefined,
+      audience,
       days,
     });
     return NextResponse.json({ events });

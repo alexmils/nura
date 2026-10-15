@@ -12,6 +12,7 @@ import {
 import { getUserById, publicUser, setUserPassword } from "@/lib/users";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { clientIp, recordUserLogin, writeAuditEvent } from "@/lib/audit-log";
+import { recordAuthPlaces } from "@/lib/auth-place";
 import { grantInvitedUserLegacyAccess } from "@/lib/user-access";
 import {
   getEntitlementForUser,
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
     jar.set(sessionCookieOptions(sessionToken));
 
     await recordUserLogin(user.id, clientIp(request));
+    await recordAuthPlaces(request, user.id, true);
 
     const refreshed = await getUserById(user.id);
     const entitlement = await getEntitlementForUser({

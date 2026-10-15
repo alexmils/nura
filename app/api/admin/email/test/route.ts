@@ -67,6 +67,32 @@ export async function POST(request: Request) {
         manageBillingUrl: await getAppUrl("/app/billing"),
         supportEmail: sample.supportEmail,
       });
+    } else if (id === "admin_signup") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "sam@example.com",
+        source: "Google",
+        adminUserUrl: await getAppUrl("/admin/users/u1"),
+      });
+    } else if (id === "admin_trial") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "sam@example.com",
+        planLabel: "Weekly",
+        amount: "$0",
+        trialEndsAt: "October 22, 2026",
+        mode: "Live",
+        adminUserUrl: await getAppUrl("/admin/users/u1"),
+      });
+    } else if (id === "admin_payment") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "alex@example.com",
+        planLabel: "Monthly",
+        amount: "$14.99",
+        paidAt: "September 21, 2026",
+        adminUserUrl: await getAppUrl("/admin/users/u1"),
+      });
     } else {
       await sendTemplateEmail(to.trim(), "welcome", {
         name: sample.name,

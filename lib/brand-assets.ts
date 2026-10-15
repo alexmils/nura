@@ -3,6 +3,7 @@
  * Stored in app_settings; served from /brand-assets/*.
  */
 
+import { BRAND_DOMAIN } from "@/lib/brand";
 import {
   SEO_OG_IMAGE_MAX_CHARS,
   isAllowedOgImageUrl,
@@ -17,9 +18,38 @@ export const DEFAULT_FAVICON_PATH = "/icon.png";
 /**
  * Email header lockup: the coloured wave logo on transparency, so it sits on
  * the light card without a white box around it. Email clients need an absolute
- * URL — the template builds `<origin>${EMAIL_LOGO_PATH}`.
+ * URL. Gmail fetches that URL itself, so it must be the public site. A
+ * login-gated host such as dev.nurahelp.com returns HTML and the logo breaks.
  */
 export const EMAIL_LOGO_PATH = "/brand/nura-wave-logo.png";
+
+export function publicEmailLogoUrl(): string {
+  return `https://${BRAND_DOMAIN}${EMAIL_LOGO_PATH}`;
+}
+
+/** Use the app origin only when that host already serves the PNG in public. */
+export function emailLogoSrcForOrigin(appOrigin: string): string {
+  const fallback = publicEmailLogoUrl();
+  try {
+    const url = new URL(appOrigin);
+    const host = url.hostname.replace(/\.$/, "").toLowerCase();
+    const onPublicSite = host === BRAND_DOMAIN || host === `www.${BRAND_DOMAIN}`;
+    if (url.protocol === "https:" && onPublicSite) {
+      return `${url.origin}${EMAIL_LOGO_PATH}`;
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
+/** Saved templates may still point at a gated host. Outbound mail must not. */
+export function rewriteEmailLogoSrc(html: string): string {
+  const logo = publicEmailLogoUrl();
+  return html
+    .replace(/https?:\/\/[^"'\s]+\/brand\/nura-wave-logo\.png/g, logo)
+    .replace(/(?<![\w/])\/brand\/nura-wave-logo\.png/g, logo);
+}
 
 /**
  * Display width for the email lockup; the source is 1600×363 (≈4.4:1).

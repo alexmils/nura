@@ -1,3 +1,4 @@
+import { rewriteEmailLogoSrc } from "@/lib/brand-assets";
 import { sendViaBrevo } from "./brevo";
 import { isGmailReady, sendViaGmail } from "./gmail";
 import { logEmailEvent } from "@/lib/email-events";
@@ -24,6 +25,7 @@ export {
 export async function sendEmail(
   input: SendEmailInput
 ): Promise<SendEmailResult> {
+  const message = { ...input, html: rewriteEmailLogoSrc(input.html) };
   const brevoKey = await getResolvedBrevoApiKey();
   const gmailReady = await isGmailReady();
 
@@ -32,11 +34,11 @@ export async function sendEmail(
 
     if (brevoKey) {
       try {
-        result = await sendViaBrevo(input);
+        result = await sendViaBrevo(message);
       } catch (err) {
         if (isQuotaError(err) && gmailReady) {
           console.warn("[email] Brevo quota hit, falling back to Gmail API");
-          result = await sendViaGmail(input);
+          result = await sendViaGmail(message);
         } else if (isQuotaError(err)) {
           throw new Error(
             "Brevo quota exceeded and Gmail API fallback is not configured"
@@ -46,7 +48,7 @@ export async function sendEmail(
         }
       }
     } else if (gmailReady) {
-      result = await sendViaGmail(input);
+      result = await sendViaGmail(message);
     } else {
       throw new Error(
         "No email provider configured. Set Brevo API key (preferred) or Gmail API credentials in Admin → Email."

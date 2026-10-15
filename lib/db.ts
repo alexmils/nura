@@ -157,6 +157,25 @@ async function runSchemaMigrations(db: PoolClient) {
       created_at TIMESTAMPTZ NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_audit_events_created ON audit_events(created_at DESC);
+    CREATE TABLE IF NOT EXISTS auth_places (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('signup', 'login')),
+      country_code TEXT,
+      timezone TEXT,
+      language TEXT,
+      browser TEXT,
+      city TEXT,
+      created_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_auth_places_created ON auth_places(created_at DESC);
+    ALTER TABLE auth_places ADD COLUMN IF NOT EXISTS city TEXT;
+    UPDATE auth_places
+      SET city = replace(regexp_replace(timezone, '^.*/', ''), '_', ' ')
+      WHERE (city IS NULL OR city = '')
+        AND timezone LIKE '%/%'
+        AND timezone !~* '^Etc/'
+        AND regexp_replace(timezone, '^.*/', '') !~* '^(Eastern|Central|Pacific|Mountain|UTC|GMT)$';
     CREATE TABLE IF NOT EXISTS webauthn_credentials (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

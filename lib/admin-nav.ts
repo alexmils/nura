@@ -15,6 +15,8 @@ export type AdminNavIcon =
   | "billing"
   | "finance"
   | "analytics"
+  | "focus"
+  | "places"
   | "activity"
   | "email"
   | "ai"
@@ -54,8 +56,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         ],
       },
       { href: "/admin/tasks", label: "Tasks", icon: "tasks" },
-      {
-        href: "/admin/analytics",
+      { href: "/admin/analytics",
         label: "Analytics",
         icon: "analytics",
         children: [
@@ -86,6 +87,8 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
           },
         ],
       },
+      { href: "/admin/focus", label: "Focus", icon: "focus" },
+      { href: "/admin/places", label: "Places", icon: "places" },
     ],
   },
   {
@@ -253,6 +256,11 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
             href: "/admin/email?tab=templates",
             label: "Templates",
             tab: "templates",
+          },
+          {
+            href: "/admin/email?tab=admin",
+            label: "Admin",
+            tab: "admin",
           },
           { href: "/admin/email?tab=log", label: "Log", tab: "log" },
         ],
