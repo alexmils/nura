@@ -271,7 +271,7 @@ export async function sendDueTrialFeedbackEmails(
   const { ensureFeedbackSchema, userHasSubmittedFeedback } = await import(
     "@/lib/feedback-db"
   );
-  const { userHasQualifyingSession } = await import("@/lib/feedback-eligibility");
+  const { userHasQualifyingSession } = await import("@/lib/feedback-db");
   await ensureFeedbackSchema();
   const windowStart = new Date(now.getTime() - 3 * MS_DAY);
   const { rows } = await getPool().query<{
