@@ -37,7 +37,7 @@ function redirectAfterLogin(
   });
 }
 
-function LoginForm() {
+export function LoginForm({ adminGate }: { adminGate?: string } = {}) {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") ?? APP_BASE;
@@ -67,6 +67,7 @@ function LoginForm() {
         body: JSON.stringify({
           email,
           password,
+          ...(adminGate ? { gate: adminGate } : {}),
           [TURNSTILE_TOKEN_FIELD]: turnstileToken,
         }),
       });
@@ -99,6 +100,7 @@ function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim() || undefined,
+          ...(adminGate ? { gate: adminGate } : {}),
         }),
       });
       const optData = await optRes.json();
@@ -114,7 +116,10 @@ function LoginForm() {
       const verifyRes = await fetch("/api/auth/passkey/login/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ response: assertion }),
+        body: JSON.stringify({
+          response: assertion,
+          ...(adminGate ? { gate: adminGate } : {}),
+        }),
       });
       const verifyData = await verifyRes.json();
       if (!verifyRes.ok) {
@@ -147,15 +152,22 @@ function LoginForm() {
       title="Sign in"
       subtitle="Pick up where you left your last session."
       footer={
-        <p>
-          Forgot your password?{" "}
-          <AuthLink href={appPath("/forgot-password")}>Reset it</AuthLink>
-          <br />
-          <span className="mt-2 inline-block">
-            No account?{" "}
-            <AuthLink href={appPath("/create-account")}>Create one</AuthLink>
-          </span>
-        </p>
+        adminGate ? (
+          <p>
+            Forgot your password?{" "}
+            <AuthLink href={appPath("/forgot-password")}>Reset it</AuthLink>
+          </p>
+        ) : (
+          <p>
+            Forgot your password?{" "}
+            <AuthLink href={appPath("/forgot-password")}>Reset it</AuthLink>
+            <br />
+            <span className="mt-2 inline-block">
+              No account?{" "}
+              <AuthLink href={appPath("/create-account")}>Create one</AuthLink>
+            </span>
+          </p>
+        )
       }
     >
       <form onSubmit={submit}>
@@ -199,7 +211,12 @@ function LoginForm() {
           <div className="h-px flex-1 bg-[var(--separator-opaque)]" />
         </div>
 
-        <GoogleAuthButton next={next} from="login" disabled={busy} />
+        <GoogleAuthButton
+          next={next}
+          from="login"
+          gate={adminGate}
+          disabled={busy}
+        />
 
         <button
           type="button"

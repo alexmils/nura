@@ -12,6 +12,7 @@ export type AuditAction =
   | "user.disabled"
   | "user.enabled"
   | "settings.platform_updated"
+  | "settings.login_guard_updated"
   | "settings.seo_updated"
   | "settings.meta_ads_updated"
   | "settings.email_updated"

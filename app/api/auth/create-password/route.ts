@@ -14,6 +14,7 @@ import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import { clientIp, recordUserLogin, writeAuditEvent } from "@/lib/audit-log";
 import { recordAuthPlaces } from "@/lib/auth-place";
 import { grantInvitedUserLegacyAccess } from "@/lib/user-access";
+import { isStaffRole } from "@/lib/login-guard-policy";
 import {
   getEntitlementForUser,
   publicEntitlement,
@@ -97,6 +98,10 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       console.warn("[auth/create-password] welcome email failed:", err);
+    }
+
+    if (isStaffRole(user.role)) {
+      return NextResponse.json({ operatorSignIn: true });
     }
 
     const sessionToken = await createSessionToken({

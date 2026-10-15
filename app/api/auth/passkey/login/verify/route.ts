@@ -21,11 +21,20 @@ import {
   publicEntitlement,
 } from "@/lib/entitlements";
 import { ensureUserAccessStub } from "@/lib/user-access";
+import {
+  noteLoginFailure,
+  noteLoginSuccess,
+  precheckLogin,
+  sessionAllowedForRole,
+  surfaceForGate,
+} from "@/lib/login-guard";
+import { isStaffRole, normalizeGuardEmail } from "@/lib/login-guard-policy";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       response?: AuthenticationResponseJSON;
+      gate?: string;
     };
 
     if (!body.response?.id) {
@@ -35,8 +44,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const surface = await surfaceForGate(body.gate);
+    const guard = await precheckLogin({ request, surface });
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status });
+    }
+
     const passkey = await getPasskeyByCredentialId(body.response.id);
     if (!passkey) {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: "",
+        surface,
+        outcome: "unknown_user",
+        whitelisted: guard.whitelisted,
+      });
       return NextResponse.json(
         { error: "Unknown passkey" },
         { status: 401 }
@@ -45,6 +67,13 @@ export async function POST(request: Request) {
 
     const user = await getUserById(passkey.userId);
     if (!user || user.status === "disabled") {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: normalizeGuardEmail(user?.email),
+        surface,
+        outcome: "disabled",
+        whitelisted: guard.whitelisted,
+      });
       return NextResponse.json(
         { error: "Account unavailable" },
         { status: 403 }
@@ -62,8 +91,29 @@ export async function POST(request: Request) {
     });
 
     if (!verification.verified) {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: normalizeGuardEmail(user.email),
+        surface,
+        outcome: "bad_password",
+        whitelisted: guard.whitelisted,
+      });
       return NextResponse.json(
         { error: "Passkey verification failed" },
+        { status: 401 }
+      );
+    }
+
+    if (!sessionAllowedForRole(user.role, surface === "operator")) {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: normalizeGuardEmail(user.email),
+        surface,
+        outcome: isStaffRole(user.role) ? "staff_public" : "consumer_gate",
+        whitelisted: guard.whitelisted,
+      });
+      return NextResponse.json(
+        { error: "Passkey sign-in failed" },
         { status: 401 }
       );
     }
@@ -83,6 +133,12 @@ export async function POST(request: Request) {
     jar.set(sessionCookieOptions(token));
     await recordUserLogin(user.id, clientIp(request));
     await recordAuthPlaces(request, user.id, false);
+    await noteLoginSuccess({
+      ip: guard.ip,
+      email: normalizeGuardEmail(user.email),
+      surface,
+      whitelisted: guard.whitelisted,
+    });
 
     if (user.role === "user") {
       await ensureUserAccessStub(user.id);

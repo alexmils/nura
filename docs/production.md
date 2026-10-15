@@ -18,6 +18,7 @@ Related: local ports in [README](../README.md), brand in [brand.md](./brand.md).
 | App listens | **3471** inside container → host `127.0.0.1:3471` |
 | Dev (local) | `localhost:3471` · Postgres Docker **5434** |
 | Dev tunnel | https://dev.nurahelp.com → this PC `localhost:3471` via the local Cloudflared service (Cloudflare Access in front). DNS CNAME targets that tunnel, not `staging-receptly`. |
+| Dev webhooks | CF Access app **NuraHelp Dev Webhooks Bypass** on `dev.nurahelp.com/api/webhooks/*` (bypass) so Stripe/Brevo POSTs are not redirected to login. Test sandbox webhook URL: `https://dev.nurahelp.com/api/webhooks/stripe`. |
 
 ---
 
@@ -188,7 +189,9 @@ Set in Coolify → **nurahelp** → Environment (values not in git):
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Prod Google OAuth; add redirect `https://nurahelp.com/api/auth/google/callback` |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Public Turnstile sitekey |
 | `TURNSTILE_SECRET` | Turnstile widget secret (Coolify only; never git) |
-| `TURNSTILE_HOSTNAMES` | Prod: `nurahelp.com,www.nurahelp.com` (no localhost) |
+| `TURNSTILE_HOSTNAMES` | Prod: `nurahelp.com,www.nurahelp.com` (no localhost). Dev tunnel: include `dev.nurahelp.com`. Turnstile widget must allow the same hostnames in the Cloudflare dashboard. |
+| `TURNSTILE_SITEVERIFY_TIMEOUT_MS` | Optional; default **25000**. Register/login 403 after ~10s often means siteverify timed out (slow path to `challenges.cloudflare.com`). |
+| `TURNSTILE_BYPASS_DEV` | **`true` only on local `npm run dev`** — skips siteverify. Never set on Coolify/prod. |
 | `CRON_SECRET` | Shared secret for scheduled jobs (guest help transcript, trial charge reminder) |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Optional Web Push keys for Admin Help alerts (PWA). If unset, keys are auto-generated and stored in platform settings on first use |
 | `VAPID_SUBJECT` | Optional `mailto:` or `https://` contact for VAPID (defaults to `APP_URL`) |

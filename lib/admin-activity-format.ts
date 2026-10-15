@@ -67,6 +67,7 @@ export function formatActivityBilling(input: {
   status: string;
   livemode: boolean | null;
   trialEndsAt: string | null;
+  accessEndsAt?: string | null;
 }): { title: string; detail: string } {
   const title = activityPersonTitle(input.name, input.email);
   const plan = receiptPlanLabel(input.plan);
@@ -85,6 +86,17 @@ export function formatActivityBilling(input: {
     parts.push(`Payment failed`, amount, plan);
   } else if (input.status === "succeeded") {
     parts.push(`Paid ${amount}`, plan);
+  } else if (input.status === "subscription_cancel_scheduled") {
+    parts.push(`Cancel scheduled`, plan);
+    const endIso = input.accessEndsAt?.trim() || null;
+    if (endIso) {
+      const end = new Date(endIso);
+      if (!Number.isNaN(end.getTime())) {
+        parts.push(`access until ${formatReceiptDate(end)}`);
+      }
+    }
+  } else if (input.status === "subscription_canceled") {
+    parts.push(`Subscription ended`, plan);
   } else {
     parts.push(`Checkout`, amount, plan);
   }

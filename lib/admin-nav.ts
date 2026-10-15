@@ -21,6 +21,7 @@ export type AdminNavIcon =
   | "email"
   | "ai"
   | "platform"
+  | "security"
   | "seo"
   | "mcp"
   | "tasks"
@@ -276,6 +277,26 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         ],
       },
       {
+        href: "/admin/security",
+        label: "Sign-in",
+        icon: "security",
+        adminOnly: true,
+        children: [
+          { href: "/admin/security", label: "Limits", tab: "limits" },
+          {
+            href: "/admin/security?tab=addresses",
+            label: "Addresses",
+            tab: "addresses",
+          },
+          {
+            href: "/admin/security?tab=attempts",
+            label: "Attempts",
+            tab: "attempts",
+          },
+          { href: "/admin/security?tab=locks", label: "Locks", tab: "locks" },
+        ],
+      },
+      {
         href: "/admin/platform",
         label: "Platform",
         icon: "platform",
@@ -348,6 +369,7 @@ export const ADMIN_DEFAULT_TAB_BY_PATH: Record<string, string> = {
   "/admin/email": "delivery",
   "/admin/ai": "ai",
   "/admin/platform": "brand",
+  "/admin/security": "limits",
   "/admin/seo": "overview",
   "/admin/marketing": "meta",
 };

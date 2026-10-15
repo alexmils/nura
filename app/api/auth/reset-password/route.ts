@@ -17,6 +17,7 @@ import {
   extractTurnstileToken,
   verifyTurnstileToken,
 } from "@/lib/turnstile";
+import { isStaffRole } from "@/lib/login-guard-policy";
 
 export async function POST(request: Request) {
   try {
@@ -72,6 +73,13 @@ export async function POST(request: Request) {
       });
     } catch (err) {
       console.warn("[auth/reset-password] confirmation email failed:", err);
+    }
+
+    if (isStaffRole(user.role)) {
+      return NextResponse.json({
+        operatorSignIn: true,
+        user: publicUser({ ...user, passwordHash }),
+      });
     }
 
     const sessionToken = await createSessionToken({

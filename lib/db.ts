@@ -296,6 +296,8 @@ async function runSchemaMigrations(db: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS idx_billing_events_user_occurred
       ON billing_events(user_id, occurred_at DESC);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_events_stripe_event_id
+      ON billing_events(stripe_event_id);
     CREATE INDEX IF NOT EXISTS idx_audit_events_actor_created
       ON audit_events(actor_user_id, created_at DESC);
     CREATE TABLE IF NOT EXISTS llm_usage_events (
@@ -350,6 +352,37 @@ async function runSchemaMigrations(db: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS idx_conversion_dispatches_created
       ON conversion_dispatches(created_at DESC);
+    CREATE TABLE IF NOT EXISTS login_guard (
+      id INT PRIMARY KEY CHECK (id = 1),
+      slug TEXT NOT NULL,
+      max_attempts INT NOT NULL,
+      window_minutes INT NOT NULL,
+      lock_minutes INT NOT NULL,
+      whitelist JSONB NOT NULL DEFAULT '[]',
+      blocklist JSONB NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      id BIGSERIAL PRIMARY KEY,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      ip TEXT,
+      email TEXT,
+      success BOOLEAN NOT NULL,
+      surface TEXT NOT NULL,
+      outcome TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_login_attempts_created
+      ON login_attempts(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_login_attempts_ip
+      ON login_attempts(ip, created_at DESC);
+    CREATE TABLE IF NOT EXISTS login_locks (
+      subject_key TEXT PRIMARY KEY,
+      kind TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      failed_count INT NOT NULL,
+      locked_until TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
   `);
 
   // One-time only — never re-run on every boot (that falsely marked new

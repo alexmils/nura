@@ -46,7 +46,13 @@ export function aiGroundingAllowPaths(): string[] {
   ];
 }
 
-export const ROBOTS_DISALLOW = ["/app", "/admin", "/api", "/health"] as const;
+export const ROBOTS_DISALLOW = [
+  "/app",
+  "/admin",
+  "/api",
+  "/health",
+  "/entry",
+] as const;
 
 export function buildRobotsTxt(origin: string): string {
   const lines: string[] = [

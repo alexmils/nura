@@ -45,6 +45,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "user.disabled": "Disabled",
   "user.enabled": "Enabled",
   "settings.platform_updated": "Platform settings updated",
+  "settings.login_guard_updated": "Sign-in protection updated",
   "settings.seo_updated": "SEO settings updated",
   "settings.meta_ads_updated": "Meta Ads connection updated",
   "settings.email_updated": "Email settings updated",

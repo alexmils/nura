@@ -163,9 +163,11 @@ function isSupportWriteBlocked(pathname: string, method: string) {
 function isSupportPageBlocked(pathname: string) {
   return (
     pathname.startsWith("/admin/platform") ||
+    pathname.startsWith("/admin/security") ||
     pathname.startsWith("/admin/email") ||
     pathname.startsWith("/admin/ai") ||
     pathname.startsWith("/api/admin/platform") ||
+    pathname.startsWith("/api/admin/login-guard") ||
     pathname.startsWith("/api/admin/email")
   );
 }

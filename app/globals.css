@@ -7968,6 +7968,55 @@ a.admin-panel-title-link:hover {
   color: var(--text-muted);
 }
 
+.admin-nav-toggle,
+.admin-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-canvas {
+    min-width: 0;
+    flex: 1;
+    width: 100%;
+  }
+
+  .admin-nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    border: 1px solid var(--separator-opaque);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+  }
+
+  .admin-sidebar {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 0.2s ease;
+    width: min(280px, 86vw);
+  }
+
+  .admin-shell.admin-nav-open .admin-sidebar {
+    transform: none;
+  }
+
+  .admin-shell.admin-nav-open .admin-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    border: 0;
+    background: rgba(42, 48, 32, 0.35);
+  }
+}
+
 @media (max-width: 640px) {
   .admin-topbar {
     padding: 0 0.75rem;

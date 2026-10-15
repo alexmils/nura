@@ -7,6 +7,8 @@ type GoogleAuthButtonProps = {
   next?: string;
   /** Where to return on OAuth errors */
   from?: "login" | "create-account";
+  /** Operator sign-in slug. Public login omits this. */
+  gate?: string;
   disabled?: boolean;
   className?: string;
   /** ink — dark charcoal pill (method picker); default — secondary outline */
@@ -46,6 +48,7 @@ function GoogleMark() {
 export function GoogleAuthButton({
   next,
   from = "login",
+  gate,
   disabled = false,
   className = "",
   variant = "default",
@@ -53,6 +56,7 @@ export function GoogleAuthButton({
   const params = new URLSearchParams();
   if (next) params.set("next", next);
   if (from !== "login") params.set("from", from);
+  if (gate) params.set("gate", gate);
   const qs = params.toString();
   const href = qs ? `/api/auth/google?${qs}` : "/api/auth/google";
   const base =

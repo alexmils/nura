@@ -10,7 +10,10 @@ import "./onboarding-shell.css";
 type OnboardingShellProps = {
   kicker?: string;
   title: string;
+  /** Single lead paragraph. Ignored when `leadLines` is set. */
   lead?: string;
+  /** Stacked lead lines (fixed line breaks, no awkward wrap). */
+  leadLines?: readonly string[];
   children: ReactNode;
   footer?: ReactNode;
 };
@@ -23,6 +26,7 @@ export function OnboardingShell({
   kicker,
   title,
   lead,
+  leadLines,
   children,
   footer,
 }: OnboardingShellProps) {
@@ -36,7 +40,17 @@ export function OnboardingShell({
           </p>
           {kicker ? <p className="ob-kicker">{kicker}</p> : null}
           <h1 className="ob-title ui-page-title">{title}</h1>
-          {lead ? <p className="ob-lead ui-page-lead">{lead}</p> : null}
+          {leadLines?.length ? (
+            <div className="ob-lead-stack">
+              {leadLines.map((line) => (
+                <p key={line} className="ob-lead-line ui-page-lead">
+                  {line}
+                </p>
+              ))}
+            </div>
+          ) : lead ? (
+            <p className="ob-lead ui-page-lead">{lead}</p>
+          ) : null}
         </header>
 
         <div className="ob-panel">{children}</div>

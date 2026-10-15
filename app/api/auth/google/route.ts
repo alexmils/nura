@@ -33,10 +33,12 @@ export async function GET(request: Request) {
   const redirectUri = `${appBase}/api/auth/google/callback`;
 
   try {
+    const gate = url.searchParams.get("gate") ?? undefined;
     const { state, nonce } = await createGoogleOAuthState({
       next,
       returnTo,
       appBase,
+      gate,
     });
     const authorizeUrl = buildGoogleAuthorizeUrl({
       clientId: creds.clientId,

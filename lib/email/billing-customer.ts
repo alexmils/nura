@@ -5,6 +5,7 @@
 
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { ensureSchemaReady, getPool } from "@/lib/db";
+import { clearSubscriptionCancelScheduledActivity } from "@/lib/subscription-cancel-effects";
 import { hasSentEmailDedup } from "@/lib/email-events";
 import { getAppUrl, sendTemplateEmail } from "@/lib/email";
 import {
@@ -192,6 +193,7 @@ export async function clearSubscriptionCancelNotice(
     `DELETE FROM email_events WHERE dedup_key = $1`,
     [`subscription_canceled:${stripeSubscriptionId}`]
   );
+  await clearSubscriptionCancelScheduledActivity(stripeSubscriptionId);
 }
 
 export async function sendDueTrialChargeReminders(

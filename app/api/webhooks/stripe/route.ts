@@ -21,16 +21,14 @@ import {
   dispatchConversion,
   isFirstPaidCharge,
 } from "@/lib/conversions/dispatch";
-import {
-  notifyAdminsOfPayment,
-  notifyAdminsOfTrial,
-} from "@/lib/email/admin-payment-notify";
+import { notifyAdminsOfPayment } from "@/lib/email/admin-payment-notify";
+import { runCheckoutTrialEffects } from "@/lib/checkout-trial-effects";
+import { runSubscriptionCancelAdminEffects } from "@/lib/subscription-cancel-effects";
 import { sendPurchaseReceipt } from "@/lib/email/purchase-receipt";
 import {
   clearSubscriptionCancelNotice,
   sendPaymentFailedEmail,
   sendSubscriptionCanceledEmail,
-  sendTrialStartedEmail,
 } from "@/lib/email/billing-customer";
 import { syncBrevoContactForUser } from "@/lib/email/brevo-contacts";
 
@@ -149,37 +147,28 @@ export async function POST(request: Request) {
 
       const amountCents = session.amount_total ?? mapped.amountCents ?? 0;
       const isTrial = mapped.status === "trialing" || amountCents === 0;
-      await recordBillingEvent({
-        userId,
-        stripeEventId: event.id,
-        eventType: event.type,
-        status: isTrial ? "trial_started" : "checkout",
-        amountCents,
-        currency: session.currency ?? mapped.currency,
-        description: isTrial
-          ? `Checkout · ${mapped.plan} trial started`
-          : `Checkout · ${mapped.plan}`,
-        subscriptionId: mapped.stripeSubscriptionId,
-        livemode: event.livemode,
-        occurredAt: event.created,
-      });
       if (isTrial) {
-        await notifyAdminsOfTrial({
+        await runCheckoutTrialEffects({
           userId,
-          plan: mapped.plan,
+          dedupStripeEventId: event.id,
+          mapped,
+          sessionAmountCents: amountCents,
+          currency: session.currency ?? mapped.currency,
+          livemode: event.livemode,
+          occurredAt: event.created,
+        });
+      } else {
+        await recordBillingEvent({
+          userId,
+          stripeEventId: event.id,
+          eventType: event.type,
+          status: "checkout",
           amountCents,
           currency: session.currency ?? mapped.currency,
-          trialEndsAt: mapped.trialEndsAt,
+          description: `Checkout · ${mapped.plan}`,
+          subscriptionId: mapped.stripeSubscriptionId,
           livemode: event.livemode,
-        });
-        await sendTrialStartedEmail({
-          userId,
-          plan: mapped.plan,
-          amountCents: mapped.amountCents ?? 0,
-          currency: session.currency ?? mapped.currency,
-          trialEndsAt: mapped.trialEndsAt,
-          livemode: event.livemode,
-          stripeEventId: event.id,
+          occurredAt: event.created,
         });
       }
       void syncBrevoContactForUser(userId).catch((err) =>
@@ -240,6 +229,19 @@ export async function POST(request: Request) {
           livemode: event.livemode,
           keepsAccess: false,
         });
+        void runSubscriptionCancelAdminEffects({
+          userId,
+          stripeEventId: event.id,
+          stripeSubscriptionId: sub.id,
+          eventType: event.type,
+          plan: sub.metadata?.plan ?? null,
+          accessEndsAt: periodEnd,
+          keepsAccess: false,
+          livemode: event.livemode,
+          occurredAt: event.created,
+        }).catch((err) =>
+          console.error("[webhook] subscription cancel admin effects", err)
+        );
       } else {
         const mapped = mapStripeSubscription(sub, priceIds);
         await syncSubscriptionFromStripe({
@@ -262,6 +264,19 @@ export async function POST(request: Request) {
             livemode: event.livemode,
             keepsAccess: true,
           });
+          void runSubscriptionCancelAdminEffects({
+            userId,
+            stripeEventId: event.id,
+            stripeSubscriptionId: sub.id,
+            eventType: event.type,
+            plan: mapped.plan,
+            accessEndsAt: periodEnd,
+            keepsAccess: true,
+            livemode: event.livemode,
+            occurredAt: event.created,
+          }).catch((err) =>
+            console.error("[webhook] subscription cancel admin effects", err)
+          );
         } else if (mapped.status === "trialing" || mapped.status === "active") {
           await clearSubscriptionCancelNotice(userId, sub.id);
         }

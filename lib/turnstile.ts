@@ -30,9 +30,30 @@ export function turnstileHostnames(): Set<string> {
   return new Set(
     (process.env.TURNSTILE_HOSTNAMES ?? "")
       .split(",")
-      .map((hostname) => hostname.trim())
+      .map((hostname) => hostname.trim().toLowerCase())
       .filter(Boolean)
   );
+}
+
+function siteverifyTimeoutMs(): number {
+  const raw = process.env.TURNSTILE_SITEVERIFY_TIMEOUT_MS?.trim();
+  const n = raw ? Number.parseInt(raw, 10) : 25_000;
+  return Number.isFinite(n) && n >= 5_000 ? n : 25_000;
+}
+
+function devTurnstileBypassEnabled(): boolean {
+  return (
+    process.env.NODE_ENV === "development" &&
+    process.env.TURNSTILE_BYPASS_DEV === "true"
+  );
+}
+
+function logTurnstileDevFailure(
+  reason: string,
+  detail?: Record<string, unknown>
+): void {
+  if (process.env.NODE_ENV !== "development") return;
+  console.warn("[turnstile]", reason, detail ?? "");
 }
 
 export function extractTurnstileToken(
@@ -64,16 +85,27 @@ export async function verifyTurnstileToken(options: {
   const expectedHostnames = turnstileHostnames();
   const { token, expectedAction, remoteip } = options;
 
-  if (
-    !secret ||
-    !isPlausibleTurnstileToken(token) ||
-    expectedHostnames.size === 0
-  ) {
+  if (!isPlausibleTurnstileToken(token) || expectedHostnames.size === 0) {
+    logTurnstileDevFailure("missing token or TURNSTILE_HOSTNAMES");
     return {
       ok: false,
       status: 403,
       error: "Verification failed. Refresh and try again.",
     };
+  }
+
+  if (!secret) {
+    logTurnstileDevFailure("TURNSTILE_SECRET not set");
+    return {
+      ok: false,
+      status: 403,
+      error: "Verification failed. Refresh and try again.",
+    };
+  }
+
+  if (devTurnstileBypassEnabled()) {
+    logTurnstileDevFailure("TURNSTILE_BYPASS_DEV=true — siteverify skipped");
+    return { ok: true };
   }
 
   let result: TurnstileSiteverifyResult;
@@ -87,10 +119,11 @@ export async function verifyTurnstileToken(options: {
     const r = await fetch(TURNSTILE_SITEVERIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(siteverifyTimeoutMs()),
       body: params,
     });
     if (!r.ok) {
+      logTurnstileDevFailure("siteverify HTTP error", { status: r.status });
       return {
         ok: false,
         status: 403,
@@ -98,7 +131,10 @@ export async function verifyTurnstileToken(options: {
       };
     }
     result = (await r.json()) as TurnstileSiteverifyResult;
-  } catch {
+  } catch (err) {
+    logTurnstileDevFailure("siteverify request failed", {
+      message: err instanceof Error ? err.message : String(err),
+    });
     return {
       ok: false,
       status: 403,
@@ -106,12 +142,20 @@ export async function verifyTurnstileToken(options: {
     };
   }
 
+  const hostname = result.hostname?.trim().toLowerCase() ?? "";
   if (
     !result.success ||
     result.action !== expectedAction ||
-    !result.hostname ||
-    !expectedHostnames.has(result.hostname)
+    !hostname ||
+    !expectedHostnames.has(hostname)
   ) {
+    logTurnstileDevFailure("siteverify rejected", {
+      success: result.success,
+      action: result.action,
+      expectedAction,
+      hostname,
+      codes: result["error-codes"],
+    });
     return {
       ok: false,
       status: 403,

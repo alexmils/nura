@@ -16,10 +16,13 @@ import {
   Wallet,
   LifeBuoy,
   Mail,
+  Menu,
   MessageSquareQuote,
   Plug,
   Search,
   Settings2,
+  X,
+  Shield,
   Sparkles,
   Users,
   type LucideIcon,
@@ -75,6 +78,7 @@ const NAV_ICONS: Record<AdminNavIcon, LucideIcon> = {
   email: Mail,
   ai: Sparkles,
   platform: Settings2,
+  security: Shield,
   seo: Search,
   mcp: Plug,
 };
@@ -307,6 +311,8 @@ function AdminAccountMenu({
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
   const [user, setUser] = useState<AdminUser | null>(null);
   const [helpUnread, setHelpUnread] = useState(0);
   const [feedbackUnread, setFeedbackUnread] = useState(0);
@@ -400,8 +406,20 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   };
 
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
   return (
-    <div className="admin-shell">
+    <div className={`admin-shell${navOpen ? " admin-nav-open" : ""}`}>
+      {navOpen ? (
+        <button
+          type="button"
+          className="admin-nav-backdrop"
+          aria-label="Close menu"
+          onClick={() => setNavOpen(false)}
+        />
+      ) : null}
       <aside className="admin-sidebar">
         <div className="admin-sidebar-head">
           <BrandLockup href="/admin" tone="white" asset="app" />
@@ -434,6 +452,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
         <div className="admin-topbar">
+          <button
+            type="button"
+            className="admin-nav-toggle"
+            aria-expanded={navOpen}
+            aria-label={navOpen ? "Close menu" : "Open menu"}
+            onClick={() => setNavOpen((open) => !open)}
+          >
+            {navOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <AdminSearch isPlatformAdmin={user?.role === "platform_admin"} />
           <div className="admin-topbar-tools">
             <AdminNewMenu />

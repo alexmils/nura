@@ -23,6 +23,7 @@ describe("robots.txt", () => {
     assert.match(body, /^Disallow: \/admin$/m);
     assert.match(body, /^Disallow: \/api$/m);
     assert.match(body, /^Disallow: \/health$/m);
+    assert.match(body, /^Disallow: \/entry$/m);
   });
 
   it("allows search and AI answers, forbids training", () => {

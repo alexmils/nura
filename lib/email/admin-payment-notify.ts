@@ -222,6 +222,85 @@ export async function notifyAdminsOfPayment(input: {
  * Email platform admins that someone just created an account.
  * Failures must not block signup.
  */
+export function buildAdminSubscriptionCancelNotifyCopy(input: {
+  customerEmail: string;
+  customerName: string;
+  planLabel: string;
+  accessEndsAt: string;
+  keepsAccess: boolean;
+  mode: "Live" | "Sandbox";
+  adminUserUrl: string;
+}): { subject: string; text: string; html: string } {
+  const headline = input.keepsAccess
+    ? "Subscription cancel scheduled"
+    : "Subscription ended";
+  const subject = input.keepsAccess
+    ? `Cancel scheduled: ${input.planLabel} · ${input.mode}`
+    : `Subscription ended: ${input.planLabel} · ${input.mode}`;
+  return renderEmailTemplate("admin_subscription_canceled", {
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    planLabel: input.planLabel,
+    accessEndsAt: input.accessEndsAt,
+    keepsAccess: input.keepsAccess,
+    mode: input.mode,
+    headline,
+    adminUserUrl: input.adminUserUrl,
+  });
+}
+
+/**
+ * Email platform admins when a customer cancels or schedules cancel at period end.
+ * Includes sandbox so dev matches trial alerts.
+ */
+export async function notifyAdminsOfSubscriptionCancel(input: {
+  userId: string;
+  plan?: string | null;
+  accessEndsAt?: string | Date | null;
+  keepsAccess: boolean;
+  livemode: boolean;
+}): Promise<{ sent: number; reason?: string }> {
+  try {
+    const user = await getUserById(input.userId);
+    if (!user?.email) return { sent: 0, reason: "no customer" };
+
+    const end =
+      input.accessEndsAt == null
+        ? ""
+        : formatReceiptDate(
+            input.accessEndsAt instanceof Date
+              ? input.accessEndsAt
+              : new Date(input.accessEndsAt)
+          );
+
+    const customerName =
+      user.name?.trim() || user.email.split("@")[0] || "Customer";
+    const copy = await renderStoredTemplate("admin_subscription_canceled", {
+      customerName,
+      customerEmail: user.email,
+      planLabel: receiptPlanLabel(input.plan),
+      accessEndsAt: end,
+      keepsAccess: input.keepsAccess,
+      mode: input.livemode ? "Live" : "Sandbox",
+      headline: input.keepsAccess
+        ? "Subscription cancel scheduled"
+        : "Subscription ended",
+      adminUserUrl: await getAppUrl(`/admin/users/${input.userId}`),
+    });
+
+    return await sendToOperatorRecipients({
+      ...copy,
+      logLabel: "admin subscription cancel notify",
+    });
+  } catch (err) {
+    console.error("[email] admin subscription cancel notify failed", err);
+    return {
+      sent: 0,
+      reason: err instanceof Error ? err.message : "send failed",
+    };
+  }
+}
+
 export async function notifyAdminsOfSignup(input: {
   userId: string;
   email: string;

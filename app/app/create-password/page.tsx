@@ -23,6 +23,7 @@ function CreatePasswordForm() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [operatorSaved, setOperatorSaved] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileFieldHandle>(null);
 
@@ -65,6 +66,11 @@ function CreatePasswordForm() {
         return;
       }
 
+      if (data.operatorSignIn) {
+        setOperatorSaved(true);
+        return;
+      }
+
       router.push(
         typeof data.redirectTo === "string" ? data.redirectTo : "/app"
       );
@@ -89,6 +95,19 @@ function CreatePasswordForm() {
         }
       >
         <AuthError message="No invitation token found. Ask your administrator for a new invite." />
+      </AuthShell>
+    );
+  }
+
+  if (operatorSaved) {
+    return (
+      <AuthShell
+        title="Password saved"
+        subtitle="Use the operator sign-in page to continue."
+      >
+        <p className="text-caption">
+          This account does not sign in from the public page.
+        </p>
       </AuthShell>
     );
   }

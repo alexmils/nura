@@ -49,8 +49,10 @@ export async function listAdminActivity(limit = 12): Promise<AdminActivityItem[]
       name: string | null;
       plan: string | null;
       trial_ends_at: string | null;
+      description: string | null;
     }>(
       `SELECT be.id, be.occurred_at, be.status, be.amount_cents, be.currency, be.livemode,
+              be.description,
               u.id AS user_id, u.email, u.name,
               COALESCE(s.plan, NULL) AS plan,
               s.trial_ends_at
@@ -92,6 +94,7 @@ export async function listAdminActivity(limit = 12): Promise<AdminActivityItem[]
         status: row.status,
         livemode: row.livemode,
         trialEndsAt: row.trial_ends_at,
+        accessEndsAt: row.description,
       });
       return {
         id: `billing:${row.id}`,

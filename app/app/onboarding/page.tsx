@@ -36,7 +36,7 @@ type BillingStatus = {
   plans?: Record<BillingPlanId, BillingPlanMeta>;
 };
 
-type Step = "age" | "plan" | "tutorial";
+type Step = "age" | "email" | "plan" | "tutorial";
 
 const FREE_MINUTES = Math.floor(TRIAL_BLS_SECONDS / 60);
 
@@ -151,16 +151,27 @@ function OnboardingFlow() {
         setAfterAgeStep(nextStep);
 
         let ageOk = false;
+        let emailAsked = false;
         try {
           const cRes = await fetch("/api/consents");
-          const cData = (await cRes.json()) as { ageOk?: boolean };
-          if (cRes.ok) ageOk = Boolean(cData.ageOk);
+          const cData = (await cRes.json()) as {
+            ageOk?: boolean;
+            consents?: { docType?: string }[];
+          };
+          if (cRes.ok) {
+            ageOk = Boolean(cData.ageOk);
+            emailAsked = Boolean(
+              cData.consents?.some((row) => row.docType === "marketing_email")
+            );
+          }
         } catch {
           ageOk = false;
         }
         if (cancelled) return;
 
-        setStep(ageOk ? nextStep : "age");
+        if (!ageOk) setStep("age");
+        else if (!emailAsked) setStep("email");
+        else setStep(nextStep);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Load failed");
@@ -189,14 +200,7 @@ function OnboardingFlow() {
         setError(data.error ?? "Could not save confirmation");
         return;
       }
-      if (marketingOptIn) {
-        await fetch("/api/consents", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "marketing_email", optedIn: true }),
-        });
-      }
-      setStep(afterAgeStep);
+      setStep("email");
     } catch {
       setError("Network error. Try again.");
     } finally {
@@ -264,25 +268,66 @@ function OnboardingFlow() {
     }
   };
 
+  const saveEmailChoice = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/consents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "marketing_email",
+          optedIn: marketingOptIn,
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(data.error ?? "Could not save your choice");
+        return;
+      }
+      setStep(afterAgeStep);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const selectedPlanMeta = useMemo(() => {
+    return status?.plans?.[plan] ?? BILLING_PLANS[plan];
+  }, [status?.plans, plan]);
+
   const shellCopy = useMemo(() => {
     if (step === "age") {
       return {
         kicker: undefined as string | undefined,
         title: "Are you 18 or older?",
         lead: undefined as string | undefined,
+        leadLines: undefined as readonly string[] | undefined,
+      };
+    }
+    if (step === "email") {
+      return {
+        kicker: undefined as string | undefined,
+        title: "Email updates",
+        lead: undefined as string | undefined,
+        leadLines: undefined as readonly string[] | undefined,
       };
     }
     if (step === "plan") {
       return {
         kicker: undefined as string | undefined,
         title: "Pick a plan",
-        lead: `${TRIAL_DAYS} days free · cancel anytime`,
+        lead: `${TRIAL_DAYS} days free`,
+        leadLines: undefined as readonly string[] | undefined,
       };
     }
     return {
       kicker: undefined as string | undefined,
       title: "You’re ready",
-      lead: "Your trial is on. Open the app and tap New chat.",
+      lead: undefined as string | undefined,
+      leadLines: ["Your trial is on.", "Open the app and tap New chat."] as const,
     };
   }, [step]);
 
@@ -301,6 +346,7 @@ function OnboardingFlow() {
       kicker={shellCopy.kicker}
       title={shellCopy.title}
       lead={shellCopy.lead}
+      leadLines={shellCopy.leadLines}
       footer={
         <p>
           <HelpChatLink>Need help?</HelpChatLink>
@@ -325,17 +371,6 @@ function OnboardingFlow() {
             <AuthLink href="/terms">Terms</AuthLink> and{" "}
             <AuthLink href="/privacy">Privacy</AuthLink>.
           </p>
-          <label className="ob-age-check">
-            <input
-              type="checkbox"
-              checked={marketingOptIn}
-              onChange={(e) => setMarketingOptIn(e.target.checked)}
-            />
-            <span>
-              Send me occasional product news and tips by email. Optional. Turn
-              this off anytime in Settings.
-            </span>
-          </label>
           <button
             type="button"
             className="frontend-btn-primary ob-cta"
@@ -347,8 +382,32 @@ function OnboardingFlow() {
         </div>
       )}
 
+      {step === "email" && (
+        <div className="ob-age-step">
+          <label className="ob-age-check">
+            <input
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+            />
+            <span>
+              Send me occasional product news and tips. Optional. Turn this off
+              anytime in Settings.
+            </span>
+          </label>
+          <button
+            type="button"
+            className="frontend-btn-primary ob-cta"
+            disabled={busy}
+            onClick={() => void saveEmailChoice()}
+          >
+            {busy ? "Saving…" : "Continue"}
+          </button>
+        </div>
+      )}
+
       {step === "plan" && (
-        <div>
+        <div className="ob-plan-step">
           {!status?.stripeConfigured && (
             <AuthError message="Stripe is not configured yet. Ask your admin to set price IDs." />
           )}
@@ -361,10 +420,11 @@ function OnboardingFlow() {
                   type="button"
                   role="radio"
                   aria-checked={plan === id}
-                  className={`upgrade-plan-card ${plan === id ? "upgrade-plan-card--selected" : ""} ${p.highlight ? "upgrade-plan-card--highlight" : ""}`}
+                  className={`upgrade-plan-card ob-plan-option ${plan === id ? "upgrade-plan-card--selected ob-plan-option--selected" : ""} ${p.highlight ? "upgrade-plan-card--highlight" : ""}`}
                   onClick={() => setPlan(id)}
                   disabled={busy}
                 >
+                  <span className="ob-plan-radio" aria-hidden="true" />
                   <span className="upgrade-plan-label">
                     {p.label}
                     {p.savingsHint ? (
@@ -379,19 +439,25 @@ function OnboardingFlow() {
               );
             })}
           </div>
-          <p className="ob-note">
-            {TRIAL_GUIDED_SESSIONS} AI agent-guided sessions and {FREE_MINUTES} minutes of
-            self-guided set time in the trial. We save your card now. You won’t be
-            charged for {TRIAL_DAYS} days.
-          </p>
+
           <button
             type="button"
             className="frontend-btn-primary ob-cta"
             disabled={busy || !status?.stripeConfigured}
             onClick={() => void startCheckout()}
           >
-            {busy ? "Redirecting…" : `Start ${TRIAL_DAYS}-day trial`}
+            {busy ? "Redirecting…" : "Try free"}
           </button>
+          <div className="ob-plan-footnote">
+            <p className="ob-plan-footnote-line">
+              Trial: {TRIAL_GUIDED_SESSIONS} AI agent-guided sessions,{" "}
+              {FREE_MINUTES} min self-guided.
+            </p>
+            <p className="ob-plan-footnote-line ob-plan-footnote-line--billing">
+              Then {selectedPlanMeta.displayPrice}
+              {selectedPlanMeta.displayPeriod}. Cancel anytime.
+            </p>
+          </div>
         </div>
       )}
 

@@ -161,6 +161,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] New menu icons sit centered in their tiles again
 - Optional email updates on create account, setup, and Settings. The footer newsletter asks before it adds you. Billing mail still arrives without that choice
 - [internal] Brevo marketing contacts, unsubscribe webhook, and trial, failed payment, charge reminder, and canceled subscription emails
+- Sign-in locks after repeated failed attempts from the same network or email
+- [internal] Admin and support sign in only on a private address set under Admin, Sign-in. Public sign-in rejects those accounts. The page shows attempts, locks, a whitelist, and a block list
+- [internal] On a phone, the admin menu sits off-screen and opens from the top bar
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway
@@ -425,8 +428,14 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Selected Adjustments chips use a lighter sage fill, with dark text, so the choice stays clear on the green panel
 - Repeat counts in Adjustments use the same sage fill and dark text as the other selected controls
 - [internal] GitHub Actions purges the Cloudflare cache after Coolify deploy so marketing HTML cannot keep the previous deploy's chunk URLs for an hour
+- Age check and optional email updates are two setup screens. Create account no longer asks for either
+- Onboarding **Pick a plan**: flush layout (no inner card), radio plan rows, **Try free** CTA, one-line trial footnote under the button
+- [internal] Admin **Trial started** email also fires when Checkout syncs via `/api/billing/status?session_id=` (local dev without Stripe webhook), deduped per subscription
+- [internal] Cloudflare Access bypass on `dev.nurahelp.com/api/webhooks/*` for Stripe/Brevo (dev tunnel no longer 302 on webhook POST)
 
 ### Fixed
+- [internal] Turnstile siteverify timeout 10s → 25s (default); dev console warns on reject/timeout; optional `TURNSTILE_BYPASS_DEV` for local dev only
+- [internal] `billing_events`: ensure unique index on `stripe_event_id` so trial sync `ON CONFLICT` works on older local DBs
 - GTM public container: load `gtm.js` on marketing pages with Consent Mode (like GA4) so Google’s install checker detects `GTM-*` without Accept; Clarity stays consent-gated (`MarketingTags`, Connections hint)
 - Clarity public tag: load on marketing pages + pass `consentv2` (cookies off until analytics accept); enable Consent Mode in the Clarity project; Privacy cookie copy updated (`MarketingTags`, `lib/marketing-consent.ts`)
 - GA4: after Accept analytics cookies, fire a `page_view` immediately (denied→granted) so Realtime / “No data received” can clear without a second navigation
@@ -779,6 +788,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Safety consent fills the screen until you confirm it. The sidebar and the tour stay hidden until then, and the sidebar opens again once you confirm
 - Guide steps that point at the visual set open a Self-guided session first, instead of sitting on Start a session
 - The guide card sits above the session controls so it does not cover their labels
+- [internal] Admin activity bell shows subscription cancel scheduled and ended events, with operator email (`admin_subscription_canceled`)
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

@@ -93,6 +93,16 @@ export type EmailTemplateData = {
     paidAt: string;
     adminUserUrl: string;
   };
+  admin_subscription_canceled: {
+    customerName: string;
+    customerEmail: string;
+    planLabel: string;
+    accessEndsAt: string;
+    keepsAccess: boolean;
+    mode: string;
+    headline: string;
+    adminUserUrl: string;
+  };
 };
 
 const brandColor = BRAND_COLORS.earth;
@@ -501,6 +511,39 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         "Payment received",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) paid <strong>${amount}</strong> for <strong>${plan}</strong>.</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Date: ${paidAt}</p>
+         ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
+      );
+      return { subject, html, text };
+    }
+    case "admin_subscription_canceled": {
+      const d = data as EmailTemplateData["admin_subscription_canceled"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const plan = escapeEmailHtml(d.planLabel);
+      const mode = escapeEmailHtml(d.mode);
+      const headline = escapeEmailHtml(d.headline);
+      const accessLine = d.keepsAccess && d.accessEndsAt?.trim()
+        ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Access until: ${escapeEmailHtml(d.accessEndsAt)}</p>`
+        : "";
+      const subject = d.keepsAccess
+        ? `Cancel scheduled: ${d.planLabel} · ${d.mode}`
+        : `Subscription ended: ${d.planLabel} · ${d.mode}`;
+      const text = [
+        d.keepsAccess
+          ? `${d.customerName} <${d.customerEmail}> scheduled cancel for ${d.planLabel} (${d.mode}).`
+          : `${d.customerName} <${d.customerEmail}> subscription ended (${d.planLabel}, ${d.mode}).`,
+        ...(d.keepsAccess && d.accessEndsAt?.trim()
+          ? [`Access until: ${d.accessEndsAt}`]
+          : []),
+        "",
+        `Open user: ${d.adminUserUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        headline,
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) · <strong>${plan}</strong> (${mode}).</p>
+         ${accessLine}
          ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
         "This note is for the platform admin."
       );

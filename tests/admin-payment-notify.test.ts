@@ -118,6 +118,24 @@ describe("admin activity lines", () => {
     assert.match(detail, /Live/);
   });
 
+  it("formats cancel scheduled with access end", () => {
+    const { detail } = formatActivityBilling({
+      name: "Alex",
+      email: "alex@example.com",
+      plan: "monthly",
+      amountCents: 0,
+      currency: "USD",
+      status: "subscription_cancel_scheduled",
+      livemode: true,
+      trialEndsAt: null,
+      accessEndsAt: "2026-10-22T06:30:18.000Z",
+    });
+    assert.match(detail, /Cancel scheduled/);
+    assert.match(detail, /Monthly/);
+    assert.match(detail, /October 22, 2026/);
+    assert.match(detail, /Live/);
+  });
+
   it("puts a real charge amount on a paid event", () => {
     const { detail } = formatActivityBilling({
       name: "Alex",

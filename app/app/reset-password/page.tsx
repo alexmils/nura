@@ -23,6 +23,7 @@ function ResetPasswordForm() {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [operatorSaved, setOperatorSaved] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileFieldHandle>(null);
 
@@ -65,6 +66,11 @@ function ResetPasswordForm() {
         return;
       }
 
+      if (data.operatorSignIn) {
+        setOperatorSaved(true);
+        return;
+      }
+
       router.push("/app");
       router.refresh();
     } catch {
@@ -87,6 +93,19 @@ function ResetPasswordForm() {
         }
       >
         <AuthError message="No reset token found. Please request a new password reset email." />
+      </AuthShell>
+    );
+  }
+
+  if (operatorSaved) {
+    return (
+      <AuthShell
+        title="Password saved"
+        subtitle="Use the operator sign-in page to continue."
+      >
+        <p className="text-caption">
+          This account does not sign in from the public page.
+        </p>
       </AuthShell>
     );
   }

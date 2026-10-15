@@ -1,5 +1,7 @@
 import { APP_BASE, LOGIN_PATH } from "@/lib/app-base";
 
+const GATE_SLUG = /^[A-Za-z0-9_-]{16,64}$/;
+
 export type GoogleOAuthReturnTo = "login" | "create-account";
 
 export function parseGoogleReturnTo(
@@ -10,12 +12,15 @@ export function parseGoogleReturnTo(
 
 export function googleAuthErrorPath(
   returnTo: GoogleOAuthReturnTo,
-  code: string
+  code: string,
+  gateSlug?: string | null
 ): string {
   const base =
-    returnTo === "create-account"
-      ? `${APP_BASE}/create-account`
-      : LOGIN_PATH;
+    gateSlug && GATE_SLUG.test(gateSlug)
+      ? `/entry/${gateSlug}`
+      : returnTo === "create-account"
+        ? `${APP_BASE}/create-account`
+        : LOGIN_PATH;
   return `${base}?error=${encodeURIComponent(code)}`;
 }
 
@@ -34,6 +39,12 @@ export function googleAuthErrorMessage(code: string | null): string | null {
       return "An account with this email already exists. Sign in with your password first.";
     case "google_conflict":
       return "This Google account is already linked to another Nura user.";
+    case "google_denied":
+      return "Sign-in failed. Try again.";
+    case "google_locked":
+      return "Too many attempts. Try again later.";
+    case "google_blocked":
+      return "Sign-in is not available from this network.";
     case "google":
     default:
       if (code.startsWith("google")) {

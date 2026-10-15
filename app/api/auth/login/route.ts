@@ -14,53 +14,89 @@ import {
   extractTurnstileToken,
   verifyTurnstileToken,
 } from "@/lib/turnstile";
+import {
+  noteLoginFailure,
+  noteLoginSuccess,
+  precheckLogin,
+  sessionAllowedForRole,
+  surfaceForGate,
+} from "@/lib/login-guard";
+import { isStaffRole, normalizeGuardEmail } from "@/lib/login-guard-policy";
+
+const INVALID = "Invalid email or password";
 
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
       email?: string;
       password?: string;
+      gate?: string;
       "cf-turnstile-response"?: string;
     };
 
-    const gate = await verifyTurnstileToken({
+    const email = normalizeGuardEmail(body.email);
+    const surface = await surfaceForGate(body.gate);
+    const guard = await precheckLogin({ request, email, surface });
+    if (!guard.ok) {
+      return NextResponse.json({ error: guard.error }, { status: guard.status });
+    }
+
+    const turnstile = await verifyTurnstileToken({
       token: extractTurnstileToken(body),
       expectedAction: "login",
       remoteip: clientIp(request),
     });
-    if (!gate.ok) {
-      return NextResponse.json({ error: gate.error }, { status: gate.status });
+    if (!turnstile.ok) {
+      return NextResponse.json(
+        { error: turnstile.error },
+        { status: turnstile.status }
+      );
     }
 
-    const { email, password } = body;
+    const { password } = body;
 
-    if (!email?.trim() || !password) {
+    if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
         { status: 400 }
       );
     }
 
+    const fail = async (
+      outcome: "unknown_user" | "bad_password" | "staff_public" | "consumer_gate" | "disabled",
+      status: number,
+      error: string
+    ) => {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: guard.email,
+        surface,
+        outcome,
+        whitelisted: guard.whitelisted,
+      });
+      return NextResponse.json({ error }, { status });
+    };
+
     const user = await getUserByEmail(email);
     if (!user?.passwordHash) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
+      return fail("unknown_user", 401, INVALID);
     }
 
     if (user.status === "disabled") {
-      return NextResponse.json(
-        { error: "This account has been disabled" },
-        { status: 403 }
-      );
+      return fail("disabled", 403, "This account has been disabled");
     }
 
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
+      return fail("bad_password", 401, INVALID);
+    }
+
+    const gateAccepted = surface === "operator";
+    if (!sessionAllowedForRole(user.role, gateAccepted)) {
+      return fail(
+        isStaffRole(user.role) ? "staff_public" : "consumer_gate",
+        401,
+        INVALID
       );
     }
 
@@ -76,6 +112,12 @@ export async function POST(request: Request) {
 
     await recordUserLogin(user.id, clientIp(request));
     await recordAuthPlaces(request, user.id, false);
+    await noteLoginSuccess({
+      ip: guard.ip,
+      email: guard.email,
+      surface,
+      whitelisted: guard.whitelisted,
+    });
 
     if (user.role === "user") {
       await ensureUserAccessStub(user.id);

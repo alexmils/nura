@@ -15,6 +15,7 @@ import {
   syncSubscriptionFromStripe,
   mapStripeSubscriptionWithConfig,
 } from "@/lib/stripe-admin";
+import { runCheckoutTrialEffects } from "@/lib/checkout-trial-effects";
 import { markOnboardingCompleted } from "@/lib/users";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { publicAdsConfig } from "@/lib/ads";
@@ -75,6 +76,21 @@ export async function GET(request: Request) {
               await markOnboardingCompleted(auth.user.id);
               auth.user.onboardingCompletedAt = new Date().toISOString();
             }
+            const amountCents =
+              typeof session.amount_total === "number"
+                ? session.amount_total
+                : mapped.amountCents ?? 0;
+            void runCheckoutTrialEffects({
+              userId: auth.user.id,
+              dedupStripeEventId: `checkout.sync:${session.id}`,
+              mapped,
+              sessionAmountCents: amountCents,
+              currency: session.currency ?? mapped.currency,
+              livemode: resolved.livemode,
+              occurredAt: created,
+            }).catch((err) =>
+              console.error("[billing/status] trial notify", err)
+            );
           }
         }
       } catch (err) {

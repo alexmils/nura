@@ -126,6 +126,17 @@ export async function POST(request: Request) {
         paidAt: "September 21, 2026",
         adminUserUrl: await getAppUrl("/admin/users/u1"),
       });
+    } else if (id === "admin_subscription_canceled") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "alex@example.com",
+        planLabel: "Monthly",
+        accessEndsAt: "October 22, 2026",
+        keepsAccess: true,
+        mode: "Live",
+        headline: "Subscription cancel scheduled",
+        adminUserUrl: await getAppUrl("/admin/users/u1"),
+      });
     } else {
       await sendTemplateEmail(to.trim(), "welcome", {
         name: sample.name,

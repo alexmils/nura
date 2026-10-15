@@ -34,6 +34,10 @@ export function paymentStatusLabel(status: string): string {
       return "Failed";
     case "trial_started":
       return "Trial started";
+    case "subscription_cancel_scheduled":
+      return "Cancel scheduled";
+    case "subscription_canceled":
+      return "Subscription ended";
     case "checkout":
       return "Checkout";
     default:

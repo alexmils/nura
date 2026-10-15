@@ -18,11 +18,10 @@ import {
 
 export async function GET() {
   return withAuth(async (ctx) => {
-    const [requiredOk, ageOk, consents] = await Promise.all([
-      hasRequiredConsents(ctx.user.id),
-      hasAgeConsent(ctx.user.id),
-      listConsentsForUser(ctx.user.id),
-    ]);
+    // One RLS client per request — do not Promise.all dbQuery on it (pg@9 deprecates overlap).
+    const requiredOk = await hasRequiredConsents(ctx.user.id);
+    const ageOk = await hasAgeConsent(ctx.user.id);
+    const consents = await listConsentsForUser(ctx.user.id);
     return NextResponse.json({
       requiredOk,
       ageOk,

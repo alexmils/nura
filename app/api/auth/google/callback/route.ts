@@ -28,6 +28,14 @@ import { getEntitlementForUser } from "@/lib/entitlements";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { ensureUserAccessStub } from "@/lib/user-access";
 import {
+  noteLoginFailure,
+  noteLoginSuccess,
+  precheckLogin,
+  sessionAllowedForRole,
+  staffGateAccepted,
+} from "@/lib/login-guard";
+import { isStaffRole } from "@/lib/login-guard-policy";
+import {
   createUser,
   getUserByEmail,
   getUserByGoogleSub,
@@ -38,10 +46,10 @@ import {
 async function errorRedirect(
   returnTo: GoogleOAuthReturnTo,
   code: string,
-  opts: { secure: boolean; appUrl: string }
+  opts: { secure: boolean; appUrl: string; gate?: string }
 ) {
   const res = NextResponse.redirect(
-    new URL(googleAuthErrorPath(returnTo, code), opts.appUrl)
+    new URL(googleAuthErrorPath(returnTo, code, opts.gate), opts.appUrl)
   );
   res.cookies.set(clearGoogleOAuthCookieOptions({ secure: opts.secure }));
   return res;
@@ -162,9 +170,10 @@ export async function GET(request: Request) {
   let returnTo: GoogleOAuthReturnTo = earlyState?.returnTo ?? "login";
   let appBase = earlyState?.appBase ?? resolveOAuthAppBase(request, configuredUrl);
   let secure = shouldUseSecureAuthCookies(appBase);
+  let gateSlug: string | undefined = earlyState?.gate;
 
   const fail = (code: string) =>
-    errorRedirect(returnTo, code, { secure, appUrl: appBase });
+    errorRedirect(returnTo, code, { secure, appUrl: appBase, gate: gateSlug });
 
   const oauthError = url.searchParams.get("error");
   if (oauthError === "access_denied") {
@@ -193,6 +202,7 @@ export async function GET(request: Request) {
   returnTo = parsed.returnTo;
   appBase = parsed.appBase;
   secure = shouldUseSecureAuthCookies(appBase);
+  gateSlug = parsed.gate;
 
   const jar = await cookies();
   const cookieNonce = jar.get(GOOGLE_OAUTH_COOKIE)?.value;
@@ -215,12 +225,34 @@ export async function GET(request: Request) {
       return fail("google_unverified");
     }
 
+    const gateOk = await staffGateAccepted(parsed.gate);
+    const surface = gateOk ? "operator" : "public";
+    const guard = await precheckLogin({
+      request,
+      email: profile.email,
+      surface,
+    });
+    if (!guard.ok) {
+      return fail(guard.status === 403 ? "google_blocked" : "google_locked");
+    }
+
     const resolved = await resolveGoogleUser(profile, request);
     if (!resolved.ok) {
       return fail(resolved.code);
     }
 
     const { user, isNew } = resolved;
+
+    if (!sessionAllowedForRole(user.role, gateOk)) {
+      await noteLoginFailure({
+        ip: guard.ip,
+        email: guard.email,
+        surface,
+        outcome: isStaffRole(user.role) ? "staff_public" : "consumer_gate",
+        whitelisted: guard.whitelisted,
+      });
+      return fail("google_denied");
+    }
 
     if (!isNew && user.role === "user") {
       await ensureUserAccessStub(user.id);
@@ -229,6 +261,12 @@ export async function GET(request: Request) {
     // for the whole first session (37 messages, zero user.login rows).
     await recordUserLogin(user.id, clientIp(request));
     await recordAuthPlaces(request, user.id, isNew);
+    await noteLoginSuccess({
+      ip: guard.ip,
+      email: guard.email,
+      surface,
+      whitelisted: guard.whitelisted,
+    });
 
     const token = await createSessionToken({
       sub: user.id,

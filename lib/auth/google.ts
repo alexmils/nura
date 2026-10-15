@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { APP_BASE, safeAppNext } from "@/lib/app-base";
+import { isValidGuardSlug } from "@/lib/login-guard-policy";
 import {
   parseGoogleReturnTo,
   type GoogleOAuthReturnTo,
@@ -25,6 +26,8 @@ export type GoogleOAuthState = {
   returnTo: GoogleOAuthReturnTo;
   /** Origin used for redirect_uri + post-login redirects (cookie host). */
   appBase: string;
+  /** Operator sign-in slug. Absent on the public login screen. */
+  gate?: string;
 };
 
 export type GoogleUserInfo = {
@@ -144,11 +147,14 @@ export async function createGoogleOAuthState(
   const nonce = input.nonce ?? crypto.randomUUID();
   const next = safeAppNext(input.next, APP_BASE);
   const appBase = normalizeOrigin(input.appBase) ?? input.appBase;
+  const gate =
+    input.gate && isValidGuardSlug(input.gate) ? input.gate : undefined;
   const state = await new SignJWT({
     nonce,
     next,
     returnTo: input.returnTo,
     appBase,
+    ...(gate ? { gate } : {}),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -176,7 +182,11 @@ export async function verifyGoogleOAuthState(
     const appBaseRaw =
       typeof payload.appBase === "string" ? payload.appBase : fallback;
     const appBase = normalizeOrigin(appBaseRaw) ?? fallback;
-    return { nonce: payload.nonce, next, returnTo, appBase };
+    const gate =
+      typeof payload.gate === "string" && isValidGuardSlug(payload.gate)
+        ? payload.gate
+        : undefined;
+    return { nonce: payload.nonce, next, returnTo, appBase, gate };
   } catch {
     return null;
   }
