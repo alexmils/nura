@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   FEEDBACK_DAYS_ELAPSED,
   FEEDBACK_IMMERSIVE_SELECTOR,
+  FEEDBACK_SESSION_END_MIN_DAYS,
   FEEDBACK_SNOOZE_DAYS,
   accountAgeEligible,
   isSnoozeActive,
@@ -69,16 +70,30 @@ describe("feedback eligibility", () => {
     assert.deepEqual(r, { show: false, source: null });
   });
 
-  it("prefers session_end pending when not snoozed", () => {
-    const r = shouldOfferPrompt({
+  it("defers session_end until account is at least one day old", () => {
+    const young = new Date(now).toISOString();
+    const rYoung = shouldOfferPrompt({
       hasResponse: false,
       forceShow: false,
       snoozeUntil: null,
       pendingSource: "session_end",
-      userCreatedAt: new Date(now).toISOString(),
+      userCreatedAt: young,
       now,
     });
-    assert.deepEqual(r, { show: true, source: "session_end" });
+    assert.deepEqual(rYoung, { show: false, source: null });
+
+    const old = new Date(
+      now - FEEDBACK_SESSION_END_MIN_DAYS * 24 * 60 * 60 * 1000
+    ).toISOString();
+    const rOld = shouldOfferPrompt({
+      hasResponse: false,
+      forceShow: false,
+      snoozeUntil: null,
+      pendingSource: "session_end",
+      userCreatedAt: old,
+      now,
+    });
+    assert.deepEqual(rOld, { show: true, source: "session_end" });
   });
 
   it("respects snooze even with session_end pending", () => {

@@ -323,6 +323,7 @@ export const GUIDE_SEEN_KEY = "nura.guide.v1";
 export const GUIDE_STEP_KEY = "nura.guide.step";
 export const GUIDE_AUTOSTART_KEY = "nura.guide.autostarted";
 export const GUIDE_NEW_CHAT_KEY = "nura.guide.newchat";
+export const GUIDE_PENDING_AUTOSTART_KEY = "nura.guide.pending";
 
 export interface GuideStorageLike {
   getItem(key: string): string | null;
@@ -354,17 +355,52 @@ function safeRemove(storage: GuideStorageLike, key: string): void {
   }
 }
 
-/** True once the tour was finished or skipped on this device. */
+export function guideSeenStorageKey(userId: string | null | undefined): string {
+  const id = userId?.trim();
+  return id ? `${GUIDE_SEEN_KEY}:${id}` : GUIDE_SEEN_KEY;
+}
+
+function guidePendingAutostartKey(userId: string | null | undefined): string {
+  const id = userId?.trim();
+  return id ? `${GUIDE_PENDING_AUTOSTART_KEY}:${id}` : GUIDE_PENDING_AUTOSTART_KEY;
+}
+
+/** True once the tour was finished or skipped (legacy global key). */
 export function hasSeenGuide(storage: GuideStorageLike): boolean {
   return safeGet(storage, GUIDE_SEEN_KEY) === "1";
+}
+
+/** Per-account on this device; ignores the legacy global seen flag. */
+export function hasSeenGuideForUser(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): boolean {
+  return safeGet(storage, guideSeenStorageKey(userId)) === "1";
 }
 
 export function markGuideSeen(storage: GuideStorageLike): void {
   safeSet(storage, GUIDE_SEEN_KEY, "1");
 }
 
+export function markGuideSeenForUser(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): void {
+  safeSet(storage, guideSeenStorageKey(userId), "1");
+}
+
 export function clearGuideSeen(storage: GuideStorageLike): void {
   safeRemove(storage, GUIDE_SEEN_KEY);
+}
+
+export function clearGuideSeenForUser(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): void {
+  safeRemove(storage, guideSeenStorageKey(userId));
+  if (userId?.trim()) {
+    safeRemove(storage, GUIDE_SEEN_KEY);
+  }
 }
 
 /** Clamped 0-based index, or 0 when nothing valid is stored. */
@@ -389,18 +425,46 @@ export function clearGuideStepIndex(storage: GuideStorageLike): void {
   safeRemove(storage, GUIDE_STEP_KEY);
 }
 
-/** Reset both flags so the tour auto-starts again from the beginning. */
+/** Queue a one-shot autostart after onboarding (consumed on home). */
+export function requestGuideAutostart(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): void {
+  safeSet(storage, guidePendingAutostartKey(userId), "1");
+}
+
+export function hasPendingGuideAutostart(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): boolean {
+  return safeGet(storage, guidePendingAutostartKey(userId)) === "1";
+}
+
+/** `true` only the first time after {@link requestGuideAutostart}. */
+export function consumeGuideAutostart(
+  storage: GuideStorageLike,
+  userId: string | null | undefined
+): boolean {
+  const key = guidePendingAutostartKey(userId);
+  if (safeGet(storage, key) !== "1") return false;
+  safeRemove(storage, key);
+  return true;
+}
+
+/** Reset flags so the tour auto-starts again from the beginning. */
 export function resetGuideState(
   storage: GuideStorageLike,
-  session?: GuideStorageLike | null
+  session?: GuideStorageLike | null,
+  userId?: string | null
 ): void {
-  clearGuideSeen(storage);
+  clearGuideSeenForUser(storage, userId ?? null);
   clearGuideStepIndex(storage);
   safeRemove(storage, GUIDE_AUTOSTART_KEY);
   if (session) {
     clearGuideStepIndex(session);
     safeRemove(session, GUIDE_AUTOSTART_KEY);
   }
+  requestGuideAutostart(storage, userId ?? null);
 }
 
 /** True when the browser already auto-started the tour this session. */

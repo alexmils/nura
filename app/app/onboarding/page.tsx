@@ -15,7 +15,7 @@ import {
   type BillingPlanMeta,
 } from "@/lib/billing-constants";
 import { APP_BASE } from "@/lib/app-base";
-import { resetGuideState } from "@/lib/guide-steps";
+import { requestGuideAutostart, resetGuideState } from "@/lib/guide-steps";
 import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
@@ -60,6 +60,24 @@ function OnboardingFlow() {
   const [success, setSuccess] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+
+  useEffect(() => {
+    if (step !== "tutorial" || typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (!meRes.ok || cancelled) return;
+        const me = (await meRes.json()) as { user?: { id?: string } };
+        requestGuideAutostart(window.localStorage, me.user?.id ?? null);
+      } catch {
+        /* autostart also set on Open the app */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step]);
 
   const refreshStatus = useCallback(async () => {
     const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
@@ -253,9 +271,19 @@ function OnboardingFlow() {
         if (data.code === "needs_payment") setStep("plan");
         return;
       }
-      // A fresh account gets the guided tour even on a shared device.
+      let userId: string | null = null;
       try {
-        resetGuideState(window.localStorage, window.sessionStorage);
+        const meRes = await fetch("/api/auth/me");
+        if (meRes.ok) {
+          const me = (await meRes.json()) as { user?: { id?: string } };
+          userId = me.user?.id ?? null;
+        }
+      } catch {
+        userId = null;
+      }
+      // Fresh account: per-user tour flags + one-shot autostart on home.
+      try {
+        resetGuideState(window.localStorage, window.sessionStorage, userId);
       } catch {
         /* storage unavailable: the tour simply may not auto-start */
       }

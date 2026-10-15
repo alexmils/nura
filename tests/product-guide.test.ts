@@ -6,12 +6,17 @@ import {
   GUIDE_GEAR_SECTIONS,
   GUIDE_STEPS,
   clearGuideStepIndex,
+  consumeGuideAutostart,
   consumeGuideNewChat,
   hasGuideAutoStarted,
+  hasPendingGuideAutostart,
   hasSeenGuide,
+  hasSeenGuideForUser,
   isGuideAction,
   markGuideAutoStarted,
   markGuideSeen,
+  markGuideSeenForUser,
+  requestGuideAutostart,
   nextIndexOutsideGroup,
   previousIndexOutsideGroup,
   readGuideStepIndex,
@@ -268,8 +273,19 @@ describe("guide storage", () => {
     assert.equal(consumeGuideNewChat(session), true);
     assert.equal(consumeGuideNewChat(session), false);
 
-    resetGuideState(local, session);
-    assert.equal(hasSeenGuide(local), false);
+    markGuideSeenForUser(local, "user-a");
+    assert.equal(hasSeenGuideForUser(local, "user-a"), true);
+    assert.equal(hasSeenGuideForUser(local, "user-b"), false);
+
+    assert.equal(hasPendingGuideAutostart(local, "user-a"), false);
+    requestGuideAutostart(local, "user-a");
+    assert.equal(hasPendingGuideAutostart(local, "user-a"), true);
+    assert.equal(consumeGuideAutostart(local, "user-a"), true);
+    assert.equal(hasPendingGuideAutostart(local, "user-a"), false);
+
+    resetGuideState(local, session, "user-a");
+    assert.equal(hasSeenGuideForUser(local, "user-a"), false);
+    assert.equal(hasPendingGuideAutostart(local, "user-a"), true);
     assert.equal(hasGuideAutoStarted(session), false);
     assert.deepEqual(session.dump(), {});
   });

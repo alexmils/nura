@@ -2,6 +2,8 @@
 
 export const FEEDBACK_SNOOZE_DAYS = 7;
 export const FEEDBACK_DAYS_ELAPSED = 4;
+/** Earliest day count before a post-session NPS prompt (avoids onboarding / guide). */
+export const FEEDBACK_SESSION_END_MIN_DAYS = 1;
 export const FEEDBACK_SCORE_MIN = 1;
 export const FEEDBACK_SCORE_MAX = 10;
 
@@ -95,6 +97,15 @@ export function shouldOfferPrompt(input: {
   }
 
   if (input.pendingSource === "session_end") {
+    if (
+      !accountAgeEligible(
+        input.userCreatedAt,
+        FEEDBACK_SESSION_END_MIN_DAYS,
+        now
+      )
+    ) {
+      return { show: false, source: null };
+    }
     return { show: true, source: "session_end" };
   }
 

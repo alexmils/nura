@@ -803,6 +803,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Monthly cancel for **Too expensive** can offer 50% off the next month to stay (weekly and yearly skip the offer)
 - [internal] Admin Billing overview shows retention offer counts (offered, accepted, declined, take rate)
 - [internal] Admin user Subscription shows retention offer clicks (saw offer, accepted, declined)
+- Product tour auto-starts after onboarding for each account (not blocked by another login on the same browser)
+- NPS feedback no longer opens on top of the product tour; post-session prompts wait until your account is at least one day old
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

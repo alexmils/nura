@@ -48,6 +48,7 @@ function clientSafeToShow(): boolean {
   if (document.querySelector(".crisis-help-panel")) return false;
   if (document.querySelector(".admin-modal-backdrop")) return false;
   if (document.querySelector(".upgrade-modal")) return false;
+  if (document.querySelector("[data-guide-root]")) return false;
   return true;
 }
 
@@ -97,7 +98,7 @@ export function FeedbackPromptHost() {
   useEffect(() => {
     const t = window.setTimeout(() => {
       void check();
-    }, 1200);
+    }, 2800);
     return () => window.clearTimeout(t);
   }, [check, pathname]);
 

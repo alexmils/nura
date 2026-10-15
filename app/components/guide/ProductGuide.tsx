@@ -18,11 +18,13 @@ import { GuideVoiceDemo } from "./GuideVoiceDemo";
 import {
   GUIDE_STEPS,
   clearGuideStepIndex,
+  consumeGuideAutostart,
+  hasPendingGuideAutostart,
   consumeGuideNewChat,
   hasGuideAutoStarted,
-  hasSeenGuide,
+  hasSeenGuideForUser,
   markGuideAutoStarted,
-  markGuideSeen,
+  markGuideSeenForUser,
   readGuideStepIndex,
   requestGuideNewChat,
   writeGuideStepIndex,
@@ -149,6 +151,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const autoStartRef = useRef(false);
   const mountedRef = useRef(true);
 
+  const [userId, setUserId] = useState<string | null>(null);
   const [active, setActive] = useState(false);
   const [held, setHeld] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -161,6 +164,23 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { user?: { id?: string } };
+        if (!cancelled) setUserId(data.user?.id ?? null);
+      } catch {
+        /* tour can still run manually */
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -189,12 +209,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     } catch {
       /* a failing host action must not trap the exit */
     }
-    const storage = sessionStore();
-    if (storage) {
-      clearGuideStepIndex(storage);
-      markGuideSeen(storage);
-    }
-  }, []);
+    const session = sessionStore();
+    if (session) clearGuideStepIndex(session);
+    const local = localStore();
+    if (local) markGuideSeenForUser(local, userId);
+  }, [userId]);
 
   const start = useCallback((from = 0) => {
     const next = Math.min(Math.max(0, from), GUIDE_STEPS.length - 1);
@@ -600,19 +619,24 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   /* First visit after onboarding: run once, resume where a reload left off. */
   useEffect(() => {
     if (active || autoStartRef.current || held) return;
-    if (pathname !== APP_BASE) return;
+    if (!pathname?.startsWith(APP_BASE)) return;
+    if (!userId) return;
     const local = localStore();
-    if (!local || hasSeenGuide(local)) return;
+    if (!local) return;
     const session = sessionStore();
-    if (session && hasGuideAutoStarted(session)) return;
+    const pendingAutostart = hasPendingGuideAutostart(local, userId);
+    if (!pendingAutostart && hasSeenGuideForUser(local, userId)) return;
+    if (!pendingAutostart && session && hasGuideAutoStarted(session)) return;
     if (session) markGuideAutoStarted(session);
     autoStartRef.current = true;
     const resume = session ? readGuideStepIndex(session) : 0;
     const id = window.setTimeout(() => {
-      if (mountedRef.current) start(resume);
+      if (!mountedRef.current) return;
+      if (pendingAutostart) consumeGuideAutostart(local, userId);
+      start(resume);
     }, 1200);
     return () => window.clearTimeout(id);
-  }, [active, held, pathname, start]);
+  }, [active, held, pathname, start, userId]);
 
   /* "Start a session" on the last step: open a thread once we are home. */
   useEffect(() => {
