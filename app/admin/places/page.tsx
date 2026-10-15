@@ -136,40 +136,21 @@ export default function AdminPlacesPage() {
             {copied ? "Copied" : "Copy summary"}
           </button>
         </div>
-        <p className="admin-panel-sub">
-          Hover a country for people and cities. Copy summary hands a marketing
-          agent the same list, plus languages, time zones, and browsers. Time
-          zone and language come from the browser. Country and city come from
-          the network only behind a trusted proxy. Without that, the city is
-          the time zone place. Accounts excluded from stats stay out.
-        </p>
 
         {loading ? <p className="admin-panel-sub">Loading…</p> : null}
         {error ? <p className="text-[var(--destructive)]">{error}</p> : null}
 
         {summary ? (
-          <section className="admin-panel">
-            <h2 className="admin-panel-title">Map</h2>
-            {mapBucket && mapBucket.total > 0 ? (
-              <p className="admin-panel-sub">
-                {summary.signIns.total > 0
-                  ? "Countries with sign-ins are marked."
-                  : "Countries with new accounts are marked."}
-              </p>
-            ) : (
-              <p className="admin-panel-sub">
-                No sign-ins in this window yet. Countries mark after the next sign-in.
-              </p>
-            )}
-            <PlacesMap countries={mapBucket?.countries ?? []} />
-          </section>
-        ) : null}
-
-        {summary ? (
-          <>
+          <div className="admin-places-board">
+            <section className="admin-panel admin-places-map-panel">
+              <PlacesMap countries={mapBucket?.countries ?? []} />
+              {mapBucket && mapBucket.total > 0 ? null : (
+                <p className="admin-panel-sub">No sign-ins in this window yet.</p>
+              )}
+            </section>
             <BucketBlock title="Sign-ins" bucket={summary.signIns} />
             <BucketBlock title="New accounts" bucket={summary.signups} />
-          </>
+          </div>
         ) : null}
       </main>
     </div>

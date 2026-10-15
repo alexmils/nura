@@ -8836,6 +8836,17 @@ a.admin-panel-title-link:hover {
   color: var(--text-secondary);
 }
 
+.admin-places-board {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.admin-places-map-panel {
+  padding: 0.65rem;
+}
+
 .admin-places-map {
   display: block;
   width: 100%;
@@ -8990,7 +9001,23 @@ a.admin-panel-title-link:hover {
   border-color: #3d4129;
 }
 
+@media (max-width: 1100px) {
+  .admin-places-board {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-places-map-panel {
+    grid-column: 1 / -1;
+  }
+
+  .admin-places-map-panel .admin-places-map {
+    width: min(100%, 28rem);
+    margin-inline: auto;
+  }
+}
+
 @media (max-width: 720px) {
+  .admin-places-board,
   .admin-places-grid,
   .admin-places-rank li {
     grid-template-columns: minmax(0, 1fr);
