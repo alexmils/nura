@@ -87,8 +87,8 @@ export function AdminNewMenu() {
               role="menuitem"
               onClick={() => setOpen(false)}
             >
-              <span className="admin-activity-icon" aria-hidden>
-                <Icon size={14} strokeWidth={2} />
+              <span className="admin-new-icon" aria-hidden>
+                <Icon size={16} strokeWidth={2} />
               </span>
               <span>
                 <strong>{label}</strong>

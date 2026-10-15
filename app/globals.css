@@ -7615,6 +7615,25 @@ a.admin-panel-title-link:hover {
   display: block;
 }
 
+.admin-top-menu .admin-new-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin-top: 0.1rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--ink, #2a3020) 6%, transparent);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.admin-top-menu .admin-new-icon svg {
+  width: 16px;
+  height: 16px;
+  overflow: visible;
+}
+
 .admin-top-menu strong {
   font-size: 0.875rem;
   font-weight: 600;
