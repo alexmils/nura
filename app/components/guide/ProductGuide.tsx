@@ -23,7 +23,6 @@ import {
   hasSeenGuide,
   markGuideAutoStarted,
   markGuideSeen,
-  nextIndexOutsideGroup,
   readGuideStepIndex,
   requestGuideNewChat,
   writeGuideStepIndex,
@@ -80,6 +79,8 @@ type GuideContextValue = {
   stop: () => void;
   next: () => void;
   previous: () => void;
+  /** Hide the tour while safety consent is on screen. The step is kept. */
+  setHeld: (held: boolean) => void;
   registerHost: (actions: GuideHostActions) => void;
 };
 
@@ -149,8 +150,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const mountedRef = useRef(true);
 
   const [active, setActive] = useState(false);
+  const [held, setHeld] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<GuideRect | null>(null);
+  const [anchorSettled, setAnchorSettled] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const [sizeTick, setSizeTick] = useState(0);
 
@@ -275,11 +278,14 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     goTo(stepIndex - 1);
   }, [goTo, stepIndex]);
 
-  /* Prepare the step: cleanup, open what it needs, then skip if it cannot run. */
+  /* Prepare the step once its screen is mounted. Failure must not change the step. */
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const current = GUIDE_STEPS[stepIndex];
     if (!current) return;
+    // Resources and the session screen are different pages. Preparing on the
+    // wrong one fails, and skipping the session block jumped step 6 to 16.
+    if (current.surface !== pathname) return;
 
     let cancelled = false;
 
@@ -288,40 +294,41 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       if (previousStep && previousStep.id !== current.id) {
         await runActions(previousStep.cleanup);
       }
+      if (cancelled) return;
       prevStepRef.current = current;
 
-      if (
-        current.group === "session" &&
-        hostRef.current.canRunSession?.() === false
-      ) {
-        if (!cancelled) goTo(nextIndexOutsideGroup(stepIndex, current.group));
+      const ok = await runActions(current.prepare, current);
+      if (cancelled || ok || current.group !== "session") return;
+      // The mode step opens the picker. Other session steps open the set themselves.
+      if (current.prepare?.some((action) => action !== "ensurePendingThread" && action !== "stopSet")) {
         return;
       }
-
-      const ok = await runActions(current.prepare, current);
-      if (cancelled) return;
-      if (!ok) {
-        goTo(nextIndexOutsideGroup(stepIndex, current.group));
-      }
+      const created = await hostRef.current.ensurePendingThread?.();
+      if (cancelled || !created) return;
+      const retry = (current.prepare ?? []).filter(
+        (action) => action !== "ensurePendingThread"
+      );
+      if (retry.length === 0) return;
+      await runActions(retry, current);
     };
 
     void run();
     return () => {
       cancelled = true;
     };
-  }, [active, stepIndex, goTo, runActions]);
+  }, [active, held, stepIndex, pathname, runActions]);
 
-  /* Route the step belongs to. */
+  /* The step button picks the screen. Replace so the browser Back stack stays out of it. */
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const current = GUIDE_STEPS[stepIndex];
     if (!current) return;
-    if (current.surface !== pathname) router.push(current.surface);
-  }, [active, pathname, router, stepIndex]);
+    if (current.surface !== pathname) router.replace(current.surface);
+  }, [active, held, pathname, router, stepIndex]);
 
   /* Find and measure the spotlight target, and keep the measurement fresh. */
   useEffect(() => {
-    if (!active) {
+    if (!active || held) {
       setRect(null);
       return;
     }
@@ -329,8 +336,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     const selector = current?.target;
     if (!selector) {
       setRect(null);
+      setAnchorSettled(true);
       return;
     }
+    setAnchorSettled(false);
 
     let cancelled = false;
     let observer: ResizeObserver | null = null;
@@ -407,6 +416,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
         // Keep the card without the dim so a missing target never leaves the
         // whole app shaded and unusable (see the shade fallback in the render).
         setRect(null);
+        setAnchorSettled(true);
         return;
       }
       timer = window.setTimeout(poll, TARGET_POLL_MS);
@@ -418,11 +428,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(timer);
       detach?.();
     };
-  }, [active, pathname, stepIndex]);
+  }, [active, held, pathname, stepIndex]);
 
   /* Place the card next to the spotlight, clamped to the viewport. */
   useLayoutEffect(() => {
-    if (!active) {
+    if (!active || held) {
       setPos(null);
       return;
     }
@@ -442,6 +452,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     let top: number;
     const gap = CARD_GAP + (current.cardOffset ?? 0);
 
+    if (!rect && current.target && !anchorSettled) {
+      setPos(null);
+      return;
+    }
+
     if (!rect || current.placement === "center") {
       left = (vw - cw) / 2;
       top = (vh - ch) / 2;
@@ -455,9 +470,17 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
 
       const tall = rect.height > vh * 0.45;
       // A target taller than the screen leaves no room on any side. The card is
-      // pinned to the bottom edge (and the dot moves to the target's top edge,
-      // see dotStyle), instead of hunting for the smallest overlap.
-      const pinned = { left: (vw - cw) / 2, top: vh - ch - m - 8 };
+      // pinned above the controls bar (and the dot moves to the target's top
+      // edge, see dotStyle), instead of hunting for the smallest overlap.
+      const dock = document.querySelector(".bls-dock");
+      const dockBox = dock?.getBoundingClientRect();
+      const dockTop =
+        dockBox && dockBox.height > 8 && dockBox.top < vh ? dockBox.top : null;
+      const pinnedTop =
+        dockTop != null
+          ? dockTop - ch - 12
+          : vh - ch - m - 8;
+      const pinned = { left: (vw - cw) / 2, top: pinnedTop };
 
       // Preference order per placement, then the other sides as fallbacks.
       const order =
@@ -509,6 +532,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       const box = chosen ?? best;
       left = box.left;
       top = box.top;
+      // The controls bar is not part of the spotlight, but the pinned card
+      // used to cover its labels. Keep the card above that bar.
+      if (dockTop != null && top + ch > dockTop - 12) {
+        top = dockTop - ch - 12;
+      }
     }
 
     const maxLeft = Math.max(m, vw - cw - m);
@@ -517,28 +545,28 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       left: Math.min(Math.max(m, left), maxLeft),
       top: Math.min(Math.max(m, top), maxTop),
     });
-  }, [active, rect, sizeTick, stepIndex]);
+  }, [active, held, anchorSettled, rect, sizeTick, stepIndex]);
 
   /* Card height can change with the step (longer copy, different buttons). */
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const card = cardRef.current;
     if (!card || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => setSizeTick((t) => t + 1));
     observer.observe(card);
     return () => observer.disconnect();
-  }, [active, stepIndex]);
+  }, [active, held, stepIndex]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const onResize = () => setSizeTick((t) => t + 1);
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
-  }, [active]);
+  }, [active, held]);
 
   /* Keyboard: arrows move, Escape leaves. */
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -559,19 +587,19 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [active, next, previous, stop]);
+  }, [active, held, next, previous, stop]);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active || held) return;
     const el = cardRef.current;
     if (!el) return;
     const id = window.setTimeout(() => el.focus({ preventScroll: true }), 60);
     return () => window.clearTimeout(id);
-  }, [active, stepIndex]);
+  }, [active, held, stepIndex]);
 
   /* First visit after onboarding: run once, resume where a reload left off. */
   useEffect(() => {
-    if (active || autoStartRef.current) return;
+    if (active || autoStartRef.current || held) return;
     if (pathname !== APP_BASE) return;
     const local = localStore();
     if (!local || hasSeenGuide(local)) return;
@@ -584,7 +612,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       if (mountedRef.current) start(resume);
     }, 1200);
     return () => window.clearTimeout(id);
-  }, [active, pathname, start]);
+  }, [active, held, pathname, start]);
 
   /* "Start a session" on the last step: open a thread once we are home. */
   useEffect(() => {
@@ -605,12 +633,13 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       stop,
       next,
       previous,
+      setHeld,
       registerHost,
     }),
-    [active, next, previous, registerHost, start, stepIndex, stop]
+    [active, next, previous, registerHost, setHeld, start, stepIndex, stop]
   );
 
-  const current = active ? GUIDE_STEPS[stepIndex] ?? null : null;
+  const current = active && !held ? GUIDE_STEPS[stepIndex] ?? null : null;
   const isLast = stepIndex >= GUIDE_STEPS.length - 1;
   const primaryLabel = current?.cta ?? (isLast ? "Done" : "Next");
 

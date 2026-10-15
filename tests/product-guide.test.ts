@@ -13,6 +13,7 @@ import {
   markGuideAutoStarted,
   markGuideSeen,
   nextIndexOutsideGroup,
+  previousIndexOutsideGroup,
   readGuideStepIndex,
   requestGuideNewChat,
   resetGuideState,
@@ -205,6 +206,18 @@ describe("guide steps", () => {
     const outside = nextIndexOutsideGroup(first, "session");
     assert.equal(GUIDE_STEPS[outside].group, undefined);
     assert.equal(nextIndexOutsideGroup(outside, undefined), outside + 1);
+  });
+
+  it("steps from the mode picker to the visual set, not to Watch and learn", () => {
+    const mode = GUIDE_STEPS.findIndex((step) => step.id === "mode");
+    const watch = GUIDE_STEPS.findIndex((step) => step.id === "resources-watch");
+    const composer = GUIDE_STEPS.findIndex((step) => step.id === "composer");
+    assert.equal(mode + 1, 6);
+    assert.equal(GUIDE_STEPS[mode + 1].id, "canvas");
+    assert.equal(watch + 1, 16);
+    assert.ok(watch > mode + 1);
+    assert.equal(composer, watch - 1);
+    assert.equal(previousIndexOutsideGroup(watch, undefined), composer);
   });
 });
 

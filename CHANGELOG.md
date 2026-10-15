@@ -775,6 +775,10 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Admin Email delivery splits Sender, Brevo, Gmail, and Environment into tabs instead of one stacked form
 - [internal] Email sending uses Admin → Email only. The Environment tab is gone. Blank Brevo and Gmail secrets copy once from env into settings
 - [internal] dev.nurahelp.com points at the local Cloudflared tunnel and localhost 3471. The old staging tunnel was returning 502
+- Guide Back and Next move one step. A session that is still opening no longer skips from the mode step to Watch and learn, and Back on that step stays on the previous step
+- Safety consent fills the screen until you confirm it. The sidebar and the tour stay hidden until then, and the sidebar opens again once you confirm
+- Guide steps that point at the visual set open a Self-guided session first, instead of sitting on Start a session
+- The guide card sits above the session controls so it does not cover their labels
 
 ### Removed
 - Design lab `/design/voice-composer` (page + CSS); dropped `/design` from public paths and robots disallow

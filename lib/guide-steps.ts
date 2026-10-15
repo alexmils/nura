@@ -299,6 +299,18 @@ export function nextIndexOutsideGroup(
   return GUIDE_STEPS.length - 1;
 }
 
+/** Steps before `index` that are not part of `group`. */
+export function previousIndexOutsideGroup(
+  index: number,
+  group: GuideStepGroup | undefined
+): number {
+  if (!group) return Math.max(index - 1, 0);
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (GUIDE_STEPS[i].group !== group) return i;
+  }
+  return 0;
+}
+
 export function isGuideAction(value: string): value is GuideAction {
   return (GUIDE_ACTIONS as readonly string[]).includes(value);
 }

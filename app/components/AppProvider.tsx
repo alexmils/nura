@@ -191,6 +191,10 @@ const AppContext = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const threadsRef = useRef(threads);
+  const activeThreadIdRef = useRef(activeThreadId);
+  threadsRef.current = threads;
+  activeThreadIdRef.current = activeThreadId;
   const [messages, setMessages] = useState<Message[]>([]);
   /**
    * True while a hard refresh is re-opening the session that was open before.
@@ -386,10 +390,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }>(`/api/threads?id=${id}`);
         if (!data.thread) {
           // Pruned or deleted while we were away: forget it.
+          activeThreadIdRef.current = null;
           storeSessionId(null);
           syncSessionUrl(null);
           return false;
         }
+        activeThreadIdRef.current = id;
         setActiveThreadId(id);
         setMessages(data.messages ?? []);
         storeSessionId(id);
@@ -399,6 +405,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // A session that no longer exists (deleted here or in another tab) must
         // not be remembered, or every reload would retry it forever.
         if (err instanceof FetchJsonError && err.status === 404) {
+          activeThreadIdRef.current = null;
           storeSessionId(null);
           syncSessionUrl(null);
         } else {
@@ -430,6 +437,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * real session stays in Recent untouched.
    */
   const clearActiveThreadRaw = useCallback(() => {
+    activeThreadIdRef.current = null;
     setActiveThreadId(null);
     setMessages([]);
     setSessionMode("idle");
@@ -538,14 +546,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const chooseSessionMode = useCallback(
     async (kind: Exclude<SessionKind, "pending">) => {
-      if (!activeThreadId) return false;
+      const id = activeThreadIdRef.current;
+      if (!id) return false;
       try {
         const res = await fetch("/api/threads", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action: "update",
-            id: activeThreadId,
+            id,
             patch: {
               mode: kind,
               title: kind === "free" ? SESSION_MODE_SELF_LABEL : SESSION_MODE_GUIDED_LABEL,
@@ -577,10 +586,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         if (data.entitlement) setEntitlement(data.entitlement);
         if (data.thread) {
-          setThreads((t) =>
-            t.map((x) => (x.id === activeThreadId ? data.thread! : x))
+          threadsRef.current = threadsRef.current.map((x) =>
+            x.id === id ? data.thread! : x
           );
-          await selectThreadRaw(activeThreadId);
+          setThreads((t) => t.map((x) => (x.id === id ? data.thread! : x)));
+          await selectThreadRaw(id);
         }
         return true;
       } catch (err) {
@@ -588,7 +598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [activeThreadId, selectThreadRaw, openUpgradeModal]
+    [selectThreadRaw, openUpgradeModal]
   );
 
   const leaseBlsSeconds = useCallback(
@@ -899,6 +909,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   /** Thread the tour opened just to have a session screen to point at. */
   const guideScratchRef = useRef<string | null>(null);
 
+  const openGuideSession = async (
+    kind: "free" | "guided",
+    selector: string
+  ) => {
+    let created = false;
+    if (!activeThreadIdRef.current) {
+      const ok = consentOk === true ? true : await refreshConsent();
+      if (!ok) return false;
+      clearActiveThreadRaw();
+      const createdId = await createThreadRaw();
+      if (!createdId) return false;
+      guideScratchRef.current = createdId;
+      activeThreadIdRef.current = createdId;
+      created = true;
+    }
+    const current = threadsRef.current.find(
+      (t) => t.id === activeThreadIdRef.current
+    );
+    // A thread we just opened is still pending. Switch before looking for the set.
+    if (created || current?.mode !== kind) {
+      const switched = await chooseSessionMode(kind);
+      if (!switched) return false;
+    }
+    for (let i = 0; i < 40; i += 1) {
+      if (document.querySelector(selector)) return true;
+      await new Promise((resolve) => window.setTimeout(resolve, 80));
+    }
+    return false;
+  };
+
   useGuideHost({
     ensurePendingThread: async () => {
       // Consent is the one gate the tour cannot work around: without it the
@@ -929,16 +969,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clearActiveThreadRaw();
       void refreshThreads(null);
     },
-    chooseSelfGuided: () => {
-      const current = threads.find((t) => t.id === activeThreadId);
-      if (current?.mode === "free") return true;
-      return chooseSessionMode("free");
-    },
-    chooseGuided: () => {
-      const current = threads.find((t) => t.id === activeThreadId);
-      if (current?.mode === "guided") return true;
-      return chooseSessionMode("guided");
-    },
+    chooseSelfGuided: () => openGuideSession("free", '[data-guide="canvas"]'),
+    chooseGuided: () => openGuideSession("guided", '[data-guide="composer"]'),
     startNewChat: () => {
       // The person asked for a real session: it must not be cleaned up.
       guideScratchRef.current = null;

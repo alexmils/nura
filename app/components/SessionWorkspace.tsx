@@ -633,6 +633,11 @@ export function SessionWorkspace() {
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
   const showConsent = consentOk === false;
+  useEffect(() => {
+    if (!guide) return;
+    guide.setHeld(showConsent);
+    return () => guide.setHeld(false);
+  }, [guide, showConsent]);
   const showResume =
     Boolean(thread) &&
     shouldOfferResumeClosure(thread) &&
@@ -645,7 +650,6 @@ export function SessionWorkspace() {
         <header className="workspace-header workspace-header--consent">
           <div className="workspace-header-row">
             <div className="workspace-header-lead">
-              <WorkspaceMenuButton />
               <div className="min-w-0">
                 <h1 className="workspace-title">Safety consent</h1>
               </div>
@@ -671,7 +675,7 @@ export function SessionWorkspace() {
    * meanwhile: showing "Start a session" here would look like the session was
    * lost.
    */
-  if (!thread && restoringSession) {
+  if (!thread && (restoringSession || activeThreadId)) {
     return (
       <main className="workspace-main flex min-h-0 flex-1 flex-col">
         <header className="workspace-header">
