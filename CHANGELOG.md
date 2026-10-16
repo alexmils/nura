@@ -819,6 +819,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Hero Edit sits under the transparent header, so the header no longer takes clicks outside the nav pill
 - [internal] The home preloader no longer sticks at 0% when the early head scripts hydrate
 - [internal] Hero Edit no longer trips a hydration error from the footer email field or a rewritten head script
+- [internal] Hero Edit opens the section drawer again (the editor was calling a draft hook that was not imported)
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

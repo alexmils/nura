@@ -16,6 +16,7 @@ import {
 } from "@/lib/marketing-sections";
 import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
+import { commitSectionDraft, useEditorDraft } from "./section-draft";
 
 export function MarketingSectionEditor({
   id,
