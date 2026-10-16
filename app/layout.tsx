@@ -65,20 +65,17 @@ export default function RootLayout({
     >
       <head>
         {/*
-          Consent Mode default must run before any Google tag exists, or Google
-          reports "consent mode installation out of order". Emitting it from a
-          client component that waits on an API call is always too late, so it
-          lives here, ahead of everything.
+          One inline script, not two. React 19 matches <head> scripts by
+          position and swaps a second tag onto the first during hydration,
+          which throws and leaves the mint preloader stuck at 0%.
+          Consent Mode still runs first (before any Google tag), then saved
+          accessibility choices, so text size does not flash.
         */}
         <script
-          dangerouslySetInnerHTML={{ __html: consentDefaultScript() }}
-        />
-        {/*
-          Saved accessibility choices (text size, contrast, motion) must apply
-          before first paint, otherwise the page flashes at the wrong size.
-        */}
-        <script
-          dangerouslySetInnerHTML={{ __html: a11yBootstrapScript() }}
+          id="nura-early-bootstrap"
+          dangerouslySetInnerHTML={{
+            __html: `${consentDefaultScript()}\n${a11yBootstrapScript()}`,
+          }}
         />
       </head>
       <body className="font-sans antialiased">{children}</body>

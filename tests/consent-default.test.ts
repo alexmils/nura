@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { join } from "node:path";
 import vm from "node:vm";
 import {
   consentDefaultScript,
@@ -86,5 +88,14 @@ describe("consent mode head bootstrap", () => {
     assert.equal(typeof sandbox.gtag, "function");
     assert.equal(typeof window.gtag, "function");
     assert.ok(Array.isArray(window.dataLayer));
+  });
+
+  it("emits consent and accessibility as one head script", () => {
+    const layout = readFileSync(join(process.cwd(), "app/layout.tsx"), "utf8");
+    const scripts = layout.match(/<script\b/g) ?? [];
+    assert.equal(scripts.length, 1);
+    assert.match(layout, /id="nura-early-bootstrap"/);
+    assert.match(layout, /consentDefaultScript\(\)/);
+    assert.match(layout, /a11yBootstrapScript\(\)/);
   });
 });
