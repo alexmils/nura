@@ -300,7 +300,7 @@ function MediaControls({
           <ImageSlot
             label="Poster"
             hint={field.hint}
-            value={read(names.poster) || read(names.image)}
+            value={read(names.poster)}
             onChange={(url) => onChange({ [names.poster]: url })}
           />
         </>

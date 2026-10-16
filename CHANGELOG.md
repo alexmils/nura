@@ -815,6 +815,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Section editors collapse into accordions, and image slots can switch to a video or an upload
 - [internal] Home page loads again after the media editor change
 - [internal] Marketing images upload to Cloudinary, with a Media library and Settings in admin
+- [internal] Importing a site image points the live pages at Cloudinary, and the library loads every page of files
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

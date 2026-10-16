@@ -1220,6 +1220,57 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
   return out;
 }
 
+export function replaceSectionMedia(
+  config: SectionConfig,
+  from: string,
+  to: string
+): { config: SectionConfig; changed: boolean } {
+  let changed = false;
+  const next: SectionConfig = {};
+  for (const [key, raw] of Object.entries(config)) {
+    if (typeof raw === "string") {
+      next[key] = raw === from ? to : raw;
+      if (next[key] !== raw) changed = true;
+      continue;
+    }
+    next[key] = raw.map((item) => {
+      const copy = { ...item };
+      for (const [child, value] of Object.entries(copy)) {
+        if (value === from) {
+          copy[child] = to;
+          changed = true;
+        }
+      }
+      return copy;
+    });
+  }
+  return { config: next, changed };
+}
+
+export function localMarketingPaths(
+  copy: Record<string, SectionConfig>
+): { path: string; kind: "image" | "video" }[] {
+  const found = new Set<string>();
+  const visit = (value: unknown) => {
+    if (typeof value === "string") {
+      if (value.startsWith("/marketing/") && !value.includes("..")) found.add(value);
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) visit(item);
+      return;
+    }
+    if (value && typeof value === "object") {
+      for (const child of Object.values(value)) visit(child);
+    }
+  };
+  for (const config of Object.values(copy)) visit(config);
+  return [...found].sort().map((filePath) => ({
+    path: filePath,
+    kind: filePath.endsWith(".mp4") || filePath.endsWith(".webm") ? "video" : "image",
+  }));
+}
+
 export function sectionText(config: SectionConfig | undefined, key: string): string {
   const value = config?.[key];
   return typeof value === "string" ? value : "";

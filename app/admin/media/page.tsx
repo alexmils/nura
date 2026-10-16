@@ -107,7 +107,8 @@ function MediaLibrary() {
           </figure>
         ))}
       </div>
-      <h2>On the site</h2>
+      <h2>Still on the site</h2>
+      {site.length === 0 ? <p>Every referenced picture and clip is on Cloudinary.</p> : null}
       <ul className="admin-media-site">
         {site.map((file) => (
           <li key={file.path}>

@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { readFile } from "fs/promises";
+import { readFile, stat } from "fs/promises";
 import path from "path";
 import { getPlatformSettings, savePlatformSettings } from "@/lib/platform-settings";
 
@@ -19,6 +19,97 @@ export type CloudinaryStatus = {
 
 const API_ROOT = "https://api.cloudinary.com/v1_1";
 const FOLDER = "nura";
+export const MARKETING_UPLOAD_MAX_BYTES = 24 * 1024 * 1024;
+
+export function rejectUploadSize(size: number): string | null {
+  if (!Number.isFinite(size) || size <= 0) return "Choose a file.";
+  if (size > MARKETING_UPLOAD_MAX_BYTES) return "Use a file smaller than 24 MB.";
+  return null;
+}
+
+export function resolveCloudinaryCredentials(
+  stored: CloudinaryCredentials,
+  env: CloudinaryCredentials
+): { creds: CloudinaryCredentials | null; source: CloudinaryStatus["source"] } {
+  const complete = (value: CloudinaryCredentials): CloudinaryCredentials | null => {
+    const cloudName = value.cloudName.trim();
+    const apiKey = value.apiKey.trim();
+    const apiSecret = value.apiSecret.trim();
+    if (!cloudName || !apiKey || !apiSecret) return null;
+    return { cloudName, apiKey, apiSecret };
+  };
+  const fromSettings = complete(stored);
+  if (fromSettings) return { creds: fromSettings, source: "settings" };
+  const fromEnv = complete(env);
+  if (fromEnv) return { creds: fromEnv, source: "env" };
+  return { creds: null, source: "none" };
+}
+
+export function mergeCloudinaryInput(
+  current: CloudinaryCredentials,
+  input: CloudinaryCredentials
+): CloudinaryCredentials {
+  const cloudName = input.cloudName.trim();
+  if (!cloudName) throw new Error("Cloud name is required.");
+  const apiKey = input.apiKey.trim();
+  const apiSecret = input.apiSecret.trim();
+  const nameChanged = cloudName !== current.cloudName.trim();
+  if (nameChanged && (!apiKey || !apiSecret)) {
+    throw new Error("Enter the API key and secret for this cloud name.");
+  }
+  if (!apiKey && !current.apiKey.trim()) throw new Error("API key is required.");
+  if (!apiSecret && !current.apiSecret.trim()) throw new Error("API secret is required.");
+  return {
+    cloudName,
+    apiKey: apiKey || current.apiKey,
+    apiSecret: apiSecret || current.apiSecret,
+  };
+}
+
+export function sniffMarketingUpload(
+  data: Buffer
+): { resource: "image" | "video"; type: string } | null {
+  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+    return { resource: "image", type: "image/jpeg" };
+  }
+  if (data.length >= 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
+    return { resource: "image", type: "image/png" };
+  }
+  if (
+    data.length >= 12 &&
+    data.subarray(0, 4).toString("ascii") === "RIFF" &&
+    data.subarray(8, 12).toString("ascii") === "WEBP"
+  ) {
+    return { resource: "image", type: "image/webp" };
+  }
+  if (
+    data.length >= 6 &&
+    (data.subarray(0, 6).toString("ascii") === "GIF87a" || data.subarray(0, 6).toString("ascii") === "GIF89a")
+  ) {
+    return { resource: "image", type: "image/gif" };
+  }
+  if (data.length >= 12 && data.subarray(4, 8).toString("ascii") === "ftyp") {
+    return { resource: "video", type: "video/mp4" };
+  }
+  if (data.length >= 4 && data[0] === 0x1a && data[1] === 0x45 && data[2] === 0xdf && data[3] === 0xa3) {
+    return { resource: "video", type: "video/webm" };
+  }
+  return null;
+}
+
+export async function collectCloudinaryPages<T>(
+  load: (cursor?: string) => Promise<{ items: T[]; next?: string }>
+): Promise<T[]> {
+  const out: T[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < 20; page += 1) {
+    const batch = await load(cursor);
+    out.push(...batch.items);
+    if (!batch.next) break;
+    cursor = batch.next;
+  }
+  return out;
+}
 
 export function signCloudinaryParams(params: Record<string, string>, apiSecret: string): string {
   const toSign = Object.keys(params)
@@ -32,32 +123,28 @@ function basicAuth(creds: CloudinaryCredentials): string {
   return `Basic ${Buffer.from(`${creds.apiKey}:${creds.apiSecret}`).toString("base64")}`;
 }
 
+function envCloudinary(): CloudinaryCredentials {
+  return {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME?.trim() || "",
+    apiKey: process.env.CLOUDINARY_API_KEY?.trim() || "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET?.trim() || "",
+  };
+}
+
 export async function getCloudinaryCredentials(): Promise<CloudinaryCredentials | null> {
   const settings = await getPlatformSettings();
-  const stored = settings.cloudinary;
-  const cloudName = stored.cloudName.trim() || process.env.CLOUDINARY_CLOUD_NAME?.trim() || "";
-  const apiKey = stored.apiKey.trim() || process.env.CLOUDINARY_API_KEY?.trim() || "";
-  const apiSecret = stored.apiSecret.trim() || process.env.CLOUDINARY_API_SECRET?.trim() || "";
-  if (!cloudName || !apiKey || !apiSecret) return null;
-  return { cloudName, apiKey, apiSecret };
+  return resolveCloudinaryCredentials(settings.cloudinary, envCloudinary()).creds;
 }
 
 export async function getCloudinaryStatus(): Promise<CloudinaryStatus> {
   const settings = await getPlatformSettings();
-  const stored = settings.cloudinary;
-  const envName = process.env.CLOUDINARY_CLOUD_NAME?.trim() || "";
-  const envKey = process.env.CLOUDINARY_API_KEY?.trim() || "";
-  const envSecret = process.env.CLOUDINARY_API_SECRET?.trim() || "";
-  const cloudName = stored.cloudName.trim() || envName;
-  const hasApiKey = Boolean(stored.apiKey.trim() || envKey);
-  const hasApiSecret = Boolean(stored.apiSecret.trim() || envSecret);
-  const fromSettings = Boolean(stored.cloudName.trim() && stored.apiKey.trim() && stored.apiSecret.trim());
+  const resolved = resolveCloudinaryCredentials(settings.cloudinary, envCloudinary());
   return {
-    cloudName,
-    hasApiKey,
-    hasApiSecret,
-    configured: Boolean(cloudName && hasApiKey && hasApiSecret),
-    source: fromSettings ? "settings" : cloudName && hasApiKey && hasApiSecret ? "env" : "none",
+    cloudName: resolved.creds?.cloudName || settings.cloudinary.cloudName.trim(),
+    hasApiKey: Boolean(resolved.creds?.apiKey),
+    hasApiSecret: Boolean(resolved.creds?.apiSecret),
+    configured: Boolean(resolved.creds),
+    source: resolved.source,
   };
 }
 
@@ -67,12 +154,10 @@ export async function saveCloudinarySettings(input: {
   apiSecret: string;
 }): Promise<CloudinaryStatus> {
   const current = await getPlatformSettings();
-  const cloudName = input.cloudName.trim();
-  const apiKey = input.apiKey.trim() || current.cloudinary.apiKey;
-  const apiSecret = input.apiSecret.trim() || current.cloudinary.apiSecret;
+  const cloudinary = mergeCloudinaryInput(current.cloudinary, input);
   await savePlatformSettings({
     ...current,
-    cloudinary: { cloudName, apiKey, apiSecret },
+    cloudinary,
   });
   return getCloudinaryStatus();
 }
@@ -81,6 +166,7 @@ export async function uploadToCloudinary(opts: {
   bytes: Buffer;
   filename: string;
   resource: "image" | "video";
+  type: string;
   folder?: string;
 }): Promise<{ url: string; publicId: string }> {
   const creds = await getCloudinaryCredentials();
@@ -93,8 +179,7 @@ export async function uploadToCloudinary(opts: {
     timestamp: String(Math.floor(Date.now() / 1000)),
   };
   const body = new FormData();
-  const type = opts.resource === "video" ? "video/mp4" : "image/jpeg";
-  body.set("file", new File([new Uint8Array(opts.bytes)], opts.filename, { type }));
+  body.set("file", new File([new Uint8Array(opts.bytes)], opts.filename, { type: opts.type }));
   body.set("api_key", creds.apiKey);
   body.set("signature", signCloudinaryParams(signed, creds.apiSecret));
   for (const [key, value] of Object.entries(signed)) body.set(key, value);
@@ -127,32 +212,43 @@ export type CloudinaryAsset = {
 export async function listCloudinaryAssets(resource: "image" | "video"): Promise<CloudinaryAsset[]> {
   const creds = await getCloudinaryCredentials();
   if (!creds) return [];
-  const url = `${API_ROOT}/${creds.cloudName}/resources/${resource}/upload?prefix=${encodeURIComponent(FOLDER)}&max_results=100`;
-  const res = await fetch(url, {
-    headers: { Authorization: basicAuth(creds) },
-    signal: AbortSignal.timeout(20000),
+  return collectCloudinaryPages(async (cursor) => {
+    const params = new URLSearchParams({
+      prefix: FOLDER,
+      max_results: "100",
+    });
+    if (cursor) params.set("next_cursor", cursor);
+    const url = `${API_ROOT}/${creds.cloudName}/resources/${resource}/upload?${params}`;
+    const res = await fetch(url, {
+      headers: { Authorization: basicAuth(creds) },
+      signal: AbortSignal.timeout(20000),
+    });
+    const data = (await res.json().catch(() => null)) as {
+      resources?: {
+        secure_url: string;
+        public_id: string;
+        bytes: number;
+        width: number;
+        height: number;
+      }[];
+      next_cursor?: string;
+      error?: { message?: string };
+    } | null;
+    if (!res.ok) {
+      throw new Error(data?.error?.message || "Could not list Cloudinary files.");
+    }
+    return {
+      items: (data?.resources ?? []).map((item) => ({
+        url: item.secure_url,
+        publicId: item.public_id,
+        resource,
+        bytes: item.bytes,
+        width: item.width,
+        height: item.height,
+      })),
+      next: data?.next_cursor || undefined,
+    };
   });
-  if (!res.ok) {
-    const data = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
-    throw new Error(data?.error?.message || "Could not list Cloudinary files.");
-  }
-  const data = (await res.json()) as {
-    resources?: {
-      secure_url: string;
-      public_id: string;
-      bytes: number;
-      width: number;
-      height: number;
-    }[];
-  };
-  return (data.resources ?? []).map((item) => ({
-    url: item.secure_url,
-    publicId: item.public_id,
-    resource,
-    bytes: item.bytes,
-    width: item.width,
-    height: item.height,
-  }));
 }
 
 export async function testCloudinary(): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
@@ -162,34 +258,6 @@ export async function testCloudinary(): Promise<{ ok: true; count: number } | { 
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Connection failed." };
   }
-}
-
-const MEDIA_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4", ".webm"]);
-
-export async function listSiteMedia(): Promise<{ path: string; kind: "image" | "video" }[]> {
-  const root = path.join(process.cwd(), "public", "marketing");
-  const out: { path: string; kind: "image" | "video" }[] = [];
-  async function walk(dir: string) {
-    const { readdir } = await import("fs/promises");
-    const entries = await readdir(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        await walk(full);
-        continue;
-      }
-      const ext = path.extname(entry.name).toLowerCase();
-      if (!MEDIA_EXT.has(ext)) continue;
-      const rel = "/" + path.relative(path.join(process.cwd(), "public"), full).split(path.sep).join("/");
-      out.push({ path: rel, kind: ext === ".mp4" || ext === ".webm" ? "video" : "image" });
-    }
-  }
-  try {
-    await walk(root);
-  } catch {
-    return [];
-  }
-  return out.sort((a, b) => a.path.localeCompare(b.path));
 }
 
 export async function readSiteMedia(publicPath: string): Promise<Buffer> {
@@ -202,5 +270,8 @@ export async function readSiteMedia(publicPath: string): Promise<Buffer> {
   if (rel.startsWith("..") || path.isAbsolute(rel)) {
     throw new Error("That file is not a site image.");
   }
+  const info = await stat(full);
+  const sizeError = rejectUploadSize(info.size);
+  if (sizeError) throw new Error(sizeError);
   return readFile(full);
 }

@@ -26,12 +26,17 @@ export async function PUT(request: Request) {
   if (!body || typeof body.cloudName !== "string") {
     return NextResponse.json({ error: "Cloud name is required." }, { status: 400 });
   }
-  const status = await saveCloudinarySettings({
-    cloudName: body.cloudName,
-    apiKey: typeof body.apiKey === "string" ? body.apiKey : "",
-    apiSecret: typeof body.apiSecret === "string" ? body.apiSecret : "",
-  });
-  return NextResponse.json(status);
+  try {
+    const status = await saveCloudinarySettings({
+      cloudName: body.cloudName,
+      apiKey: typeof body.apiKey === "string" ? body.apiKey : "",
+      apiSecret: typeof body.apiSecret === "string" ? body.apiSecret : "",
+    });
+    return NextResponse.json(status);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not save.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
 }
 
 export async function POST() {

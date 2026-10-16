@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
-import { listCloudinaryAssets, listSiteMedia } from "@/lib/cloudinary";
+import { listCloudinaryAssets } from "@/lib/cloudinary";
+import { localMarketingPathsInUse } from "@/lib/marketing-sections-db";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export async function GET() {
     const [images, videos, site] = await Promise.all([
       listCloudinaryAssets("image"),
       listCloudinaryAssets("video"),
-      listSiteMedia(),
+      localMarketingPathsInUse(),
     ]);
     return NextResponse.json({ assets: [...images, ...videos], site });
   } catch (err) {
