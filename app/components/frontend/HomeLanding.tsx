@@ -39,6 +39,7 @@ import { HomePauseCta } from "./HomePauseCta";
 import { HomeMemorySets } from "./HomeMemorySets";
 import { SessionModesPair } from "./SessionModesPair";
 import { SectionMedia } from "./SectionMedia";
+import { useLandingMotion } from "./useLandingMotion";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 
