@@ -20,13 +20,23 @@ export function KnowledgeHub() {
   const seriesCopy = useSectionConfig("knowledge-series");
   const moreCopy = useSectionConfig("knowledge-more");
   const seriesHeadings = sectionList(seriesCopy, "series");
-  const seriesList = KNOWLEDGE_SERIES.map((series) => {
-    const saved = seriesHeadings.find((row) => row.id === series.id);
-    return {
+  const seriesOrder = [
+    ...seriesHeadings
+      .map((row) => row.id)
+      .filter((id): id is string => KNOWLEDGE_SERIES.some((series) => series.id === id)),
+    ...KNOWLEDGE_SERIES.map((series) => series.id).filter(
+      (id) => !seriesHeadings.some((row) => row.id === id)
+    ),
+  ];
+  const seriesList = seriesOrder.flatMap((id) => {
+    const series = KNOWLEDGE_SERIES.find((item) => item.id === id);
+    if (!series) return [];
+    const saved = seriesHeadings.find((row) => row.id === id);
+    return [{
       ...series,
       title: saved?.title || series.title,
       role: saved?.role || series.role,
-    };
+    }];
   });
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [heroPlaying, setHeroPlaying] = useState(false);

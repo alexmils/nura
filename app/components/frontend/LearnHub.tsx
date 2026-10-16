@@ -72,7 +72,13 @@ export function LearnHub() {
   const page = useSectionConfig("learn-hub");
   const savedPaths = sectionList(page, "paths");
   const articles = listClusterArticles().map(toHelpArticle);
-  const paths: LearnHelpPath[] = TOPIC_ORDER.map((topic) => {
+  const pathOrder = [
+    ...savedPaths
+      .map((row) => row.id)
+      .filter((id): id is ClusterTopic => TOPIC_ORDER.includes(id as ClusterTopic)),
+    ...TOPIC_ORDER.filter((topic) => !savedPaths.some((row) => row.id === topic)),
+  ];
+  const paths: LearnHelpPath[] = pathOrder.map((topic) => {
     const copy = PATH_COPY[topic];
     const saved = savedPaths.find((row) => row.id === topic);
     const moreHref = saved?.moreHref || copy.moreHref;

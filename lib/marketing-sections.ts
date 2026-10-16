@@ -10,6 +10,7 @@ import {
 import { LANDING_FAQ_ITEMS } from "@/lib/landing-faq";
 import { PRICING_FAQ_ITEMS } from "@/lib/pricing-faq";
 import { PUBLIC_FAQ_ITEMS } from "@/lib/public-faq";
+import { legalEntityDisplayName } from "@/lib/legal-entity";
 
 /**
  * Inline marketing copy. Defaults are today's page strings.
@@ -677,7 +678,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
         },
         {
           heading: "Who operates it",
-          body: `${BRAND_SPOKEN} is operated by Receptly LLC. The spoken brand is ${BRAND_SPOKEN}; the domain is nurahelp.com. Legal pages name the operator — [Terms](/terms) and [Privacy](/privacy) — so you can see who is responsible for the product and for how data is handled.`,
+          body: `${BRAND_SPOKEN} is operated by ${legalEntityDisplayName()}. The spoken brand is ${BRAND_SPOKEN}; the domain is nurahelp.com. Legal pages name the operator — [Terms](/terms) and [Privacy](/privacy) — so you can see who is responsible for the product and for how data is handled.`,
         },
         {
           heading: "How sessions work",
@@ -1008,25 +1009,52 @@ function normalizeScalar(
   return textValue;
 }
 
+function mergeFixedItem(field: ListField, def: SectionItem, incoming: SectionItem): SectionItem {
+  const next: SectionItem = {};
+  if (typeof def.id === "string") next.id = def.id;
+  for (const child of field.fields) {
+    next[child.key] = normalizeScalar(child, incoming[child.key], def[child.key] ?? "");
+  }
+  return next;
+}
+
+function cloneFallback(field: ListField, fallback: SectionItem[]): SectionItem[] {
+  return fallback.map((def) => mergeFixedItem(field, def, def));
+}
+
+function normalizeFixedList(field: ListField, rows: unknown[], fallback: SectionItem[]): SectionItem[] {
+  const ids = fallback
+    .map((item) => item.id)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+  const incoming = rows.map(asItem).filter((item): item is SectionItem => item != null);
+  const keyed = ids.length === fallback.length && incoming.some((item) => item.id && ids.includes(item.id));
+  if (!keyed) {
+    return fallback.map((def, index) => mergeFixedItem(field, def, asItem(rows[index]) ?? {}));
+  }
+  const ordered: string[] = [];
+  for (const item of incoming) {
+    if (item.id && ids.includes(item.id) && !ordered.includes(item.id)) ordered.push(item.id);
+  }
+  for (const id of ids) {
+    if (!ordered.includes(id)) ordered.push(id);
+  }
+  return ordered.map((id) => {
+    const def = fallback.find((item) => item.id === id) ?? {};
+    const row = incoming.find((item) => item.id === id) ?? {};
+    return mergeFixedItem(field, def, row);
+  });
+}
+
 function normalizeList(
   field: ListField,
   raw: unknown,
   fallback: SectionItem[]
 ): SectionItem[] {
-  const rows = Array.isArray(raw) ? raw : [];
-  if (field.fixed) {
-    return fallback.map((def, index) => {
-      const incoming = asItem(rows[index]) ?? {};
-      const next: SectionItem = {};
-      if (typeof def.id === "string") next.id = def.id;
-      for (const child of field.fields) {
-        next[child.key] = normalizeScalar(child, incoming[child.key], def[child.key] ?? "");
-      }
-      return next;
-    });
-  }
+  if (!Array.isArray(raw)) return cloneFallback(field, fallback);
+  if (field.fixed) return normalizeFixedList(field, raw, fallback);
+  if (raw.length === 0) return [];
   const next: SectionItem[] = [];
-  for (const row of rows.slice(0, field.max)) {
+  for (const row of raw.slice(0, field.max)) {
     const incoming = asItem(row);
     if (!incoming) continue;
     const item: SectionItem = {};
@@ -1037,16 +1065,6 @@ function normalizeList(
       if (value.trim()) any = true;
     }
     if (any) next.push(item);
-  }
-  if (next.length === 0) {
-    return fallback.map((def) => {
-      const item: SectionItem = {};
-      if (typeof def.id === "string") item.id = def.id;
-      for (const child of field.fields) {
-        item[child.key] = normalizeScalar(child, def[child.key], "");
-      }
-      return item;
-    });
   }
   return next;
 }

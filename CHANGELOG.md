@@ -810,6 +810,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Feedback moves to `/app/feedback` and a trial-end email (no popup). We only ask after 4+ days and at least one real session; trial week ends with one email link to rate and leave suggestions or bugs
 - [internal] Admin Feedback lists trial email and page sources; cron `POST /api/cron/trial-feedback`; template `trial_feedback`
 - [internal] Marketing sections have an Edit chip for platform admins, with a drawer that saves that band’s copy
+- [internal] Section save refreshes every public page, keeps a moved row with its id, and allows an emptied list
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import {
   defaultMarketingCopy,
+  normalizeSection,
   type SectionConfig,
 } from "@/lib/marketing-sections";
 import { useDraftOr } from "./section-draft";
@@ -28,5 +29,5 @@ export function MarketingCopyProvider({
 export function useSectionConfig(id: string): SectionConfig {
   const map = useContext(MarketingCopyContext);
   const saved = map[id] ?? FALLBACK[id] ?? {};
-  return useDraftOr(id, saved);
+  return normalizeSection(id, useDraftOr(id, saved));
 }

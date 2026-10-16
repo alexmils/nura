@@ -1,6 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { closeAllEditors } from "@/app/components/frontend/section-editor/SectionEdit";
 import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
 import { FrontendBackToTop } from "@/app/components/frontend/FrontendBackToTop";
@@ -11,6 +13,17 @@ import "./frontend-fonts.css";
 import "./frontend-buttons.css";
 import "./frontend-help.css";
 import "./section-editor/section-editor.css";
+
+function EditorRouteReset() {
+  const pathname = usePathname();
+  const last = useRef(pathname);
+  useEffect(() => {
+    if (last.current === pathname) return;
+    last.current = pathname;
+    closeAllEditors();
+  }, [pathname]);
+  return null;
+}
 
 export function FrontendShellClient({
   children,
@@ -23,6 +36,7 @@ export function FrontendShellClient({
 }) {
   return (
     <div className={`frontend-home${wide ? " frontend-home-landing" : ""}`}>
+      <EditorRouteReset />
       <FrontendPreloader />
       <FrontendHeader overlay={wide} />
       <main

@@ -16,6 +16,12 @@ function setEditorOpen(id: string, open: boolean) {
   listeners.forEach((listener) => listener());
 }
 
+export function closeAllEditors() {
+  if (openEditors.size === 0) return;
+  openEditors.clear();
+  listeners.forEach((listener) => listener());
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {

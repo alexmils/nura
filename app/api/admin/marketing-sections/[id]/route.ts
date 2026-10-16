@@ -7,21 +7,10 @@ import {
 } from "@/lib/marketing-sections-db";
 import {
   getSectionDef,
+  normalizeSection,
 } from "@/lib/marketing-sections";
 
 export const dynamic = "force-dynamic";
-
-const PUBLIC_PATHS = [
-  "/",
-  "/pricing",
-  "/about",
-  "/faq",
-  "/blog",
-  "/learn",
-  "/knowledge",
-  "/support",
-  "/editorial",
-];
 
 export async function GET(
   _request: Request,
@@ -52,6 +41,6 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const config = await saveMarketingSection(id, body);
-  for (const path of PUBLIC_PATHS) revalidatePath(path);
+  revalidatePath("/", "layout");
   return NextResponse.json({ config });
 }

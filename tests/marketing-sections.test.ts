@@ -26,21 +26,33 @@ describe("marketing section copy", () => {
     assert.equal(safeHref("https://nurahelp.com/faq", "/"), "https://nurahelp.com/faq");
     const config = normalizeSection("home-hero", {
       title: "x".repeat(800),
-      cardHref: "https://evil.test",
+      cardHref: "javascript:alert(1)",
     });
     assert.ok(sectionText(config, "title").length <= 400);
-    assert.equal(sectionText(config, "cardHref"), "https://evil.test");
+    assert.equal(sectionText(config, "cardHref"), "/learn");
   });
 
-  it("keeps fixed stage ids and restores an emptied list", () => {
-    const config = normalizeSection("home-how", { stages: [{ nav: "Settle" }] });
+  it("keeps a stage with its id when the row moves", () => {
+    const config = normalizeSection("home-how", {
+      stages: [
+        { id: "rhythm", nav: "Pulse" },
+        { id: "ground", nav: "Settle" },
+      ],
+    });
     const stages = sectionList(config, "stages");
-    assert.equal(stages[0]?.id, "ground");
-    assert.equal(stages[0]?.nav, "Settle");
+    assert.equal(stages[0]?.id, "rhythm");
+    assert.equal(stages[0]?.nav, "Pulse");
+    assert.equal(stages[1]?.id, "ground");
+    assert.equal(stages[1]?.nav, "Settle");
     assert.equal(stages.length, 4);
+    assert.equal(stages[2]?.id, "checkin");
+  });
 
+  it("keeps an explicit empty list and restores a missing one", () => {
     const emptied = normalizeSection("home-faq", { items: [] });
-    assert.ok(faqPairs(emptied).length > 0);
+    assert.equal(faqPairs(emptied).length, 0);
+    const missing = normalizeSection("home-faq", {});
+    assert.ok(faqPairs(missing).length > 0);
   });
 
   it("parses footer link lines", () => {
