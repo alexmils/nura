@@ -17,6 +17,11 @@ import {
 } from "@/lib/meta-pixel";
 import { ConversionTags } from "@/app/components/ConversionTags";
 import { UpgradeModal } from "@/app/components/UpgradeModal";
+import { useToast } from "@/app/components/Toast";
+import {
+  checkoutReturnNotice,
+  checkoutStartNotice,
+} from "@/lib/checkout-feedback";
 
 const BILLING_FLIP_MS = 620;
 
@@ -53,9 +58,11 @@ function prefersReducedMotion(): boolean {
 
 function BillingPageInner() {
   const params = useSearchParams();
+  const { toast } = useToast();
   const sessionId = params.get("session_id");
   const checkout = params.get("checkout");
   const activated = params.get("activated");
+  const announcedRef = useRef<string | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -69,51 +76,80 @@ function BillingPageInner() {
     const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
     const res = await fetch(`/api/billing/status${qs}`);
     const data = await res.json();
-    if (res.ok) setStatus(data as Status);
+    if (!res.ok) return null;
+    const next = data as Status;
+    setStatus(next);
+    return next;
   }, [sessionId]);
 
   useEffect(() => {
-    void refresh();
-    if (checkout === "success") {
-      setMsg("Subscription updated.");
-      trackMetaEvent(
-        "Subscribe",
-        { content_category: "subscription" },
-        { onceKey: "subscribe_checkout" }
-      );
-    }
-    if (checkout === "canceled") setMsg("Checkout canceled.");
-    if (activated === "1") {
-      // Legacy trial-activation return link; the Upgrade modal now confirms
-      // in place, but old links must still say the payment went through.
-      setMsg("Payment successful. Your subscription is active.");
-      // Subscription start, not a purchase: the charge is reported from the
-      // webhook with the amount Stripe actually collected. No value here
-      // either — this legacy link has no plan loaded yet, and Meta flags a
-      // Purchase without one.
-      trackMetaEvent(
-        "Subscribe",
-        { content_category: "subscription", content_name: "activate_trial" },
-        { onceKey: "subscribe_activate" }
-      );
-      if (typeof window !== "undefined") {
+    let cancelled = false;
+    void (async () => {
+      const data = await refresh();
+      if (cancelled) return;
+
+      const announceKey = checkout ?? (activated === "1" ? "activated" : "");
+      const notice =
+        checkout === "success" || checkout === "canceled"
+          ? checkoutReturnNotice({
+              checkout,
+              status: data?.status ?? null,
+              canUseApp: data?.canUseApp,
+            })
+          : null;
+
+      if (notice && announcedRef.current !== announceKey) {
+        announcedRef.current = announceKey;
+        setMsg(notice.message);
+        toast(notice.message, notice.kind === "success" ? "success" : notice.kind);
+      }
+
+      if (notice?.kind === "success" && checkout === "success") {
+        trackMetaEvent(
+          "Subscribe",
+          { content_category: "subscription" },
+          { onceKey: "subscribe_checkout" }
+        );
+      }
+
+      if (activated === "1" && announcedRef.current !== announceKey) {
+        announcedRef.current = announceKey;
+        const message = "Payment successful. Your subscription is active.";
+        setMsg(message);
+        toast(message);
+        // Subscription start, not a purchase: the charge is reported from the
+        // webhook with the amount Stripe actually collected. No value here
+        // either — this legacy link has no plan loaded yet, and Meta flags a
+        // Purchase without one.
+        trackMetaEvent(
+          "Subscribe",
+          { content_category: "subscription", content_name: "activate_trial" },
+          { onceKey: "subscribe_activate" }
+        );
+      }
+
+      // Drop checkout return params only after this sync, so the status call
+      // still includes session_id and a re-render does not skip the toast.
+      if (typeof window !== "undefined" && (sessionId || activated === "1")) {
         const url = new URL(window.location.href);
+        let dirty = false;
+        if (url.searchParams.has("session_id")) {
+          url.searchParams.delete("session_id");
+          dirty = true;
+        }
         if (url.searchParams.has("activated")) {
           url.searchParams.delete("activated");
+          dirty = true;
+        }
+        if (dirty) {
           window.history.replaceState({}, "", url.pathname + url.search);
         }
       }
-    }
-    // Drop session_id from the URL after the first status sync so refreshes
-    // cannot re-apply an old Checkout session over a newer subscription.
-    if (sessionId && typeof window !== "undefined") {
-      const url = new URL(window.location.href);
-      if (url.searchParams.has("session_id")) {
-        url.searchParams.delete("session_id");
-        window.history.replaceState({}, "", url.pathname + url.search);
-      }
-    }
-  }, [refresh, checkout, sessionId, activated]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh, checkout, sessionId, activated, toast]);
 
   useEffect(() => {
     return () => {
@@ -168,27 +204,33 @@ function BillingPageInner() {
         body: JSON.stringify({ plan, source: "billing_page" }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        if (data.code === "use_portal") {
-          setMsg(data.error ?? "Open Manage billing to update your card.");
-          return;
-        }
-        setMsg(data.error ?? "Checkout unavailable");
+      const notice = checkoutStartNotice({
+        ok: res.ok,
+        error:
+          data.error ??
+          (data.code === "use_portal"
+            ? "Open Manage billing to update your card."
+            : null),
+        url: data.url,
+      });
+      if (notice) {
+        setMsg(notice.message);
+        toast(notice.message, "error");
         return;
       }
-      if (data.url) {
-        const money = metaMoneyFromPlanPrice(
-          status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-        );
-        trackMetaEvent("InitiateCheckout", {
-          ...money,
-          content_name: plan,
-          content_category: "subscription",
-        });
-        window.location.href = data.url;
-      }
+      const money = metaMoneyFromPlanPrice(
+        status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
+      );
+      trackMetaEvent("InitiateCheckout", {
+        ...money,
+        content_name: plan,
+        content_category: "subscription",
+      });
+      window.location.href = data.url;
     } catch {
-      setMsg("Could not start checkout.");
+      const message = "Could not start checkout.";
+      setMsg(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }

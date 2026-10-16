@@ -820,6 +820,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] The home preloader no longer sticks at 0% when the early head scripts hydrate
 - [internal] Hero Edit no longer trips a hydration error from the footer email field or a rewritten head script
 - [internal] Hero Edit opens the section drawer again (the editor was calling a draft hook that was not imported)
+- Checkout tells you when payment succeeds, is still confirming, fails, or is canceled, including a toast so the page does not look stuck
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

@@ -1,8 +1,13 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AuthError, AuthSuccess, AuthLink } from "@/app/components/AuthShell";
+import { useToast } from "@/app/components/Toast";
+import {
+  checkoutReturnNotice,
+  checkoutStartNotice,
+} from "@/lib/checkout-feedback";
 import { HelpChatLink } from "@/app/components/HelpChatWidget";
 import { OnboardingShell } from "@/app/components/onboarding/OnboardingShell";
 import {
@@ -42,6 +47,7 @@ const FREE_MINUTES = Math.floor(TRIAL_BLS_SECONDS / 60);
 
 function OnboardingFlow() {
   const router = useRouter();
+  const { toast } = useToast();
   const params = useSearchParams();
   const checkout = params.get("checkout");
   const sessionId = params.get("session_id");
@@ -60,6 +66,7 @@ function OnboardingFlow() {
   const [success, setSuccess] = useState("");
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const announcedCheckout = useRef<string | null>(null);
 
   useEffect(() => {
     if (step !== "tutorial" || typeof window === "undefined") return;
@@ -97,10 +104,38 @@ function OnboardingFlow() {
         let data = await refreshStatus();
         if (cancelled) return;
 
+        const announceReturn = (snap: BillingStatus) => {
+          if (checkout !== "success" && checkout !== "canceled") return null;
+          const notice = checkoutReturnNotice({
+            checkout,
+            status: snap.status,
+            canUseApp: snap.canUseApp,
+          });
+          if (!notice) return null;
+          const key = `${checkout}:${notice.message}`;
+          if (announcedCheckout.current === key) return notice;
+          announcedCheckout.current = key;
+          toast(notice.message, notice.kind);
+          if (notice.kind === "success") {
+            setSuccess(notice.message);
+            setError("");
+          } else {
+            setError(notice.message);
+            setSuccess("");
+          }
+          return notice;
+        };
+
+        // Say what happened before the confirm loop. A redirect or a search
+        // param update must not leave the return silent.
+        let returnNotice = announceReturn(data);
+
         if (checkout === "success" && !data.canUseApp) {
           for (let i = 0; i < 4 && !cancelled && !data.canUseApp; i++) {
             await new Promise((r) => setTimeout(r, 1200));
+            if (cancelled) break;
             data = await refreshStatus();
+            returnNotice = announceReturn(data) ?? returnNotice;
           }
         }
         if (cancelled) return;
@@ -131,17 +166,13 @@ function OnboardingFlow() {
 
         if (checkout === "success" && !data.canUseApp) {
           nextStep = "plan";
-          setError(
-            "Payment is still confirming. Wait a moment, then refresh — or pick a plan if checkout did not finish."
-          );
         } else if (data.canUseApp) {
           if (data.onboardingCompletedAt && checkout !== "success") {
             router.replace(APP_BASE);
             redirectAway = true;
           } else {
             nextStep = "tutorial";
-            if (checkout === "success") {
-              setSuccess("Payment method saved. Your trial is ready.");
+            if (checkout === "success" && returnNotice?.kind === "success") {
               const money = metaMoneyFromPlanPrice(
                 data.plans?.[data.plan as BillingPlanId]?.displayPrice
               );
@@ -158,7 +189,6 @@ function OnboardingFlow() {
           }
         } else if (checkout === "canceled") {
           nextStep = "plan";
-          setError("Checkout canceled. Choose a plan when you’re ready.");
         } else if (!data.needsOnboarding && data.needsPayment) {
           router.replace(`${APP_BASE}/billing`);
           redirectAway = true;
@@ -201,7 +231,7 @@ function OnboardingFlow() {
     return () => {
       cancelled = true;
     };
-  }, [checkout, refreshStatus, registered, router, sessionId]);
+  }, [checkout, refreshStatus, registered, router, sessionId, toast]);
 
   const confirmAge = async () => {
     if (!ageConfirmed || busy) return;
@@ -236,25 +266,29 @@ function OnboardingFlow() {
         body: JSON.stringify({ plan, source: "onboarding" }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Checkout unavailable");
+      const notice = checkoutStartNotice({
+        ok: res.ok,
+        error: data.error,
+        url: data.url,
+      });
+      if (notice) {
+        setError(notice.message);
+        toast(notice.message, "error");
         return;
       }
-      if (data.url) {
-        const money = metaMoneyFromPlanPrice(
-          status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-        );
-        trackMetaEvent("InitiateCheckout", {
-          ...money,
-          content_name: plan,
-          content_category: "subscription",
-        });
-        window.location.href = data.url;
-        return;
-      }
-      setError("Checkout unavailable");
+      const money = metaMoneyFromPlanPrice(
+        status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
+      );
+      trackMetaEvent("InitiateCheckout", {
+        ...money,
+        content_name: plan,
+        content_category: "subscription",
+      });
+      window.location.href = data.url;
     } catch {
-      setError("Could not start checkout.");
+      const message = "Could not start checkout.";
+      setError(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }
@@ -382,7 +416,7 @@ function OnboardingFlow() {
       }
     >
       {error && <AuthError message={error} />}
-      {step === "plan" && success ? <AuthSuccess message={success} /> : null}
+      {success ? <AuthSuccess message={success} /> : null}
 
       {step === "age" && (
         <div className="ob-age-step">

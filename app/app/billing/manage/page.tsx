@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   BILLING_PLANS,
@@ -17,6 +17,7 @@ import {
   manageBillingFarewellCopy,
   manageBillingResumeToast,
 } from "@/lib/billing-manage-copy";
+import { useToast } from "@/app/components/Toast";
 
 type ManageState = {
   plan: string;
@@ -49,6 +50,7 @@ function formatShortDate(iso: string | null): string | null {
 
 function ManageBillingInner() {
   const router = useRouter();
+  const { toast } = useToast();
   const params = useSearchParams();
   const setup = params.get("setup");
   const sessionId = params.get("session_id");
@@ -66,6 +68,7 @@ function ManageBillingInner() {
     comment: string;
   } | null>(null);
   const [surveyError, setSurveyError] = useState<string | null>(null);
+  const announcedSetup = useRef<string | null>(null);
 
   const closeSurvey = () => {
     if (busy) return;
@@ -101,11 +104,18 @@ function ManageBillingInner() {
 
   useEffect(() => {
     if (setup === "canceled") {
-      setMsg("Card update canceled.");
+      if (announcedSetup.current !== "canceled") {
+        announcedSetup.current = "canceled";
+        const message = "Card update canceled.";
+        setMsg(message);
+        toast(message, "info");
+      }
       router.replace("/app/billing/manage");
       return;
     }
     if (setup !== "success" || !sessionId) return;
+    if (announcedSetup.current === sessionId) return;
+    announcedSetup.current = sessionId;
 
     void (async () => {
       setBusy(true);
@@ -118,19 +128,25 @@ function ManageBillingInner() {
         });
         const body = await res.json();
         if (!res.ok) {
-          setErr(body.error ?? "Could not save card");
+          const message = body.error ?? "Could not save card";
+          setErr(message);
+          toast(message, "error");
           return;
         }
         if (body.manage) setData((prev) => ({ ...prev!, ...body.manage }));
-        setMsg("Payment method updated.");
+        const saved = "Payment method updated.";
+        setMsg(saved);
+        toast(saved);
       } catch {
-        setErr("Could not save card.");
+        const message = "Could not save card.";
+        setErr(message);
+        toast(message, "error");
       } finally {
         setBusy(false);
         router.replace("/app/billing/manage");
       }
     })();
-  }, [setup, sessionId, router]);
+  }, [setup, sessionId, router, toast]);
 
   const run = async (
     path: string,
@@ -224,12 +240,22 @@ function ManageBillingInner() {
       });
       const json = await res.json();
       if (!res.ok) {
-        setErr(json.error ?? "Could not start card update");
+        const message = json.error ?? "Could not start card update";
+        setErr(message);
+        toast(message, "error");
         return;
       }
-      if (json.url) window.location.href = json.url;
+      if (json.url) {
+        window.location.href = json.url;
+        return;
+      }
+      const message = "Card update did not start. Try again.";
+      setErr(message);
+      toast(message, "error");
     } catch {
-      setErr("Could not start card update.");
+      const message = "Could not start card update.";
+      setErr(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }
