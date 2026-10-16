@@ -8,13 +8,26 @@ import { LetterRevealHeading } from "@/app/components/frontend/LetterRevealHeadi
 import { KnowledgeSeriesBlock } from "@/app/components/frontend/KnowledgeSeriesBlock";
 import {
   KNOWLEDGE_HERO,
-  KNOWLEDGE_INTRO,
-  KNOWLEDGE_MORE_LINKS,
   KNOWLEDGE_SERIES,
 } from "@/lib/knowledge-clips";
+import { sectionList, sectionText } from "@/lib/marketing-sections";
+import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./knowledge.css";
 
 export function KnowledgeHub() {
+  const heroCopy = useSectionConfig("knowledge-hero");
+  const seriesCopy = useSectionConfig("knowledge-series");
+  const moreCopy = useSectionConfig("knowledge-more");
+  const seriesHeadings = sectionList(seriesCopy, "series");
+  const seriesList = KNOWLEDGE_SERIES.map((series) => {
+    const saved = seriesHeadings.find((row) => row.id === series.id);
+    return {
+      ...series,
+      title: saved?.title || series.title,
+      role: saved?.role || series.role,
+    };
+  });
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [heroPlaying, setHeroPlaying] = useState(false);
   const [heroStarted, setHeroStarted] = useState(false);
@@ -45,9 +58,11 @@ export function KnowledgeHub() {
   return (
     <div className="fe-knowledge">
       <section
-        className="fe-knowledge-hero"
+        className="fe-knowledge-hero fe-has-edit"
+        data-section="knowledge-hero"
         aria-labelledby="fe-knowledge-hero-title"
       >
+        <SectionEdit id="knowledge-hero" lift />
         <div
           className={`fe-knowledge-hero-media${heroPlaying ? " is-playing" : ""}`}
         >
@@ -106,35 +121,38 @@ export function KnowledgeHub() {
               id="fe-knowledge-hero-title"
               className="fe-knowledge-hero-title"
             >
-              {KNOWLEDGE_HERO.title}
+              {sectionText(heroCopy, "title")}
             </h1>
-            <p className="fe-knowledge-hero-lead">{KNOWLEDGE_HERO.lead}</p>
+            <p className="fe-knowledge-hero-lead">{sectionText(heroCopy, "lead")}</p>
           </div>
         </div>
       </section>
 
-      <p className="fe-knowledge-intro">{KNOWLEDGE_INTRO}</p>
+      <p className="fe-knowledge-intro">{sectionText(heroCopy, "intro")}</p>
 
-      <div className="fe-knowledge-body">
-        {KNOWLEDGE_SERIES.map((series) => (
+      <div className="fe-knowledge-body fe-has-edit" data-section="knowledge-series">
+        <SectionEdit id="knowledge-series" />
+        {seriesList.map((series) => (
           <KnowledgeSeriesBlock key={series.id} series={series} />
         ))}
 
         <section
-          className="fe-knowledge-more"
+          className="fe-knowledge-more fe-has-edit"
+          data-section="knowledge-more"
           aria-labelledby="fe-knowledge-more-title"
         >
-          <p className="fe-section-kicker">Keep going</p>
+          <SectionEdit id="knowledge-more" />
+          <p className="fe-section-kicker">{sectionText(moreCopy, "kicker")}</p>
           <LetterRevealHeading
             id="fe-knowledge-more-title"
             className="fe-knowledge-more-title"
           >
-            Guides beside the clips
+            {sectionText(moreCopy, "title")}
           </LetterRevealHeading>
           <ul className="fe-knowledge-more-list">
-            {KNOWLEDGE_MORE_LINKS.map((item) => (
+            {sectionList(moreCopy, "links").map((item) => (
               <li key={item.href}>
-                <Link href={item.href} className="fe-knowledge-more-link">
+                <Link href={item.href ?? "/"} className="fe-knowledge-more-link">
                   <span className="fe-knowledge-more-label">{item.label}</span>
                   <span className="fe-knowledge-more-dek">{item.dek}</span>
                 </Link>

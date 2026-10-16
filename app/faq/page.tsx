@@ -2,7 +2,8 @@ import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { FaqPageView } from "@/app/components/frontend/FaqPageView";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { getPublicAppUrl } from "@/lib/platform-settings";
-import { PUBLIC_FAQ_ITEMS } from "@/lib/public-faq";
+import { faqPairs } from "@/lib/marketing-sections";
+import { loadMarketingCopy } from "@/lib/marketing-sections-db";
 import { buildPublicFaqJsonLd } from "@/lib/seo-jsonld";
 import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
 import { siteOrigin } from "@/lib/site-seo";
@@ -22,10 +23,11 @@ export default async function FaqPage() {
     publicUrl = undefined;
   }
   const origin = siteOrigin(publicUrl);
+  const copy = await loadMarketingCopy();
 
   return (
     <FrontendShell>
-      <JsonLd data={buildPublicFaqJsonLd(origin, [...PUBLIC_FAQ_ITEMS])} />
+      <JsonLd data={buildPublicFaqJsonLd(origin, faqPairs(copy["faq-page"]))} />
       <FaqPageView />
     </FrontendShell>
   );

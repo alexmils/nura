@@ -15,86 +15,69 @@ import {
   Sparkles,
 } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
-import { appPath, LOGIN_PATH } from "@/lib/app-base";
-import { BILLING_PLANS, TRIAL_DAYS } from "@/lib/billing-constants";
+import { appPath } from "@/lib/app-base";
+import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-constants";
 import { KNOWLEDGE_HERO } from "@/lib/knowledge-clips";
-import { PRICING_FAQ_ITEMS } from "@/lib/pricing-faq";
-import { MARKETING_PRICING_CARDS } from "@/app/components/frontend/marketingPricingCards";
+import {
+  linesOf,
+  sectionList,
+  sectionText,
+} from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { RichInline } from "./section-editor/RichText";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./pricing-page.css";
 
-const FEATURES = [
-  {
-    id: "guided",
-    title: "AI agent-guided sessions",
-    label: "Phases + check-ins",
-    icon: MessageSquare,
-    wide: true,
-  },
-  {
-    id: "free",
-    title: "Self-guided visual sets",
-    label: "Run sets yourself",
-    icon: Sparkles,
-    wide: false,
-  },
-  {
-    id: "voice",
-    title: "Optional voice",
-    label: "Hands-free replies",
-    icon: Headphones,
-    wide: false,
-  },
-  {
-    id: "controls",
-    title: "Session controls",
-    label: "Speed, sound, repeats",
-    icon: SlidersHorizontal,
-    wide: false,
-  },
-  {
-    id: "library",
-    title: "Resources library",
-    label: "Guides in the app",
-    icon: Library,
-    wide: false,
-  },
-  {
-    id: "limits",
-    title: "Honest limits",
-    label: "Not therapy or crisis care",
-    icon: Shield,
-    wide: true,
-  },
-] as const;
+const FEATURE_ICONS = {
+  guided: MessageSquare,
+  free: Sparkles,
+  voice: Headphones,
+  controls: SlidersHorizontal,
+  library: Library,
+  limits: Shield,
+} as const;
+
+const FEATURE_WIDE = new Set(["guided", "limits"]);
 
 export function PricingPageView() {
+  const plans = useSectionConfig("pricing-plans");
+  const cardCopy = useSectionConfig("pricing-cards");
+  const included = useSectionConfig("pricing-included");
+  const faq = useSectionConfig("pricing-faq");
+  const close = useSectionConfig("pricing-cta");
+  const cards = sectionList(cardCopy, "cards").flatMap((card) => {
+    const id = card.id as BillingPlanId;
+    if (!BILLING_PLANS[id]) return [];
+    return [{ ...card, id, features: linesOf(card.features ?? ""), featured: id === "yearly" }];
+  });
   const [openFaq, setOpenFaq] = useState(0);
 
   return (
     <div className="fe-pricing-page">
       <section
-        className="fe-pricing-section fe-pricing-section--page"
+        className="fe-pricing-section fe-pricing-section--page fe-has-edit"
         id="plans"
+        data-section="pricing-plans"
         aria-labelledby="fe-pricing-page-title"
       >
+        <SectionEdit id="pricing-plans" lift />
         <div className="fe-container">
           <div className="fe-pricing-head">
             <h1 id="fe-pricing-page-title" className="fe-pricing-title">
-              Plans tailored to your pace
+              {sectionText(plans, "title")}
             </h1>
             <p className="fe-pricing-sub">
-              {TRIAL_DAYS}-day trial. Same full app on every plan — pick how
-              often you pay.
+              {sectionText(plans, "sub")}
             </p>
           </div>
 
           <div className="fe-pricing-grid">
-            {MARKETING_PRICING_CARDS.map((card) => {
+            {cards.map((card) => {
               const plan = BILLING_PLANS[card.id];
-              const featured = Boolean(card.featured);
+              const featured = card.featured;
               return (
                 <article
                   key={card.id}
@@ -128,10 +111,10 @@ export function PricingPageView() {
                     href={appPath("/create-account")}
                     className={`fe-price-card-cta${featured ? " fe-price-card-cta--accent" : ""}`}
                   >
-                    Get started
+                    {sectionText(cardCopy, "cta")}
                     <ArrowRight size={16} aria-hidden />
                   </Link>
-                  <p className="fe-price-card-features-label">Includes</p>
+                  <p className="fe-price-card-features-label">{sectionText(plans, "featuresLabel")}</p>
                   <ul className="fe-price-card-features">
                     {card.features.map((f) => (
                       <li key={f}>
@@ -153,27 +136,30 @@ export function PricingPageView() {
       </section>
 
       <section
-        className="fe-pricing-features"
+        className="fe-pricing-features fe-has-edit"
+        data-section="pricing-included"
         aria-labelledby="fe-pricing-features-title"
       >
+        <SectionEdit id="pricing-included" />
         <div className="fe-container">
           <header className="fe-pricing-features-head">
-            <p className="fe-section-kicker">Included</p>
+            <p className="fe-section-kicker">{sectionText(included, "kicker")}</p>
             <h2
               id="fe-pricing-features-title"
               className="fe-pricing-features-title"
             >
-              Same product. Every plan.
+              {sectionText(included, "title")}
             </h2>
           </header>
 
           <div className="fe-pricing-bento">
-            {FEATURES.map((feature) => {
-              const Icon = feature.icon;
+            {sectionList(included, "items").map((feature) => {
+              const Icon = FEATURE_ICONS[feature.id as keyof typeof FEATURE_ICONS] ?? Sparkles;
+              const wide = FEATURE_WIDE.has(feature.id ?? "");
               return (
                 <article
-                  key={feature.id}
-                  className={`fe-pricing-bento-card${feature.wide ? " fe-pricing-bento-card--wide" : ""}`}
+                  key={feature.id || feature.title}
+                  className={`fe-pricing-bento-card${wide ? " fe-pricing-bento-card--wide" : ""}`}
                 >
                   <span className="fe-pricing-bento-icon" aria-hidden>
                     <Icon size={22} strokeWidth={1.5} />
@@ -188,22 +174,24 @@ export function PricingPageView() {
       </section>
 
       <section
-        className="fe-faq fe-pricing-faq"
+        className="fe-faq fe-pricing-faq fe-has-edit"
         id="pricing-faq"
+        data-section="pricing-faq"
         aria-labelledby="fe-pricing-faq-title"
       >
+        <SectionEdit id="pricing-faq" />
         <div className="fe-container">
           <div className="fe-faq-head">
-            <p className="fe-section-kicker">FAQ</p>
+            <p className="fe-section-kicker">{sectionText(faq, "kicker")}</p>
             <h2 id="fe-pricing-faq-title" className="fe-faq-title">
-              Billing questions
+              {sectionText(faq, "title")}
             </h2>
             <p className="fe-faq-sub">
-              Trial, plans, and cancel — short answers.
+              {sectionText(faq, "sub")}
             </p>
           </div>
           <div className="fe-faq-list">
-            {PRICING_FAQ_ITEMS.map((item, i) => {
+            {sectionList(faq, "items").map((item, i) => {
               const isOpen = openFaq === i;
               const answerId = `fe-pricing-faq-a-${i}`;
               return (
@@ -249,7 +237,8 @@ export function PricingPageView() {
         </div>
       </section>
 
-      <section className="fe-pricing-cta" aria-label="Get started">
+      <section className="fe-pricing-cta fe-has-edit" data-section="pricing-cta" aria-label="Get started">
+        <SectionEdit id="pricing-cta" />
         <div className="fe-container">
           <div className="fe-pricing-cta-stage">
             <video
@@ -269,21 +258,18 @@ export function PricingPageView() {
                 <BrandLockup tone="white" href={null} />
               </div>
               <LetterRevealHeading className="fe-pricing-cta-title">
-                Your healing starts here.
+                {sectionText(close, "title")}
               </LetterRevealHeading>
               <div className="fe-pricing-cta-actions">
                 <Link
-                  href={appPath("/create-account")}
+                  href={sectionText(close, "ctaHref")}
                   className="fe-pricing-cta-btn"
                 >
-                  Get started
+                  {sectionText(close, "cta")}
                 </Link>
               </div>
               <p className="fe-pricing-cta-note">
-                {TRIAL_DAYS}-day trial.{" "}
-                <Link href={LOGIN_PATH}>Sign in</Link>
-                {" · "}
-                <Link href="/limits">Read the limits</Link>
+                <RichInline text={sectionText(close, "note")} />
               </p>
             </div>
           </div>

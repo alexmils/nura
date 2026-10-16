@@ -12,8 +12,11 @@ import {
   NoColdStartDemo,
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
+import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SessionLoopKit } from "./SessionLoopKit";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "./session-path-sticky.css";
 
 type StageId = "ground" | "rhythm" | "checkin" | "close";
@@ -27,57 +30,6 @@ type Stage = {
   line: string;
   mediaLabel: string;
 };
-
-const STAGES: Stage[] = [
-  {
-    id: "ground",
-    nav: "Ground first",
-    // Attio right ≠ left nav (“Your team, amplified.” vs “Build pipeline”)
-    lead: "From ground to close — one calm loop.",
-    line: "Intake, feet on the floor, a calm place — no set starts cold. You settle first, then the session opens at your pace, not the clock’s.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "rhythm",
-    nav: "Choose your rhythm",
-    lead: "Eyes, ears, or hands — same rhythm.",
-    line: "Pick how you feel the left–right pulse — visual sets, stereo cues, or a gamepad — one calm loop, three ways in.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "checkin",
-    nav: "Check in",
-    lead: "Pause after each set.",
-    line: "SUD and a body scan with the agent — name what shifted, then decide if another set belongs here or if you stop.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "close",
-    nav: "Close gently",
-    lead: "End when you’re ready.",
-    line: "Closure and grounding out — you leave with both feet on the floor, not mid-set. Enough is enough when you say so.",
-    mediaLabel: "Image or video",
-  },
-];
-
-const RHYTHM_CARDS = [
-  { label: "Eyes", hint: "Visual sets" },
-  { label: "Ears", hint: "Audio cues" },
-  { label: "Hands", hint: "Gamepad" },
-] as const;
-
-const GROUND_PAIR = [
-  {
-    id: "safe" as const,
-    title: "Safe place first.",
-    line: "Feet on the floor before anything heavy.",
-  },
-  {
-    id: "cold" as const,
-    title: "No cold starts.",
-    line: "Intake and breath, then the set.",
-  },
-] as const;
 
 function MediaPlaceholder({
   label,
@@ -132,6 +84,16 @@ function centerChipInNav(list: HTMLUListElement | null, id: StageId) {
 
 /** Attio-style sticky path: intro above, then sticky nav | scrolling stages. */
 export function SessionPathSticky() {
+  const copy = useSectionConfig("home-how");
+  const stages: Stage[] = sectionList(copy, "stages").map((stage) => ({
+    id: (stage.id || "ground") as StageId,
+    nav: stage.nav,
+    lead: stage.lead,
+    line: stage.line,
+    mediaLabel: "Image or video",
+  }));
+  const rhythm = sectionList(copy, "rhythm");
+  const ground = sectionList(copy, "ground");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
@@ -156,7 +118,7 @@ export function SessionPathSticky() {
     if (!sentinels.length) return;
 
     const marker = window.innerHeight * 0.5;
-    let next: StageId = STAGES[0]!.id;
+    let next: StageId = "ground";
     let best = Number.POSITIVE_INFINITY;
 
     sentinels.forEach((el) => {
@@ -265,20 +227,22 @@ export function SessionPathSticky() {
     <section
       ref={rootRef}
       id="how-it-works"
-      className="fe-spath"
+      className="fe-spath fe-has-edit"
+      data-section="home-how"
       aria-labelledby={`${baseId}-heading`}
     >
+      <SectionEdit id="home-how" />
       <div className="fe-container fe-spath-intro">
-        <p className="fe-spath-badge">How it works</p>
+        <p className="fe-spath-badge">{sectionText(copy, "badge")}</p>
         <h2 id={`${baseId}-heading`} className="fe-spath-intro-title">
           <span className="fe-spath-intro-fade fe-spath-intro-fade--1">
-            Ground first. Choose your rhythm. Check in after each set.{" "}
+            {sectionText(copy, "intro1")}{" "}
           </span>
           <span className="fe-spath-intro-fade fe-spath-intro-fade--2">
-            Close gently when it’s enough — then Free between sessions.{" "}
+            {sectionText(copy, "intro2")}{" "}
           </span>
           <span className="fe-spath-intro-fade fe-spath-intro-fade--3">
-            One calm loop in the app. No rush. No cold starts.
+            {sectionText(copy, "intro3")}
           </span>
         </h2>
       </div>
@@ -287,7 +251,7 @@ export function SessionPathSticky() {
         <div className="fe-container fe-spath-track">
           <nav className="fe-spath-nav" aria-label="Session stages">
             <ul ref={navListRef} className="fe-spath-nav-list">
-              {STAGES.map((stage) => {
+              {stages.map((stage) => {
                 const isActive = active === stage.id;
                 return (
                   <li key={stage.id}>
@@ -312,7 +276,7 @@ export function SessionPathSticky() {
 
           <div className="fe-spath-stage-scroll">
             <div className="fe-spath-sentinels" aria-hidden>
-              {STAGES.map((stage) => (
+              {stages.map((stage) => (
                 <div
                   key={stage.id}
                   id={`session-path-${stage.id}`}
@@ -322,7 +286,7 @@ export function SessionPathSticky() {
               ))}
             </div>
           <div className="fe-spath-panels">
-            {STAGES.map((stage) => (
+            {stages.map((stage) => (
               <article
                 key={stage.id}
                 data-spath-panel={stage.id}
@@ -359,7 +323,7 @@ export function SessionPathSticky() {
                   {stage.id === "rhythm" ? (
                     <div className="fe-spath-rhythm">
                       <ul className="fe-spath-rhythm-grid">
-                        {RHYTHM_CARDS.map((card) => (
+                        {rhythm.map((card) => (
                           <li key={card.label} className="fe-spath-rhythm-card">
                             <span className="fe-spath-rhythm-icon" aria-hidden />
                             {active === "rhythm" ? (
@@ -393,7 +357,7 @@ export function SessionPathSticky() {
                         {active === "ground" ? <ModePickDemo /> : null}
                       </div>
                       <ul className="fe-spath-pair" data-spath-pair>
-                        {GROUND_PAIR.map((card) => (
+                        {ground.map((card) => (
                           <li
                             key={card.id}
                             className={

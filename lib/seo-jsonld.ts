@@ -528,7 +528,10 @@ export const SUPPORT_JSON_LD = {
     "Get help with your Nura account, billing, sessions, or data. How to reach us and what to include so we can fix it fast.",
 } as const;
 
-export function buildPricingJsonLd(origin: string) {
+export function buildPricingJsonLd(
+  origin: string,
+  faqItems?: readonly { q: string; a: string }[]
+) {
   const base = origin.replace(/\/$/, "");
   const plans = orderedBillingPlans(BILLING_PLANS);
   const offerNodes = plans.map((plan, i) => ({
@@ -584,7 +587,7 @@ export function buildPricingJsonLd(origin: string) {
         },
       },
       ...offerNodes,
-      faqPageJsonLd([...PRICING_FAQ_ITEMS]),
+      faqPageJsonLd([...(faqItems ?? PRICING_FAQ_ITEMS)]),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
         { name: "Pricing", path: "/pricing" },

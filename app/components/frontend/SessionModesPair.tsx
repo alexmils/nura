@@ -2,42 +2,43 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
-import {
-  SESSION_MODE_GUIDED_LABEL,
-  SESSION_MODE_SELF_LABEL,
-} from "@/lib/brand";
+import { sectionText } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "./session-modes-pair.css";
 
 type ModeId = "guided" | "free";
 
 type ModeSlide = {
   id: ModeId;
-  label: string;
   videoSrc: string;
   poster: string;
 };
 
-const MODES: ModeSlide[] = [
+const MODES: Omit<ModeSlide, "label">[] = [
   {
     id: "guided",
-    label: SESSION_MODE_GUIDED_LABEL,
     videoSrc: "/marketing/knowledge/stock-a.mp4",
     poster: "/marketing/landing/support-talk.jpg",
   },
   {
     id: "free",
-    label: SESSION_MODE_SELF_LABEL,
     videoSrc: "/marketing/knowledge/stock-c.mp4",
     poster: "/marketing/landing/practice-space.jpg",
   },
 ];
 
 export function SessionModesPair() {
+  const copy = useSectionConfig("home-modes");
+  const modes = MODES.map((mode) => ({
+    ...mode,
+    label: mode.id === "guided" ? sectionText(copy, "guided") : sectionText(copy, "self"),
+  }));
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [active, setActive] = useState<ModeId>("guided");
   const [playing, setPlaying] = useState(false);
-  const slide = MODES.find((m) => m.id === active) ?? MODES[0];
+  const slide = modes.find((m) => m.id === active) ?? modes[0];
 
   const selectMode = useCallback((id: ModeId) => {
     setPlaying(false);
@@ -70,14 +71,15 @@ export function SessionModesPair() {
   }, []);
 
   return (
-    <section className="fe-modes" aria-labelledby="fe-modes-title">
+    <section className="fe-modes fe-has-edit" data-section="home-modes" aria-labelledby="fe-modes-title">
+      <SectionEdit id="home-modes" />
       <div className="fe-container fe-modes-frame">
         <LetterRevealHeading id="fe-modes-title" className="fe-modes-title">
-          One app, two seamless experiences.
+          {sectionText(copy, "title")}
         </LetterRevealHeading>
         <div className="fe-modes-board fe-animate">
           <div className="fe-modes-tabs" role="tablist" aria-label="Session modes">
-            {MODES.map((mode) => {
+            {modes.map((mode) => {
               const selected = mode.id === active;
               return (
                 <button
@@ -99,10 +101,10 @@ export function SessionModesPair() {
                     event.preventDefault();
                     const next =
                       event.key === "ArrowRight"
-                        ? MODES[(MODES.findIndex((m) => m.id === active) + 1) % MODES.length]
-                        : MODES[
-                            (MODES.findIndex((m) => m.id === active) + MODES.length - 1) %
-                              MODES.length
+                        ? modes[(modes.findIndex((m) => m.id === active) + 1) % modes.length]
+                        : modes[
+                            (modes.findIndex((m) => m.id === active) + modes.length - 1) %
+                              modes.length
                           ];
                     selectMode(next.id);
                     requestAnimationFrame(() => {

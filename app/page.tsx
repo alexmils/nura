@@ -3,6 +3,8 @@ import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { getLandingBlogPosts } from "@/lib/landing-blog-server";
 import { buildHomeJsonLd } from "@/lib/json-ld";
+import { faqPairs } from "@/lib/marketing-sections";
+import { loadMarketingCopy } from "@/lib/marketing-sections-db";
 import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
 import type { Metadata } from "next";
 
@@ -13,11 +15,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const blogPosts = await getLandingBlogPosts(20);
+  const [blogPosts, copy] = await Promise.all([
+    getLandingBlogPosts(20),
+    loadMarketingCopy(),
+  ]);
 
   return (
     <FrontendShell wide>
-      <JsonLd data={buildHomeJsonLd()} />
+      <JsonLd data={buildHomeJsonLd(undefined, faqPairs(copy["home-faq"]))} />
       <HomeLanding blogPosts={blogPosts} />
     </FrontendShell>
   );

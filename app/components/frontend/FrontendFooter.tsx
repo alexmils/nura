@@ -16,49 +16,22 @@ import {
   TurnstileField,
   type TurnstileFieldHandle,
 } from "@/app/components/TurnstileField";
-import { appPath, LOGIN_PATH } from "@/lib/app-base";
-import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
-import { TRIAL_DAYS } from "@/lib/billing-constants";
 import { TURNSTILE_TOKEN_FIELD } from "@/lib/turnstile-shared";
+import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
+import { sectionList, sectionText, parseLinkLines } from "@/lib/marketing-sections";
+import { RichInline } from "@/app/components/frontend/section-editor/RichText";
+import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./frontend-footer.css";
-
-const FOOTER_COLS = [
-  {
-    title: "Explore",
-    links: [
-      { href: "/blog", label: "Blog" },
-      { href: "/learn", label: "Learn" },
-      { href: "/knowledge", label: "Knowledge" },
-      { href: "/changelog", label: "What's new" },
-    ],
-  },
-  {
-    title: "Product",
-    links: [
-      { href: "/pricing", label: "Pricing" },
-      { href: "/faq", label: "FAQ" },
-      { href: "/support", label: "Support" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { href: "/about", label: "About" },
-      { href: "/safety", label: "Safety" },
-      { href: "/limits", label: "Limits" },
-    ],
-  },
-] as const;
-
-const FOOTER_LEGAL = [
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-] as const;
 
 /** Giant white lockup for Lassie-style end reveal (vector — crisp at any size). */
 const FOOTER_REVEAL_LOGO = "/brand/Nura%20Logo.svg";
 
 export function FrontendFooter() {
+  const cta = useSectionConfig("footer-cta");
+  const links = useSectionConfig("footer-links");
+  const columns = sectionList(links, "columns");
+  const legal = sectionList(links, "legal");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [note, setNote] = useState("");
@@ -134,32 +107,32 @@ export function FrontendFooter() {
         />
 
         <div className="fe-site-footer-inner">
-          <div className="fe-site-footer-cta">
+          <div className="fe-site-footer-cta fe-has-edit" data-section="footer-cta">
+            <SectionEdit id="footer-cta" />
             <LetterRevealHeading className="fe-site-footer-cta-title">
-              Support that stays calm — start when you are ready
+              {sectionText(cta, "title")}
             </LetterRevealHeading>
             <p className="fe-site-footer-cta-sub">
-              Built for practice between sessions. Create an account for a{" "}
-              {TRIAL_DAYS}-day trial, or sign in if you already use {BRAND_SPOKEN}
-              .
+              {sectionText(cta, "sub")}
             </p>
             <div className="fe-site-footer-cta-actions">
               <Link
-                href={appPath("/create-account")}
+                href={sectionText(cta, "primaryHref")}
                 className="fe-site-footer-cta-btn fe-site-footer-cta-btn--primary"
               >
-                Get started
+                {sectionText(cta, "primary")}
               </Link>
               <Link
-                href={LOGIN_PATH}
+                href={sectionText(cta, "secondaryHref")}
                 className="fe-site-footer-cta-btn fe-site-footer-cta-btn--ghost"
               >
-                Sign in
+                {sectionText(cta, "secondary")}
               </Link>
             </div>
           </div>
 
-          <div className="fe-site-footer-grid">
+          <div className="fe-site-footer-grid fe-has-edit" data-section="footer-links">
+            <SectionEdit id="footer-links" />
             <div className="fe-site-footer-brand">
               <BrandLockup
                 href="/"
@@ -167,7 +140,7 @@ export function FrontendFooter() {
                 className="fe-site-footer-logo"
               />
               <p className="fe-site-footer-tagline">
-                Join {BRAND_SPOKEN} today — calm guided support when you need it.
+                {sectionText(links, "tagline")}
               </p>
               <div className="fe-site-footer-social" aria-label="Social">
                 <BrandSocialLinks
@@ -179,11 +152,11 @@ export function FrontendFooter() {
             </div>
 
             <nav className="fe-site-footer-cols" aria-label="Footer">
-              {FOOTER_COLS.map((col) => (
+              {columns.map((col) => (
                 <div key={col.title} className="fe-site-footer-col">
                   <p className="fe-site-footer-col-title">{col.title}</p>
                   <ul className="fe-site-footer-col-list">
-                    {col.links.map((l) => (
+                    {parseLinkLines(col.links ?? "").map((l) => (
                       <li key={l.href}>
                         <Link href={l.href}>{l.label}</Link>
                       </li>
@@ -194,12 +167,12 @@ export function FrontendFooter() {
             </nav>
 
             <div className="fe-site-footer-newsletter">
-              <p className="fe-site-footer-newsletter-title">Newsletter</p>
+              <p className="fe-site-footer-newsletter-title">{sectionText(links, "newsTitle")}</p>
               <p className="fe-site-footer-newsletter-hint">
-                Product news by email. Not an account.
+                {sectionText(links, "newsHint")}
               </p>
               {sent ? (
-                <p className="fe-site-footer-newsletter-done">Thanks.</p>
+                <p className="fe-site-footer-newsletter-done">{sectionText(links, "newsThanks")}</p>
               ) : (
                 <form
                   className="fe-site-footer-form"
@@ -215,7 +188,7 @@ export function FrontendFooter() {
                     name="email"
                     autoComplete="email"
                     required
-                    placeholder="Enter your email"
+                    placeholder={sectionText(links, "newsPlaceholder")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="fe-site-footer-input"
@@ -225,7 +198,7 @@ export function FrontendFooter() {
                     className="fe-site-footer-send"
                     disabled={newsBusy || !newsOptIn || !turnstileToken}
                   >
-                    {newsBusy ? "Sending" : "Send"}
+                    {newsBusy ? sectionText(links, "newsSending") : sectionText(links, "newsSend")}
                   </button>
                   <label className="fe-site-footer-newsletter-hint" style={{ display: "flex", gap: 8 }}>
                     <input
@@ -234,8 +207,7 @@ export function FrontendFooter() {
                       onChange={(e) => setNewsOptIn(e.target.checked)}
                     />
                     <span>
-                      Send me occasional product news.{" "}
-                      <Link href="/privacy">Privacy</Link>
+                      <RichInline text={sectionText(links, "newsOptIn")} />
                     </span>
                   </label>
                   <TurnstileField
@@ -259,7 +231,7 @@ export function FrontendFooter() {
                 © {new Date().getFullYear()} {BRAND_SPOKEN} | All rights reserved
               </p>
               <nav className="fe-site-footer-legal" aria-label="Legal">
-                {FOOTER_LEGAL.map((l) => (
+                {legal.map((l) => (
                   <Link key={l.href} href={l.href}>
                     {l.label}
                   </Link>

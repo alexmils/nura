@@ -3,35 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { AudioLines, Mic, User, Volume2 } from "lucide-react";
+import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "./home-memory-sets.css";
 
 const GUIDE_MARK = "/brand/nura-circle-variants/A-white-on-sage-128.png";
 
-const AGENT_OPEN =
-  "What are you noticing now — in your body, or in the picture?";
-const USER_LINE =
-  "My chest is still tight. Same as last week — that I'm not good enough.";
-const AGENT_REPLY =
-  "That's in your notes. Tightness in the chest. The line you wrote: I'm not good enough.";
-const COMPOSER_HINT = "What are you noticing…";
-
-const POINTS = [
-  {
-    title: "Write it once",
-    line: "Add a note yourself, or import what you already told ChatGPT or Claude.",
-  },
-  {
-    title: "The agent can use it",
-    line: "In an AI agent-guided session the guide can draw on those notes.",
-  },
-  {
-    title: "Yours to erase",
-    line: "Delete any note, or clear them all in Settings.",
-  },
-] as const;
-
-type LoadLabel = "Memory loading" | "Memory processing";
+type LoadLabel = string;
 
 type Scene = {
   showOpen: boolean;
@@ -51,13 +31,13 @@ const EMPTY: Scene = {
   reply: "",
 };
 
-const DONE: Scene = {
+const DONE_BASE: Scene = {
   showOpen: true,
   draft: "",
   showUser: true,
   loading: null,
   showReply: true,
-  reply: AGENT_REPLY,
+  reply: "",
 };
 
 function GuideAvatar() {
@@ -77,6 +57,19 @@ function UserAvatar() {
 }
 
 export function HomeMemorySets() {
+  const copy = useSectionConfig("home-memory");
+  const linesRef = useRef({
+    user: sectionText(copy, "userLine"),
+    reply: sectionText(copy, "agentReply"),
+    loading: sectionText(copy, "loading"),
+    processing: sectionText(copy, "processing"),
+  });
+  linesRef.current = {
+    user: sectionText(copy, "userLine"),
+    reply: sectionText(copy, "agentReply"),
+    loading: sectionText(copy, "loading"),
+    processing: sectionText(copy, "processing"),
+  };
   const rootRef = useRef<HTMLElement | null>(null);
   const [inView, setInView] = useState(false);
   const [scene, setScene] = useState<Scene>(EMPTY);
@@ -98,7 +91,7 @@ export function HomeMemorySets() {
     if (!inView) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) {
-      setScene(DONE);
+      setScene({ ...DONE_BASE, reply: linesRef.current.reply });
       return;
     }
 
@@ -115,7 +108,7 @@ export function HomeMemorySets() {
         if (cancelled) return;
 
         let typed = "";
-        for (const ch of USER_LINE) {
+        for (const ch of linesRef.current.user) {
           if (cancelled) return;
           typed += ch;
           const next = typed;
@@ -129,16 +122,16 @@ export function HomeMemorySets() {
         await wait(700);
         if (cancelled) return;
 
-        setScene((s) => ({ ...s, loading: "Memory loading" }));
+        setScene((s) => ({ ...s, loading: linesRef.current.loading }));
         await wait(2400);
         if (cancelled) return;
-        setScene((s) => ({ ...s, loading: "Memory processing" }));
+        setScene((s) => ({ ...s, loading: linesRef.current.processing }));
         await wait(3200);
         if (cancelled) return;
 
         setScene((s) => ({ ...s, loading: null, showReply: true, reply: "" }));
         let reply = "";
-        for (const ch of AGENT_REPLY) {
+        for (const ch of linesRef.current.reply) {
           if (cancelled) return;
           reply += ch;
           const next = reply;
@@ -156,7 +149,8 @@ export function HomeMemorySets() {
   }, [inView]);
 
   return (
-    <section ref={rootRef} className="fe-memory" aria-labelledby="fe-memory-title">
+    <section ref={rootRef} className="fe-memory fe-has-edit" data-section="home-memory" aria-labelledby="fe-memory-title">
+      <SectionEdit id="home-memory" />
       <div className="fe-container fe-memory-frame">
         <div className="fe-memory-stage fe-animate" aria-hidden>
           <div className="fe-memory-chat">
@@ -164,7 +158,7 @@ export function HomeMemorySets() {
               <div className="fe-memory-row fe-memory-row--agent">
                 <GuideAvatar />
                 <div className="fe-memory-bubble fe-memory-bubble--agent">
-                  <p>{AGENT_OPEN}</p>
+                  <p>{sectionText(copy, "agentOpen")}</p>
                   <span className="fe-memory-speak">
                     <Volume2 size={16} strokeWidth={2} />
                   </span>
@@ -175,7 +169,7 @@ export function HomeMemorySets() {
             {scene.showUser ? (
               <div className="fe-memory-row fe-memory-row--user">
                 <div className="fe-memory-bubble fe-memory-bubble--user">
-                  <p>{USER_LINE}</p>
+                  <p>{sectionText(copy, "userLine")}</p>
                 </div>
                 <UserAvatar />
               </div>
@@ -197,11 +191,11 @@ export function HomeMemorySets() {
                 <div className="fe-memory-bubble fe-memory-bubble--agent">
                   <p>
                     {scene.reply}
-                    {scene.reply.length < AGENT_REPLY.length ? (
+                    {scene.reply.length < linesRef.current.reply.length ? (
                       <span className="fe-memory-caret" />
                     ) : null}
                   </p>
-                  {scene.reply.length >= AGENT_REPLY.length ? (
+                  {scene.reply.length >= linesRef.current.reply.length ? (
                     <span className="fe-memory-speak">
                       <Volume2 size={16} strokeWidth={2} />
                     </span>
@@ -216,7 +210,7 @@ export function HomeMemorySets() {
               <Mic size={20} strokeWidth={2.25} />
             </span>
             <p className={`fe-memory-composer-text${scene.draft ? " is-typing" : ""}`}>
-              {scene.draft || COMPOSER_HINT}
+              {scene.draft || sectionText(copy, "composer")}
               {scene.draft ? <span className="fe-memory-caret" /> : null}
             </p>
             <span className="fe-memory-composer-send">
@@ -225,12 +219,12 @@ export function HomeMemorySets() {
           </div>
         </div>
         <div className="fe-memory-copy">
-          <p className="fe-section-kicker fe-animate">Memory</p>
+          <p className="fe-section-kicker fe-animate">{sectionText(copy, "kicker")}</p>
           <LetterRevealHeading id="fe-memory-title" className="fe-memory-title">
-            Notes you keep. The agent can use them in every session.
+            {sectionText(copy, "title")}
           </LetterRevealHeading>
           <ul className="fe-memory-points">
-            {POINTS.map((point) => (
+            {sectionList(copy, "points").map((point) => (
               <li key={point.title} className="fe-memory-point fe-animate">
                 <p className="fe-memory-point-title">{point.title}</p>
                 <p className="fe-memory-point-line">{point.line}</p>

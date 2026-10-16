@@ -1,7 +1,9 @@
 "use client";
 
 import { Languages, Phone, Shield } from "lucide-react";
+import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 
 type KitChip = {
   code: string;
@@ -37,23 +39,7 @@ const KIT_ROWS: KitChip[][] = [
   ],
 ];
 
-const KIT_POINTS = [
-  {
-    icon: Languages,
-    title: "Answers in your language",
-    hint: "No translating yourself first.",
-  },
-  {
-    icon: Shield,
-    title: "Safety in every language",
-    hint: "Red-flag checks and grounding never switch off.",
-  },
-  {
-    icon: Phone,
-    title: "Local help, by country",
-    hint: "The crisis panel shows your country's emergency numbers.",
-  },
-] as const;
+const KIT_ICONS = [Languages, Shield, Phone] as const;
 
 function flagSrc(code: string) {
   return `https://flagcdn.com/w80/${code}.png`;
@@ -102,18 +88,19 @@ function KitRow({
 
 /** BrightHub language-board clone — flags + languages, pistachio copy. */
 export function SessionLoopKit() {
+  const copy = useSectionConfig("home-how");
+  const points = sectionList(copy, "kitPoints");
   return (
     <div className="fe-spath-kit">
       <div className="fe-container">
         <div className="fe-spath-kit-hero">
           <div className="fe-spath-kit-copy">
-            <p className="fe-spath-kit-kicker fe-animate">Your language</p>
+            <p className="fe-spath-kit-kicker fe-animate">{sectionText(copy, "kitKicker")}</p>
             <LetterRevealHeading as="h2" className="fe-spath-kit-title">
-              A calm session in many languages.
+              {sectionText(copy, "kitTitle")}
             </LetterRevealHeading>
             <p className="fe-spath-kit-sub fe-animate">
-              Write the way you&apos;d speak. The agent answers the same way —
-              intake, check-ins, closure.
+              {sectionText(copy, "kitSub")}
             </p>
           </div>
           <div className="fe-spath-kit-board fe-animate" aria-hidden>
@@ -124,15 +111,18 @@ export function SessionLoopKit() {
         </div>
 
         <ul className="fe-spath-kit-points">
-          {KIT_POINTS.map((point) => (
-            <li key={point.title} className="fe-spath-kit-point fe-animate">
-              <span className="fe-spath-kit-point-icon" aria-hidden>
-                <point.icon size={22} strokeWidth={1.6} />
-              </span>
-              <h3 className="fe-spath-kit-point-title">{point.title}</h3>
-              <p className="fe-spath-kit-point-hint">{point.hint}</p>
-            </li>
-          ))}
+          {points.map((point, index) => {
+            const Icon = KIT_ICONS[index] ?? Languages;
+            return (
+              <li key={point.title} className="fe-spath-kit-point fe-animate">
+                <span className="fe-spath-kit-point-icon" aria-hidden>
+                  <Icon size={22} strokeWidth={1.6} />
+                </span>
+                <h3 className="fe-spath-kit-point-title">{point.title}</h3>
+                <p className="fe-spath-kit-point-hint">{point.hint}</p>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

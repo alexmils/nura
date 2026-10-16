@@ -77,9 +77,19 @@ function matchesQuery(article: LearnHelpArticle, query: string) {
 export function LearnHelpCenter({
   articles,
   paths,
+  badge = "Watch Knowledge clips",
+  badgeHref = "/knowledge",
+  title = "How can we help?",
+  dek = "Short guides on EMDR, sets, and staying safe.",
+  searchPlaceholder = "Search guides",
 }: {
   articles: LearnHelpArticle[];
   paths: LearnHelpPath[];
+  badge?: string;
+  badgeHref?: string;
+  title?: string;
+  dek?: string;
+  searchPlaceholder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const listId = useId();
@@ -197,14 +207,12 @@ export function LearnHelpCenter({
 
       <div className="fe-help-main">
         <header className="fe-help-hero">
-          <Link href="/knowledge" className="fe-help-badge">
-            Watch Knowledge clips
+          <Link href={badgeHref} className="fe-help-badge">
+            {badge}
             <ChevronRight aria-hidden />
           </Link>
-          <h1 className="fe-help-title">How can we help?</h1>
-          <p className="fe-help-dek">
-            Short guides on EMDR, sets, and staying safe.
-          </p>
+          <h1 className="fe-help-title">{title}</h1>
+          <p className="fe-help-dek">{dek}</p>
 
           <div className="fe-help-search">
             <label className="fe-help-search-field">
@@ -215,7 +223,7 @@ export function LearnHelpCenter({
                 type="search"
                 role="combobox"
                 value={query}
-                placeholder="Search guides"
+                placeholder={searchPlaceholder}
                 autoComplete="off"
                 aria-autocomplete="list"
                 aria-controls={listId}

@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { categoriesWithPosts, blogCategoryName } from "@/lib/blog-categories";
@@ -7,6 +9,10 @@ import {
   type ClusterArticle,
 } from "@/lib/content-cluster";
 import { formatBlogDate } from "@/lib/landing-blog";
+import { sectionText } from "@/lib/marketing-sections";
+import { RichInline } from "@/app/components/frontend/section-editor/RichText";
+import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./public-cluster.css";
 
 export type BlogCategoryNavItem = {
@@ -49,9 +55,11 @@ function splitIntoColumns(articles: ClusterArticle[], cols: number) {
 export function BlogCategoryNav({
   categories,
   activeSlug,
+  allLabel = "All",
 }: {
   categories: BlogCategoryNavItem[];
   activeSlug?: string;
+  allLabel?: string;
 }) {
   const withPosts = categoriesWithPosts(categories);
 
@@ -62,7 +70,7 @@ export function BlogCategoryNav({
         className="fe-blog-cat"
         aria-current={activeSlug ? undefined : "page"}
       >
-        All
+        {allLabel}
       </Link>
       {withPosts.map((category) => (
         <Link
@@ -156,18 +164,19 @@ export function BlogIndex({
   posts: ClusterArticle[];
   categories: BlogCategoryNavItem[];
 }) {
+  const copy = useSectionConfig("blog-index");
   return (
-    <div className="fe-cluster fe-cluster--blog">
+    <div className="fe-cluster fe-cluster--blog fe-has-edit" data-section="blog-index">
+      <SectionEdit id="blog-index" lift />
       <div className="fe-cluster-inner fe-cluster-inner--blog">
-        <p className="fe-cluster-kicker">Blog</p>
-        <h1 className="fe-cluster-title">EMDR articles, newest first</h1>
+        <p className="fe-cluster-kicker">{sectionText(copy, "kicker")}</p>
+        <h1 className="fe-cluster-title">{sectionText(copy, "title")}</h1>
         <p className="fe-cluster-dek">
-          Pick a theme, or read the newest guides. New here? Start on{" "}
-          <Link href="/learn">Learn</Link> for curated reading paths.
+          <RichInline text={sectionText(copy, "dek")} />
         </p>
 
-        <BlogCategoryNav categories={categories} />
-        <BlogPostMasonry posts={posts} />
+        <BlogCategoryNav categories={categories} allLabel={sectionText(copy, "all")} />
+        <BlogPostMasonry posts={posts} emptyNote={sectionText(copy, "empty")} />
       </div>
     </div>
   );

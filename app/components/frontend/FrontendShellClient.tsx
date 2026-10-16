@@ -10,6 +10,7 @@ import { FrontendPreloader } from "@/app/components/frontend/FrontendPreloader";
 import "./frontend-fonts.css";
 import "./frontend-buttons.css";
 import "./frontend-help.css";
+import "./section-editor/section-editor.css";
 
 export function FrontendShellClient({
   children,

@@ -29,12 +29,16 @@ export function serializeJsonLd(data: unknown): string {
   return JSON.stringify(data).replace(/</g, "\\u003c");
 }
 
-export function buildHomeJsonLd(origin = jsonLdOrigin()) {
-  const orgId = `${origin}/#organization`;
-  const appId = `${origin}/#app`;
-  const faqId = `${origin}/#faq`;
-  const siteId = `${origin}/#website`;
-  const logoUrl = `${origin}/brand/lockup.png`;
+export function buildHomeJsonLd(
+  origin?: string,
+  faqItems?: readonly { q: string; a: string }[]
+) {
+  const site = origin || jsonLdOrigin();
+  const orgId = `${site}/#organization`;
+  const appId = `${site}/#app`;
+  const faqId = `${site}/#faq`;
+  const siteId = `${site}/#website`;
+  const logoUrl = `${site}/brand/lockup.png`;
 
   return {
     "@context": "https://schema.org",
@@ -45,7 +49,7 @@ export function buildHomeJsonLd(origin = jsonLdOrigin()) {
         name: BRAND_SPOKEN,
         legalName: legalEntityDisplayName(),
         alternateName: legalEntityDisplayName(),
-        url: `${origin}/`,
+        url: `${site}/`,
         logo: {
           "@type": "ImageObject",
           url: logoUrl,
@@ -58,7 +62,7 @@ export function buildHomeJsonLd(origin = jsonLdOrigin()) {
         "@type": "WebSite",
         "@id": siteId,
         name: BRAND_SPOKEN,
-        url: `${origin}/`,
+        url: `${site}/`,
         publisher: { "@id": orgId },
         inLanguage: "en",
         potentialAction: {
@@ -77,7 +81,7 @@ export function buildHomeJsonLd(origin = jsonLdOrigin()) {
         alternateName: BRAND_PRODUCT,
         applicationCategory: "HealthApplication",
         operatingSystem: "Web",
-        url: `${origin}/`,
+        url: `${site}/`,
         description: BRAND_DESCRIPTION,
         offers: {
           "@type": "AggregateOffer",
@@ -85,16 +89,16 @@ export function buildHomeJsonLd(origin = jsonLdOrigin()) {
           lowPrice: usdAmount(BILLING_PLANS.weekly.displayPrice),
           highPrice: usdAmount(BILLING_PLANS.yearly.displayPrice),
           offerCount: 3,
-          url: `${origin}/pricing`,
+          url: `${site}/pricing`,
         },
         publisher: { "@id": orgId },
       },
       {
         "@type": "FAQPage",
         "@id": faqId,
-        url: `${origin}/faq`,
+        url: `${site}/faq`,
         inLanguage: "en",
-        mainEntity: LANDING_FAQ_ITEMS.map((item) => ({
+        mainEntity: (faqItems ?? LANDING_FAQ_ITEMS).map((item) => ({
           "@type": "Question",
           name: item.q,
           acceptedAnswer: {

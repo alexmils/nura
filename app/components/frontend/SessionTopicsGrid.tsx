@@ -2,22 +2,27 @@
 
 import Link from "next/link";
 import { BLOG_CATEGORIES } from "@/lib/blog-categories";
+import { sectionText } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "./session-topics-grid.css";
 
 const CORE_LOGO = "/brand/nura-circle-variants/O-mint-on-ink.png";
 
 export function SessionTopicsGrid() {
+  const copy = useSectionConfig("home-topics");
   const count = BLOG_CATEGORIES.length;
 
   return (
-    <section className="fe-topics" aria-labelledby="fe-topics-title">
+    <section className="fe-topics fe-has-edit" data-section="home-topics" aria-labelledby="fe-topics-title">
+      <SectionEdit id="home-topics" />
       <div className="fe-container fe-topics-frame">
         <div className="fe-topics-head">
           <LetterRevealHeading id="fe-topics-title" className="fe-topics-title">
-            People start with.
+            {sectionText(copy, "title")}
           </LetterRevealHeading>
-          <p className="fe-section-kicker fe-topics-kicker fe-animate">Guides</p>
+          <p className="fe-section-kicker fe-topics-kicker fe-animate">{sectionText(copy, "kicker")}</p>
         </div>
 
         <div className="fe-topics-stage">
@@ -62,8 +67,8 @@ export function SessionTopicsGrid() {
             </ul>
           </div>
 
-          <Link href="/blog" className="fe-topics-more fe-animate">
-            Read the guides
+          <Link href={sectionText(copy, "moreHref")} className="fe-topics-more fe-animate">
+            {sectionText(copy, "more")}
             <span className="fe-topics-more-arrow" aria-hidden>
               →
             </span>
