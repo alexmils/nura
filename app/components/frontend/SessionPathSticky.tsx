@@ -13,6 +13,7 @@ import {
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
+import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SessionLoopKit } from "./SessionLoopKit";
 import { SectionEdit } from "./section-editor/SectionEdit";
@@ -29,41 +30,86 @@ type Stage = {
   /** Continues on the same line after the lead. */
   line: string;
   mediaLabel: string;
+  mediaKind: string;
+  mediaImage: string;
+  mediaVideo: string;
+  mediaPoster: string;
+  mediaAlt: string;
 };
 
 function MediaPlaceholder({
   label,
   compact,
+  kind,
+  image,
+  video,
+  poster,
+  alt,
 }: {
   label: string;
   compact?: boolean;
+  kind?: string;
+  image?: string;
+  video?: string;
+  poster?: string;
+  alt?: string;
 }) {
+  const hasMedia = Boolean(image || video);
   return (
     <div
       className={
         compact ? "fe-spath-media fe-spath-media--card" : "fe-spath-media"
       }
-      role="img"
-      aria-label={label}
+      role={hasMedia ? undefined : "img"}
+      aria-label={hasMedia ? undefined : label}
     >
-      <span className="fe-spath-media-label">{label}</span>
+      {hasMedia ? (
+        <SectionMedia
+          kind={kind || "image"}
+          image={image || ""}
+          video={video || ""}
+          poster={poster || ""}
+          alt={alt || label}
+        />
+      ) : (
+        <span className="fe-spath-media-label">{label}</span>
+      )}
     </div>
   );
 }
 
-function ScreenPlaceholder() {
+function ScreenPlaceholder({
+  kind,
+  image,
+  video,
+  poster,
+  alt,
+}: {
+  kind: string;
+  image: string;
+  video: string;
+  poster: string;
+  alt: string;
+}) {
+  const hasMedia = Boolean(image || video);
   return (
     <div
       className="fe-spath-screen"
-      role="img"
-      aria-label="App screen placeholder"
+      role={hasMedia ? undefined : "img"}
+      aria-label={hasMedia ? undefined : "App screen placeholder"}
     >
-      <span className="fe-spath-screen-chrome" aria-hidden>
-        <span />
-        <span />
-        <span />
-      </span>
-      <span className="fe-spath-media-label">Add your screen image here</span>
+      {hasMedia ? (
+        <SectionMedia kind={kind} image={image} video={video} poster={poster} alt={alt || "Session screen"} />
+      ) : (
+        <>
+          <span className="fe-spath-screen-chrome" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
+          <span className="fe-spath-media-label">Add your screen image here</span>
+        </>
+      )}
     </div>
   );
 }
@@ -91,6 +137,11 @@ export function SessionPathSticky() {
     lead: stage.lead,
     line: stage.line,
     mediaLabel: "Image or video",
+    mediaKind: stage.mediaKind,
+    mediaImage: stage.mediaImage,
+    mediaVideo: stage.mediaVideo,
+    mediaPoster: stage.mediaPoster,
+    mediaAlt: stage.mediaAlt,
   }));
   const rhythm = sectionList(copy, "rhythm");
   const ground = sectionList(copy, "ground");
@@ -345,7 +396,14 @@ export function SessionPathSticky() {
                           </li>
                         ))}
                       </ul>
-                      <MediaPlaceholder label={stage.mediaLabel} />
+                      <MediaPlaceholder
+                        label={stage.mediaLabel}
+                        kind={stage.mediaKind}
+                        image={stage.mediaImage}
+                        video={stage.mediaVideo}
+                        poster={stage.mediaPoster}
+                        alt={stage.mediaAlt}
+                      />
                     </div>
                   ) : stage.id === "ground" ? (
                     <div className="fe-spath-ground">
@@ -398,7 +456,14 @@ export function SessionPathSticky() {
                       </ul>
                     </div>
                   ) : (
-                    <MediaPlaceholder label={stage.mediaLabel} />
+                    <MediaPlaceholder
+                      label={stage.mediaLabel}
+                      kind={stage.mediaKind}
+                      image={stage.mediaImage}
+                      video={stage.mediaVideo}
+                      poster={stage.mediaPoster}
+                      alt={stage.mediaAlt}
+                    />
                   )}
                 </div>
               </article>
@@ -424,7 +489,13 @@ export function SessionPathSticky() {
           >
             Start for free
           </Link>
-          <ScreenPlaceholder />
+          <ScreenPlaceholder
+            kind={sectionText(copy, "screenKind")}
+            image={sectionText(copy, "screenImage")}
+            video={sectionText(copy, "screenVideo")}
+            poster={sectionText(copy, "screenPoster")}
+            alt={sectionText(copy, "screenAlt")}
+          />
         </div>
         </div>
       </div>

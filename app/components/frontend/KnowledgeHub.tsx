@@ -7,7 +7,6 @@ import { Pause, Play } from "lucide-react";
 import { LetterRevealHeading } from "@/app/components/frontend/LetterRevealHeading";
 import { KnowledgeSeriesBlock } from "@/app/components/frontend/KnowledgeSeriesBlock";
 import {
-  KNOWLEDGE_HERO,
   KNOWLEDGE_SERIES,
 } from "@/lib/knowledge-clips";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
@@ -41,7 +40,10 @@ export function KnowledgeHub() {
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [heroPlaying, setHeroPlaying] = useState(false);
   const [heroStarted, setHeroStarted] = useState(false);
-  const hasHeroVideo = Boolean(KNOWLEDGE_HERO.videoSrc);
+  const clipKind = sectionText(heroCopy, "clipKind");
+  const clipVideo = sectionText(heroCopy, "clipVideo");
+  const clipPoster = sectionText(heroCopy, "clipPoster") || sectionText(heroCopy, "clipImage");
+  const hasHeroVideo = clipKind !== "image" && Boolean(clipVideo);
 
   const toggleHero = useCallback(() => {
     const el = heroVideoRef.current;
@@ -80,19 +82,20 @@ export function KnowledgeHub() {
             <>
               {!heroStarted ? (
                 <Image
-                  src={KNOWLEDGE_HERO.poster}
+                  src={clipPoster}
                   alt=""
                   fill
                   priority
                   sizes="100vw"
                   className="fe-knowledge-hero-image"
+                  unoptimized={!clipPoster.startsWith("/marketing/")}
                 />
               ) : null}
               <video
                 ref={heroVideoRef}
                 className={`fe-knowledge-hero-video${heroStarted ? " is-on" : ""}`}
-                src={KNOWLEDGE_HERO.videoSrc}
-                poster={KNOWLEDGE_HERO.poster}
+                src={clipVideo}
+                poster={clipPoster}
                 playsInline
                 loop
                 preload="metadata"
@@ -102,12 +105,13 @@ export function KnowledgeHub() {
             </>
           ) : (
             <Image
-              src={KNOWLEDGE_HERO.poster}
+              src={clipPoster}
               alt=""
               fill
               priority
               sizes="100vw"
               className="fe-knowledge-hero-image"
+              unoptimized={!clipPoster.startsWith("/marketing/")}
             />
           )}
           <div className="fe-knowledge-hero-shade" aria-hidden />

@@ -812,6 +812,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Marketing sections have an Edit chip for platform admins, with a drawer that saves that band’s copy
 - [internal] Section save refreshes every public page, keeps a moved row with its id, and allows an emptied list
 
+- [internal] Section editors collapse into accordions, and image slots can switch to a video or an upload
+
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout
 

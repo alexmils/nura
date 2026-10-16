@@ -38,7 +38,7 @@ import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { HomePauseCta } from "./HomePauseCta";
 import { HomeMemorySets } from "./HomeMemorySets";
 import { SessionModesPair } from "./SessionModesPair";
-import { useLandingMotion } from "./useLandingMotion";
+import { SectionMedia } from "./SectionMedia";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 
@@ -124,7 +124,7 @@ function StoriesSection() {
   const copy = useSectionConfig("home-stories");
   const stories = sectionList(copy, "stories").map((story, index) => ({
     ...story,
-    image: STORY_IMAGES[index % STORY_IMAGES.length] ?? IMG.avatarMaya,
+    image: story.image || STORY_IMAGES[index % STORY_IMAGES.length] || IMG.avatarMaya,
   }));
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const hoverPaused = useRef(false);
@@ -287,9 +287,6 @@ function StoriesSection() {
     </section>
   );
 }
-
-const HERO_IMAGE = IMG.supportTalk;
-const HERO_PREVIEW_IMAGE = IMG.calmRest;
 
 /** Nexsas home/blog stagger — fixed crop heights across 3 columns. */
 const HOME_BLOG_HEIGHTS = [420, 320, 520] as const;
@@ -468,13 +465,13 @@ export function HomeLanding({
         <SectionEdit id="home-hero" lift />
         <div className="fe-hero-image-wrap">
           <div className="fe-hero-image">
-            <Image
-              src={HERO_IMAGE}
-              alt="Person in a calm, supportive setting"
-              fill
-              priority
-              sizes="100vw"
+            <SectionMedia
               className="fe-hero-image-bg"
+              kind={sectionText(hero, "heroKind")}
+              image={sectionText(hero, "heroImage")}
+              video={sectionText(hero, "heroVideo")}
+              poster={sectionText(hero, "heroPoster")}
+              alt={sectionText(hero, "heroAlt")}
             />
             <div className="fe-hero-image-overlay" aria-hidden />
             <div className="fe-hero-content-wrap">
@@ -530,11 +527,13 @@ export function HomeLanding({
                         className="fe-hero-video-thumb"
                         aria-label="Learn where to start"
                       >
-                        <DecorativeImg
-                          src={HERO_PREVIEW_IMAGE}
-                          width={160}
-                          height={112}
+                        <SectionMedia
                           className="fe-hero-video-image"
+                          kind={sectionText(hero, "thumbKind")}
+                          image={sectionText(hero, "thumbImage")}
+                          video={sectionText(hero, "thumbVideo")}
+                          poster={sectionText(hero, "thumbPoster")}
+                          alt={sectionText(hero, "thumbAlt")}
                         />
                         <span className="fe-hero-video-play" aria-hidden>
                           <Play size={18} fill="currentColor" />

@@ -205,3 +205,127 @@ html[data-editor-open] .frontend-back-to-top {
   display: flex;
   gap: 0.35rem;
 }
+
+.fe-editor-acc {
+  margin: 0 0 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, white 55%, var(--paper, #f7f6f1));
+}
+
+.fe-editor-acc > button,
+.fe-editor-item-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fe-editor-acc svg,
+.fe-editor-item-toggle svg {
+  flex: none;
+  transition: transform 0.15s ease;
+}
+
+.fe-editor-acc svg.is-open,
+.fe-editor-item-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+
+.fe-editor-acc-body {
+  padding: 0 0.9rem 0.85rem;
+}
+
+.fe-editor-item-bar {
+  margin-bottom: 0;
+}
+
+.fe-editor-item-toggle {
+  min-width: 0;
+  padding: 0;
+}
+
+.fe-editor-item-toggle strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fe-editor-media-toggle {
+  display: inline-flex;
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 999px;
+}
+
+.fe-editor-media-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+}
+
+.fe-editor-media-toggle button.is-on {
+  background: var(--sage, #84b067);
+  color: #fff;
+  font-weight: 600;
+}
+
+.fe-editor-preview {
+  display: block;
+  width: 100%;
+  max-height: 9rem;
+  margin-bottom: 0.45rem;
+  object-fit: cover;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--ink) 6%, white);
+}
+
+.fe-editor-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+
+.fe-editor-upload button {
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.35rem 0.7rem;
+  cursor: pointer;
+}
+
+.fe-editor-upload small {
+  color: #8b3a32;
+}
+
+.fe-hero-image-bg,
+.fe-knowledge-hero-image,
+.fe-spath-media img,
+.fe-spath-media video,
+.fe-spath-media iframe,
+.fe-spath-screen img,
+.fe-spath-screen video,
+.fe-spath-screen iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}

@@ -20,8 +20,16 @@ import { legalEntityDisplayName } from "@/lib/legal-entity";
 export type ScalarField = {
   key: string;
   label: string;
-  kind: "text" | "textarea";
+  kind: "text" | "textarea" | "image";
   href?: boolean;
+  hint?: string;
+};
+
+/** Image or video slot. Stored as `{key}Kind`, `{key}Image`, `{key}Video`, `{key}Poster`, `{key}Alt`. */
+export type MediaFieldDef = {
+  key: string;
+  label: string;
+  kind: "media";
   hint?: string;
 };
 
@@ -33,10 +41,12 @@ export type ListField = {
   max: number;
   /** Keep the default count and any default `id` values. */
   fixed?: boolean;
-  fields: ScalarField[];
+  fields: ItemField[];
 };
 
-export type Field = ScalarField | ListField;
+export type ItemField = ScalarField | MediaFieldDef;
+
+export type Field = ScalarField | MediaFieldDef | ListField;
 
 export type SectionItem = Record<string, string>;
 
@@ -73,6 +83,31 @@ const link = (key: string, label: string): ScalarField => ({
   href: true,
 });
 
+const image = (key: string, label: string, hint?: string): ScalarField => ({
+  key,
+  label,
+  kind: "image",
+  hint,
+});
+
+const media = (key: string, label: string, hint?: string): MediaFieldDef => ({
+  key,
+  label,
+  kind: "media",
+  hint,
+});
+
+export function mediaNames(key: string) {
+  const cap = (part: string) => (key ? key + part[0].toUpperCase() + part.slice(1) : part);
+  return {
+    kind: cap("kind"),
+    image: cap("image"),
+    video: cap("video"),
+    poster: cap("poster"),
+    alt: cap("alt"),
+  };
+}
+
 const LINK_HINT = "One link per line: Label|/path";
 
 function faqDefaults(
@@ -93,6 +128,8 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
       text("cardLabel", "Card label"),
       text("cardLink", "Card link label"),
       link("cardHref", "Card link"),
+      media("hero", "Background", "Image, or a muted looping video. Poster shows if motion is reduced."),
+      media("thumb", "Preview"),
     ],
     defaults: {
       kicker: "The time is right for",
@@ -103,6 +140,16 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
       cardLabel: "Support you can trust",
       cardLink: "Learn",
       cardHref: "/learn",
+      heroKind: "image",
+      heroImage: "/marketing/landing/support-talk.jpg",
+      heroVideo: "",
+      heroPoster: "",
+      heroAlt: "Person in a calm, supportive setting",
+      thumbKind: "image",
+      thumbImage: "/marketing/landing/calm-rest.jpg",
+      thumbVideo: "",
+      thumbPoster: "",
+      thumbAlt: "",
     },
   },
   {
@@ -124,6 +171,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
           text("nav", "Nav label"),
           text("lead", "Lead"),
           area("line", "Line"),
+          media("media", "Image or video", "Leave blank to keep the stage as it is."),
         ],
       },
       {
@@ -144,6 +192,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
         fixed: true,
         fields: [text("title", "Title"), text("line", "Line")],
       },
+      media("screen", "Between sessions", "Still or video in the closing frame. Leave blank for the empty frame."),
       text("kitKicker", "Language kicker"),
       text("kitTitle", "Language title"),
       area("kitSub", "Language line"),
@@ -231,11 +280,23 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
       text("title", "Title"),
       text("guided", "AI agent-guided tab"),
       text("self", "Self-guided tab"),
+      media("guidedMedia", "AI agent-guided", "Image, or a muted looping video."),
+      media("selfMedia", "Self-guided", "Image, or a muted looping video."),
     ],
     defaults: {
       title: "One app, two seamless experiences.",
       guided: SESSION_MODE_GUIDED_LABEL,
       self: SESSION_MODE_SELF_LABEL,
+      guidedMediaKind: "video",
+      guidedMediaImage: "/marketing/landing/support-talk.jpg",
+      guidedMediaVideo: "/marketing/knowledge/stock-a.mp4",
+      guidedMediaPoster: "/marketing/landing/support-talk.jpg",
+      guidedMediaAlt: "",
+      selfMediaKind: "video",
+      selfMediaImage: "/marketing/landing/practice-space.jpg",
+      selfMediaVideo: "/marketing/knowledge/stock-c.mp4",
+      selfMediaPoster: "/marketing/landing/practice-space.jpg",
+      selfMediaAlt: "",
     },
   },
   {
@@ -400,6 +461,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
           area("quote", "Quote"),
           text("name", "Name"),
           text("role", "Role"),
+          image("image", "Photo"),
         ],
       },
     ],
@@ -821,11 +883,21 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
   {
     id: "knowledge-hero",
     name: "Knowledge: hero",
-    fields: [text("title", "Title"), area("lead", "Lead"), area("intro", "Intro")],
+    fields: [
+      text("title", "Title"),
+      area("lead", "Lead"),
+      area("intro", "Intro"),
+      media("clip", "Clip", "Image, or a video with a poster."),
+    ],
     defaults: {
       title: "EMDR knowledge clips",
       lead: "Tap a question. A different clip answers.",
       intro: `Short clips about sessions, sets, and staying safe in ${BRAND_SPOKEN}.`,
+      clipKind: "video",
+      clipImage: "/marketing/landing/support-talk.jpg",
+      clipVideo: "/marketing/knowledge/hero.mp4",
+      clipPoster: "/marketing/landing/support-talk.jpg",
+      clipAlt: "",
     },
   },
   {
@@ -995,6 +1067,17 @@ function asItem(value: unknown): SectionItem | null {
   return out;
 }
 
+/** Relative path or https. Anything else falls back. */
+export function safeMediaUrl(value: string, fallback: string): string {
+  const v = value.trim();
+  if (!v) return fallback;
+  if (v.startsWith("/") && !v.startsWith("//") && !v.includes("\\") && !v.includes("..")) {
+    return v.slice(0, 300);
+  }
+  if (/^https:\/\/[^\s]+$/i.test(v)) return v.slice(0, 300);
+  return fallback;
+}
+
 function normalizeScalar(
   field: ScalarField,
   raw: unknown,
@@ -1002,6 +1085,7 @@ function normalizeScalar(
 ): string {
   const max = field.kind === "textarea" ? AREA_MAX : TEXT_MAX;
   const textValue = clampText(raw, max, fallback);
+  if (field.kind === "image") return safeMediaUrl(textValue, fallback.trim());
   if (field.href) {
     if (!textValue.trim() && !fallback.trim()) return "";
     return safeHref(textValue, fallback.trim() || "/");
@@ -1009,12 +1093,48 @@ function normalizeScalar(
   return textValue;
 }
 
+function readSlotSource(source: Record<string, unknown> | SectionItem, key: string): string {
+  const raw = source[key];
+  return typeof raw === "string" ? raw : "";
+}
+
+export function normalizeMediaSlot(
+  key: string,
+  source: Record<string, unknown> | SectionItem,
+  fallback: SectionItem
+): SectionItem {
+  const names = mediaNames(key);
+  const fallbackKind = fallback[names.kind] === "video" ? "video" : "image";
+  const rawKind = readSlotSource(source, names.kind);
+  const out: SectionItem = {};
+  out[names.kind] = rawKind === "video" || rawKind === "image" ? rawKind : fallbackKind;
+  out[names.image] = safeMediaUrl(readSlotSource(source, names.image), fallback[names.image] ?? "");
+  out[names.video] = safeMediaUrl(readSlotSource(source, names.video), fallback[names.video] ?? "");
+  out[names.poster] = safeMediaUrl(readSlotSource(source, names.poster), fallback[names.poster] ?? "");
+  out[names.alt] = clampText(readSlotSource(source, names.alt) || fallback[names.alt] || "", TEXT_MAX, fallback[names.alt] ?? "");
+  return out;
+}
+
+function applyItemField(item: SectionItem, child: ItemField, incoming: SectionItem, def: SectionItem) {
+  if (child.kind === "media") {
+    Object.assign(item, normalizeMediaSlot(child.key, incoming, def));
+    return;
+  }
+  item[child.key] = normalizeScalar(child, incoming[child.key], def[child.key] ?? "");
+}
+
+function itemHasContent(child: ItemField, item: SectionItem): boolean {
+  if (child.kind === "media") {
+    const names = mediaNames(child.key);
+    return Boolean(item[names.image]?.trim() || item[names.video]?.trim());
+  }
+  return Boolean(item[child.key]?.trim());
+}
+
 function mergeFixedItem(field: ListField, def: SectionItem, incoming: SectionItem): SectionItem {
   const next: SectionItem = {};
   if (typeof def.id === "string") next.id = def.id;
-  for (const child of field.fields) {
-    next[child.key] = normalizeScalar(child, incoming[child.key], def[child.key] ?? "");
-  }
+  for (const child of field.fields) applyItemField(next, child, incoming, def);
   return next;
 }
 
@@ -1060,9 +1180,8 @@ function normalizeList(
     const item: SectionItem = {};
     let any = false;
     for (const child of field.fields) {
-      const value = normalizeScalar(child, incoming[child.key], "");
-      item[child.key] = value;
-      if (value.trim()) any = true;
+      applyItemField(item, child, incoming, {});
+      if (itemHasContent(child, item)) any = true;
     }
     if (any) next.push(item);
   }
@@ -1084,6 +1203,11 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
         field,
         source[field.key],
         Array.isArray(fallback) ? (fallback as SectionItem[]) : []
+      );
+    } else if (field.kind === "media") {
+      Object.assign(
+        out,
+        normalizeMediaSlot(field.key, source, def.defaults as SectionItem)
       );
     } else {
       out[field.key] = normalizeScalar(

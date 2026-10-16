@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
-import { sectionText } from "@/lib/marketing-sections";
+import { mediaNames, sectionText } from "@/lib/marketing-sections";
+import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
@@ -12,29 +13,33 @@ type ModeId = "guided" | "free";
 
 type ModeSlide = {
   id: ModeId;
-  videoSrc: string;
+  label: string;
+  kind: string;
+  image: string;
+  video: string;
   poster: string;
+  alt: string;
 };
 
-const MODES: Omit<ModeSlide, "label">[] = [
-  {
-    id: "guided",
-    videoSrc: "/marketing/knowledge/stock-a.mp4",
-    poster: "/marketing/landing/support-talk.jpg",
-  },
-  {
-    id: "free",
-    videoSrc: "/marketing/knowledge/stock-c.mp4",
-    poster: "/marketing/landing/practice-space.jpg",
-  },
+const MODES: { id: ModeId; prefix: "guidedMedia" | "selfMedia" }[] = [
+  { id: "guided", prefix: "guidedMedia" },
+  { id: "free", prefix: "selfMedia" },
 ];
 
 export function SessionModesPair() {
   const copy = useSectionConfig("home-modes");
-  const modes = MODES.map((mode) => ({
-    ...mode,
-    label: mode.id === "guided" ? sectionText(copy, "guided") : sectionText(copy, "self"),
-  }));
+  const modes: ModeSlide[] = MODES.map((mode) => {
+    const names = mediaNames(mode.prefix);
+    return {
+      id: mode.id,
+      label: mode.id === "guided" ? sectionText(copy, "guided") : sectionText(copy, "self"),
+      kind: sectionText(copy, names.kind),
+      image: sectionText(copy, names.image),
+      video: sectionText(copy, names.video),
+      poster: sectionText(copy, names.poster),
+      alt: sectionText(copy, names.alt),
+    };
+  });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [active, setActive] = useState<ModeId>("guided");
   const [playing, setPlaying] = useState(false);
@@ -123,12 +128,23 @@ export function SessionModesPair() {
             id={`fe-modes-panel-${slide.id}`}
             aria-labelledby={`fe-modes-tab-${slide.id}`}
           >
+            {slide.kind === "video" && slide.video && /youtube|youtu\.be|vimeo/i.test(slide.video) ? (
+              <SectionMedia
+                key={slide.id}
+                className="fe-modes-video"
+                kind="video"
+                image={slide.image}
+                video={slide.video}
+                poster={slide.poster}
+                alt={slide.alt || slide.label}
+              />
+            ) : slide.kind === "video" && slide.video ? (
             <video
               key={slide.id}
               ref={videoRef}
               className="fe-modes-video"
-              src={slide.videoSrc}
-              poster={slide.poster}
+              src={slide.video}
+              poster={slide.poster || slide.image}
               muted
               loop
               playsInline
@@ -137,6 +153,17 @@ export function SessionModesPair() {
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
             />
+            ) : (
+              <SectionMedia
+                className="fe-modes-video"
+                kind="image"
+                image={slide.image || slide.poster}
+                video=""
+                poster={slide.poster}
+                alt={slide.alt || slide.label}
+              />
+            )}
+            {slide.kind === "video" && slide.video && !/youtube|youtu\.be|vimeo/i.test(slide.video) ? (
             <button
               type="button"
               className={`fe-modes-play${playing ? " is-playing" : ""}`}
@@ -149,6 +176,7 @@ export function SessionModesPair() {
                 <Play size={28} fill="currentColor" strokeWidth={0} aria-hidden />
               )}
             </button>
+            ) : null}
           </div>
         </div>
       </div>

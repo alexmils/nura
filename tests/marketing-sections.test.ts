@@ -55,6 +55,16 @@ describe("marketing section copy", () => {
     assert.ok(faqPairs(missing).length > 0);
   });
 
+  it("rejects a script url on an image or video slot", () => {
+    const config = normalizeSection("home-hero", {
+      heroImage: "javascript:alert(1)",
+      heroKind: "video",
+      heroVideo: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    assert.equal(sectionText(config, "heroImage"), "/marketing/landing/support-talk.jpg");
+    assert.equal(sectionText(config, "heroKind"), "video");
+    assert.match(sectionText(config, "heroVideo"), /^https:\/\/www\.youtube\.com\//);
+  });
   it("parses footer link lines", () => {
     const links = parseLinkLines("Blog|/blog\nBad\nOff|javascript:alert(1)");
     assert.deepEqual(links, [{ label: "Blog", href: "/blog" }]);
