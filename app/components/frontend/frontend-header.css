@@ -7,9 +7,15 @@
   padding: clamp(0.75rem, 2vw, 1.875rem) clamp(1rem, 4vw, 1.875rem);
   background: transparent;
   border: none;
+  pointer-events: none;
   transition:
     padding 0.45s cubic-bezier(0.22, 1, 0.36, 1),
     background 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.frontend-header-pill,
+.frontend-header-mobile {
+  pointer-events: auto;
 }
 
 /*

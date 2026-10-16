@@ -816,6 +816,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Home page loads again after the media editor change
 - [internal] Marketing images upload to Cloudinary, with a Media library and Settings in admin
 - [internal] Importing a site image points the live pages at Cloudinary, and the library loads every page of files
+- [internal] Hero Edit sits under the transparent header, so the header no longer takes clicks outside the nav pill
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout
