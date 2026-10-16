@@ -25,7 +25,8 @@ export type AdminNavIcon =
   | "seo"
   | "mcp"
   | "tasks"
-  | "marketing";
+  | "marketing"
+  | "media";
 
 export type AdminNavItem = {
   href: string;
@@ -157,6 +158,16 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
             tab: "editor",
             adminOnly: true,
           },
+        ],
+      },
+      {
+        href: "/admin/media",
+        label: "Media",
+        icon: "media",
+        adminOnly: true,
+        children: [
+          { href: "/admin/media", label: "Library", tab: "library" },
+          { href: "/admin/media?tab=settings", label: "Settings", tab: "settings" },
         ],
       },
       {
@@ -372,6 +383,7 @@ export const ADMIN_DEFAULT_TAB_BY_PATH: Record<string, string> = {
   "/admin/security": "limits",
   "/admin/seo": "overview",
   "/admin/marketing": "meta",
+  "/admin/media": "library",
 };
 
 export type AdminSearchKind = "section" | "page" | "tab" | "action";

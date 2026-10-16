@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, X } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ import {
   type SectionItem,
 } from "@/lib/marketing-sections";
 import { EditorLayer } from "./EditorLayer";
-import { commitSectionDraft, useEditorDraft } from "./section-draft";
+import { ReplaceableThumb } from "./ReplaceableThumb";
 
 export function MarketingSectionEditor({
   id,
@@ -246,12 +246,7 @@ function ImageSlot({
   return (
     <div className="fe-editor-field">
       <span>{label}</span>
-      {value ? (
-        // eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary upload or URL
-        <img className="fe-editor-preview" src={value} alt="" />
-      ) : null}
-      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="https:// or /path" />
-      <UploadButton accept="image/*" onUrl={onChange} />
+      <ReplaceableThumb src={value} onReplace={onChange} />
       {hint ? <small>{hint}</small> : null}
     </div>
   );
@@ -296,15 +291,11 @@ function MediaControls({
         <>
           <div className="fe-editor-field">
             <span>Video</span>
-            {read(names.video) && !read(names.video).includes("youtube") && !read(names.video).includes("vimeo") ? (
-              <video className="fe-editor-preview" src={read(names.video)} muted playsInline />
-            ) : null}
-            <input
-              value={read(names.video)}
-              placeholder="MP4, WebM, YouTube, or Vimeo"
-              onChange={(event) => onChange({ [names.video]: event.target.value })}
+            <ReplaceableThumb
+              mediaType="video"
+              src={read(names.video)}
+              onReplace={(url) => onChange({ [names.video]: url })}
             />
-            <UploadButton accept="video/mp4,video/webm" onUrl={(url) => onChange({ [names.video]: url })} />
           </div>
           <ImageSlot
             label="Poster"
@@ -318,53 +309,6 @@ function MediaControls({
         <span>Alt text</span>
         <input value={read(names.alt)} onChange={(event) => onChange({ [names.alt]: event.target.value })} />
       </label>
-    </div>
-  );
-}
-
-function UploadButton({
-  accept,
-  onUrl,
-}: {
-  accept: string;
-  onUrl: (url: string) => void;
-}) {
-  const ref = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function upload(file: File | null) {
-    if (!file) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      const res = await fetch("/api/admin/marketing-media", { method: "POST", body: form });
-      const body = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
-      if (!res.ok || !body?.url) throw new Error(body?.error || "Upload failed.");
-      onUrl(body.url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setBusy(false);
-      if (ref.current) ref.current.value = "";
-    }
-  }
-
-  return (
-    <div className="fe-editor-upload">
-      <input
-        ref={ref}
-        type="file"
-        accept={accept}
-        hidden
-        onChange={(event) => void upload(event.target.files?.[0] ?? null)}
-      />
-      <button type="button" disabled={busy} onClick={() => ref.current?.click()}>
-        {busy ? "Uploading…" : "Upload"}
-      </button>
-      {error ? <small>{error}</small> : null}
     </div>
   );
 }

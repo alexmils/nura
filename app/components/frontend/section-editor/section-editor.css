@@ -314,6 +314,136 @@ html[data-editor-open] .frontend-back-to-top {
   color: #8b3a32;
 }
 
+.fe-replace {
+  position: relative;
+  display: inline-block;
+}
+
+.fe-replace-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 7rem;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--ink) 6%, white);
+  cursor: pointer;
+}
+
+.fe-replace-thumb img,
+.fe-replace-thumb video {
+  display: block;
+  width: 100%;
+  height: 8rem;
+  object-fit: cover;
+}
+
+.fe-replace-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  color: #fff;
+  opacity: 0;
+}
+
+.fe-replace-thumb:hover .fe-replace-badge,
+.fe-replace-thumb:focus-visible .fe-replace-badge {
+  opacity: 1;
+}
+
+.fe-replace-menu {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  top: calc(100% + 0.25rem);
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  border-radius: 0.55rem;
+  background: #fff;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 16%, transparent);
+}
+
+.fe-replace-menu button {
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fe-replace-menu button:hover {
+  background: color-mix(in srgb, var(--sage, #84b067) 18%, white);
+}
+
+.fe-replace small {
+  display: block;
+  margin-top: 0.3rem;
+  color: #8b3a32;
+}
+
+.fe-cld-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+
+.fe-cld-panel {
+  width: min(40rem, calc(100% - 2rem));
+  max-height: min(32rem, calc(100% - 2rem));
+  overflow: auto;
+  padding: 1rem;
+  border-radius: 0.8rem;
+  background: var(--paper, #f7f6f1);
+}
+
+.fe-cld-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fe-cld-panel h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.fe-cld-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.fe-cld-grid button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fe-cld-grid img,
+.fe-cld-grid video {
+  display: block;
+  width: 100%;
+  height: 6rem;
+  object-fit: cover;
+  border-radius: 0.4rem;
+}
+
 .fe-hero-image-bg,
 .fe-knowledge-hero-image,
 .fe-spath-media img,

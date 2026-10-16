@@ -149,6 +149,12 @@ export type PlatformSettings = {
     privateKey: string;
     subject: string;
   };
+  /** Cloudinary library. Secret stays server-side. */
+  cloudinary: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
 };
 
 export const DEFAULT_PLATFORM_AI: PlatformAiConfig = {
@@ -194,6 +200,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   guidedChatChromeId: DEFAULT_GUIDED_CHAT_CHROME_ID,
   freeSessionChromeId: DEFAULT_FREE_SESSION_CHROME_ID,
   adminPush: { publicKey: "", privateKey: "", subject: "" },
+  cloudinary: { cloudName: "", apiKey: "", apiSecret: "" },
 };
 
 /** Old user AppSettings mistakenly stored in app_settings (has autoVoice, no siteName). */
@@ -339,6 +346,21 @@ function normalizeSettings(raw: unknown): PlatformSettings {
     adminPush: normalizeAdminPush(
       (r as Partial<PlatformSettings>).adminPush
     ),
+    cloudinary: normalizeCloudinary(
+      (r as Partial<PlatformSettings>).cloudinary
+    ),
+  };
+}
+
+function normalizeCloudinary(raw: unknown): PlatformSettings["cloudinary"] {
+  if (!raw || typeof raw !== "object") {
+    return { cloudName: "", apiKey: "", apiSecret: "" };
+  }
+  const r = raw as Partial<PlatformSettings["cloudinary"]>;
+  return {
+    cloudName: typeof r.cloudName === "string" ? r.cloudName.trim() : "",
+    apiKey: typeof r.apiKey === "string" ? r.apiKey.trim() : "",
+    apiSecret: typeof r.apiSecret === "string" ? r.apiSecret.trim() : "",
   };
 }
 
