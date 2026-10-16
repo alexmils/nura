@@ -65,14 +65,15 @@ export default function RootLayout({
     >
       <head>
         {/*
-          One inline script, not two. React 19 matches <head> scripts by
-          position and swaps a second tag onto the first during hydration,
-          which throws and leaves the mint preloader stuck at 0%.
-          Consent Mode still runs first (before any Google tag), then saved
-          accessibility choices, so text size does not flash.
+          One inline script, not two. React 19 matches head scripts by
+          position and a second tag hydrates onto the first.
+          suppressHydrationWarning: tag blockers rewrite this script's text
+          before React starts, which otherwise fails hydration and blocks Edit.
+          Consent Mode still runs first, then saved accessibility choices.
         */}
         <script
           id="nura-early-bootstrap"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `${consentDefaultScript()}\n${a11yBootstrapScript()}`,
           }}

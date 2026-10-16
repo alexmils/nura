@@ -818,6 +818,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - [internal] Importing a site image points the live pages at Cloudinary, and the library loads every page of files
 - [internal] Hero Edit sits under the transparent header, so the header no longer takes clicks outside the nav pill
 - [internal] The home preloader no longer sticks at 0% when the early head scripts hydrate
+- [internal] Hero Edit no longer trips a hydration error from the footer email field or a rewritten head script
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

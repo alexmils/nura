@@ -95,6 +95,7 @@ describe("consent mode head bootstrap", () => {
     const scripts = layout.match(/<script\b/g) ?? [];
     assert.equal(scripts.length, 1);
     assert.match(layout, /id="nura-early-bootstrap"/);
+    assert.match(layout, /suppressHydrationWarning/);
     assert.match(layout, /consentDefaultScript\(\)/);
     assert.match(layout, /a11yBootstrapScript\(\)/);
   });

@@ -5,6 +5,7 @@ import {
   type FormEvent,
   type PointerEvent,
   useCallback,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -26,6 +27,45 @@ import "./frontend-footer.css";
 
 /** Giant white lockup for Lassie-style end reveal (vector — crisp at any size). */
 const FOOTER_REVEAL_LOGO = "/brand/Nura%20Logo.svg";
+
+/**
+ * The email field is absent from the server HTML. LastPass injects
+ * `[data-lastpass-icon-root]` beside `#fe-footer-email` before hydration,
+ * and that mismatch takes down the whole page, including hero Edit.
+ */
+function FooterEmailInput({
+  placeholder,
+  value,
+  onChange,
+}: {
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(true);
+  }, []);
+  if (!ready) {
+    return <div className="fe-site-footer-input" aria-hidden />;
+  }
+  return (
+    <input
+      id="fe-footer-email"
+      type="email"
+      name="email"
+      autoComplete="email"
+      required
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="fe-site-footer-input"
+      data-lpignore="true"
+      data-1p-ignore="true"
+      data-bwignore="true"
+    />
+  );
+}
 
 export function FrontendFooter() {
   const cta = useSectionConfig("footer-cta");
@@ -178,20 +218,17 @@ export function FrontendFooter() {
                   className="fe-site-footer-form"
                   onSubmit={(e) => void onNewsletter(e)}
                   noValidate
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
                 >
                   <label className="fe-site-footer-sr" htmlFor="fe-footer-email">
                     Email
                   </label>
-                  <input
-                    id="fe-footer-email"
-                    type="email"
-                    name="email"
-                    autoComplete="email"
-                    required
+                  <FooterEmailInput
                     placeholder={sectionText(links, "newsPlaceholder")}
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="fe-site-footer-input"
+                    onChange={setEmail}
                   />
                   <button
                     type="submit"
