@@ -88,7 +88,7 @@ function KitRow({
 
 /** BrightHub language-board clone — flags + languages, pistachio copy. */
 export function SessionLoopKit() {
-  const copy = useSectionConfig("home-how");
+  const copy = useSectionConfig("home-how-languages");
   const points = sectionList(copy, "kitPoints");
   return (
     <div className="fe-spath-kit">

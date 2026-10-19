@@ -4,9 +4,10 @@ import dynamic from "next/dynamic";
 import { Fragment, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { LayoutList } from "lucide-react";
-import { isCustomSectionId } from "@/lib/marketing-sections";
+import { getSectionDef, hasSectionParts, isCustomSectionId } from "@/lib/marketing-sections";
 import { MARKETING_PAGES, slotLabel, type MarketingPageId } from "@/lib/marketing-layout";
 import { CustomSection } from "./CustomSection";
+import { SectionGate } from "./EditablePart";
 import { usePageLayout } from "./MarketingCopy";
 import { useIsPlatformAdmin } from "./useIsPlatformAdmin";
 
@@ -62,9 +63,22 @@ export function PageSections({
           return admin ? <HiddenMarker key={entry.id} page={page} id={entry.id} /> : null;
         }
         if (isCustomSectionId(entry.id)) {
-          return <CustomSection key={entry.id} id={entry.id} />;
+          return (
+            <SectionGate key={entry.id} id={entry.id}>
+              <CustomSection id={entry.id} />
+            </SectionGate>
+          );
         }
-        return <Fragment key={entry.id}>{slots[entry.id] ?? null}</Fragment>;
+        const node = slots[entry.id] ?? null;
+        // Split components switch their own parts off; everything else is gated here.
+        if (getSectionDef(entry.id) && !hasSectionParts(entry.id)) {
+          return (
+            <SectionGate key={entry.id} id={entry.id}>
+              {node}
+            </SectionGate>
+          );
+        }
+        return <Fragment key={entry.id}>{node}</Fragment>;
       })}
       {admin ? <LayoutButton page={page} /> : null}
       {admin && open ? <PageLayoutEditor page={page} onClose={closeLayoutEditor} /> : null}

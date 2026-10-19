@@ -17,7 +17,9 @@ import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SessionLoopKit } from "./SessionLoopKit";
 import { SectionEdit } from "./section-editor/SectionEdit";
-import { useSectionConfig } from "./section-editor/MarketingCopy";
+import { EditablePart, HiddenSectionNote } from "./section-editor/EditablePart";
+import { useSectionConfig, useSectionOn } from "./section-editor/MarketingCopy";
+import { useIsPlatformAdmin } from "./section-editor/useIsPlatformAdmin";
 import "./session-path-sticky.css";
 
 type StageId = "ground" | "rhythm" | "checkin" | "close";
@@ -131,7 +133,14 @@ function centerChipInNav(list: HTMLUListElement | null, id: StageId) {
 /** Attio-style sticky path: intro above, then sticky nav | scrolling stages. */
 export function SessionPathSticky() {
   const copy = useSectionConfig("home-how");
-  const stages: Stage[] = sectionList(copy, "stages").map((stage) => ({
+  const stagesCopy = useSectionConfig("home-how-stages");
+  const rhythmCopy = useSectionConfig("home-how-rhythm");
+  const groundCopy = useSectionConfig("home-how-ground");
+  const between = useSectionConfig("home-how-between");
+  const rhythmOn = useSectionOn("home-how-rhythm");
+  const groundOn = useSectionOn("home-how-ground");
+  const admin = useIsPlatformAdmin();
+  const stages: Stage[] = sectionList(stagesCopy, "stages").map((stage) => ({
     id: (stage.id || "ground") as StageId,
     nav: stage.nav,
     lead: stage.lead,
@@ -143,8 +152,8 @@ export function SessionPathSticky() {
     mediaPoster: stage.mediaPoster,
     mediaAlt: stage.mediaAlt,
   }));
-  const rhythm = sectionList(copy, "rhythm");
-  const ground = sectionList(copy, "ground");
+  const rhythm = sectionList(rhythmCopy, "rhythm");
+  const ground = sectionList(groundCopy, "ground");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
@@ -282,7 +291,7 @@ export function SessionPathSticky() {
       data-section="home-how"
       aria-labelledby={`${baseId}-heading`}
     >
-      <SectionEdit id="home-how" />
+      <EditablePart id="home-how">
       <div className="fe-container fe-spath-intro">
         <p className="fe-spath-badge">{sectionText(copy, "badge")}</p>
         <h2 id={`${baseId}-heading`} className="fe-spath-intro-title">
@@ -297,7 +306,9 @@ export function SessionPathSticky() {
           </span>
         </h2>
       </div>
+      </EditablePart>
 
+      <EditablePart id="home-how-stages">
       <div className="fe-spath-track-wrap">
         <div className="fe-container fe-spath-track">
           <nav className="fe-spath-nav" aria-label="Session stages">
@@ -371,8 +382,16 @@ export function SessionPathSticky() {
                     </p>
                   </div>
 
-                  {stage.id === "rhythm" ? (
-                    <div className="fe-spath-rhythm">
+                  {stage.id === "rhythm" && !rhythmOn ? (
+                    admin ? <HiddenSectionNote id="home-how-rhythm" /> : null
+                  ) : stage.id === "ground" && !groundOn ? (
+                    admin ? <HiddenSectionNote id="home-how-ground" /> : null
+                  ) : stage.id === "rhythm" ? (
+                    <div
+                      className={admin ? "fe-spath-rhythm fe-has-edit" : "fe-spath-rhythm"}
+                      data-section={admin ? "home-how-rhythm" : undefined}
+                    >
+                      <SectionEdit id="home-how-rhythm" />
                       <ul className="fe-spath-rhythm-grid">
                         {rhythm.map((card) => (
                           <li key={card.label} className="fe-spath-rhythm-card">
@@ -406,7 +425,11 @@ export function SessionPathSticky() {
                       />
                     </div>
                   ) : stage.id === "ground" ? (
-                    <div className="fe-spath-ground">
+                    <div
+                      className={admin ? "fe-spath-ground fe-has-edit" : "fe-spath-ground"}
+                      data-section={admin ? "home-how-ground" : undefined}
+                    >
+                      <SectionEdit id="home-how-ground" />
                       <div
                         className="fe-spath-media fe-spath-media--live"
                         role="img"
@@ -472,35 +495,40 @@ export function SessionPathSticky() {
           </div>
         </div>
       </div>
+      </EditablePart>
 
+      <EditablePart id="home-how-between">
       <div className="fe-spath-finale">
         <div className="fe-spath-finale-zoom">
         <div className="fe-container fe-spath-finale-inner">
-          <p className="fe-spath-finale-kicker">Between sessions</p>
+          <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
           <LetterRevealHeading as="h3" className="fe-spath-finale-title">
-            Self-guided session — sets without an agent
+            {sectionText(between, "betweenTitle")}
           </LetterRevealHeading>
           <p className="fe-spath-finale-line">
-            Practice in the gap, on your schedule.
+            {sectionText(between, "betweenLine")}
           </p>
           <Link
-            href={appPath("/create-account")}
+            href={sectionText(between, "betweenCtaHref") || appPath("/create-account")}
             className="fe-spath-cta frontend-btn-ghost"
           >
-            Start for free
+            {sectionText(between, "betweenCta")}
           </Link>
           <ScreenPlaceholder
-            kind={sectionText(copy, "screenKind")}
-            image={sectionText(copy, "screenImage")}
-            video={sectionText(copy, "screenVideo")}
-            poster={sectionText(copy, "screenPoster")}
-            alt={sectionText(copy, "screenAlt")}
+            kind={sectionText(between, "screenKind")}
+            image={sectionText(between, "screenImage")}
+            video={sectionText(between, "screenVideo")}
+            poster={sectionText(between, "screenPoster")}
+            alt={sectionText(between, "screenAlt")}
           />
         </div>
         </div>
       </div>
+      </EditablePart>
 
-      <SessionLoopKit />
+      <EditablePart id="home-how-languages">
+        <SessionLoopKit />
+      </EditablePart>
     </section>
   );
 }

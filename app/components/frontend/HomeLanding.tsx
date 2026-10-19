@@ -34,6 +34,7 @@ import {
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { PageSections } from "./section-editor/PageSections";
 import { SectionEdit } from "./section-editor/SectionEdit";
+import { EditablePart } from "./section-editor/EditablePart";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import { SessionPathSticky } from "./SessionPathSticky";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
@@ -573,6 +574,7 @@ export function HomeLanding({
             </p>
           </div>
 
+          <EditablePart id="pricing-cards">
           <div className="fe-pricing-grid">
             {cards.map((card) => {
               const plan = BILLING_PLANS[card.id];
@@ -631,6 +633,7 @@ export function HomeLanding({
               );
             })}
           </div>
+          </EditablePart>
         </div>
       </section>
       ),

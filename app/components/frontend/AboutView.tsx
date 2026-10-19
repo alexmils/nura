@@ -4,22 +4,26 @@ import Link from "next/link";
 import { BRAND_LIMITS_LINE } from "@/lib/brand";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { RichText } from "@/app/components/frontend/section-editor/RichText";
-import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { EditablePart } from "@/app/components/frontend/section-editor/EditablePart";
 import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./public-cluster.css";
 
 export function AboutView() {
   const copy = useSectionConfig("about-page");
-  const sections = sectionList(copy, "sections");
+  const body = useSectionConfig("about-sections");
+  const actions = useSectionConfig("about-actions");
+  const sections = sectionList(body, "sections");
 
   return (
-    <article className="fe-cluster fe-has-edit" data-section="about-page">
-      <SectionEdit id="about-page" lift />
+    <article className="fe-cluster" data-section="about-page">
       <div className="fe-cluster-inner">
-        <p className="fe-cluster-kicker">{sectionText(copy, "kicker")}</p>
-        <h1>{sectionText(copy, "title")}</h1>
-        <p className="fe-cluster-dek">{sectionText(copy, "dek")}</p>
+        <EditablePart id="about-page" lift>
+          <p className="fe-cluster-kicker">{sectionText(copy, "kicker")}</p>
+          <h1>{sectionText(copy, "title")}</h1>
+          <p className="fe-cluster-dek">{sectionText(copy, "dek")}</p>
+        </EditablePart>
 
+        <EditablePart id="about-sections">
         <div className="fe-cluster-body">
           {sections.map((section, index) => (
             <section key={section.heading}>
@@ -29,18 +33,21 @@ export function AboutView() {
             </section>
           ))}
         </div>
+        </EditablePart>
 
+        <EditablePart id="about-actions">
         <div className="fe-cluster-actions frontend-hero-actions">
-          <Link href={sectionText(copy, "primaryHref")} className="frontend-btn-primary">
-            {sectionText(copy, "primary")}
+          <Link href={sectionText(actions, "primaryHref")} className="frontend-btn-primary">
+            {sectionText(actions, "primary")}
           </Link>
-          <Link href={sectionText(copy, "secondaryHref")} className="frontend-btn-ghost">
-            {sectionText(copy, "secondary")}
+          <Link href={sectionText(actions, "secondaryHref")} className="frontend-btn-ghost">
+            {sectionText(actions, "secondary")}
           </Link>
-          <Link href={sectionText(copy, "tertiaryHref")} className="frontend-btn-ghost">
-            {sectionText(copy, "tertiary")}
+          <Link href={sectionText(actions, "tertiaryHref")} className="frontend-btn-ghost">
+            {sectionText(actions, "tertiary")}
           </Link>
         </div>
+        </EditablePart>
       </div>
     </article>
   );

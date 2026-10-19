@@ -22,7 +22,9 @@ import { BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import { sectionList, sectionText, parseLinkLines } from "@/lib/marketing-sections";
 import { RichInline } from "@/app/components/frontend/section-editor/RichText";
 import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
-import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
+import { useSectionConfig, useSectionOn } from "@/app/components/frontend/section-editor/MarketingCopy";
+import { EditablePart, SectionBackdrop, SectionGate } from "@/app/components/frontend/section-editor/EditablePart";
+import { useIsPlatformAdmin } from "@/app/components/frontend/section-editor/useIsPlatformAdmin";
 import "./frontend-footer.css";
 
 /** Giant white lockup for Lassie-style end reveal (vector — crisp at any size). */
@@ -71,7 +73,11 @@ export function FrontendFooter() {
   const cta = useSectionConfig("footer-cta");
   const links = useSectionConfig("footer-links");
   const columns = sectionList(links, "columns");
-  const legal = sectionList(links, "legal");
+  const news = useSectionConfig("footer-newsletter");
+  const legalCopy = useSectionConfig("footer-legal");
+  const legalOn = useSectionOn("footer-legal");
+  const footerAdmin = useIsPlatformAdmin();
+  const legal = legalOn ? sectionList(legalCopy, "legal") : [];
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [note, setNote] = useState("");
@@ -147,6 +153,7 @@ export function FrontendFooter() {
         />
 
         <div className="fe-site-footer-inner">
+          <SectionGate id="footer-cta">
           <div className="fe-site-footer-cta fe-has-edit" data-section="footer-cta">
             <SectionEdit id="footer-cta" />
             <LetterRevealHeading className="fe-site-footer-cta-title">
@@ -170,7 +177,9 @@ export function FrontendFooter() {
               </Link>
             </div>
           </div>
+          </SectionGate>
 
+          <SectionBackdrop id="footer-links">
           <div className="fe-site-footer-grid fe-has-edit" data-section="footer-links">
             <SectionEdit id="footer-links" />
             <div className="fe-site-footer-brand">
@@ -206,13 +215,14 @@ export function FrontendFooter() {
               ))}
             </nav>
 
+            <EditablePart id="footer-newsletter">
             <div className="fe-site-footer-newsletter">
-              <p className="fe-site-footer-newsletter-title">{sectionText(links, "newsTitle")}</p>
+              <p className="fe-site-footer-newsletter-title">{sectionText(news, "newsTitle")}</p>
               <p className="fe-site-footer-newsletter-hint">
-                {sectionText(links, "newsHint")}
+                {sectionText(news, "newsHint")}
               </p>
               {sent ? (
-                <p className="fe-site-footer-newsletter-done">{sectionText(links, "newsThanks")}</p>
+                <p className="fe-site-footer-newsletter-done">{sectionText(news, "newsThanks")}</p>
               ) : (
                 <form
                   className="fe-site-footer-form"
@@ -226,7 +236,7 @@ export function FrontendFooter() {
                     Email
                   </label>
                   <FooterEmailInput
-                    placeholder={sectionText(links, "newsPlaceholder")}
+                    placeholder={sectionText(news, "newsPlaceholder")}
                     value={email}
                     onChange={setEmail}
                   />
@@ -235,7 +245,7 @@ export function FrontendFooter() {
                     className="fe-site-footer-send"
                     disabled={newsBusy || !newsOptIn || !turnstileToken}
                   >
-                    {newsBusy ? sectionText(links, "newsSending") : sectionText(links, "newsSend")}
+                    {newsBusy ? sectionText(news, "newsSending") : sectionText(news, "newsSend")}
                   </button>
                   <label className="fe-site-footer-newsletter-hint" style={{ display: "flex", gap: 8 }}>
                     <input
@@ -244,7 +254,7 @@ export function FrontendFooter() {
                       onChange={(e) => setNewsOptIn(e.target.checked)}
                     />
                     <span>
-                      <RichInline text={sectionText(links, "newsOptIn")} />
+                      <RichInline text={sectionText(news, "newsOptIn")} />
                     </span>
                   </label>
                   <TurnstileField
@@ -256,7 +266,9 @@ export function FrontendFooter() {
                 </form>
               )}
             </div>
+            </EditablePart>
           </div>
+          </SectionBackdrop>
 
           <div className="fe-site-footer-meta">
             <p className="fe-site-footer-limits">
@@ -267,7 +279,13 @@ export function FrontendFooter() {
               <p className="fe-site-footer-copy">
                 © {new Date().getFullYear()} {BRAND_SPOKEN} | All rights reserved
               </p>
-              <nav className="fe-site-footer-legal" aria-label="Legal">
+              <SectionBackdrop id="footer-legal">
+              <nav
+                className={footerAdmin ? "fe-site-footer-legal fe-has-edit" : "fe-site-footer-legal"}
+                data-section={footerAdmin ? "footer-legal" : undefined}
+                aria-label="Legal"
+              >
+                <SectionEdit id="footer-legal" />
                 {legal.map((l) => (
                   <Link key={l.href} href={l.href}>
                     {l.label}
@@ -275,6 +293,7 @@ export function FrontendFooter() {
                 ))}
                 <CookieSettingsButton className="fe-site-footer-cookie-btn" />
               </nav>
+              </SectionBackdrop>
             </div>
           </div>
         </div>

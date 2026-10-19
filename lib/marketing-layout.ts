@@ -1,4 +1,6 @@
-import { getSectionDef, isCustomSectionId } from "@/lib/marketing-sections";
+import { articleSlotIds, getSectionDef, isCustomSectionId } from "@/lib/marketing-sections";
+
+const articleSlots = (baseId: string) => articleSlotIds(baseId).map((id) => ({ id }));
 
 /**
  * Page-level section order and visibility for the public marketing pages.
@@ -50,20 +52,20 @@ export const MARKETING_PAGES = {
   },
   support: { label: "Support", path: "/support", slots: [{ id: "support-page" }] },
   editorial: { label: "Editorial", path: "/editorial", slots: [{ id: "editorial-page" }] },
-  safety: { label: "Safety", path: "/safety", slots: [{ id: "safety-page" }] },
-  limits: { label: "Limits", path: "/limits", slots: [{ id: "limits-page" }] },
+  safety: { label: "Safety", path: "/safety", slots: articleSlots("safety-page") },
+  limits: { label: "Limits", path: "/limits", slots: articleSlots("limits-page") },
   clinical: {
     label: "Clinical review",
     path: "/about/clinical-team",
-    slots: [{ id: "clinical-intro" }, { id: "clinical-advisor" }, { id: "clinical-outro" }],
+    slots: [...articleSlots("clinical-intro"), { id: "clinical-advisor" }, { id: "clinical-outro" }],
   },
   emdr: {
     label: "EMDR",
     path: "/emdr",
     slots: [
-      { id: "emdr-intro" },
+      ...articleSlots("emdr-intro"),
       { id: "emdr-compare" },
-      { id: "emdr-guide" },
+      ...articleSlots("emdr-guide"),
       { id: "emdr-faq" },
       { id: "emdr-close" },
       { id: "emdr-more", label: "EMDR: keep reading (automatic links)" },

@@ -10,7 +10,7 @@ import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { EMDR_FAQ_ITEMS as EMDR_FAQ } from "@/lib/emdr-faq";
 import { isSectionShown } from "@/lib/marketing-layout";
-import { faqPairs, getSectionDef, sectionList } from "@/lib/marketing-sections";
+import { articleSlotIds, faqPairs, getSectionDef, isSectionOn, sectionList } from "@/lib/marketing-sections";
 import { loadMarketingCopy, loadPageLayouts } from "@/lib/marketing-sections-db";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { buildEmdrJsonLd } from "@/lib/seo-jsonld";
@@ -46,7 +46,7 @@ export default async function EmdrPage() {
   }
   const origin = siteOrigin(publicUrl);
   const [copy, layouts] = await Promise.all([loadMarketingCopy(), loadPageLayouts()]);
-  const faq = isSectionShown(layouts.emdr, "emdr-faq") ? emdrFaqJsonLd(copy["emdr-faq"]) : [];
+  const faq = isSectionShown(layouts.emdr, "emdr-faq") && isSectionOn(copy["emdr-faq"]) ? emdrFaqJsonLd(copy["emdr-faq"]) : [];
 
   return (
     <FrontendShell>
@@ -55,9 +55,9 @@ export default async function EmdrPage() {
         <PageSections
           page="emdr"
           slots={{
-            "emdr-intro": <ArticleSection id="emdr-intro" />,
+            ...Object.fromEntries(articleSlotIds("emdr-intro").map((id) => [id, <ArticleSection key={id} id={id} />])),
             "emdr-compare": <EmdrCompareSection />,
-            "emdr-guide": <ArticleSection id="emdr-guide" />,
+            ...Object.fromEntries(articleSlotIds("emdr-guide").map((id) => [id, <ArticleSection key={id} id={id} />])),
             "emdr-faq": <EmdrFaqSection />,
             "emdr-close": <EmdrCloseSection />,
             "emdr-more": <EmdrKeepReading />,

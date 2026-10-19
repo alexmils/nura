@@ -7,7 +7,7 @@ import {
   SESSION_MODE_GUIDED_SHORT,
   SESSION_MODE_SELF_SHORT,
 } from "@/lib/brand";
-import { LOGIN_PATH } from "@/lib/app-base";
+import { appPath, LOGIN_PATH } from "@/lib/app-base";
 import { EMDR_FAQ_ITEMS } from "@/lib/emdr-faq";
 import { LANDING_FAQ_ITEMS } from "@/lib/landing-faq";
 import {
@@ -74,6 +74,8 @@ export type SectionDef = {
   name: string;
   fields: Field[];
   defaults: SectionConfig;
+  /** No "Show this section" switch (the block cannot be hidden on its own). */
+  noHide?: boolean;
 };
 
 const TEXT_MAX = 400;
@@ -146,7 +148,7 @@ function faqDefaults(
   return items.map((item) => ({ q: item.q, a: item.a }));
 }
 
-export const MARKETING_SECTIONS: readonly SectionDef[] = [
+const BASE_SECTIONS: readonly SectionDef[] = [
   {
     id: "home-hero",
     name: "Home: hero",
@@ -403,7 +405,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
   },
   {
     id: "pricing-cards",
-    name: "Pricing cards",
+    name: "Pricing: plan cards",
     fields: [
       text("cta", "Card button"),
       {
@@ -1175,6 +1177,222 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
   },
 ];
 
+/* ---------- One definition per visual section ---------- */
+
+type PartSpec = {
+  id: string;
+  name: string;
+  /** Field keys taken from the base definition, in panel order. */
+  keys: string[];
+  labels?: Record<string, string>;
+  /** Fields that only this part has (placed before the base keys). */
+  extra?: { fields: Field[]; defaults: SectionConfig };
+  noHide?: boolean;
+};
+
+/**
+ * Blocks that render inside one component but are separate on the page.
+ * The first part keeps the base id, so page layouts are unchanged.
+ */
+const COMPONENT_PARTS: Record<string, PartSpec[]> = {
+  "home-how": [
+    { id: "home-how", name: "Home: how it works", keys: ["badge", "intro1", "intro2", "intro3"] },
+    { id: "home-how-stages", name: "Home: session stages", keys: ["stages"] },
+    { id: "home-how-rhythm", name: "Home: rhythm cards", keys: ["rhythm"], labels: { rhythm: "Cards" } },
+    { id: "home-how-ground", name: "Home: grounding cards", keys: ["ground"], labels: { ground: "Cards" } },
+    {
+      id: "home-how-between",
+      name: "Home: between sessions",
+      keys: ["screen"],
+      labels: { screen: "Screen image or video" },
+      extra: {
+        fields: [
+          text("betweenKicker", "Kicker"),
+          text("betweenTitle", "Title"),
+          area("betweenLine", "Line"),
+          text("betweenCta", "Button"),
+          link("betweenCtaHref", "Button link"),
+        ],
+        defaults: {
+          betweenKicker: "Between sessions",
+          betweenTitle: "Self-guided session \u2014 sets without an agent",
+          betweenLine: "Practice in the gap, on your schedule.",
+          betweenCta: "Start for free",
+          betweenCtaHref: appPath("/create-account"),
+        },
+      },
+    },
+    {
+      id: "home-how-languages",
+      name: "Home: languages",
+      keys: ["kitKicker", "kitTitle", "kitSub", "kitPoints"],
+      labels: { kitKicker: "Kicker", kitTitle: "Title", kitSub: "Line", kitPoints: "Points" },
+    },
+  ],
+  "footer-links": [
+    { id: "footer-links", name: "Footer: links", keys: ["tagline", "columns"], noHide: true },
+    {
+      id: "footer-newsletter",
+      name: "Footer: newsletter",
+      keys: ["newsTitle", "newsHint", "newsPlaceholder", "newsSend", "newsSending", "newsThanks", "newsOptIn"],
+      labels: {
+        newsTitle: "Title",
+        newsHint: "Hint",
+        newsPlaceholder: "Email placeholder",
+        newsSend: "Send button",
+        newsSending: "Sending label",
+        newsThanks: "Thank-you line",
+        newsOptIn: "Opt-in line",
+      },
+    },
+    { id: "footer-legal", name: "Footer: legal links", keys: ["legal"], labels: { legal: "Links" } },
+  ],
+  "about-page": [
+    { id: "about-page", name: "About: header", keys: ["kicker", "title", "dek"] },
+    { id: "about-sections", name: "About: text sections", keys: ["sections"] },
+    {
+      id: "about-actions",
+      name: "About: buttons",
+      keys: ["primary", "primaryHref", "secondary", "secondaryHref", "tertiary", "tertiaryHref"],
+    },
+  ],
+  "support-page": [
+    { id: "support-page", name: "Support: header", keys: ["title", "lead"] },
+    { id: "support-sections", name: "Support: text sections", keys: ["sections"] },
+  ],
+  "editorial-page": [
+    { id: "editorial-page", name: "Editorial: header", keys: ["kicker", "title", "dek"] },
+    { id: "editorial-sections", name: "Editorial: text sections", keys: ["sections"] },
+  ],
+  "faq-page": [
+    { id: "faq-page", name: "FAQ: header", keys: ["title", "lead"] },
+    { id: "faq-questions", name: "FAQ: questions", keys: ["items"] },
+  ],
+};
+
+/**
+ * Long articles split at every "## " heading. Each piece is its own page
+ * section (own chip, own panel, own place in the page layout). The first
+ * piece keeps the base id.
+ */
+const ARTICLE_PARTS: Record<string, string> = {
+  "safety-page": "Safety",
+  "limits-page": "Limits",
+  "clinical-intro": "Clinical review",
+  "emdr-intro": "EMDR",
+  "emdr-guide": "EMDR",
+};
+
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\*\*|\[|\]\([^)]*\)/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-[a-z0-9]*$/, (tail) => (value.length > 48 ? "" : tail));
+}
+
+/** Splits markdown before each "## " line. Rendering the pieces one after another gives the same blocks. */
+export function splitArticleBody(body: string): { heading: string; body: string }[] {
+  const lines = body.split("\n");
+  const pieces: { heading: string; lines: string[] }[] = [{ heading: "", lines: [] }];
+  for (const line of lines) {
+    if (line.startsWith("## ")) pieces.push({ heading: line.slice(3).trim(), lines: [] });
+    pieces[pieces.length - 1]!.lines.push(line);
+  }
+  return pieces
+    .map((piece) => ({ heading: piece.heading, body: piece.lines.join("\n").replace(/^\n+|\n+$/g, "") }))
+    .filter((piece) => piece.body.trim().length > 0);
+}
+
+function fieldKeys(field: Field): string[] {
+  if (field.kind !== "media") return [field.key];
+  return Object.values(mediaNames(field.key));
+}
+
+function buildParts(base: SectionDef, parts: PartSpec[]): SectionDef[] {
+  return parts.map((part) => {
+    const fields: Field[] = [...(part.extra?.fields ?? [])];
+    const defaults: SectionConfig = { ...(part.extra?.defaults ?? {}) };
+    for (const key of part.keys) {
+      const field = base.fields.find((entry) => entry.key === key);
+      if (!field) throw new Error(`${base.id}: no field ${key}`);
+      const label = part.labels?.[key];
+      fields.push(label ? { ...field, label } : field);
+      for (const name of fieldKeys(field)) {
+        if (name in base.defaults) defaults[name] = base.defaults[name]!;
+      }
+    }
+    return { id: part.id, name: part.name, fields, defaults, ...(part.noHide ? { noHide: true } : {}) };
+  });
+}
+
+function buildArticleParts(base: SectionDef, page: string): SectionDef[] {
+  const field = base.fields.find((entry) => entry.key === "body");
+  const body = typeof base.defaults.body === "string" ? base.defaults.body : "";
+  if (!field) return [base];
+  const pieces = splitArticleBody(body);
+  const used = new Set<string>();
+  return pieces.map((piece, index) => {
+    let id = base.id;
+    if (index > 0) {
+      id = `${base.id}-${slugify(piece.heading) || index}`;
+      while (used.has(id)) id = `${id}-${index}`;
+    }
+    used.add(id);
+    const heading = piece.heading.replace(/\*\*/g, "") || "Introduction";
+    return {
+      id,
+      name: `${page}: ${heading}`,
+      fields: [{ ...field, label: "Text" }],
+      defaults: { body: piece.body },
+    };
+  });
+}
+
+const ARTICLE_SLOTS: Record<string, string[]> = {};
+const PART_IDS: Record<string, string[]> = {};
+
+function expandSections(base: readonly SectionDef[]): SectionDef[] {
+  const out: SectionDef[] = [];
+  for (const def of base) {
+    const parts = COMPONENT_PARTS[def.id];
+    const article = ARTICLE_PARTS[def.id];
+    if (parts) {
+      const built = buildParts(def, parts);
+      PART_IDS[def.id] = built.map((entry) => entry.id);
+      out.push(...built);
+    } else if (article) {
+      const built = buildArticleParts(def, article);
+      ARTICLE_SLOTS[def.id] = built.map((entry) => entry.id);
+      out.push(...built);
+    } else {
+      out.push(def);
+    }
+  }
+  return out;
+}
+
+export const MARKETING_SECTIONS: readonly SectionDef[] = expandSections(BASE_SECTIONS);
+
+/** Page-layout slot ids for a long article (one per "## " piece). */
+export function articleSlotIds(baseId: string): string[] {
+  return ARTICLE_SLOTS[baseId] ?? [baseId];
+}
+
+/** Base id whose component renders several separately edited parts. */
+export function hasSectionParts(id: string): boolean {
+  return Object.prototype.hasOwnProperty.call(COMPONENT_PARTS, id);
+}
+
+/** Section switched off in its own panel ("Show this section" unticked). */
+export const SECTION_OFF_KEY = "_off";
+
+export function isSectionOn(config: SectionConfig | undefined): boolean {
+  return config?.[SECTION_OFF_KEY] !== "1";
+}
+
 /* ---------- Admin-added sections ---------- */
 
 export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "faq", "cards"] as const;
@@ -1541,6 +1759,65 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
       );
     }
   }
+  if (source[SECTION_OFF_KEY] === "1" && !def.noHide) out[SECTION_OFF_KEY] = "1";
+  Object.assign(out, normalizeBackground(source));
+  return out;
+}
+
+/* ---------- Section background (every section) ---------- */
+
+export const BG_KINDS = ["image", "video", "color"] as const;
+export type SectionBgKind = (typeof BG_KINDS)[number];
+export const BG_KEYS = ["bgKind", "bgImage", "bgVideo", "bgPoster", "bgColor", "bgOverlay", "bgTone"] as const;
+export const BG_DEFAULT_OVERLAY = 40;
+
+export type SectionBackground = {
+  kind: SectionBgKind;
+  image: string;
+  video: string;
+  poster: string;
+  color: string;
+  /** 0-90, percent. */
+  overlay: number;
+  tone: "light" | "dark";
+};
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Only kept when a kind is chosen, so an untouched section stores nothing extra. */
+export function normalizeBackground(source: Record<string, unknown>): SectionItem {
+  const kind = source.bgKind;
+  if (kind !== "image" && kind !== "video" && kind !== "color") return {};
+  const str = (key: string) => (typeof source[key] === "string" ? (source[key] as string) : "");
+  const overlay = Number.parseInt(str("bgOverlay"), 10);
+  const color = str("bgColor").trim();
+  return {
+    bgKind: kind,
+    bgImage: safeMediaUrl(str("bgImage"), ""),
+    bgVideo: safeMediaUrl(str("bgVideo"), ""),
+    bgPoster: safeMediaUrl(str("bgPoster"), ""),
+    bgColor: HEX.test(color) ? color.toLowerCase() : "#ffffff",
+    bgOverlay: String(Number.isFinite(overlay) ? Math.min(90, Math.max(0, overlay)) : BG_DEFAULT_OVERLAY),
+    bgTone: str("bgTone") === "dark" ? "dark" : "light",
+  };
+}
+
+/** The background to paint, or null when the section keeps its own look. */
+export function sectionBackground(config: SectionConfig | undefined): SectionBackground | null {
+  if (!config) return null;
+  const bg = normalizeBackground(config as Record<string, unknown>);
+  if (!bg.bgKind) return null;
+  const out: SectionBackground = {
+    kind: bg.bgKind as SectionBgKind,
+    image: bg.bgImage ?? "",
+    video: bg.bgVideo ?? "",
+    poster: bg.bgPoster ?? "",
+    color: bg.bgColor ?? "#ffffff",
+    overlay: Number(bg.bgOverlay ?? BG_DEFAULT_OVERLAY),
+    tone: bg.bgTone === "dark" ? "dark" : "light",
+  };
+  if (out.kind === "image" && !out.image) return null;
+  if (out.kind === "video" && !out.video) return null;
   return out;
 }
 

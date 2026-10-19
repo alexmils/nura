@@ -34,30 +34,41 @@ const MarketingSectionEditor = dynamic(
   { ssr: false }
 );
 
+let openSnapshot = "";
+function openKey() {
+  openSnapshot = [...openEditors].join("|");
+  return openSnapshot;
+}
+
 /** Admin-only Edit chip. Renders nothing for everyone else. */
 export function SectionEdit({ id, lift = false }: { id: string; lift?: boolean }) {
   const admin = useIsPlatformAdmin();
-  const open = useSyncExternalStore(
-    subscribe,
-    () => openEditors.has(id),
-    () => false
-  );
   const def = getSectionDef(id);
   if (!admin || !def) return null;
   return (
+    <AdminSectionChip
+      name={def.name}
+      id={id}
+      lift={lift}
+      onEdit={() => setEditorOpen(id, true)}
+    />
+  );
+}
+
+/**
+ * Open panels live here, once per page, not inside the chip: a section that
+ * hides or swaps markup while you edit it (e.g. "Show this section" off)
+ * must not unmount its own panel.
+ */
+export function SectionEditorHost() {
+  const key = useSyncExternalStore(subscribe, openKey, () => "");
+  if (!key || typeof document === "undefined") return null;
+  return createPortal(
     <>
-      <AdminSectionChip
-        name={def.name}
-        id={id}
-        lift={lift}
-        onEdit={() => setEditorOpen(id, true)}
-      />
-      {open
-        ? createPortal(
-            <MarketingSectionEditor id={id} onClose={() => setEditorOpen(id, false)} />,
-            document.body
-          )
-        : null}
-    </>
+      {key.split("|").map((id) => (
+        <MarketingSectionEditor key={id} id={id} onClose={() => setEditorOpen(id, false)} />
+      ))}
+    </>,
+    document.body
   );
 }

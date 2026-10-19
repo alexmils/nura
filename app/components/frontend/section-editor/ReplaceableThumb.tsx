@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 
 function isCloudinary(src: string): boolean {
@@ -54,7 +54,7 @@ export function ReplaceableThumb({
 
   return (
     <div ref={boxRef} className="fe-replace">
-      <button type="button" className="fe-replace-thumb" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu((open) => !open)}>
+      <button type="button" className="fe-replace-thumb" aria-haspopup="menu" aria-expanded={menu} aria-label={src ? "Change media" : "Upload media"} onClick={() => setMenu((open) => !open)}>
         {src && mediaType === "video" ? (
           <video src={src} muted playsInline />
         ) : src ? (
@@ -63,8 +63,9 @@ export function ReplaceableThumb({
         ) : (
           <span>Add</span>
         )}
-        <span className="fe-replace-badge" aria-hidden>
-          <RefreshCw size={16} />
+        <span className="fe-replace-hover" aria-hidden>
+          <Pencil size={16} />
+          {src ? "Change" : "Upload"}
         </span>
       </button>
       {menu ? (

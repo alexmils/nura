@@ -3,6 +3,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 import {
   defaultMarketingCopy,
+  isSectionOn,
   normalizeSection,
   type SectionConfig,
 } from "@/lib/marketing-sections";
@@ -42,6 +43,11 @@ export function useSectionConfig(id: string): SectionConfig {
   const map = useContext(MarketingCopyContext);
   const saved = map[id] ?? FALLBACK[id] ?? {};
   return normalizeSection(id, useDraftOr(id, saved));
+}
+
+/** False when the section's own "Show this section" switch is off (live while editing). */
+export function useSectionOn(id: string): boolean {
+  return isSectionOn(useSectionConfig(id));
 }
 
 /** Saved copy for every section (no drafts). */

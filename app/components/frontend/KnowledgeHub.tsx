@@ -12,6 +12,7 @@ import {
 import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { SectionGate } from "@/app/components/frontend/section-editor/EditablePart";
 import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./knowledge.css";
 
@@ -158,6 +159,7 @@ export function KnowledgeHub() {
           <KnowledgeSeriesBlock key={series.id} series={series} />
         ))}
 
+        <SectionGate id="knowledge-more">
         <section
           className="fe-knowledge-more fe-has-edit"
           data-section="knowledge-more"
@@ -182,6 +184,7 @@ export function KnowledgeHub() {
             ))}
           </ul>
         </section>
+        </SectionGate>
       </div>
       ),
         }}

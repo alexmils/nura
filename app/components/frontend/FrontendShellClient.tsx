@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { closeAllEditors } from "@/app/components/frontend/section-editor/SectionEdit";
+import { closeAllEditors, SectionEditorHost } from "@/app/components/frontend/section-editor/SectionEdit";
 import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
 import { FrontendBackToTop } from "@/app/components/frontend/FrontendBackToTop";
@@ -37,6 +37,7 @@ export function FrontendShellClient({
   return (
     <div className={`frontend-home${wide ? " frontend-home-landing" : ""}`}>
       <EditorRouteReset />
+      <SectionEditorHost />
       <FrontendPreloader />
       <FrontendHeader overlay={wide} />
       <main

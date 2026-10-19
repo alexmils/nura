@@ -2,12 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, RotateCcw, Undo2, X } from "lucide-react";
+import { RotateCcw, Undo2, X } from "lucide-react";
 import {
   getSectionDef,
+  BG_DEFAULT_OVERLAY,
   HIDDEN_ITEM_KEY,
+  SECTION_OFF_KEY,
   mediaNames,
-  type Field,
   type ItemField,
   type ListField,
   type MediaFieldDef,
@@ -31,7 +32,6 @@ export function MarketingSectionEditor({
   const [config, setConfig] = useState<SectionConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [open, setOpen] = useState<Record<string, boolean>>({});
   const [history, setHistory] = useState<SectionConfig[]>([]);
   const lastEdit = useRef<{ key: string; at: number } | null>(null);
   useEditorDraft(id, config);
@@ -138,88 +138,101 @@ export function MarketingSectionEditor({
   }
 
   if (!def) return null;
-  const groups = fieldGroups(def.fields);
+  const split = def.name.indexOf(": ");
+  const page = split > 0 ? def.name.slice(0, split) : "";
+  const rawTitle = split > 0 ? def.name.slice(split + 2) : def.name;
+  const title = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+  const on = config ? config[SECTION_OFF_KEY] !== "1" : true;
 
   return (
-    <EditorLayer className="fe-editor-layer" role="dialog" aria-modal="true" aria-label="Edit section">
+    <EditorLayer className="fe-editor-layer" role="dialog" aria-modal="true" aria-label={`Edit ${title}`}>
       <div className="fe-editor-drawer" data-lenis-prevent>
         <header className="fe-editor-head">
-          <h2>Edit section</h2>
+          <div>
+            <h2>Edit {title}</h2>
+            <p className="fe-editor-sub">
+              {page ? `${page} \u00b7 ` : ""}
+              <code>{id}</code>
+            </p>
+          </div>
           <button type="button" onClick={onClose} aria-label="Close">
             <X size={20} />
           </button>
         </header>
         <div className="fe-editor-body">
           {!config ? (
-            <p>{error ?? "Loading…"}</p>
+            <p>{error ?? "Loading\u2026"}</p>
           ) : (
-            groups.map((group, index) => {
-              const expanded = open[group.key] ?? index === 0;
-              return (
-                <section key={group.key} className="fe-editor-acc">
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() =>
-                      setOpen((current) => ({ ...current, [group.key]: !expanded }))
-                    }
-                  >
-                    <ChevronDown size={16} className={expanded ? "is-open" : ""} aria-hidden />
-                    {group.label}
-                  </button>
-                  {expanded ? (
-                    <div className="fe-editor-acc-body">
-                      {group.kind === "copy"
-                        ? group.fields.map((field) => (
-                            <ScalarControl
-                              key={field.key}
-                              field={field}
-                              value={String(config[field.key] ?? "")}
-                              onChange={(value) =>
-                                change(field.key, (current) => ({ ...current, [field.key]: value }))
-                              }
-                            />
-                          ))
-                        : null}
-                      {group.kind === "media" ? (
-                        <MediaControls
-                          field={group.field}
-                          values={config}
-                          onChange={(patch) =>
-                            change(`${group.field.key}:${Object.keys(patch).join(",")}`, (current) => ({
-                              ...current,
-                              ...patch,
-                            }))
-                          }
-                        />
-                      ) : null}
-                      {group.kind === "list" ? (
-                        <ListEditor
-                          field={group.field}
-                          items={(config[group.field.key] as SectionItem[]) ?? []}
-                          onChange={(items, key) =>
-                            change(`${group.field.key}:${key}`, (current) => ({
-                              ...current,
-                              [group.field.key]: items,
-                            }))
-                          }
-                        />
-                      ) : null}
-                    </div>
-                  ) : null}
-                </section>
-              );
-            })
+            <>
+              {def.noHide ? null : (
+                <label className="fe-editor-check fe-editor-show">
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={(event) => {
+                      const show = event.target.checked;
+                      change(SECTION_OFF_KEY, (current) => {
+                        const next = { ...current };
+                        if (show) delete next[SECTION_OFF_KEY];
+                        else next[SECTION_OFF_KEY] = "1";
+                        return next;
+                      });
+                    }}
+                  />
+                  <span>Show this section</span>
+                </label>
+              )}
+              <BackgroundControls
+                values={config}
+                onChange={(patch, key) => change(`bg:${key}`, (current) => ({ ...current, ...patch }))}
+              />
+              {def.fields.map((field) => {
+                if (field.kind === "list") {
+                  return (
+                    <fieldset key={field.key} className="fe-editor-group">
+                      <legend>{field.label}</legend>
+                      <ListEditor
+                        field={field}
+                        items={(config[field.key] as SectionItem[]) ?? []}
+                        onChange={(items, key) =>
+                          change(`${field.key}:${key}`, (current) => ({ ...current, [field.key]: items }))
+                        }
+                      />
+                    </fieldset>
+                  );
+                }
+                if (field.kind === "media") {
+                  return (
+                    <fieldset key={field.key} className="fe-editor-group">
+                      <legend>{field.label}</legend>
+                      <MediaControls
+                        field={field}
+                        values={config}
+                        onChange={(patch) =>
+                          change(`${field.key}:${Object.keys(patch).join(",")}`, (current) => ({
+                            ...current,
+                            ...patch,
+                          }))
+                        }
+                      />
+                    </fieldset>
+                  );
+                }
+                return (
+                  <ScalarControl
+                    key={field.key}
+                    field={field}
+                    value={String(config[field.key] ?? "")}
+                    onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+                  />
+                );
+              })}
+            </>
           )}
         </div>
         <footer className="fe-editor-foot">
           {error && config ? <p>{error}</p> : <span />}
-          <button
-            type="button"
-            onClick={undo}
-            disabled={!history.length || saving}
-            title="Undo last change"
-          >
+          <button type="button" onClick={undo} disabled={!history.length || saving} title="Undo last change">
             <Undo2 size={14} aria-hidden /> Undo
           </button>
           <button
@@ -234,45 +247,12 @@ export function MarketingSectionEditor({
             Cancel
           </button>
           <button type="button" disabled={!config || saving} onClick={() => void save()}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving\u2026" : "Save"}
           </button>
         </footer>
       </div>
     </EditorLayer>
   );
-}
-
-type EditorGroup =
-  | { key: string; label: string; kind: "copy"; fields: ScalarField[] }
-  | { key: string; label: string; kind: "media"; field: MediaFieldDef }
-  | { key: string; label: string; kind: "list"; field: ListField };
-
-function fieldGroups(fields: Field[]): EditorGroup[] {
-  const groups: EditorGroup[] = [];
-  let copy: ScalarField[] = [];
-  const flush = () => {
-    if (!copy.length) return;
-    groups.push({
-      key: `copy-${groups.length}`,
-      label: copy.length === 1 ? copy[0].label : "Copy",
-      kind: "copy",
-      fields: copy,
-    });
-    copy = [];
-  };
-  for (const field of fields) {
-    if (field.kind === "media") {
-      flush();
-      groups.push({ key: field.key, label: field.label, kind: "media", field });
-    } else if (field.kind === "list") {
-      flush();
-      groups.push({ key: field.key, label: field.label, kind: "list", field });
-    } else {
-      copy.push(field);
-    }
-  }
-  flush();
-  return groups;
 }
 
 function ScalarControl({
@@ -392,8 +372,6 @@ function ListEditor({
   items: SectionItem[];
   onChange: (items: SectionItem[], key: string) => void;
 }) {
-  const [open, setOpen] = useState(0);
-
   function patch(index: number, key: string, value: string) {
     onChange(
       items.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
@@ -416,7 +394,6 @@ function ListEditor({
     const next = items.slice();
     next.splice(index + 1, 0, copy);
     onChange(next, `dup-${Date.now()}`);
-    setOpen(index + 1);
   }
 
   function toggleHidden(index: number) {
@@ -439,7 +416,6 @@ function ListEditor({
     if (!row) return;
     next.splice(target, 0, row);
     onChange(next, `move-${Date.now()}`);
-    setOpen(target);
   }
 
   function add() {
@@ -458,43 +434,33 @@ function ListEditor({
       }
     }
     onChange([...items, blank], `add-${Date.now()}`);
-    setOpen(items.length);
   }
 
   return (
     <div className="fe-editor-list">
       {items.map((item, index) => {
-        const expanded = open === index;
         const hidden = item[HIDDEN_ITEM_KEY] === "1";
-        const title =
-          (item.nav || item.title || item.name || item.q || item.label || item.heading || `${field.itemLabel} ${index + 1}`) +
-          (hidden ? " (hidden)" : "");
         return (
-          <article key={item.id || index} className="fe-editor-item">
+          <article key={item.id || index} className={hidden ? "fe-editor-item is-off" : "fe-editor-item"}>
             <div className="fe-editor-item-bar">
-              <button
-                type="button"
-                className="fe-editor-item-toggle"
-                aria-expanded={expanded}
-                onClick={() => setOpen(expanded ? -1 : index)}
-              >
-                <ChevronDown size={16} className={expanded ? "is-open" : ""} aria-hidden />
-                <strong>{title}</strong>
-              </button>
+              <strong>
+                {field.itemLabel} {index + 1}
+              </strong>
               <div>
-                <button type="button" onClick={() => move(index, -1)} aria-label="Move up">
-                  Up
-                </button>
-                <button type="button" onClick={() => move(index, 1)} aria-label="Move down">
-                  Down
+                <label className="fe-editor-check">
+                  <input type="checkbox" checked={!hidden} onChange={() => toggleHidden(index)} />
+                  <span>Show</span>
+                </label>
+                <button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label="Move up">
+                  {"\u2191"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => toggleHidden(index)}
-                  aria-pressed={!hidden}
-                  aria-label={hidden ? "Show item" : "Hide item"}
+                  onClick={() => move(index, 1)}
+                  disabled={index === items.length - 1}
+                  aria-label="Move down"
                 >
-                  {hidden ? "Show" : "Hide"}
+                  {"\u2193"}
                 </button>
                 {field.fixed ? null : (
                   <>
@@ -517,26 +483,131 @@ function ListEditor({
                 )}
               </div>
             </div>
-            {expanded
-              ? field.fields.map((child) => (
-                  <ItemFieldControl
-                    key={child.kind === "media" ? child.key : child.key}
-                    field={child}
-                    item={item}
-                    onPatch={(key, value) => patch(index, key, value)}
-                    onPatchItem={(next) => patchItem(index, next)}
-                  />
-                ))
-              : null}
+            {field.fields.map((child) => (
+              <ItemFieldControl
+                key={child.key}
+                field={child}
+                item={item}
+                onPatch={(key, value) => patch(index, key, value)}
+                onPatchItem={(next) => patchItem(index, next)}
+              />
+            ))}
           </article>
         );
       })}
       {field.fixed || items.length >= field.max ? null : (
-        <button type="button" onClick={add}>
+        <button type="button" className="fe-editor-add" onClick={add}>
           Add {field.itemLabel.toLowerCase()}
         </button>
       )}
     </div>
+  );
+}
+
+const BG_OPTIONS = [
+  { value: "", label: "Default" },
+  { value: "image", label: "Image" },
+  { value: "video", label: "Video" },
+  { value: "color", label: "Color" },
+] as const;
+
+/** Background for the whole section: Image, Video or Color (Default = as designed). */
+function BackgroundControls({
+  values,
+  onChange,
+}: {
+  values: SectionConfig;
+  onChange: (patch: Record<string, string>, key: string) => void;
+}) {
+  const read = (key: string) => (typeof values[key] === "string" ? (values[key] as string) : "");
+  const kind = read("bgKind");
+  const color = /^#[0-9a-f]{6}$/i.test(read("bgColor")) ? read("bgColor") : "#ffffff";
+  const overlay = read("bgOverlay") || String(BG_DEFAULT_OVERLAY);
+  const [hex, setHex] = useState(color);
+  useEffect(() => setHex(color), [color]);
+  return (
+    <fieldset className="fe-editor-group fe-editor-bg">
+      <legend>Background</legend>
+      <div className="fe-editor-media-toggle" role="radiogroup" aria-label="Background type">
+        {BG_OPTIONS.map((option) => (
+          <button
+            key={option.value || "default"}
+            type="button"
+            role="radio"
+            aria-checked={kind === option.value}
+            className={kind === option.value ? "is-on" : ""}
+            onClick={() => onChange({ bgKind: option.value }, "kind")}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {kind === "image" ? (
+        <ImageSlot label="Image" value={read("bgImage")} onChange={(url) => onChange({ bgImage: url }, "image")} hint="Covers the whole section." />
+      ) : null}
+      {kind === "video" ? (
+        <>
+          <div className="fe-editor-field">
+            <span>Video</span>
+            <ReplaceableThumb mediaType="video" src={read("bgVideo")} onReplace={(url) => onChange({ bgVideo: url }, "video")} />
+            <small>Plays muted, looped, behind the content.</small>
+          </div>
+          <ImageSlot label="Poster (optional)" value={read("bgPoster")} onChange={(url) => onChange({ bgPoster: url }, "poster")} />
+        </>
+      ) : null}
+      {kind === "color" ? (
+        <div className="fe-editor-field fe-editor-color">
+          <span>Color</span>
+          <div>
+            <input
+              type="color"
+              aria-label="Pick a color"
+              value={color}
+              onChange={(event) => onChange({ bgColor: event.target.value }, "color")}
+            />
+            <input
+              aria-label="Hex color"
+              value={hex}
+              maxLength={7}
+              onChange={(event) => {
+                const next = event.target.value.trim();
+                setHex(next);
+                if (/^#[0-9a-f]{6}$/i.test(next)) onChange({ bgColor: next.toLowerCase() }, "color");
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
+      {kind === "image" || kind === "video" ? (
+        <>
+          <label className="fe-editor-field">
+            <span>Overlay strength: {overlay}%</span>
+            <input
+              type="range"
+              min={0}
+              max={90}
+              step={5}
+              value={overlay}
+              onChange={(event) => onChange({ bgOverlay: event.target.value }, "overlay")}
+            />
+          </label>
+          <div className="fe-editor-media-toggle" role="radiogroup" aria-label="Overlay tone">
+            {(["light", "dark"] as const).map((tone) => (
+              <button
+                key={tone}
+                type="button"
+                role="radio"
+                aria-checked={(read("bgTone") || "light") === tone}
+                className={(read("bgTone") || "light") === tone ? "is-on" : ""}
+                onClick={() => onChange({ bgTone: tone }, "tone")}
+              >
+                {tone === "light" ? "Light overlay, dark text" : "Dark overlay, light text"}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : null}
+    </fieldset>
   );
 }
 

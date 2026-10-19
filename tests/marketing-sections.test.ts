@@ -33,7 +33,7 @@ describe("marketing section copy", () => {
   });
 
   it("keeps a stage with its id when the row moves", () => {
-    const config = normalizeSection("home-how", {
+    const config = normalizeSection("home-how-stages", {
       stages: [
         { id: "rhythm", nav: "Pulse" },
         { id: "ground", nav: "Settle" },

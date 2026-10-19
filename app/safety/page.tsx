@@ -1,3 +1,4 @@
+import { articleSlotIds } from "@/lib/marketing-sections";
 import { ArticleSection } from "@/app/components/frontend/ArticleSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
@@ -27,7 +28,7 @@ export default async function SafetyPage() {
     <FrontendShell>
       <JsonLd data={buildSafetyJsonLd(origin)} />
       <article className="frontend-legal frontend-legal--long">
-        <PageSections page="safety" slots={{ "safety-page": <ArticleSection id="safety-page" /> }} />
+        <PageSections page="safety" slots={{ ...Object.fromEntries(articleSlotIds("safety-page").map((id) => [id, <ArticleSection key={id} id={id} />])) }} />
       </article>
     </FrontendShell>
   );

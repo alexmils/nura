@@ -1,3 +1,4 @@
+import { articleSlotIds } from "@/lib/marketing-sections";
 import {
   ArticleSection,
   ClinicalAdvisorSection,
@@ -44,7 +45,7 @@ export default async function ClinicalTeamPage() {
         <PageSections
           page="clinical"
           slots={{
-            "clinical-intro": <ArticleSection id="clinical-intro" />,
+            ...Object.fromEntries(articleSlotIds("clinical-intro").map((id) => [id, <ArticleSection key={id} id={id} />])),
             "clinical-advisor": <ClinicalAdvisorSection advisor={advisor} />,
             "clinical-outro": <ArticleSection id="clinical-outro" />,
           }}

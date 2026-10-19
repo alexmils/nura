@@ -145,7 +145,7 @@ describe("article text", () => {
       const body = def.defaults.body as string;
       assert.equal(sectionText(normalizeSection(id, null), "body"), body, id);
     }
-    const support = normalizeSection("support-page", null);
+    const support = normalizeSection("support-sections", null);
     assert.match(sectionList(support, "sections")[0]?.body ?? "", /\*\*Need help\*\*/);
   });
 });

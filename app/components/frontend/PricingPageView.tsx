@@ -27,6 +27,7 @@ import { LetterRevealHeading } from "./LetterRevealHeading";
 import { RichInline } from "./section-editor/RichText";
 import { PageSections } from "./section-editor/PageSections";
 import { SectionEdit } from "./section-editor/SectionEdit";
+import { EditablePart } from "./section-editor/EditablePart";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
@@ -89,6 +90,7 @@ export function PricingPageView() {
             </p>
           </div>
 
+          <EditablePart id="pricing-cards">
           <div className="fe-pricing-grid">
             {cards.map((card) => {
               const plan = BILLING_PLANS[card.id];
@@ -147,6 +149,7 @@ export function PricingPageView() {
               );
             })}
           </div>
+          </EditablePart>
         </div>
       </section>
       ),

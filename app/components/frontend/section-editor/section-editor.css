@@ -672,3 +672,178 @@ html[data-editor-open] .frontend-back-to-top {
 .fe-editable-slot:hover {
   outline-color: color-mix(in srgb, var(--sage, #84b067) 60%, transparent);
 }
+/* Per-section panels (one block, one panel) */
+.fe-editable-part {
+  position: relative;
+}
+
+.fe-editor-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+.fe-editor-sub code {
+  font-size: 11px;
+}
+
+.fe-editor-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.fe-editor-show {
+  display: flex;
+  width: 100%;
+  margin-bottom: 18px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.fe-editor-group {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.fe-editor-group > legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fe-editor-item.is-off {
+  opacity: 0.6;
+}
+
+.fe-editor-item-bar > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fe-hidden-section {
+  margin: 12px auto;
+  max-width: 1200px;
+  padding: 44px 16px 14px;
+  border: 1px dashed rgba(15, 23, 42, 0.35);
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.9);
+  color: #334155;
+  font-size: 14px;
+  text-align: center;
+}
+
+.fe-hidden-section p {
+  margin: 0;
+}
+
+/* Thumb hover: pencil + Change */
+.fe-replace-hover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.fe-replace-thumb:hover .fe-replace-hover,
+.fe-replace-thumb:focus-visible .fe-replace-hover {
+  opacity: 1;
+}
+
+.fe-editor-bg {
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 10px;
+}
+
+.fe-editor-bg > legend {
+  padding: 0 4px;
+}
+
+.fe-editor-bg .fe-editor-media-toggle {
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.fe-editor-color > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fe-editor-color input[type="color"] {
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.fe-editor-color input:not([type]) {
+  width: 110px;
+  font-family: ui-monospace, monospace;
+}
+
+/* Section background (live page) */
+.fe-bgwrap {
+  position: relative;
+  isolation: isolate;
+}
+
+.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay) {
+  background: transparent !important;
+}
+
+.fe-bgwrap-media,
+.fe-bgwrap-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fe-bgwrap-media img,
+.fe-bgwrap-media video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fe-bgwrap-overlay {
+  background: #fff;
+}
+
+.fe-bgwrap--dark .fe-bgwrap-overlay {
+  background: #0b1220;
+}
+
+.fe-bgwrap--dark,
+.fe-bgwrap--dark :is(h1, h2, h3, h4, p, li, span, dt, dd, strong, small) {
+  color: #fff;
+}
+
+.fe-replace-thumb {
+  position: relative;
+  overflow: hidden;
+}
