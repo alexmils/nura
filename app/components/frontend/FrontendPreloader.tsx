@@ -86,13 +86,13 @@ export function FrontendPreloader() {
       aria-label={`Loading ${fill} percent`}
     >
       <div className="fe-preloader-inner">
+        <AnimatedBrandWave size="lg" fill={fill} className="fe-preloader-logo" />
         <p className="fe-preloader-count">
           <span className="fe-preloader-num">{fill}</span>
           <span className="fe-preloader-pct" aria-hidden>
             %
           </span>
         </p>
-        <AnimatedBrandWave size="lg" fill={fill} />
       </div>
     </div>
   );
