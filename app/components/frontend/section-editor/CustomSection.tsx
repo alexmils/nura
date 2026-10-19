@@ -8,6 +8,7 @@ import {
   type SectionConfig,
   type CustomSectionType,
 } from "@/lib/marketing-sections";
+import { Marquee } from "@/app/components/motion/Marquee";
 import { SectionMedia } from "../SectionMedia";
 import { useSectionConfig } from "./MarketingCopy";
 import { RichArticle, RichInline } from "./RichText";
@@ -47,6 +48,29 @@ function Head({ copy }: { copy: SectionConfig }) {
       {kicker ? <p className="fe-custom-kicker">{kicker}</p> : null}
       {title ? <h2 className="fe-custom-title">{title}</h2> : null}
     </>
+  );
+}
+
+/** Enough tiles that one copy of the strip is wider than a wide screen. */
+const MARQUEE_MIN_TILES = 12;
+
+function ImageMarquee({ copy }: { copy: SectionConfig }) {
+  const images = sectionList(copy, "images").filter((item) => (item.image ?? "").trim());
+  if (!images.length) return null;
+  const reps = Math.ceil(MARQUEE_MIN_TILES / images.length);
+  const tiles = Array.from({ length: reps }, () => images).flat();
+  return (
+    <div className="fe-custom-marquee">
+      <Marquee duration={Math.max(30, tiles.length * 4)} pauseOnHover={false}>
+        {tiles.map((item, index) => (
+          <div key={index} className={`fe-custom-marquee-tile${index % 2 ? " is-short" : ""}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin images can be any Cloudinary or site URL */}
+            <img src={item.image} alt={item.alt ?? ""} loading="lazy" decoding="async" />
+          </div>
+        ))}
+      </Marquee>
+      <div className="fe-custom-marquee-fade" aria-hidden />
+    </div>
   );
 }
 
@@ -98,6 +122,25 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
           </div>
         ) : null}
         {type === "cta" ? (
+          <div className="fe-custom-band">
+            {sectionText(copy, "kicker") ? <p className="fe-custom-kicker">{sectionText(copy, "kicker")}</p> : null}
+            <h2 className="fe-custom-title">{sectionText(copy, "title")}</h2>
+            {sectionText(copy, "body") ? (
+              <p className="fe-custom-lead">
+                <RichInline text={sectionText(copy, "body")} />
+              </p>
+            ) : null}
+            <div className="fe-custom-actions">
+              <Cta label={sectionText(copy, "ctaLabel")} href={sectionText(copy, "ctaHref")} />
+              <Cta
+                ghost
+                label={sectionText(copy, "secondaryLabel")}
+                href={sectionText(copy, "secondaryHref")}
+              />
+            </div>
+          </div>
+        ) : null}
+        {type === "marquee" ? (
           <div className="fe-custom-band">
             {sectionText(copy, "kicker") ? <p className="fe-custom-kicker">{sectionText(copy, "kicker")}</p> : null}
             <h2 className="fe-custom-title">{sectionText(copy, "title")}</h2>
@@ -172,6 +215,7 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
           </>
         ) : null}
       </div>
+      {type === "marquee" ? <ImageMarquee copy={copy} /> : null}
     </section>
   );
 }

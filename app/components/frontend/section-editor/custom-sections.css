@@ -195,3 +195,100 @@
 .frontend-legal .fe-custom-inner {
   width: 100%;
 }
+
+/* ---- Call to action with image marquee (after Insurily's closing band) ---- */
+.fe-custom--marquee {
+  --mq-bg: #141a12;
+  padding-bottom: 0;
+  background: var(--mq-bg);
+  color: #fff;
+  overflow: hidden;
+}
+
+.fe-custom--marquee .fe-custom-band {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0 0;
+  border-radius: 0;
+  background: none;
+  text-align: center;
+}
+
+.fe-custom--marquee .fe-custom-kicker {
+  color: color-mix(in srgb, #fff 70%, transparent);
+}
+
+.fe-custom--marquee .fe-custom-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.fe-custom--marquee .fe-custom-lead {
+  color: color-mix(in srgb, #fff 78%, transparent);
+}
+
+.fe-custom--marquee .fe-custom-actions {
+  justify-content: center;
+}
+
+.fe-custom--marquee .fe-custom-btn {
+  border-color: #f2c94c;
+  background: #f2c94c;
+  color: #141a12;
+}
+
+.fe-custom--marquee .fe-custom-btn--ghost {
+  border-color: #fff;
+  background: #fff;
+  color: #141a12;
+}
+
+.fe-custom-marquee {
+  position: relative;
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+
+.fe-custom-marquee .mo-marquee-group {
+  align-items: flex-end;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.fe-custom-marquee-tile {
+  flex: 0 0 auto;
+  width: clamp(100px, 12.5vw, 180px);
+  height: clamp(120px, 16.8vw, 242px);
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  background: color-mix(in srgb, #fff 8%, transparent);
+}
+
+.fe-custom-marquee-tile.is-short {
+  height: clamp(92px, 12.5vw, 180px);
+}
+
+.fe-custom-marquee-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fe-custom-marquee-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: clamp(60px, 9vw, 120px);
+  background: linear-gradient(0deg, var(--mq-bg), color-mix(in srgb, var(--mq-bg) 50%, transparent) 70%, transparent);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .fe-custom-marquee .mo-marquee-group {
+    gap: 8px;
+    padding-right: 8px;
+  }
+}

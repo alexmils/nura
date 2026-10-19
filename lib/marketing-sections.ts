@@ -1763,10 +1763,10 @@ export function isSectionOn(config: SectionConfig | undefined): boolean {
 
 /* ---------- Admin-added sections ---------- */
 
-export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "faq", "cards"] as const;
+export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "marquee", "faq", "cards"] as const;
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
-const CUSTOM_ID = /^custom-(text|media|cta|faq|cards)-[a-z0-9]{8}$/;
+const CUSTOM_ID = /^custom-(text|media|cta|marquee|faq|cards)-[a-z0-9]{8}$/;
 
 export function isCustomSectionId(id: string): boolean {
   return CUSTOM_ID.test(id);
@@ -1854,6 +1854,48 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
       ctaHref: LOGIN_PATH,
       secondaryLabel: "",
       secondaryHref: "",
+    },
+  },
+  marquee: {
+    label: "Call to action with image marquee",
+    description: "Dark band, big heading, two buttons and a row of images that drifts sideways.",
+    fields: [
+      text("kicker", "Kicker"),
+      text("title", "Heading"),
+      area("body", "Text", "Links: [Label](/path), **bold**"),
+      text("ctaLabel", "Button label"),
+      link("ctaHref", "Button link"),
+      text("secondaryLabel", "Second button label", "Leave empty to hide"),
+      link("secondaryHref", "Second button link"),
+      {
+        key: "images",
+        label: "Images",
+        kind: "list",
+        itemLabel: "Image",
+        max: 16,
+        fields: [image("image", "Image"), text("alt", "Alt text", "Describe the image, or leave empty if decorative")],
+      },
+    ],
+    defaults: {
+      kicker: "",
+      title: "Calmer practice, in a few minutes",
+      body: "",
+      ctaLabel: `Start your ${TRIAL_DAYS}-day trial`,
+      ctaHref: appPath("/create-account"),
+      secondaryLabel: "See pricing",
+      secondaryHref: "/pricing",
+      images: [
+        { image: "/marketing/landing/golden-hills.jpg", alt: "" },
+        { image: "/marketing/landing/support-talk.jpg", alt: "" },
+        { image: "/marketing/landing/calm-water.jpg", alt: "" },
+        { image: "/marketing/landing/morning-tea.jpg", alt: "" },
+        { image: "/marketing/landing/green-meadow.jpg", alt: "" },
+        { image: "/marketing/landing/together.jpg", alt: "" },
+        { image: "/marketing/landing/forest-path.jpg", alt: "" },
+        { image: "/marketing/landing/journal.jpg", alt: "" },
+        { image: "/marketing/landing/wildflower-sky.jpg", alt: "" },
+        { image: "/marketing/landing/quiet-hands.jpg", alt: "" },
+      ],
     },
   },
   faq: {
