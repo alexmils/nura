@@ -147,7 +147,7 @@
 .gc-pick-note {
   font-size: 0.75rem;
   line-height: 1.3;
-  color: var(--text-muted, #948f4e);
+  color: var(--text-muted, #5a5c2b);
 }
 
 .gc-pick-preview {

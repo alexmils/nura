@@ -1,4 +1,4 @@
-﻿import { HomeLanding } from "@/app/components/frontend/HomeLanding";
+﻿import { HomeLandingV2 } from "@/app/components/frontend/HomeLandingV2";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { getLandingBlogPosts } from "@/lib/landing-blog-server";
@@ -23,7 +23,7 @@ export default async function HomePage() {
   return (
     <FrontendShell wide>
       <JsonLd data={buildHomeJsonLd(undefined, faqPairs(copy["home-faq"]))} />
-      <HomeLanding blogPosts={blogPosts} />
+      <HomeLandingV2 blogPosts={blogPosts} />
     </FrontendShell>
   );
 }

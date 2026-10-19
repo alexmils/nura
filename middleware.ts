@@ -7,6 +7,7 @@ import {
   ROLE_SYNC_MAX_AGE_SEC,
 } from "@/lib/auth/role-sync";
 import { NOINDEX_ROBOTS, shouldNoindexPath } from "@/lib/crawl-headers";
+import { applySecurityHeaders } from "@/lib/security-headers";
 import {
   isAuthLinkScreen,
   isAuthPublicPath,
@@ -147,6 +148,7 @@ function withCookies(
 }
 
 function applyCrawlHeaders(pathname: string, res: NextResponse): NextResponse {
+  applySecurityHeaders(res.headers);
   if (shouldNoindexPath(pathname)) {
     res.headers.set("X-Robots-Tag", NOINDEX_ROBOTS);
   }
@@ -226,13 +228,16 @@ export async function middleware(request: NextRequest) {
     pathname === VOICE_DIAG_PATH ||
     pathname === MCP_PATH
   ) {
-    return NextResponse.next();
+    return applyCrawlHeaders(pathname, NextResponse.next());
   }
 
   const session = await getSessionFromRequest(request);
   if (!session) {
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return applyCrawlHeaders(
+        pathname,
+        NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      );
     }
     const login = new URL(LOGIN_PATH, request.url);
     const nextTarget = `${pathname}${request.nextUrl.search || ""}` || APP_BASE;

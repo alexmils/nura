@@ -50,7 +50,7 @@
   padding: 0.35rem 0.7rem;
   border: 0;
   border-radius: 999px;
-  background: var(--sage, #84b067);
+  background: var(--accent, #4a7234);
   color: #fff;
   font: inherit;
   font-weight: 600;
@@ -121,7 +121,7 @@ html[data-editor-open] .frontend-back-to-top {
 }
 
 .fe-editor-foot button:last-child {
-  background: var(--sage, #84b067);
+  background: var(--accent, #4a7234);
   border-color: transparent;
   color: #fff;
   font-weight: 600;
@@ -278,7 +278,7 @@ html[data-editor-open] .frontend-back-to-top {
 }
 
 .fe-editor-media-toggle button.is-on {
-  background: var(--sage, #84b067);
+  background: var(--accent, #4a7234);
   color: #fff;
   font-weight: 600;
 }

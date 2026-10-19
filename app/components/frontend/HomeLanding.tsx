@@ -31,6 +31,7 @@ import {
   type SectionConfig,
   type SectionItem,
 } from "@/lib/marketing-sections";
+import { AccentText } from "./AccentText";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { PageSections } from "./section-editor/PageSections";
 import { SectionEdit } from "./section-editor/SectionEdit";
@@ -42,6 +43,8 @@ import { HomePauseCta } from "./HomePauseCta";
 import { HomeMemorySets } from "./HomeMemorySets";
 import { SessionModesPair } from "./SessionModesPair";
 import { SectionMedia } from "./SectionMedia";
+import { SectionRise } from "@/app/components/motion/SectionRise";
+import { SectionWipe } from "@/app/components/motion/SectionWipe";
 import { useLandingMotion } from "./useLandingMotion";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
@@ -124,12 +127,16 @@ function StoriesStars({ className }: { className?: string }) {
   );
 }
 
-function StoriesSection() {
+export function StoriesSection() {
   const copy = useSectionConfig("home-stories");
-  const stories = sectionList(copy, "stories").map((story, index): SectionItem => ({
-    ...story,
-    image: story.image || STORY_IMAGES[index % STORY_IMAGES.length] || IMG.avatarMaya,
-  }));
+  const stories: Array<Record<string, string> & { image: string }> =
+    sectionList(copy, "stories").map((story, index) => ({
+      ...story,
+      image:
+        story.image ||
+        STORY_IMAGES[index % STORY_IMAGES.length] ||
+        IMG.avatarMaya,
+    }));
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const hoverPaused = useRef(false);
   const manualPaused = useRef(false);
@@ -296,7 +303,7 @@ function StoriesSection() {
 const HOME_BLOG_HEIGHTS = [420, 320, 520] as const;
 const HOME_BLOG_PAGE_SIZE = 5;
 
-function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
+export function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
   const copy = useSectionConfig("home-blog");
   const [visibleCount, setVisibleCount] = useState(HOME_BLOG_PAGE_SIZE);
 
@@ -316,9 +323,12 @@ function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
       <div className="fe-container fe-blog-inner">
         <div className="fe-blog-head">
           <p className="fe-section-kicker fe-animate">{sectionText(copy, "kicker")}</p>
-          <LetterRevealHeading id="fe-blog-title" className="fe-blog-title">
-            {sectionText(copy, "title")}
-          </LetterRevealHeading>
+          <h2 id="fe-blog-title" className="fe-blog-title fe-animate">
+            <AccentText
+              text={sectionText(copy, "title")}
+              accent="between sessions"
+            />
+          </h2>
         </div>
 
         <div className="fe-blog-masonry" role="list">
@@ -387,7 +397,7 @@ function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
   );
 }
 
-function FaqSection() {
+export function FaqSection() {
   const copy = useSectionConfig("home-faq");
   const items = sectionList(copy, "items");
   const [open, setOpen] = useState(0);
@@ -398,9 +408,9 @@ function FaqSection() {
       <div className="fe-container">
         <div className="fe-faq-head">
           <p className="fe-section-kicker fe-animate">{sectionText(copy, "kicker")}</p>
-          <LetterRevealHeading id="fe-faq-title" className="fe-faq-title">
-            {sectionText(copy, "title")}
-          </LetterRevealHeading>
+          <h2 id="fe-faq-title" className="fe-faq-title fe-animate">
+            <AccentText text={sectionText(copy, "title")} accent="calmly" />
+          </h2>
           <p className="fe-faq-sub fe-animate">
             {sectionText(copy, "sub")}
           </p>
@@ -438,130 +448,13 @@ function FaqSection() {
   );
 }
 
-export function HomeLanding({
-  blogPosts = [],
-}: {
-  blogPosts?: LandingBlogPost[];
-}) {
-  const hero = useSectionConfig("home-hero");
+export function PricingSection() {
   const pricing = useSectionConfig("home-pricing");
   const cardCopy = useSectionConfig("pricing-cards");
   const cards = planCards(cardCopy);
-  const landingRef = useRef<HTMLDivElement | null>(null);
-  useLandingMotion(landingRef);
-
-  useEffect(() => {
-    let stop = scheduleScrollToLandingHash({ consumePending: true });
-    const onHashChange = () => {
-      stop();
-      stop = scheduleScrollToLandingHash({ consumePending: true });
-    };
-    window.addEventListener("hashchange", onHashChange);
-    return () => {
-      stop();
-      window.removeEventListener("hashchange", onHashChange);
-    };
-  }, []);
 
   return (
-    <div ref={landingRef} className="fe-landing">
-      <PageSections
-        page="home"
-        slots={{
-      "home-hero": (
-      <section className="fe-hero fe-has-edit" id="home" data-section="home-hero">
-        <SectionEdit id="home-hero" lift />
-        <div className="fe-hero-image-wrap">
-          <div className="fe-hero-image">
-            <SectionMedia
-              className="fe-hero-image-bg"
-              kind={sectionText(hero, "heroKind")}
-              image={sectionText(hero, "heroImage")}
-              video={sectionText(hero, "heroVideo")}
-              poster={sectionText(hero, "heroPoster")}
-              alt={sectionText(hero, "heroAlt")}
-            />
-            <div className="fe-hero-image-overlay" aria-hidden />
-            <div className="fe-hero-content-wrap">
-              <div className="fe-container">
-                <div className="fe-hero-info-inner">
-                  <div className="fe-hero-left">
-                    <p className="fe-hero-kicker">{sectionText(hero, "kicker")}</p>
-                    <h1 className="fe-hero-title">
-                      <span className="fe-hero-title-line">
-                        {sectionText(hero, "title").split(/\s+/).filter(Boolean).map((word, i, arr) => (
-                          <span key={`${word}-${i}`} className="fe-split-line">
-                            <span className="fe-split-word">
-                              {word}
-                              {i < arr.length - 1 ? "\u00A0" : ""}
-                            </span>
-                          </span>
-                        ))}
-                      </span>{" "}
-                      <span className="fe-hero-title-line fe-hero-title-line--accent">
-                        <em>
-                          {sectionText(hero, "accent").split(/\s+/).filter(Boolean).map((word, i, arr) => (
-                            <span key={`${word}-${i}`} className="fe-split-line">
-                              <span className="fe-split-word">
-                                {word}
-                                {i < arr.length - 1 ? "\u00A0" : ""}
-                              </span>
-                            </span>
-                          ))}
-                        </em>
-                      </span>
-                    </h1>
-                  </div>
-                  <div className="fe-hero-right">
-                    <p className="fe-hero-description">
-                      {sectionText(hero, "description")}
-                    </p>
-                    <div className="fe-hero-card-row">
-                      <div className="fe-hero-inner-card">
-                        <span className="fe-hero-inner-icon" aria-hidden>
-                          <HeartHandshake size={22} strokeWidth={1.5} />
-                        </span>
-                        <div className="fe-hero-inner-text">
-                          <p className="fe-hero-inner-label">
-                            {sectionText(hero, "cardLabel")}
-                          </p>
-                          <Link href={sectionText(hero, "cardHref")} className="fe-hero-inner-link">
-                            {sectionText(hero, "cardLink")}
-                          </Link>
-                        </div>
-                      </div>
-                      <Link
-                        href="/learn"
-                        className="fe-hero-video-thumb"
-                        aria-label="Learn where to start"
-                      >
-                        <SectionMedia
-                          className="fe-hero-video-image"
-                          kind={sectionText(hero, "thumbKind")}
-                          image={sectionText(hero, "thumbImage")}
-                          video={sectionText(hero, "thumbVideo")}
-                          poster={sectionText(hero, "thumbPoster")}
-                          alt={sectionText(hero, "thumbAlt")}
-                        />
-                        <span className="fe-hero-video-play" aria-hidden>
-                          <Play size={18} fill="currentColor" />
-                        </span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      ),
-      "home-how": <SessionPathSticky />,
-      "home-topics": <SessionTopicsGrid />,
-      "home-modes": <SessionModesPair />,
-      "home-pause": <HomePauseCta />,
-      "home-memory": <HomeMemorySets />,
-      "home-pricing": (
+    <SectionRise>
       <section className="fe-pricing-section fe-has-edit" id="prices" data-section="home-pricing">
         <SectionEdit id="home-pricing" />
         <div className="fe-container">
@@ -574,7 +467,6 @@ export function HomeLanding({
             </p>
           </div>
 
-          <EditablePart id="pricing-cards">
           <div className="fe-pricing-grid">
             {cards.map((card) => {
               const plan = BILLING_PLANS[card.id];
@@ -633,15 +525,136 @@ export function HomeLanding({
               );
             })}
           </div>
-          </EditablePart>
         </div>
       </section>
-      ),
-      "home-stories": <StoriesSection />,
-      "home-blog": <BlogSection posts={blogPosts} />,
-      "home-faq": <FaqSection />,
-        }}
-      />
+    </SectionRise>
+  );
+}
+
+export function HomeLanding({
+  blogPosts = [],
+}: {
+  blogPosts?: LandingBlogPost[];
+}) {
+  const hero = useSectionConfig("home-hero");
+  const landingRef = useRef<HTMLDivElement | null>(null);
+  useLandingMotion(landingRef);
+
+  useEffect(() => {
+    let stop = scheduleScrollToLandingHash({ consumePending: true });
+    const onHashChange = () => {
+      stop();
+      stop = scheduleScrollToLandingHash({ consumePending: true });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      stop();
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, []);
+
+  return (
+    <div ref={landingRef} className="fe-landing">
+      <section className="fe-hero fe-has-edit" id="home" data-section="home-hero">
+        <SectionEdit id="home-hero" lift />
+        <div className="fe-hero-image-wrap">
+          <div className="fe-hero-image">
+            <SectionMedia
+              className="fe-hero-image-bg"
+              kind={sectionText(hero, "heroKind")}
+              image={sectionText(hero, "heroImage")}
+              video={sectionText(hero, "heroVideo")}
+              poster={sectionText(hero, "heroPoster")}
+              alt={sectionText(hero, "heroAlt")}
+            />
+            <div className="fe-hero-image-overlay" aria-hidden />
+            <div className="fe-hero-content-wrap">
+              <div className="fe-container">
+                <div className="fe-hero-info-inner">
+                  <div className="fe-hero-left">
+                    <p className="fe-hero-kicker">{sectionText(hero, "kicker")}</p>
+                    <h1 className="fe-hero-title">
+                      <span className="fe-hero-title-line">
+                        {sectionText(hero, "title").split(/\s+/).filter(Boolean).map((word, i) => (
+                          <span key={`${word}-${i}`} className="fe-split-line">
+                            <span className="fe-split-word">{word}</span>
+                          </span>
+                        ))}
+                      </span>{" "}
+                      <span className="fe-hero-title-line fe-hero-title-line--accent">
+                        <em>
+                          {sectionText(hero, "accent").split(/\s+/).filter(Boolean).map((word, i) => (
+                            <span key={`${word}-${i}`} className="fe-split-line">
+                              <span className="fe-split-word">{word}</span>
+                            </span>
+                          ))}
+                        </em>
+                      </span>
+                    </h1>
+                  </div>
+                  <div className="fe-hero-right">
+                    <p className="fe-hero-description">
+                      {sectionText(hero, "description")}
+                    </p>
+                    <div className="fe-hero-card-row">
+                      <div className="fe-hero-inner-card">
+                        <span className="fe-hero-inner-icon" aria-hidden>
+                          <HeartHandshake size={22} strokeWidth={1.5} />
+                        </span>
+                        <div className="fe-hero-inner-text">
+                          <p className="fe-hero-inner-label">
+                            {sectionText(hero, "cardLabel")}
+                          </p>
+                          <Link href={sectionText(hero, "cardHref")} className="fe-hero-inner-link">
+                            {sectionText(hero, "cardLink")}
+                          </Link>
+                        </div>
+                      </div>
+                      <Link
+                        href="/learn"
+                        className="fe-hero-video-thumb"
+                        aria-label="Learn where to start"
+                      >
+                        <SectionMedia
+                          className="fe-hero-video-image"
+                          kind={sectionText(hero, "thumbKind")}
+                          image={sectionText(hero, "thumbImage")}
+                          video={sectionText(hero, "thumbVideo")}
+                          poster={sectionText(hero, "thumbPoster")}
+                          alt={sectionText(hero, "thumbAlt")}
+                        />
+                        <span className="fe-hero-video-play" aria-hidden>
+                          <Play size={18} fill="currentColor" />
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <SessionPathSticky />
+
+      <SessionTopicsGrid />
+
+      <SessionModesPair />
+
+      <HomePauseCta />
+
+      <HomeMemorySets />
+
+      <PricingSection />
+
+      <StoriesSection />
+
+      <SectionWipe>
+        <BlogSection posts={blogPosts} />
+      </SectionWipe>
+
+      <FaqSection />
     </div>
   );
 }

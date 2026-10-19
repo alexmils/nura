@@ -10,6 +10,16 @@ import {
 } from "../lib/marketing-sections.ts";
 
 describe("marketing section copy", () => {
+  it("rewrites a saved Free sets lead to Self-guided", () => {
+    const config = normalizeSection("faq-page", {
+      lead: "Short answers about sessions, Free sets, the trial, and when to get help.",
+    });
+    assert.equal(
+      sectionText(config, "lead"),
+      "Short answers about sessions, Self-guided sets, the trial, and when to get help."
+    );
+  });
+
   it("keeps defaults and drops unknown keys", () => {
     const config = normalizeSection("home-pause", {
       title: "Start here",
@@ -24,12 +34,14 @@ describe("marketing section copy", () => {
     assert.equal(safeHref("javascript:alert(1)", "/learn"), "/learn");
     assert.equal(safeHref("/pricing", "/"), "/pricing");
     assert.equal(safeHref("https://nurahelp.com/faq", "/"), "https://nurahelp.com/faq");
-    const config = normalizeSection("home-hero", {
+    assert.equal(safeHref("#how-it-works", "/"), "#how-it-works");
+    assert.equal(safeHref("#<script>", "/"), "/");
+    const config = normalizeSection("home-close", {
       title: "x".repeat(800),
-      cardHref: "javascript:alert(1)",
+      secondaryHref: "javascript:alert(1)",
     });
     assert.ok(sectionText(config, "title").length <= 400);
-    assert.equal(sectionText(config, "cardHref"), "/learn");
+    assert.equal(sectionText(config, "secondaryHref"), "/safety");
   });
 
   it("keeps a stage with its id when the row moves", () => {
@@ -56,14 +68,14 @@ describe("marketing section copy", () => {
   });
 
   it("rejects a script url on an image or video slot", () => {
-    const config = normalizeSection("home-hero", {
-      heroImage: "javascript:alert(1)",
-      heroKind: "video",
-      heroVideo: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    const config = normalizeSection("knowledge-hero", {
+      clipImage: "javascript:alert(1)",
+      clipKind: "video",
+      clipVideo: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     });
-    assert.equal(sectionText(config, "heroImage"), "/marketing/landing/support-talk.jpg");
-    assert.equal(sectionText(config, "heroKind"), "video");
-    assert.match(sectionText(config, "heroVideo"), /^https:\/\/www\.youtube\.com\//);
+    assert.equal(sectionText(config, "clipImage"), "/marketing/landing/support-talk.jpg");
+    assert.equal(sectionText(config, "clipKind"), "video");
+    assert.match(sectionText(config, "clipVideo"), /^https:\/\/www\.youtube\.com\//);
   });
   it("parses footer link lines", () => {
     const links = parseLinkLines("Blog|/blog\nBad\nOff|javascript:alert(1)");

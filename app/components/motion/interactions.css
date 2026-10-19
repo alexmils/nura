@@ -1,0 +1,60 @@
+/*
+ * Micro-interactions — the small, repeated feedback that makes the brand feel
+ * alive. Uses the same tokens as the reveal primitives, applied to the
+ * existing marketing classes so nothing has to be re-marked up.
+ */
+
+/* Cards lift on hover */
+.frontend-home .fe-blog-masonry-card,
+.frontend-home .fe-stories-card {
+  transition:
+    transform var(--mo-dur-base) var(--mo-ease-out),
+    box-shadow var(--mo-dur-base) var(--mo-ease-out);
+}
+
+.frontend-home .fe-blog-masonry-card:hover,
+.frontend-home .fe-stories-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--mo-shadow-lift);
+}
+
+/* Image inside a card zooms a touch more slowly */
+.frontend-home .fe-blog-masonry-image {
+  transition: transform var(--mo-dur-slow) var(--mo-ease-out);
+}
+
+.frontend-home .fe-blog-masonry-card:hover .fe-blog-masonry-image {
+  transform: scale(1.06);
+}
+
+/* Dark pricing cards rise on hover */
+.frontend-home .fe-price-card:hover {
+  transform: translateY(-6px);
+}
+
+/* Press feedback on the main marketing CTA */
+.frontend-home .fe-price-card-cta:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frontend-home .fe-blog-masonry-card:hover,
+  .frontend-home .fe-stories-card:hover,
+  .frontend-home .fe-price-card:hover {
+    transform: none;
+  }
+
+  .frontend-home .fe-blog-masonry-card:hover .fe-blog-masonry-image {
+    transform: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .frontend-home .fe-blog-masonry-card:hover,
+html[data-a11y-motion="reduced"] .frontend-home .fe-stories-card:hover,
+html[data-a11y-motion="reduced"] .frontend-home .fe-price-card:hover {
+  transform: none;
+}
+
+html[data-a11y-motion="reduced"] .frontend-home .fe-blog-masonry-card:hover .fe-blog-masonry-image {
+  transform: none;
+}

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -11,6 +12,9 @@ const nextConfig: NextConfig = {
   // Docker/Coolify builds are memory-tight; lint + typecheck run in CI / locally.
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders() }];
+  },
   async redirects() {
     return [
       {

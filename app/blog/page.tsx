@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { BlogIndex } from "@/app/components/frontend/BlogIndex";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
@@ -43,7 +44,7 @@ export default async function BlogPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildBlogIndexJsonLd(siteOrigin(publicUrl), posts)} />
-      <PageSections page="blog" slots={{ "blog-index": <BlogIndex posts={posts} categories={categories} /> }} />
+      <PageSections page="blog" slots={{ "page-cta-blog": <PageCta page="blog" />, "blog-index": <BlogIndex posts={posts} categories={categories} /> }} />
     </FrontendShell>
   );
 }

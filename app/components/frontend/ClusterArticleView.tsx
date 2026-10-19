@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
 import { blogCategoryName } from "@/lib/blog-categories";
 import { BRAND_CIRCLE_AVATAR, BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
+import { TRIAL_DAYS } from "@/lib/billing-constants";
 import {
   CLUSTER_TOPIC_LABEL,
   clusterArticleFaqs,
@@ -118,12 +119,15 @@ export function ClusterArticleView({
           </section>
         ) : null}
 
-        {article.emdrAnchor ? (
-          <p className="fe-cluster-emdr">
-            In the app:{" "}
-            <Link href="/emdr">{article.emdrAnchor}</Link>.
-          </p>
-        ) : null}
+        <p className="fe-cluster-emdr">
+          <Link href="/pricing">Plans and the {TRIAL_DAYS}-day trial</Link>.
+          {article.emdrAnchor ? (
+            <>
+              {" "}
+              In the app: <Link href="/emdr">{article.emdrAnchor}</Link>.
+            </>
+          ) : null}
+        </p>
 
         <p className="fe-cluster-note">
           {BRAND_LIMITS_LINE}{" "}

@@ -59,6 +59,24 @@ describe("public sitemap", () => {
     assert.ok(urls.has("https://nurahelp.com/changelog"));
     assert.ok(urls.has("https://nurahelp.com/blog/what-is-emdr"));
   });
+
+  it("includes category hubs that have no published guide yet", () => {
+    const urls = new Set(
+      buildPublicSitemap("https://nurahelp.com", {
+        posts: [],
+        categories: [
+          { slug: "trauma", postCount: 2 },
+          { slug: "grief", postCount: 0 },
+          { slug: "phobias", postCount: 0 },
+          { slug: "childhood-memories", postCount: 0 },
+          { slug: "self-worth", postCount: 0 },
+        ],
+      }).map((entry) => entry.url)
+    );
+    for (const slug of ["grief", "phobias", "childhood-memories", "self-worth"]) {
+      assert.ok(urls.has(`https://nurahelp.com/blog/category/${slug}`));
+    }
+  });
 });
 
 describe("hreflang", () => {

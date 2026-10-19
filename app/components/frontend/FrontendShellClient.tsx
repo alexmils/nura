@@ -12,6 +12,7 @@ import { FrontendPreloader } from "@/app/components/frontend/FrontendPreloader";
 import "./frontend-fonts.css";
 import "./frontend-buttons.css";
 import "./frontend-help.css";
+import "../motion/interactions.css";
 import "./section-editor/section-editor.css";
 
 function EditorRouteReset() {

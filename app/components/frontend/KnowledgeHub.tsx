@@ -1,5 +1,6 @@
 "use client";
 
+import { PageCta } from "./section-editor/PageCta";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
@@ -73,7 +74,7 @@ export function KnowledgeHub() {
     <div className="fe-knowledge">
       <PageSections
         page="knowledge"
-        slots={{
+        slots={{ "page-cta-knowledge": <PageCta page="knowledge" />,
       "knowledge-hero": (
       <>
       <section

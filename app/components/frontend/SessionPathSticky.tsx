@@ -14,6 +14,7 @@ import {
 } from "./GroundFirstTutorial";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
 import { SectionMedia } from "./SectionMedia";
+import { AccentText } from "./AccentText";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SessionLoopKit } from "./SessionLoopKit";
 import { SectionEdit } from "./section-editor/SectionEdit";
@@ -75,42 +76,6 @@ function MediaPlaceholder({
         />
       ) : (
         <span className="fe-spath-media-label">{label}</span>
-      )}
-    </div>
-  );
-}
-
-function ScreenPlaceholder({
-  kind,
-  image,
-  video,
-  poster,
-  alt,
-}: {
-  kind: string;
-  image: string;
-  video: string;
-  poster: string;
-  alt: string;
-}) {
-  const hasMedia = Boolean(image || video);
-  return (
-    <div
-      className="fe-spath-screen"
-      role={hasMedia ? undefined : "img"}
-      aria-label={hasMedia ? undefined : "App screen placeholder"}
-    >
-      {hasMedia ? (
-        <SectionMedia kind={kind} image={image} video={video} poster={poster} alt={alt || "Session screen"} />
-      ) : (
-        <>
-          <span className="fe-spath-screen-chrome" aria-hidden>
-            <span />
-            <span />
-            <span />
-          </span>
-          <span className="fe-spath-media-label">Add your screen image here</span>
-        </>
       )}
     </div>
   );
@@ -284,6 +249,7 @@ export function SessionPathSticky() {
   }
 
   return (
+    <>
     <section
       ref={rootRef}
       id="how-it-works"
@@ -502,9 +468,12 @@ export function SessionPathSticky() {
         <div className="fe-spath-finale-zoom">
         <div className="fe-container fe-spath-finale-inner">
           <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
-          <LetterRevealHeading as="h3" className="fe-spath-finale-title">
-            {sectionText(between, "betweenTitle")}
-          </LetterRevealHeading>
+          <h3 className="fe-spath-finale-title">
+            <AccentText
+              text={sectionText(between, "betweenTitle")}
+              accent={sectionText(between, "betweenAccent")}
+            />
+          </h3>
           <p className="fe-spath-finale-line">
             {sectionText(between, "betweenLine")}
           </p>
@@ -514,21 +483,21 @@ export function SessionPathSticky() {
           >
             {sectionText(between, "betweenCta")}
           </Link>
-          <ScreenPlaceholder
-            kind={sectionText(between, "screenKind")}
-            image={sectionText(between, "screenImage")}
-            video={sectionText(between, "screenVideo")}
-            poster={sectionText(between, "screenPoster")}
-            alt={sectionText(between, "screenAlt")}
-          />
         </div>
         </div>
       </div>
       </EditablePart>
 
+    </section>
+
+    <section
+      className="fe-spath-kit-section"
+      aria-label="Session language support"
+    >
       <EditablePart id="home-how-languages">
         <SessionLoopKit />
       </EditablePart>
     </section>
+    </>
   );
 }

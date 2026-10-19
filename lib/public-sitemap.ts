@@ -103,15 +103,15 @@ export function buildPublicSitemap(
         lastModified,
       }));
 
-  const categoryPages: MetadataRoute.Sitemap = (blog?.categories ?? [])
-    .filter((category) => category.postCount > 0)
-    .map((category) => ({
+  const categoryPages: MetadataRoute.Sitemap = (blog?.categories ?? []).map(
+    (category) => ({
       url: `${base}/blog/category/${category.slug}`,
       // Each hub is as fresh as its own newest guide, not the whole blog.
       lastModified: category.lastModified
         ? new Date(category.lastModified)
         : clusterLatest,
-    }));
+    })
+  );
 
   return [...pages, ...articles, ...categoryPages];
 }

@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { LearnHub } from "@/app/components/frontend/LearnHub";
@@ -25,7 +26,7 @@ export default async function LearnPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildLearnJsonLd(siteOrigin(publicUrl))} />
-      <PageSections page="learn" slots={{ "learn-hub": <LearnHub /> }} />
+      <PageSections page="learn" slots={{ "page-cta-learn": <PageCta page="learn" />, "learn-hub": <LearnHub /> }} />
     </FrontendShell>
   );
 }

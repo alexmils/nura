@@ -91,7 +91,7 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
 
   useEffect(() => {
     const onScroll = () => {
-      const hero = document.querySelector<HTMLElement>(".fe-hero");
+      const hero = document.querySelector<HTMLElement>(".fe-hero, .v2-hero");
       if (overlay && hero) {
         const bottom = hero.getBoundingClientRect().bottom;
         // Hysteresis around the hero edge so fixed overlay does not flicker.

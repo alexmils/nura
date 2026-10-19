@@ -1,6 +1,8 @@
-import { articleSlotIds, getSectionDef, isCustomSectionId } from "@/lib/marketing-sections";
+import { articleSlotIds, getSectionDef, isCustomSectionId, pageCtaId } from "@/lib/marketing-sections";
 
 const articleSlots = (baseId: string) => articleSlotIds(baseId).map((id) => ({ id }));
+/** Closing call to action, hidden until an admin switches it on. */
+const cta = (page: string) => ({ id: pageCtaId(page) });
 
 /**
  * Page-level section order and visibility for the public marketing pages.
@@ -20,15 +22,16 @@ export const MARKETING_PAGES = {
     path: "/",
     slots: [
       { id: "home-hero" },
+      { id: "home-trust" },
       { id: "home-how" },
-      { id: "home-topics" },
       { id: "home-modes" },
-      { id: "home-pause" },
-      { id: "home-memory" },
-      { id: "home-pricing" },
+      { id: "home-session" },
+      { id: "home-topics" },
       { id: "home-stories" },
-      { id: "home-blog" },
+      { id: "home-pricing" },
       { id: "home-faq" },
+      { id: "home-blog" },
+      { id: "home-close" },
     ],
   },
   pricing: {
@@ -41,23 +44,23 @@ export const MARKETING_PAGES = {
       { id: "pricing-cta" },
     ],
   },
-  about: { label: "About", path: "/about", slots: [{ id: "about-page" }] },
-  faq: { label: "FAQ", path: "/faq", slots: [{ id: "faq-page" }] },
-  blog: { label: "Blog", path: "/blog", slots: [{ id: "blog-index" }] },
-  learn: { label: "Learn", path: "/learn", slots: [{ id: "learn-hub" }] },
+  about: { label: "About", path: "/about", slots: [{ id: "about-page" }, cta("about")] },
+  faq: { label: "FAQ", path: "/faq", slots: [{ id: "faq-page" }, cta("faq")] },
+  blog: { label: "Blog", path: "/blog", slots: [{ id: "blog-index" }, cta("blog")] },
+  learn: { label: "Learn", path: "/learn", slots: [{ id: "learn-hub" }, cta("learn")] },
   knowledge: {
     label: "Knowledge",
     path: "/knowledge",
-    slots: [{ id: "knowledge-hero" }, { id: "knowledge-series" }],
+    slots: [{ id: "knowledge-hero" }, { id: "knowledge-series" }, cta("knowledge")],
   },
-  support: { label: "Support", path: "/support", slots: [{ id: "support-page" }] },
-  editorial: { label: "Editorial", path: "/editorial", slots: [{ id: "editorial-page" }] },
-  safety: { label: "Safety", path: "/safety", slots: articleSlots("safety-page") },
-  limits: { label: "Limits", path: "/limits", slots: articleSlots("limits-page") },
+  support: { label: "Support", path: "/support", slots: [{ id: "support-page" }, cta("support")] },
+  editorial: { label: "Editorial", path: "/editorial", slots: [{ id: "editorial-page" }, cta("editorial")] },
+  safety: { label: "Safety", path: "/safety", slots: [...articleSlots("safety-page"), cta("safety")] },
+  limits: { label: "Limits", path: "/limits", slots: [...articleSlots("limits-page"), cta("limits")] },
   clinical: {
     label: "Clinical review",
     path: "/about/clinical-team",
-    slots: [...articleSlots("clinical-intro"), { id: "clinical-advisor" }, { id: "clinical-outro" }],
+    slots: [...articleSlots("clinical-intro"), { id: "clinical-advisor" }, { id: "clinical-outro" }, cta("clinical")],
   },
   emdr: {
     label: "EMDR",

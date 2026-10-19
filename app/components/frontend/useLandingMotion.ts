@@ -17,7 +17,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       isA11yReduceMotionPreferred();
     if (reduced) {
-      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-orbit, .fe-topics-more").forEach((el) => {
+      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-orbit, .fe-topics-more, .v2-hero-kicker, .v2-hero-title-line, .v2-hero-sub, .v2-hero-actions, .v2-hero-trust").forEach((el) => {
         gsap.set(el, { clearProps: "all", opacity: 1, y: 0, x: 0, color: "" });
         el.classList.add("is-in");
       });
@@ -80,10 +80,53 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         },
       });
 
+      /* —— Landing v2 hero: centered load + scroll parallax —— */
+      const v2Hero = root.querySelector<HTMLElement>(".v2-hero");
+      if (v2Hero) {
+        const v2Tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+        v2Tl
+          .from(".v2-hero-kicker", { y: 20, opacity: 0, duration: 0.7 })
+          .from(
+            ".v2-hero-title-line",
+            { y: 38, opacity: 0, stagger: 0.14, duration: 1.05 },
+            "-=0.35"
+          )
+          .from(".v2-hero-sub", { y: 28, opacity: 0, duration: 0.85 }, "-=0.55")
+          .from(".v2-hero-actions", { y: 22, opacity: 0, duration: 0.7 }, "-=0.45")
+          .from(".v2-hero-trust", { y: 18, opacity: 0, duration: 0.6 }, "-=0.4");
+
+        gsap.fromTo(
+          ".v2-hero-photo-img",
+          { yPercent: -4, scale: 1.08 },
+          {
+            yPercent: 4,
+            scale: 1.08,
+            ease: "none",
+            scrollTrigger: {
+              trigger: v2Hero,
+              start: "top top",
+              end: "bottom top",
+              scrub: 1.2,
+            },
+          }
+        );
+
+        gsap.to(".v2-hero-sun", {
+          yPercent: 16,
+          ease: "none",
+          scrollTrigger: {
+            trigger: v2Hero,
+            start: "top top",
+            end: "bottom top",
+            scrub: 1.6,
+          },
+        });
+      }
+
       /* Keep overlay pinned to hero — do not translate (that strips the bottom filter). */
       /* —— Section stagger reveals —— */
       root.querySelectorAll<HTMLElement>(
-        ".fe-section-block, .fe-pricing-section, .fe-spath, .fe-spath-kit, .fe-topics, .fe-pause, .fe-modes, .fe-memory, .fe-faq, .fe-blog"
+        ".fe-section-block, .fe-pricing-section, .fe-spath, .fe-spath-kit, .fe-topics, .fe-pause, .fe-modes, .fe-memory, .fe-faq, .fe-blog, .v2-section, .v2-close"
       ).forEach((section) => {
         const items = [
           ...section.querySelectorAll<HTMLElement>(":scope .fe-animate"),

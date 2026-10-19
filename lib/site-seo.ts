@@ -117,13 +117,14 @@ export const RETIRED_SEO_DESCRIPTIONS = new Set([
   "Guided EMDR sessions with AI support: visual sets, optional voice, and practice on your schedule.",
   "Weekly, monthly, and yearly plans for AI-guided EMDR — start with a 7-day trial.",
   "Answers about Nura sessions, Free sets, the trial, privacy, and when to get help.",
+  "Answers to the questions people ask before starting: is guided EMDR safe, how long a session takes, what happens if you feel worse, and how billing works.",
   "Reach Nura by in-app Need help chat or email — plus safety and crisis links.",
   "What Nura does not do: no diagnosis, no treatment, no clinical judgment, no crisis care — and where to go instead.",
   "Curated EMDR reading paths: understand, practice, and safety. Short guides in order — not the full archive.",
 ]);
 
 /** Bump when default title/description copy changes so `unstable_cache` cannot keep the last resolve. */
-export const SEO_COPY_REVISION = "p0-seo-round3-titles-1";
+export const SEO_COPY_REVISION = "faq-self-guided-1";
 
 export function documentTitle(pageTitle: string): string {
   const suffix = ` — ${BRAND_SPOKEN}`;
@@ -222,7 +223,7 @@ const BASE_SITE_SEO_DEFAULTS: PageDefault[] = [
     label: "FAQ",
     title: "EMDR App FAQ — Common Questions",
     description:
-      "Answers to the questions people ask before starting: is guided EMDR safe, how long a session takes, what happens if you feel worse, and how billing works.",
+      "Answers about sessions, Self-guided sets, the trial, privacy, and when to get help.",
   },
   {
     id: "support",

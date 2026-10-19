@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { FaqPageView } from "@/app/components/frontend/FaqPageView";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
@@ -33,7 +34,7 @@ export default async function FaqPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildPublicFaqJsonLd(origin, faq)} />
-      <PageSections page="faq" slots={{ "faq-page": <FaqPageView /> }} />
+      <PageSections page="faq" slots={{ "page-cta-faq": <PageCta page="faq" />, "faq-page": <FaqPageView /> }} />
     </FrontendShell>
   );
 }

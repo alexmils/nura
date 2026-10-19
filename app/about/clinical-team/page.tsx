@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { articleSlotIds } from "@/lib/marketing-sections";
 import {
   ArticleSection,
@@ -44,7 +45,7 @@ export default async function ClinicalTeamPage() {
       <article className="frontend-legal">
         <PageSections
           page="clinical"
-          slots={{
+          slots={{ "page-cta-clinical": <PageCta page="clinical" />,
             ...Object.fromEntries(articleSlotIds("clinical-intro").map((id) => [id, <ArticleSection key={id} id={id} />])),
             "clinical-advisor": <ClinicalAdvisorSection advisor={advisor} />,
             "clinical-outro": <ArticleSection id="clinical-outro" />,

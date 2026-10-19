@@ -20,17 +20,21 @@
   --bg-canvas: #dff5e0;
   --text: #2a3020;
   --text-secondary: #5e7048;
-  --text-muted: #948f4e;
+  --text-muted: #5a5c2b;
   --text-primary: var(--text);
-  --accent: #84b067;
-  --accent-hover: #6f9a58;
-  --accent-subtle: rgba(132, 176, 103, 0.14);
-  --gold: #c6d67e;
+  /* Sage stays a surface and icon color. Action is the fill under light text. */
+  --sage: #84b067;
+  --accent: #4a7234;
+  --accent-hover: #3d612b;
+  --accent-subtle: rgba(74, 114, 52, 0.14);
+  --pistachio: #c6d67e;
+  --gold: var(--pistachio);
+  --star: #e8c547;
   --ink: #2a3020;
   --on-accent: #f7fdf7;
-  --destructive: #ef4444;
-  --border: #b8d4a8;
-  --border-strong: #84b067;
+  --destructive: #b91c1c;
+  --border: #5f8a4c;
+  --border-strong: #4a7234;
   --shadow-sm: 0 1px 2px rgba(42, 48, 32, 0.06);
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -5958,7 +5962,7 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .admin-health-live.is-warn .admin-health-live-dot {
-  background: #948f4e;
+  background: #5a5c2b;
   box-shadow: none;
   animation: none;
 }
@@ -7185,7 +7189,7 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .admin-users-ignored {
-  color: #948f4e;
+  color: #5a5c2b;
 }
 
 button.admin-link {
@@ -7236,7 +7240,7 @@ button.admin-link {
 
 .admin-users-dot-active { background: #5a8f4a; }
 .admin-users-dot-pending { background: #d4a017; }
-.admin-users-dot-disabled { background: #948f4e; }
+.admin-users-dot-disabled { background: #5a5c2b; }
 
 .admin-users-role {
   margin: 0;
@@ -9653,7 +9657,7 @@ a.admin-panel-title-link:hover {
 
 .admin-places-tip-empty {
   margin-top: 0.2rem;
-  color: #948f4e;
+  color: #5a5c2b;
 }
 
 .admin-places-country.is-hot {
@@ -10552,11 +10556,14 @@ select.field option:disabled {
 .frontend-home {
   --fe-bg: #edf9ed;
   --fe-fg: #2a3020;
-  --fe-muted: #948f4e;
+  --fe-muted: #5a5c2b;
   --fe-line: rgba(42, 48, 32, 0.12);
-  --fe-accent: #84b067;
+  --fe-sage: #84b067;
+  --fe-accent: #4a7234;
   --fe-accent-fg: #f7fdf7;
-  --fe-gold: #c6d67e;
+  --fe-pistachio: #c6d67e;
+  --fe-gold: var(--fe-pistachio);
+  --fe-star: #e8c547;
   /* Same voice as /app — contrasts rounded wave wordmark (see nura-brand.mdc) */
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
   --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
@@ -13416,7 +13423,7 @@ a.help-drawer-signin.btn-primary {
   margin: 0.35rem 0 0;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: var(--olive, #948f4e);
+  color: var(--olive, #5a5c2b);
 }
 
 .fe-cookie-banner-text a {
@@ -13466,7 +13473,7 @@ a.help-drawer-signin.btn-primary {
 
 .fe-cookie-opts label.is-disabled {
   cursor: not-allowed;
-  color: var(--olive, #948f4e);
+  color: var(--olive, #5a5c2b);
 }
 
 /* —— Safety / legal session chrome —— */
@@ -13824,7 +13831,7 @@ a.help-drawer-signin.btn-primary {
 }
 
 .feedback-nps-score[aria-checked="true"] {
-  background: #84b067;
+  background: var(--accent);
   color: #fff;
 }
 

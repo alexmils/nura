@@ -173,7 +173,7 @@ export function MarketingSectionEditor({
                       const show = event.target.checked;
                       change(SECTION_OFF_KEY, (current) => {
                         const next = { ...current };
-                        if (show) delete next[SECTION_OFF_KEY];
+                        if (show) next[SECTION_OFF_KEY] = "0";
                         else next[SECTION_OFF_KEY] = "1";
                         return next;
                       });

@@ -40,7 +40,7 @@ describe("one panel per visual section", () => {
 
   it("article pieces are page slots in reading order", () => {
     const safety = MARKETING_PAGES.safety.slots.map((slot) => slot.id);
-    assert.deepEqual(safety, articleSlotIds("safety-page"));
+    assert.deepEqual(safety, [...articleSlotIds("safety-page"), "page-cta-safety"]);
     const emdr = MARKETING_PAGES.emdr.slots.map((slot) => slot.id);
     assert.equal(emdr.indexOf("emdr-compare"), articleSlotIds("emdr-intro").length);
   });
@@ -56,7 +56,7 @@ describe("one panel per visual section", () => {
     const between = normalizeSection("home-how-between", null);
     assert.equal(sectionText(between, "betweenKicker"), "Between sessions");
     assert.equal(sectionText(between, "betweenCtaHref"), "/app/create-account");
-    assert.equal(sectionText(between, "screenKind"), "image");
+    assert.equal(sectionText(between, "betweenAccent"), "Self-guided");
   });
 
   it("every section id is unique", () => {

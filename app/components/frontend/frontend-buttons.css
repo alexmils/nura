@@ -60,7 +60,7 @@
 
 .frontend-home .frontend-header-cta:hover .frontend-header-cta-icon {
   background: var(--fe-btn-ink);
-  color: var(--fe-btn-pistachio);
+  color: #fff;
 }
 
 .frontend-home .fe-about-cta:hover .fe-about-cta-icon {

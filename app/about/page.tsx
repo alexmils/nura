@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { AboutView } from "@/app/components/frontend/AboutView";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
@@ -25,7 +26,7 @@ export default async function AboutPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildAboutJsonLd(siteOrigin(publicUrl))} />
-      <PageSections page="about" slots={{ "about-page": <AboutView /> }} />
+      <PageSections page="about" slots={{ "page-cta-about": <PageCta page="about" />, "about-page": <AboutView /> }} />
     </FrontendShell>
   );
 }

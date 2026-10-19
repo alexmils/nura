@@ -61,24 +61,20 @@ export async function generateMetadata({
   const def = blogCategoryBySlug(slug);
   if (!def) return { title: "Category not found" };
 
-  const { posts } = (await loadCategory(def.slug)) ?? { posts: [] };
-
   // Registered in Admin → SEO, so the hub owns its title, description, share
   // image, and canonical instead of inheriting the home Open Graph copy.
   const seoPageId = blogCategorySeoPageId(def.slug);
   const meta = seoPageId ? await buildCachedPageMetadata(seoPageId) : null;
 
-  return {
-    ...(meta ?? {
+  return (
+    meta ?? {
       title: `${def.name}: EMDR guides`,
       description: def.description,
       alternates: localeAlternates(
         `${siteOrigin(undefined)}/blog/category/${def.slug}`
       ),
-    }),
-    // Thin until the first guide lands in this category.
-    robots: posts.length ? undefined : { index: false, follow: true },
-  };
+    }
+  );
 }
 
 export default async function BlogCategoryPage({

@@ -314,7 +314,7 @@
   padding: 0.75rem 0.625rem 0.75rem 1.75rem;
   border-radius: 6.25rem;
   background: var(--fe-accent);
-  color: var(--fe-fg);
+  color: #fff;
   font-size: 1rem;
   font-weight: 500;
   line-height: 1.2;
@@ -326,13 +326,13 @@
 }
 
 .frontend-header--overlay:not(.frontend-header-scrolled) .frontend-header-cta {
-  background: #a4eda5;
-  color: #26332d;
+  background: #4a7234;
+  color: #fff;
 }
 
 .frontend-header--overlay:not(.frontend-header-scrolled) .frontend-header-cta-icon {
   background: #26332d;
-  color: #a4eda5;
+  color: #fff;
 }
 
 .frontend-header-cta:hover {
@@ -374,7 +374,7 @@
   height: 30px;
   border-radius: 50%;
   background: var(--fe-fg);
-  color: var(--fe-accent-fg);
+  color: #fff;
   overflow: hidden;
 }
 

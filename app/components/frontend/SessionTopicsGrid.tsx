@@ -10,12 +10,23 @@ import "./session-topics-grid.css";
 
 const CORE_LOGO = "/brand/nura-circle-variants/O-mint-on-ink.png";
 
-export function SessionTopicsGrid() {
+export function SessionTopicsGrid({
+  id,
+  className,
+}: {
+  id?: string;
+  className?: string;
+} = {}) {
   const copy = useSectionConfig("home-topics");
   const count = BLOG_CATEGORIES.length;
 
   return (
-    <section className="fe-topics fe-has-edit" data-section="home-topics" aria-labelledby="fe-topics-title">
+    <section
+      id={id}
+      className={`fe-topics fe-has-edit${className ? ` ${className}` : ""}`}
+      data-section="home-topics"
+      aria-labelledby="fe-topics-title"
+    >
       <SectionEdit id="home-topics" />
       <div className="fe-container fe-topics-frame">
         <div className="fe-topics-head">

@@ -1,0 +1,337 @@
+/*
+ * Nura page-transition library. Every layer is built from the pistachio palette
+ * only. The renderer sets `--pt-c` (cover seconds) and `--pt-r` (reveal
+ * seconds) from `TRANSITION_TIMING`; phase is `data-phase`.
+ */
+
+.mo-pt {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mo-pt[data-phase="cover"] {
+  pointer-events: auto;
+}
+
+.mo-pt [class^="mo-pt-"],
+.mo-pt [class*=" mo-pt-"] {
+  position: absolute;
+}
+
+/* —— Fade through mint —— */
+.mo-pt-fade {
+  inset: 0;
+  background: #edf9ed;
+}
+
+[data-pt="fade"][data-phase="cover"] .mo-pt-fade {
+  animation: mo-pt-fade-cover var(--pt-c) var(--mo-ease-in-out) both;
+}
+
+[data-pt="fade"][data-phase="reveal"] .mo-pt-fade {
+  animation: mo-pt-fade-reveal var(--pt-r) var(--mo-ease-in-out) both;
+}
+
+@keyframes mo-pt-fade-cover {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes mo-pt-fade-reveal {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* —— Blur dissolve —— */
+.mo-pt-veil {
+  inset: 0;
+  background: rgba(237, 249, 237, 0.55);
+  backdrop-filter: blur(0px);
+}
+
+[data-pt="blurDissolve"][data-phase="cover"] .mo-pt-veil {
+  animation: mo-pt-veil-cover var(--pt-c) var(--mo-ease-soft) both;
+}
+
+[data-pt="blurDissolve"][data-phase="reveal"] .mo-pt-veil {
+  animation: mo-pt-veil-reveal var(--pt-r) var(--mo-ease-soft) both;
+}
+
+@keyframes mo-pt-veil-cover {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(18px); }
+}
+
+@keyframes mo-pt-veil-reveal {
+  from { opacity: 1; backdrop-filter: blur(18px); }
+  to { opacity: 0; backdrop-filter: blur(0px); }
+}
+
+/* —— Wave sweep (signature: wavy pistachio edge on a sage panel) —— */
+.mo-pt-wave {
+  inset: 0;
+  background: #84b067;
+}
+
+.mo-pt-wave::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 26px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='26' viewBox='0 0 120 26' preserveAspectRatio='none'><path d='M0,13 q15,-13 30,0 t30,0 t30,0 t30,0 L120,26 L0,26 Z' fill='%23c6d67e'/></svg>");
+  background-size: 120px 26px;
+  background-repeat: repeat-x;
+}
+
+.mo-pt-wave::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -26px;
+  height: 26px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='26' viewBox='0 0 120 26' preserveAspectRatio='none'><path d='M0,13 q15,13 30,0 t30,0 t30,0 t30,0 L120,0 L0,0 Z' fill='%23c6d67e'/></svg>");
+  background-size: 120px 26px;
+  background-repeat: repeat-x;
+  transform: rotate(180deg);
+}
+
+[data-pt="waveSweep"][data-phase="cover"] .mo-pt-wave {
+  animation: mo-pt-wave-cover var(--pt-c) var(--mo-ease-in-out) both;
+}
+
+[data-pt="waveSweep"][data-phase="reveal"] .mo-pt-wave {
+  animation: mo-pt-wave-reveal var(--pt-r) var(--mo-ease-in-out) both;
+}
+
+@keyframes mo-pt-wave-cover {
+  from { transform: translateY(-101%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mo-pt-wave-reveal {
+  from { transform: translateY(0); }
+  to { transform: translateY(101%); }
+}
+
+/* —— Mint curtain —— */
+.mo-pt-curtain {
+  inset: 0;
+  background: #a4eda5;
+}
+
+[data-pt="mintCurtain"][data-phase="cover"] .mo-pt-curtain {
+  animation: mo-pt-curtain-cover var(--pt-c) var(--mo-ease-in-out) both;
+}
+
+[data-pt="mintCurtain"][data-phase="reveal"] .mo-pt-curtain {
+  animation: mo-pt-curtain-reveal var(--pt-r) var(--mo-ease-in-out) both;
+}
+
+@keyframes mo-pt-curtain-cover {
+  from { transform: translateY(101%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mo-pt-curtain-reveal {
+  from { transform: translateY(0); }
+  to { transform: translateY(-101%); }
+}
+
+/* —— Sage columns —— */
+.mo-pt-col {
+  top: 0;
+  bottom: 0;
+  width: 20.2%;
+  left: calc(var(--i) * 20%);
+  background: #84b067;
+  transform: translateY(-100%);
+}
+
+[data-pt="sageColumns"][data-phase="cover"] .mo-pt-col {
+  animation: mo-pt-col-cover var(--pt-c) var(--mo-ease-in-out) both;
+  animation-delay: calc(var(--i) * 0.06s);
+}
+
+[data-pt="sageColumns"][data-phase="reveal"] .mo-pt-col {
+  animation: mo-pt-col-reveal var(--pt-r) var(--mo-ease-in-out) both;
+  animation-delay: calc((4 - var(--i)) * 0.06s);
+}
+
+@keyframes mo-pt-col-cover {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mo-pt-col-reveal {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
+}
+
+/* —— Stacked panels (mint → pistachio → sage) —— */
+.mo-pt-stack {
+  inset: 0;
+}
+
+.mo-pt-stack-0 { background: #a4eda5; }
+.mo-pt-stack-1 { background: #c6d67e; }
+.mo-pt-stack-2 { background: #84b067; }
+
+[data-pt="stackUp"][data-phase="cover"] .mo-pt-stack {
+  animation: mo-pt-stack-cover calc(var(--pt-c) * 0.78) var(--mo-ease-in-out) both;
+  animation-delay: calc(var(--i) * 0.08s);
+}
+
+[data-pt="stackUp"][data-phase="reveal"] .mo-pt-stack {
+  animation: mo-pt-stack-reveal calc(var(--pt-r) * 0.78) var(--mo-ease-in-out) both;
+  animation-delay: calc((2 - var(--i)) * 0.1s);
+}
+
+@keyframes mo-pt-stack-cover {
+  from { transform: translateY(101%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes mo-pt-stack-reveal {
+  from { transform: translateY(0); }
+  to { transform: translateY(-101%); }
+}
+
+/* —— Split doors —— */
+.mo-pt-door {
+  top: 0;
+  bottom: 0;
+  width: 50.2%;
+  background: #3d4129;
+}
+
+.mo-pt-door-l { left: 0; transform: translateX(-101%); }
+.mo-pt-door-r { right: 0; transform: translateX(101%); }
+
+[data-pt="doors"][data-phase="cover"] .mo-pt-door {
+  animation: mo-pt-door-cover var(--pt-c) var(--mo-ease-in-out) both;
+}
+
+[data-pt="doors"][data-phase="reveal"] .mo-pt-door {
+  animation: mo-pt-door-reveal var(--pt-r) var(--mo-ease-in-out) both;
+}
+
+.mo-pt-door-l.mo-pt-door { --dir: -1; }
+.mo-pt-door-r.mo-pt-door { --dir: 1; }
+
+@keyframes mo-pt-door-cover {
+  from { transform: translateX(calc(var(--dir) * 101%)); }
+  to { transform: translateX(0); }
+}
+
+@keyframes mo-pt-door-reveal {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(var(--dir) * 101%)); }
+}
+
+/* —— Shutter iris —— */
+.mo-pt-iris {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  width: 260%;
+  height: 260%;
+  box-shadow: 0 0 0 300vmax #2a3020;
+}
+
+[data-pt="iris"][data-phase="cover"] .mo-pt-iris {
+  animation: mo-pt-iris-cover var(--pt-c) var(--mo-ease-in-out) both;
+}
+
+[data-pt="iris"][data-phase="reveal"] .mo-pt-iris {
+  animation: mo-pt-iris-reveal var(--pt-r) var(--mo-ease-in-out) both;
+}
+
+@keyframes mo-pt-iris-cover {
+  from { width: 260%; height: 260%; }
+  to { width: 0%; height: 0%; }
+}
+
+@keyframes mo-pt-iris-reveal {
+  from { width: 0%; height: 0%; }
+  to { width: 260%; height: 260%; }
+}
+
+/* —— Pistachio dots —— */
+.mo-pt-dot {
+  left: calc(var(--x) * 20%);
+  top: calc(var(--y) * 20%);
+  width: 20.2%;
+  height: 20.2%;
+  border-radius: 50%;
+  background: #c6d67e;
+  transform: scale(0);
+}
+
+[data-pt="dots"][data-phase="cover"] .mo-pt-dot {
+  animation: mo-pt-dot-cover calc(var(--pt-c) * 0.7) var(--mo-ease-out) both;
+  animation-delay: calc(var(--d) * 0.5s);
+}
+
+[data-pt="dots"][data-phase="reveal"] .mo-pt-dot {
+  animation: mo-pt-dot-reveal calc(var(--pt-r) * 0.7) var(--mo-ease-in-out) both;
+  animation-delay: calc(var(--d) * 0.35s);
+}
+
+@keyframes mo-pt-dot-cover {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+@keyframes mo-pt-dot-reveal {
+  from { transform: scale(1); }
+  to { transform: scale(0); }
+}
+
+/* —— Logo flash —— */
+.mo-pt-logo {
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.mo-pt-logo::before {
+  content: "";
+  width: min(38vw, 260px);
+  aspect-ratio: 2423 / 939;
+  background: url("/brand/nura-wave-logo.png") center / contain no-repeat;
+}
+
+[data-pt="logoFlash"][data-phase="cover"] .mo-pt-logo {
+  animation: mo-pt-logo-cover var(--pt-c) var(--mo-ease-out) both;
+}
+
+[data-pt="logoFlash"][data-phase="reveal"] .mo-pt-logo {
+  animation: mo-pt-logo-reveal var(--pt-r) var(--mo-ease-out) both;
+}
+
+@keyframes mo-pt-logo-cover {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes mo-pt-logo-reveal {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.05); }
+}
+
+/* —— Reduced motion: never run a transition overlay —— */
+@media (prefers-reduced-motion: reduce) {
+  .mo-pt {
+    display: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .mo-pt {
+  display: none;
+}

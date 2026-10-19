@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { articleSlotIds } from "@/lib/marketing-sections";
 import { ArticleSection } from "@/app/components/frontend/ArticleSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
@@ -28,7 +29,7 @@ export default async function LimitsPage() {
     <FrontendShell>
       <JsonLd data={buildLimitsJsonLd(origin)} />
       <article className="frontend-legal frontend-legal--long">
-        <PageSections page="limits" slots={{ ...Object.fromEntries(articleSlotIds("limits-page").map((id) => [id, <ArticleSection key={id} id={id} />])) }} />
+        <PageSections page="limits" slots={{ "page-cta-limits": <PageCta page="limits" />, ...Object.fromEntries(articleSlotIds("limits-page").map((id) => [id, <ArticleSection key={id} id={id} />])) }} />
       </article>
     </FrontendShell>
   );

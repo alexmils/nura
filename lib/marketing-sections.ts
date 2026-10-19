@@ -76,6 +76,8 @@ export type SectionDef = {
   defaults: SectionConfig;
   /** No "Show this section" switch (the block cannot be hidden on its own). */
   noHide?: boolean;
+  /** The component paints the Background setting itself (hero, closing band). */
+  ownBackground?: boolean;
 };
 
 const TEXT_MAX = 400;
@@ -816,7 +818,7 @@ const BASE_SECTIONS: readonly SectionDef[] = [
     ],
     defaults: {
       title: "EMDR App FAQ",
-      lead: "Short answers about sessions, Free sets, the trial, and when to get help. For plans, see [Pricing](/pricing). For how to reach us, see [Support](/support).",
+      lead: "Short answers about sessions, Self-guided sets, the trial, and when to get help. For plans, see [Pricing](/pricing). For how to reach us, see [Support](/support).",
       items: faqDefaults(PUBLIC_FAQ_ITEMS).map((item) =>
         item.q.startsWith("Is my data private")
           ? {
@@ -1000,7 +1002,7 @@ const BASE_SECTIONS: readonly SectionDef[] = [
       sections: [
         {
           heading: "In the app",
-          body: "Open **Need help** from any signed-in screen. The chat answers common questions and can pass a message to the team when needed.",
+          body: "Open Need help from any signed-in screen. The chat answers common questions and can pass a message to the team when needed.",
         },
         {
           heading: "Email",
@@ -1008,7 +1010,7 @@ const BASE_SECTIONS: readonly SectionDef[] = [
         },
         {
           heading: "Also useful",
-          body: "[FAQ](/faq) — sessions, Free sets, trial, privacy\n[Pricing](/pricing) — weekly, monthly, and yearly plans\n[Safety](/safety) — when to stop and get help\n[Limits](/limits) — what the app does not do",
+          body: "[FAQ](/faq) — sessions, Self-guided sets, trial, privacy\n[Pricing](/pricing) — weekly, monthly, and yearly plans\n[Safety](/safety) — when to stop and get help\n[Limits](/limits) — what the app does not do",
         },
       ],
     },
@@ -1177,8 +1179,349 @@ const BASE_SECTIONS: readonly SectionDef[] = [
   },
 ];
 
-/* ---------- One definition per visual section ---------- */
+/* ---------- New homepage (HomeLandingV2) ---------- */
 
+const lines = (key: string, label: string) => area(key, label, "One per line.");
+const sectionHead = (accentHint = "Words from the title shown in the green italic accent.") => [
+  text("kicker", "Kicker"),
+  text("title", "Title"),
+  text("accent", "Accent words", accentHint),
+  area("sub", "Subline"),
+];
+
+const V2_SECTIONS: SectionDef[] = [
+  {
+    id: "home-hero",
+    name: "Home: hero",
+    ownBackground: true,
+    fields: [
+      text("kicker", "Pill"),
+      text("title1", "Title line 1"),
+      text("title2", "Title line 2"),
+      text("accent", "Accent word", "Part of line 2 shown in the green italic accent."),
+      area("sub", "Text"),
+      text("primary", "Main button"),
+      link("primaryHref", "Main button link"),
+      text("secondary", "Second button"),
+      link("secondaryHref", "Second button link"),
+      {
+        key: "trust",
+        label: "Checks under the buttons",
+        kind: "list",
+        itemLabel: "Check",
+        max: 3,
+        fixed: true,
+        fields: [text("label", "Text")],
+      },
+    ],
+    defaults: {
+      kicker: "AI-guided EMDR, between sessions",
+      title1: "EMDR therapy online.",
+      title2: "in a calm app.",
+      accent: "calm",
+      sub: "Guided sessions you run yourself. Visual sets, optional voice, grounding, and short guides for the moments between sessions.",
+      primary: `Start your ${TRIAL_DAYS}-day trial`,
+      primaryHref: appPath("/create-account"),
+      secondary: "See how it works",
+      secondaryHref: "#how-it-works",
+      trust: [
+        { id: "trial", label: `${TRIAL_DAYS}-day trial` },
+        { id: "cancel", label: "Cancel anytime" },
+        { id: "selfhelp", label: "Self-help, not therapy" },
+      ],
+    },
+  },
+  {
+    id: "home-trust",
+    name: "Home: trust strip",
+    fields: [
+      text("line", "Line"),
+      {
+        key: "chips",
+        label: "Chips",
+        kind: "list",
+        itemLabel: "Chip",
+        max: 4,
+        fixed: true,
+        fields: [text("label", "Text")],
+      },
+    ],
+    defaults: {
+      line: "Support for therapy. Starting with EMDR.",
+      chips: [
+        { id: "trial", label: "7-day trial" },
+        { id: "cancel", label: "Cancel anytime" },
+        { id: "private", label: "Private by design" },
+        { id: "between", label: "Built for between sessions" },
+      ],
+    },
+  },
+  {
+    id: "home-modes",
+    name: "Home: two ways in",
+    fields: [
+      ...sectionHead(),
+      {
+        key: "modes",
+        label: "Modes",
+        kind: "list",
+        itemLabel: "Mode",
+        max: 2,
+        fixed: true,
+        fields: [
+          text("label", "Tab label"),
+          text("hint", "Tab hint"),
+          text("kicker", "Kicker"),
+          text("title", "Title"),
+          text("accent", "Accent words"),
+          area("body", "Text"),
+          image("image", "Image"),
+          text("alt", "Image alt text"),
+          lines("chips", "Chips"),
+        ],
+      },
+      text("link", "Link label"),
+      link("linkHref", "Link"),
+    ],
+    defaults: {
+      kicker: "Two ways in",
+      title: "An agent beside you, or a quiet set you run yourself.",
+      accent: "quiet",
+      sub: "Both live in the same calm workspace. You choose how much support you want.",
+      modes: [
+        {
+          id: "guided",
+          label: "AI agent-guided",
+          hint: "The guide walks with you",
+          kicker: "With an agent",
+          title: "An agent beside you.",
+          accent: "agent",
+          body: "The guide walks you through intake, sets, check-ins, and closure. Write in your language, at your pace.",
+          image: "/marketing/landing/support-talk.jpg",
+          alt: "A calm conversation in a supportive setting",
+          chips: "Guided phases\nCheck-ins\nYour language",
+        },
+        {
+          id: "self",
+          label: "Self-guided",
+          hint: "You set the rhythm",
+          kicker: "On your own",
+          title: "A quiet set you run yourself.",
+          accent: "quiet",
+          body: "No agent, no chat. Choose the visual set, sound, and timing. Pause any time.",
+          image: "/marketing/landing/practice-space.jpg",
+          alt: "A quiet space set up for practice",
+          chips: "Visual sets\nStereo sound\nSession controls",
+        },
+      ],
+      link: "Explore this mode",
+      linkHref: "/learn",
+    },
+  },
+  {
+    id: "home-session",
+    name: "Home: inside a session",
+    fields: [
+      ...sectionHead(),
+      text("videoUrl", "Walkthrough video", "YouTube, Vimeo or .mp4 link. Leave empty for the app preview."),
+      text("coverTitle", "Preview title"),
+      text("coverNote", "Preview note"),
+      {
+        key: "features",
+        label: "Features",
+        kind: "list",
+        itemLabel: "Feature",
+        max: 4,
+        fixed: true,
+        fields: [text("label", "Text")],
+      },
+    ],
+    defaults: {
+      kicker: "Inside a session",
+      title: "A calm room for the work.",
+      accent: "calm",
+      sub: "Grounding, visual sets, and check-ins in one quiet workspace.",
+      videoUrl: "",
+      coverTitle: "Session walkthrough",
+      coverNote: "Video coming soon",
+      features: [
+        { id: "sets", label: "Visual sets" },
+        { id: "voice", label: "Optional voice" },
+        { id: "ground", label: "Grounding first" },
+        { id: "notes", label: "Notes that stay yours" },
+      ],
+    },
+  },
+  {
+    id: "home-stories",
+    name: "Home: stories",
+    fields: [
+      ...sectionHead(),
+      text("rating", "Rating"),
+      text("ratingLine", "Rating line"),
+      {
+        key: "stories",
+        label: "Stories",
+        kind: "list",
+        itemLabel: "Story",
+        max: 12,
+        fields: [area("quote", "Quote"), text("name", "Name"), text("role", "Role")],
+      },
+    ],
+    defaults: {
+      kicker: "Stories",
+      title: "Their experience, your confidence.",
+      accent: "your",
+      sub: "Voices from people using Nura between sessions.",
+      rating: "4.9",
+      ratingLine: "from early members",
+      stories: [
+        {
+          quote: "The interface feels calm enough to actually stay with a difficult memory. Self-guided sessions let me practice without an agent.",
+          name: "Maya L.",
+          role: "Trial member",
+        },
+        { quote: "The session agent walks me through phases instead of dumping me into a blank screen.", name: "James R.", role: "Monthly plan" },
+        { quote: "Resources are short and clear. Finally something that explains EMDR without overwhelming me.", name: "Sophie T.", role: "Resources reader" },
+        { quote: "I use it between sessions. The steps feel structured but never rushed.", name: "Daniel K.", role: "Yearly plan" },
+      ],
+    },
+  },
+  {
+    id: "home-pricing",
+    name: "Home: pricing",
+    fields: [
+      ...sectionHead(),
+      text("cta", "Card button"),
+      text("featuresLabel", "Features label"),
+      {
+        key: "plans",
+        label: "Plans",
+        kind: "list",
+        itemLabel: "Plan",
+        max: 3,
+        fixed: true,
+        fields: [
+          text("name", "Name"),
+          text("badge", "Badge"),
+          area("details", "Text"),
+          text("note", "Price note"),
+          lines("features", "Features"),
+        ],
+      },
+      text("note", "Note under the cards"),
+    ],
+    defaults: {
+      kicker: "Pricing",
+      title: "Plans tailored to your pace.",
+      accent: "your pace",
+      sub: `Start with a ${TRIAL_DAYS}-day trial. Every paid plan unlocks the same AI agent-guided and Self-guided sessions. Pick how often you want to be billed.`,
+      cta: "Start your trial",
+      featuresLabel: "What is included",
+      plans: [
+        {
+          id: "yearly",
+          name: "Yearly",
+          badge: "Best value",
+          details: "One calm price for a full year. The lowest cost per month if Nura becomes part of your routine.",
+          note: "About $8.25 per month",
+          features: "Everything in Monthly\nLowest cost per month\nPay once, fewer interruptions\nCustomer portal for billing\nKeep your history and settings",
+        },
+        {
+          id: "monthly",
+          name: "Monthly",
+          badge: "Most popular",
+          details: "The everyday plan for practice between sessions. Billed monthly, cancel anytime.",
+          note: "",
+          features: "Unlimited AI agent-guided + Self-guided sessions\nFull protocol phases and check-ins\nResources library access\nCustomer portal for billing\nUpgrade or switch plans later",
+        },
+        {
+          id: "weekly",
+          name: "Weekly",
+          badge: "",
+          details: "Flexible billing if you want to stay light. Same full app, billed each week.",
+          note: "",
+          features: "Unlimited AI agent-guided sessions\nFull Self-guided sessions\nNo ads on paid plans\nCancel anytime in the portal\nSame session workspace as other plans",
+        },
+      ],
+      note: "Cancel anytime in the customer portal. Prices in USD.",
+    },
+  },
+  {
+    id: "home-close",
+    name: "Home: call to action",
+    ownBackground: true,
+    fields: [
+      text("kicker", "Kicker"),
+      text("title", "Title"),
+      text("accent", "Accent words"),
+      area("body", "Text"),
+      text("primary", "Main button"),
+      link("primaryHref", "Main button link"),
+      text("secondary", "Second button", "Leave empty to hide."),
+      link("secondaryHref", "Second button link"),
+      text("note", "Note"),
+    ],
+    defaults: {
+      kicker: "A gentler next step",
+      title: "A calmer next step.",
+      accent: "calmer",
+      body: `Try Nura for ${TRIAL_DAYS} days. Start with one short session and see how it feels.`,
+      primary: "Start your trial",
+      primaryHref: appPath("/create-account"),
+      secondary: "Read the safety notes",
+      secondaryHref: "/safety",
+      note: "Self-help, not therapy or crisis care.",
+    },
+  },
+];
+
+/* ---------- Call to action on every other public page (off until switched on) ---------- */
+
+export const PAGE_CTA_PAGES = {
+  about: "About",
+  faq: "FAQ",
+  blog: "Blog",
+  learn: "Learn",
+  knowledge: "Knowledge",
+  support: "Support",
+  editorial: "Editorial",
+  safety: "Safety",
+  limits: "Limits",
+  clinical: "Clinical review",
+} as const;
+
+export function pageCtaId(page: string): string {
+  return `page-cta-${page}`;
+}
+
+const PAGE_CTA_SECTIONS: SectionDef[] = Object.entries(PAGE_CTA_PAGES).map(([page, label]) => ({
+  id: pageCtaId(page),
+  name: `${label}: call to action`,
+  fields: [
+    text("kicker", "Kicker"),
+    text("title", "Heading"),
+    area("body", "Text", "Links: [Label](/path), **bold**"),
+    text("ctaLabel", "Button label"),
+    link("ctaHref", "Button link"),
+    text("secondaryLabel", "Second button label", "Leave empty to hide"),
+    link("secondaryHref", "Second button link"),
+  ],
+  defaults: {
+    _off: "1",
+    kicker: "",
+    title: "Ready when you are",
+    body: `Try Nura for ${TRIAL_DAYS} days. Start with one short session and see how it feels.`,
+    ctaLabel: "Start your trial",
+    ctaHref: appPath("/create-account"),
+    secondaryLabel: "",
+    secondaryHref: "",
+  },
+}));
+
+const REPLACED_IDS = new Set(V2_SECTIONS.map((def) => def.id));
+
+/* ---------- One definition per visual section ---------- */
 type PartSpec = {
   id: string;
   name: string;
@@ -1203,12 +1546,12 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
     {
       id: "home-how-between",
       name: "Home: between sessions",
-      keys: ["screen"],
-      labels: { screen: "Screen image or video" },
+      keys: [],
       extra: {
         fields: [
           text("betweenKicker", "Kicker"),
           text("betweenTitle", "Title"),
+          text("betweenAccent", "Accent words", "Part of the title shown in the green italic accent."),
           area("betweenLine", "Line"),
           text("betweenCta", "Button"),
           link("betweenCtaHref", "Button link"),
@@ -1216,6 +1559,7 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
         defaults: {
           betweenKicker: "Between sessions",
           betweenTitle: "Self-guided session \u2014 sets without an agent",
+          betweenAccent: "Self-guided",
           betweenLine: "Practice in the gap, on your schedule.",
           betweenCta: "Start for free",
           betweenCtaHref: appPath("/create-account"),
@@ -1374,7 +1718,11 @@ function expandSections(base: readonly SectionDef[]): SectionDef[] {
   return out;
 }
 
-export const MARKETING_SECTIONS: readonly SectionDef[] = expandSections(BASE_SECTIONS);
+export const MARKETING_SECTIONS: readonly SectionDef[] = expandSections([
+  ...BASE_SECTIONS.filter((def) => !REPLACED_IDS.has(def.id)),
+  ...V2_SECTIONS,
+  ...PAGE_CTA_SECTIONS,
+]);
 
 /** Page-layout slot ids for a long article (one per "## " piece). */
 export function articleSlotIds(baseId: string): string[] {
@@ -1579,7 +1927,7 @@ export function defaultMarketingCopy(): Record<string, SectionConfig> {
 
 function clampText(value: unknown, max: number, fallback: string): string {
   const raw = typeof value === "string" ? value : fallback;
-  return raw.replace(/\u0000/g, "").slice(0, max);
+  return raw.replace(/\u0000/g, "").replaceAll("Free sets", "Self-guided sets").slice(0, max);
 }
 
 /** Relative path, https, or mailto. Anything else falls back. */
@@ -1592,6 +1940,7 @@ export function safeHref(value: string, fallback: string): string {
   if (/^https:\/\/[^\s]+$/i.test(v)) return v.slice(0, 300);
   if (/^mailto:[^\s@]+@[^\s@]+$/i.test(v)) return v.slice(0, 300);
   if (/^tel:\+?[0-9][0-9 ()-]{0,24}$/i.test(v)) return v.slice(0, 40);
+  if (/^#[A-Za-z][\w-]{0,60}$/.test(v)) return v;
   return fallback;
 }
 
@@ -1759,7 +2108,13 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
       );
     }
   }
-  if (source[SECTION_OFF_KEY] === "1" && !def.noHide) out[SECTION_OFF_KEY] = "1";
+  if (!def.noHide) {
+    const raw = source[SECTION_OFF_KEY];
+    const offByDefault = def.defaults[SECTION_OFF_KEY] === "1";
+    // Sections that start hidden keep an explicit "0" once switched on.
+    if (raw === "1" || (raw === undefined && offByDefault)) out[SECTION_OFF_KEY] = "1";
+    else if (offByDefault) out[SECTION_OFF_KEY] = "0";
+  }
   Object.assign(out, normalizeBackground(source));
   return out;
 }

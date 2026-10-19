@@ -2,7 +2,7 @@
 
 import { Languages, Phone, Shield } from "lucide-react";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
-import { LetterRevealHeading } from "./LetterRevealHeading";
+import { AccentText } from "./AccentText";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 
 type KitChip = {
@@ -96,9 +96,9 @@ export function SessionLoopKit() {
         <div className="fe-spath-kit-hero">
           <div className="fe-spath-kit-copy">
             <p className="fe-spath-kit-kicker fe-animate">{sectionText(copy, "kitKicker")}</p>
-            <LetterRevealHeading as="h2" className="fe-spath-kit-title">
-              {sectionText(copy, "kitTitle")}
-            </LetterRevealHeading>
+            <h2 className="fe-spath-kit-title fe-animate">
+              <AccentText text={sectionText(copy, "kitTitle")} accent="calm" />
+            </h2>
             <p className="fe-spath-kit-sub fe-animate">
               {sectionText(copy, "kitSub")}
             </p>

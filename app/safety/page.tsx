@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { articleSlotIds } from "@/lib/marketing-sections";
 import { ArticleSection } from "@/app/components/frontend/ArticleSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
@@ -28,7 +29,7 @@ export default async function SafetyPage() {
     <FrontendShell>
       <JsonLd data={buildSafetyJsonLd(origin)} />
       <article className="frontend-legal frontend-legal--long">
-        <PageSections page="safety" slots={{ ...Object.fromEntries(articleSlotIds("safety-page").map((id) => [id, <ArticleSection key={id} id={id} />])) }} />
+        <PageSections page="safety" slots={{ "page-cta-safety": <PageCta page="safety" />, ...Object.fromEntries(articleSlotIds("safety-page").map((id) => [id, <ArticleSection key={id} id={id} />])) }} />
       </article>
     </FrontendShell>
   );

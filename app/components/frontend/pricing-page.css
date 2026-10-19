@@ -77,7 +77,7 @@
 
 .fe-pricing-section--page .fe-pricing-sub {
   margin: 0.85rem 0 0;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
   font-size: clamp(1.05rem, 2vw, 1.2rem);
 }
 
@@ -195,7 +195,7 @@
   display: inline;
   margin: 0;
   font-size: 1.05rem;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
   line-height: 1.2;
 }
 
@@ -230,20 +230,20 @@
 }
 
 .fe-pricing-section--page .fe-price-card-cta--accent {
-  background: #84b067;
-  border-color: #84b067;
-  color: #fff;
+  background: var(--fe-accent, #4a7234);
+  border-color: var(--fe-accent, #4a7234);
+  color: var(--fe-accent-fg, #f7fdf7);
 }
 
 .fe-pricing-section--page .fe-price-card-cta--accent:hover {
-  background: #739a58;
-  border-color: #739a58;
-  color: #fff;
+  background: #3d612b;
+  border-color: #3d612b;
+  color: #f7fdf7;
 }
 
 .fe-pricing-section--page .fe-price-card-features-label {
   margin-top: 1.35rem;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
   font-family: var(--font-alt);
   font-size: 0.75rem;
   font-weight: 400;
@@ -401,7 +401,7 @@
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.35;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 .fe-pricing-bento-card--wide .fe-pricing-bento-title {
@@ -427,7 +427,7 @@
 .fe-pricing-faq-more {
   margin: 1.5rem 0 0;
   font-size: 0.9875rem;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
   text-align: center;
 }
 

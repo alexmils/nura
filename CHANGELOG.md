@@ -432,6 +432,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Onboarding **Pick a plan**: flush layout (no inner card), radio plan rows, **Try free** CTA, one-line trial footnote under the button
 - [internal] Admin **Trial started** email also fires when Checkout syncs via `/api/billing/status?session_id=` (local dev without Stripe webhook), deduped per subscription
 - [internal] Cloudflare Access bypass on `dev.nurahelp.com/api/webhooks/*` for Stripe/Brevo (dev tunnel no longer 302 on webhook POST)
+- [internal] FAQ meta description and the lead under the title say Self-guided sets (saved “Free sets” copy rewrites on load)
+- [internal] Blog category hubs stay in the sitemap with zero guides (grief, phobias, childhood memories, self-worth) and are no longer noindex
+- [internal] `/signup` redirects to create-account; `/checkout` redirects to pricing (those paths were 404)
+- [internal] Security headers on every response: HSTS in production, CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy (microphone stays on for session voice)
+- [internal] Blog guides publish every four days from August 3 to October 10 (was a 10-day burst); each guide links to pricing; empty category hubs stay in the sitemap
+- [internal] Default contrast: filled buttons and small accent text use `#4A7234` (sage `#84B067` stays for surfaces); muted text `#5A5C2B`; field borders `#5F8A4C` (the suggested `#94B884` is only 2.05:1 on paper); `--gold` aliases `--pistachio`; stars use `--star`
 
 ### Fixed
 - [internal] Turnstile siteverify timeout 10s → 25s (default); dev console warns on reject/timeout; optional `TURNSTILE_BYPASS_DEV` for local dev only

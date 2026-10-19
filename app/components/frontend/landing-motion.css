@@ -31,6 +31,22 @@
   will-change: transform;
 }
 
+/* Word gaps are CSS, not literal NBSP characters in the copy. */
+.fe-split-line + .fe-split-line {
+  margin-left: 0.24em;
+}
+
+/* Fraunces italic accent inside the original marketing headings. */
+.fe-accent {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  color: var(--fe-accent, #4a7234);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 45, "WONK" 0.4, "opsz" 144;
+}
+
 /* —— Hero (Curevo full-bleed image + bottom content grid) —— */
 .fe-hero {
   --fe-hero-dark: #26332d;
@@ -1064,7 +1080,7 @@
   --fe-st-muted: #a8b09a;
   --fe-st-lime: #a4eda5;
   --fe-st-ink: #1a1d14;
-  --fe-st-star: #e8c547;
+  --fe-st-star: var(--fe-star, #e8c547);
   --fe-st-line: color-mix(in srgb, var(--fe-st-lime) 22%, transparent);
 
   padding: clamp(4rem, 9vw, 6.5rem) 0 clamp(3.5rem, 7vw, 5rem);
@@ -1434,7 +1450,7 @@
   line-height: 1.35;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 .fe-blog-masonry-title {

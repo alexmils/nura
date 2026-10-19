@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Fraunces, Roboto_Mono, Source_Sans_3 } from "next/font/google";
+import {
+  Fraunces,
+  Instrument_Sans,
+  Roboto_Mono,
+  Source_Sans_3,
+} from "next/font/google";
 import {
   BRAND_DESCRIPTION,
   BRAND_LEGAL,
@@ -9,6 +14,8 @@ import {
 } from "@/lib/brand";
 import { a11yBootstrapScript } from "@/lib/a11y-preferences";
 import { consentDefaultScript } from "@/lib/marketing-consent";
+import { MotionProvider } from "@/app/components/motion/MotionProvider";
+import { PageTransitionOverlay } from "@/app/components/motion/PageTransitionOverlay";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -17,12 +24,20 @@ const fraunces = Fraunces({
   variable: "--font-fraunces",
   // Soft/wonky axes — organic like the wave; distinct from condensed Caslon
   axes: ["SOFT", "WONK", "opsz"],
+  style: ["normal", "italic"],
 });
 
 const sourceSans = Source_Sans_3({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-source-sans",
+});
+
+/** Display sans for the landing v2 hero and section titles. */
+const instrumentSans = Instrument_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-instrument",
 });
 
 /** Labels / kickers on `.frontend-home` (mono; does not compete with wave lockup). */
@@ -61,7 +76,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${sourceSans.variable} ${fraunces.variable} ${robotoMono.variable}`}
+      className={`${sourceSans.variable} ${fraunces.variable} ${robotoMono.variable} ${instrumentSans.variable}`}
     >
       <head>
         {/*
@@ -79,7 +94,12 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        <MotionProvider>
+          {children}
+          <PageTransitionOverlay />
+        </MotionProvider>
+      </body>
     </html>
   );
 }

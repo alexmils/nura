@@ -16,20 +16,24 @@ export function EditablePart({
   children,
   lift = false,
   className,
+  backdrop = true,
 }: {
   id: string;
   children: ReactNode;
   lift?: boolean;
   className?: string;
+  /** False when an outer SectionGate already paints the background. */
+  backdrop?: boolean;
 }) {
   const admin = useIsPlatformAdmin();
   const on = useSectionOn(id);
-  if (!admin) return on ? <SectionBackdrop id={id}>{children}</SectionBackdrop> : null;
+  const body = backdrop ? <SectionBackdrop id={id}>{children}</SectionBackdrop> : children;
+  if (!admin) return on ? <>{body}</> : null;
   if (!on) return <HiddenSectionNote id={id} />;
   return (
     <div className={className ? `fe-has-edit fe-editable-part ${className}` : "fe-has-edit fe-editable-part"} data-section={id}>
       <SectionEdit id={id} lift={lift} />
-      <SectionBackdrop id={id}>{children}</SectionBackdrop>
+      {body}
     </div>
   );
 }
@@ -61,7 +65,7 @@ export function SectionGate({ id, children }: { id: string; children: ReactNode 
  */
 export function SectionBackdrop({ id, children }: { id: string; children: ReactNode }) {
   const bg = sectionBackground(useSectionConfig(id));
-  if (!bg) return <>{children}</>;
+  if (!bg || getSectionDef(id)?.ownBackground) return <>{children}</>;
   const className = `fe-bgwrap fe-bgwrap--${bg.kind}${bg.kind !== "color" && bg.tone === "dark" ? " fe-bgwrap--dark" : ""}`;
   return (
     <div className={className} data-bg-section={id} style={bg.kind === "color" ? { backgroundColor: bg.color } : undefined}>

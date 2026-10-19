@@ -1,3 +1,4 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { EditorialView } from "@/app/components/frontend/EditorialView";
 import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
@@ -43,7 +44,7 @@ export default async function EditorialPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: stringifyJsonLd(graph) }}
       />
-      <PageSections page="editorial" slots={{ "editorial-page": <EditorialView /> }} />
+      <PageSections page="editorial" slots={{ "page-cta-editorial": <PageCta page="editorial" />, "editorial-page": <EditorialView /> }} />
     </FrontendShell>
   );
 }

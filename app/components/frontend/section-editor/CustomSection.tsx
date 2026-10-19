@@ -6,6 +6,7 @@ import {
   sectionList,
   sectionText,
   type SectionConfig,
+  type CustomSectionType,
 } from "@/lib/marketing-sections";
 import { SectionMedia } from "../SectionMedia";
 import { useSectionConfig } from "./MarketingCopy";
@@ -50,8 +51,8 @@ function Head({ copy }: { copy: SectionConfig }) {
 }
 
 /** Renders an admin-added section (`custom-<type>-<suffix>`). */
-export function CustomSection({ id }: { id: string }) {
-  const type = customSectionType(id);
+export function CustomSection({ id, type: forced }: { id: string; type?: CustomSectionType }) {
+  const type = forced ?? customSectionType(id);
   const copy = useSectionConfig(id);
   if (!type) return null;
   return (
@@ -98,6 +99,7 @@ export function CustomSection({ id }: { id: string }) {
         ) : null}
         {type === "cta" ? (
           <div className="fe-custom-band">
+            {sectionText(copy, "kicker") ? <p className="fe-custom-kicker">{sectionText(copy, "kicker")}</p> : null}
             <h2 className="fe-custom-title">{sectionText(copy, "title")}</h2>
             {sectionText(copy, "body") ? (
               <p className="fe-custom-lead">

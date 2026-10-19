@@ -65,8 +65,10 @@ describe("page layouts", () => {
     const ids = layout.sections.map((entry) => entry.id);
     assert.equal(ids.length, builtInSlotIds("home").length);
     assert.equal(ids[0], "home-faq");
-    assert.equal(ids[1], "home-hero");
-    assert.equal(ids[2], "home-how");
+    assert.equal(ids[1], "home-blog");
+    assert.equal(ids[2], "home-close");
+    assert.equal(ids[3], "home-hero");
+    assert.equal(ids[4], "home-trust");
   });
 
   it("caps added sections per page", () => {
@@ -146,6 +148,6 @@ describe("article text", () => {
       assert.equal(sectionText(normalizeSection(id, null), "body"), body, id);
     }
     const support = normalizeSection("support-sections", null);
-    assert.match(sectionList(support, "sections")[0]?.body ?? "", /\*\*Need help\*\*/);
+    assert.match(sectionList(support, "sections")[0]?.body ?? "", /^Open Need help from/);
   });
 });

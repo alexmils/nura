@@ -47,7 +47,7 @@
   margin: 0.4rem 0.5rem 0.6rem;
   border: 0;
   border-radius: 0.45rem;
-  background: var(--sage, #84b067);
+  background: var(--accent, #4a7234);
   color: #fff;
   font: inherit;
   padding: 0.35rem 0.6rem;

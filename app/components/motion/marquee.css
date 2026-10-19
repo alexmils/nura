@@ -1,0 +1,46 @@
+/* Infinite marquee — one shared loop for every horizontal ticker. */
+
+.mo-marquee {
+  overflow: hidden;
+  width: 100%;
+}
+
+.mo-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: mo-marquee-x var(--mo-marquee-dur, 42s) linear infinite;
+  will-change: transform;
+}
+
+.mo-marquee-track--reverse {
+  animation-direction: reverse;
+}
+
+.mo-marquee-group {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.mo-marquee--hover-pause:hover .mo-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes mo-marquee-x {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-marquee-track {
+    animation: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .mo-marquee-track {
+  animation: none;
+}
