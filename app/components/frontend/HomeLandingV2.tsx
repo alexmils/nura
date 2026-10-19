@@ -25,7 +25,9 @@ import {
   type BillingPlanId,
 } from "@/lib/billing-constants";
 import type { LandingBlogPost } from "@/lib/landing-blog";
+import { SectionRise } from "@/app/components/motion/SectionRise";
 import { SectionWipe } from "@/app/components/motion/SectionWipe";
+import { useHomeChoreography } from "./useHomeChoreography";
 import {
   linesOf,
   sectionBackground,
@@ -410,6 +412,7 @@ export function HomeLandingV2({
 }) {
   const landingRef = useRef<HTMLDivElement | null>(null);
   useLandingMotion(landingRef);
+  useHomeChoreography(landingRef);
 
   const hero = useSectionConfig("home-hero");
   const trust = useSectionConfig("home-trust");
@@ -581,6 +584,7 @@ export function HomeLandingV2({
 
       "home-modes": (
       <EditablePart id="home-modes" backdrop={false}>
+      <SectionRise from={4} radius={40}>
       <section className="v2-section v2-modes" id="modes" aria-labelledby="v2-modes-title">
         <div className="v2-container">
           <SectionHead
@@ -728,6 +732,7 @@ export function HomeLandingV2({
           ) : null}
         </div>
       </section>
+      </SectionRise>
       </EditablePart>
       ),
 

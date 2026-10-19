@@ -9,6 +9,7 @@ import { FrontendBackToTop } from "@/app/components/frontend/FrontendBackToTop";
 import { FrontendFooter } from "@/app/components/frontend/FrontendFooter";
 import { FrontendHeader } from "@/app/components/frontend/FrontendHeader";
 import { FrontendPreloader } from "@/app/components/frontend/FrontendPreloader";
+import { PageChoreography } from "@/app/components/motion/PageChoreography";
 import "./frontend-fonts.css";
 import "./frontend-buttons.css";
 import "./frontend-help.css";
@@ -46,6 +47,7 @@ export function FrontendShellClient({
       >
         {children}
       </main>
+      <PageChoreography />
       <FrontendFooter />
       <FrontendBackToTop />
       <HelpChatWidget showFab />
