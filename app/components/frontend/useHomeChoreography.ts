@@ -1,8 +1,9 @@
 "use client";
 
 import type { RefObject } from "react";
+import gsap from "gsap";
 import { MOTION_STAGGER } from "@/lib/motion";
-import { arrive, scrub, useChoreography, type ChoreoContext } from "@/app/components/motion/choreography";
+import { arrive, handoff, scrub, useChoreography, type ChoreoContext } from "@/app/components/motion/choreography";
 
 const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...root.querySelectorAll<T>(sel)];
 
@@ -11,25 +12,37 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * neighbours differ. The topics ring, plans spread, footer wordmark, CTA
  * marquee and the sticky "How it works" path keep their own motion.
  *
- * hero        recede   copy lifts and fades as the hero scrolls away
- * trust       chips    glass bar settles, chips tick in one by one
- * modes       rise     (SectionRise in JSX) + the board scales up from 94%
- * session     settle   video frame grows from 90%, glow drifts, features alternate in
- * stories     glide    the story reel slides in from the right
- * faq         ticker   questions slide in from the left
- * blog        wipe     (SectionWipe in JSX, unchanged)
- * close       zoom     meadow photo settles from 120% while the card rises
+ * Every boundary is a whole-section hand-off (see `handoff` in choreography.ts,
+ * adapted from alexandermils' SectionHandoff "rise"):
+ *
+ * hero -> how it works     stack   how slides over; hero sinks, shrinks, dims (copy also recedes)
+ * how it works -> modes    rise    SectionRise: inset rounded card opens to full bleed
+ * modes -> session         curve   session's domed top flattens; modes sinks and dims
+ * session -> topics        stack   topics slides over with rounded top; session shrinks and dims
+ * topics -> stories        curve   stories' domed top flattens (topics stays still: it is pinned)
+ * stories -> pricing       stack   pricing slides over; stories shrinks and dims
+ * pricing -> faq           curve   faq's domed top flattens; pricing sinks and dims
+ * faq -> blog              wipe    SectionWipe: mint wave veil lifts off (unchanged)
+ * blog -> close            stack   close slides over; blog shrinks and dims
+ *
+ * Inside the sections: trust chips tick in, the modes board scales up, the
+ * session frame settles, features alternate in, the story reel glides, FAQ
+ * questions tick in, and the closing photo settles from 120%.
  */
 export function buildHomeChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
-  const tag = (sel: string, name: string) => root.querySelector(sel)?.setAttribute("data-mo-handoff", name);
-  tag(".v2-hero", "recede");
-  tag(".v2-trust", "chips");
-  tag(".v2-modes", "rise");
-  tag(".v2-session", "settle");
-  tag(".v2-stories", "glide");
-  tag(".fe-faq", "ticker");
-  tag(".v2-close", "zoom");
+  const one = (sel: string) => root.querySelector<HTMLElement>(sel);
+  one(".mo-section-rise")?.setAttribute("data-mo-handoff", "rise");
+  one(".mo-swipe")?.setAttribute("data-mo-handoff", "wipe");
+  const trustWrap = one(".v2-trust-wrap");
+  if (trustWrap) gsap.set(trustWrap, { position: "relative", zIndex: 3 });
+  handoff(one(".v2-hero"), one(".fe-spath"), "stack", mobile);
+  handoff(one(".v2-modes"), one(".v2-session"), "curve", mobile);
+  handoff(one(".v2-session"), one(".fe-topics"), "stack", mobile);
+  handoff(one(".fe-topics"), one(".v2-stories"), "curve", mobile);
+  handoff(one(".v2-stories"), one(".v2-pricing"), "stack", mobile);
+  handoff(one(".v2-pricing"), one(".fe-faq"), "curve", mobile);
+  handoff(one(".mo-swipe"), one(".v2-close"), "stack", mobile);
 
   const trust = root.querySelector(".v2-trust");
   if (trust) {

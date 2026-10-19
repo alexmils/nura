@@ -103,6 +103,117 @@ export function scrub(
   });
 }
 
+const TRANSPARENT = /^(transparent|rgba\(0, 0, 0, 0\))$/;
+
+/** The colour a block actually shows: its own background, else the nearest painted ancestor's. */
+export function paintedBg(el: Element): string {
+  for (let node: Element | null = el; node; node = node.parentElement) {
+    const bg = getComputedStyle(node).backgroundColor;
+    if (!TRANSPARENT.test(bg)) return bg;
+  }
+  return "rgb(255, 255, 255)";
+}
+
+const ownsBg = (el: Element) => {
+  const s = getComputedStyle(el);
+  return !TRANSPARENT.test(s.backgroundColor) || s.backgroundImage !== "none";
+};
+
+/** Sticky/fixed children break under a transformed ancestor. */
+function pinnedInside(el: Element): boolean {
+  const pinned = (node: Element) => /sticky|fixed/.test(getComputedStyle(node).position);
+  return pinned(el) || [...el.querySelectorAll<HTMLElement>("*")].some(pinned);
+}
+
+export type HandoffKind = "stack" | "curve";
+
+/**
+ * Section-level hand-off between two neighbouring blocks, scrubbed over the
+ * next block's entry (its top from the viewport bottom to the top).
+ *
+ * - stack: adapted from alexandermils' SectionHandoff effect="rise". There the
+ *   outgoing panel is pinned (sticky, bottom on the viewport bottom), the next
+ *   section is pulled up 100svh with a higher z-index and slides over it, and
+ *   a black layer dims the pinned panel to 55%. Here the previous block is
+ *   counter-translated down at almost the scroll speed instead of pinned (so
+ *   no wrapper heights, pull-ups or pins that would fight the section editor's
+ *   show/hide/reorder), scales to 92% and dims to 55% brightness, while the
+ *   next block slides over it with rounded top corners and a soft shadow.
+ * - curve: the next block arrives with a curved, dome-shaped top edge that
+ *   flattens as it comes up; the previous block sinks back and dims.
+ *
+ * Only the two section boxes move (transform/opacity, plus the radius and the
+ * dome edge on the incoming block), so whatever animates inside them keeps
+ * working. A previous block with sticky children is never transformed. Curve
+ * falls back to stack when the two blocks share a colour (the dome would be
+ * invisible) or the next block clips its overflow.
+ */
+/** Climb to the ancestors of a and b that are siblings, so z-index compares in one stacking context. */
+function siblingBoxes(a: HTMLElement, b: HTMLElement): [HTMLElement, HTMLElement] {
+  let nb = b;
+  while (nb.parentElement && !nb.parentElement.contains(a)) nb = nb.parentElement;
+  const parent = nb.parentElement;
+  let na = a;
+  while (parent && na.parentElement && na.parentElement !== parent) na = na.parentElement;
+  return [na, nb];
+}
+
+const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
+
+export function handoff(prevIn: HTMLElement | null, nextIn: HTMLElement | null, kind: HandoffKind, mobile = false): HandoffKind | null {
+  if (!nextIn) return null;
+  const [prev, next] = prevIn ? siblingBoxes(prevIn, nextIn) : [null, nextIn];
+  if (prev === next) return null;
+  const nextBg = paintedBg(next);
+  let use = kind;
+  if (use === "curve") {
+    const clips = /hidden|clip/.test(getComputedStyle(next).overflowY);
+    if (clips || (prev && paintedBg(prev) === nextBg)) use = "stack";
+  }
+  nextIn.setAttribute("data-mo-handoff", use);
+  // Each incoming block sits one layer above the block it covers.
+  const prevZ = prev ? Math.max(1, zOf(prev)) : 1;
+  gsap.set(next, { position: getComputedStyle(next).position === "static" ? "relative" : undefined, zIndex: Math.max(prevZ + 1, zOf(next)) });
+  if (!ownsBg(next)) gsap.set(next, { backgroundColor: nextBg });
+  const range = { trigger: next, start: "top bottom", end: mobile ? "top 30%" : "top top", scrub: 0.5, invalidateOnRefresh: true };
+  const movePrev = prev && !pinnedInside(prev);
+  if (prev && !zOf(prev)) gsap.set(prev, { position: getComputedStyle(prev).position === "static" ? "relative" : undefined, zIndex: 1 });
+
+  if (use === "stack") {
+    const r = mobile ? 28 : 56;
+    gsap.fromTo(
+      next,
+      { borderTopLeftRadius: r, borderTopRightRadius: r, boxShadow: "0 -28px 60px -24px rgba(42, 48, 32, 0.35)" },
+      { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", ease: "none", scrollTrigger: range }
+    );
+    if (movePrev) {
+      gsap.fromTo(
+        prev,
+        { y: 0, scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" },
+        {
+          y: () => Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.5 : 0.85),
+          scale: mobile ? 0.95 : 0.92,
+          filter: "brightness(0.55)",
+          ease: "none",
+          scrollTrigger: range,
+        }
+      );
+    }
+  } else {
+    next.classList.add("mo-curve");
+    gsap.set(next, { "--mo-curve-bg": nextBg });
+    gsap.fromTo(next, { "--mo-curve": 1 }, { "--mo-curve": 0, ease: "none", scrollTrigger: { ...range, end: "top 25%" } });
+    if (movePrev) {
+      gsap.fromTo(
+        prev,
+        { y: 0, scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" },
+        { y: () => Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.35 : 0.6), filter: "brightness(0.7)", scale: 0.95, ease: "none", scrollTrigger: range }
+      );
+    }
+  }
+  return use;
+}
+
 function motionReduced(): boolean {
   return window.matchMedia(REDUCE_QUERY).matches || isA11yReduceMotionPreferred();
 }
@@ -142,7 +253,10 @@ export function useChoreography(
       gctx = gsap.context(() => {
         build({ root, mobile, seen });
         // Named hand-offs are tagged for debugging and tests; untag on revert.
-        return () => root.querySelectorAll("[data-mo-handoff]").forEach((el) => el.removeAttribute("data-mo-handoff"));
+        return () => {
+          root.querySelectorAll("[data-mo-handoff]").forEach((el) => el.removeAttribute("data-mo-handoff"));
+          root.querySelectorAll(".mo-curve").forEach((el) => el.classList.remove("mo-curve"));
+        };
       }, root);
       ScrollTrigger.refresh();
     };
@@ -178,11 +292,6 @@ export function useChoreography(
 
 const usable = (el: Element) => !el.closest(CHOREO_EXCLUDE) && !el.querySelector(".fe-animate, .fe-letter-reveal");
 
-/** A transformed ancestor breaks sticky and fixed children, so those blocks keep still. */
-function hasSticky(el: Element): boolean {
-  const pinned = (node: Element) => /sticky|fixed/.test(getComputedStyle(node).position);
-  return pinned(el) || [...el.querySelectorAll<HTMLElement>("*")].some(pinned);
-}
 
 /** A grid/flex row of 3+ like-for-like blocks (cards, tiles, panels). */
 function cardGroups(root: HTMLElement): HTMLElement[][] {
@@ -212,10 +321,10 @@ function cardGroups(root: HTMLElement): HTMLElement[][] {
  * - Card rows: "cascade" — rise + settle from 96%, alternate cards travel further.
  * - Accordions: "ticker" — items slide in from the left one by one.
  * - Large images in a clipping frame: "drift" — parallax inside the frame.
- * - Section-to-section: the blocks after the first alternate "rise" (lift + scale
- *   up), "glide" (slide in from the side) and "settle" (drop in from a slight
- *   zoom), so two neighbours never share a hand-off.
- * Phones get the arrivals only (shorter travel), no scrubbed moves.
+ * - Section-to-section: every block after the first takes a section-level
+ *   hand-off, alternating "stack" (slides over the previous, which shrinks and
+ *   dims) and "curve" (domed top edge that flattens), so neighbours differ.
+ * Phones get the arrivals and lighter hand-offs, no image drift.
  */
 export function buildPageChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
@@ -260,6 +369,26 @@ export function buildPageChoreography(ctx: ChoreoContext) {
   const items = take([...root.querySelectorAll("details, .fe-faq-item")]);
   if (items.length) arrive(items, { x: -28 * travel, opacity: 0 }, ctx, { start: "top 94%", stagger: MOTION_STAGGER.base * 1.5 });
 
+  // Section hand-offs between blocks
+  const units = [...root.querySelectorAll<HTMLElement>("[data-section]")].filter(
+    (el) => !el.parentElement?.closest("[data-section]")
+  );
+  const blocks =
+    units.length > 1
+      ? units
+      : units.length === 1
+        ? ([...units[0].querySelectorAll<HTMLElement>(":scope > *, :scope > * > section")].filter(
+            (el) => el.tagName === "SECTION" || el.offsetHeight >= 260
+          ) as HTMLElement[])
+        : [];
+  let n = 0;
+  blocks.forEach((block, index) => {
+    if (index === 0 || block.closest(CHOREO_EXCLUDE) || block.querySelector(".fe-custom--marquee, .fe-topics, .v2-price-grid")) return;
+    const prev = blocks[index - 1];
+    const safePrev = prev.closest(CHOREO_EXCLUDE) || prev.querySelector(".fe-custom--marquee, .fe-topics, .v2-price-grid") ? null : prev;
+    handoff(safePrev, block, n++ % 2 ? "curve" : "stack", mobile);
+  });
+
   if (mobile) return;
 
   // Drift
@@ -274,32 +403,5 @@ export function buildPageChoreography(ctx: ChoreoContext) {
     const style = getComputedStyle(img);
     if (/transform|all/.test(style.transitionProperty) && parseFloat(style.transitionDuration) > 0) return;
     scrub(img, { yPercent: -5, scale: 1.12 }, { yPercent: 5, scale: 1.12 }, frame, "top bottom", "bottom top");
-  });
-
-  // Hand-offs between blocks
-  const units = [...root.querySelectorAll<HTMLElement>("[data-section]")].filter(
-    (el) => !el.parentElement?.closest("[data-section]")
-  );
-  const blocks =
-    units.length > 1
-      ? units
-      : units.length === 1
-        ? ([...units[0].querySelectorAll<HTMLElement>(":scope > *, :scope > * > section")].filter(
-            (el) => el.tagName === "SECTION" || el.offsetHeight >= 260
-          ) as HTMLElement[])
-        : [];
-  let n = 0;
-  blocks.forEach((block, index) => {
-    if (index === 0 || block.contains(h1) || block.closest(CHOREO_EXCLUDE) || block.querySelector(".fe-custom--marquee, .fe-topics, .v2-price-grid") || hasSticky(block)) return;
-    const kind = n++ % 3;
-    block.setAttribute("data-mo-handoff", ["rise", "glide", "settle"][kind]);
-    if (kind === 0) {
-      scrub(block, { y: 90, scale: 0.95, opacity: 0.35, transformOrigin: "50% 0%" }, { y: 0, scale: 1, opacity: 1 }, block, "top bottom", "top 55%");
-    } else if (kind === 1) {
-      const side = n % 2 ? 1 : -1;
-      scrub(block, { xPercent: 6 * side, opacity: 0.3 }, { xPercent: 0, opacity: 1 }, block, "top bottom", "top 60%");
-    } else {
-      scrub(block, { y: -40, scale: 1.04, opacity: 0.4, transformOrigin: "50% 50%" }, { y: 0, scale: 1, opacity: 1 }, block, "top bottom", "top 58%");
-    }
   });
 }
