@@ -32,6 +32,7 @@ export const CHOREO_EXCLUDE = [
   ".v2-price-grid",
   ".fe-ft-wordmark",
   ".fe-custom--marquee",
+  ".fe-custom--poster",
   ".fe-spath",
   ".fe-letter-reveal",
   ".fe-animate",
@@ -259,9 +260,12 @@ export function useChoreography(
         return () => {
           root.querySelectorAll("[data-mo-handoff]").forEach((el) => el.removeAttribute("data-mo-handoff"));
           root.querySelectorAll(".mo-curve").forEach((el) => el.classList.remove("mo-curve"));
-          root.querySelectorAll(".mo-layer").forEach((el) => el.remove());
+          // Layers can live on <body> (viewport-fixed overlays such as the bloom disc).
+          document.querySelectorAll(".mo-layer").forEach((el) => el.remove());
         };
       }, root);
+      // Hand-offs may add overlay nodes; sign after building so they never retrigger a rebuild.
+      signature = sign();
       ScrollTrigger.refresh();
     };
 

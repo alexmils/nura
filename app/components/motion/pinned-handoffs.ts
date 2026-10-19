@@ -26,7 +26,7 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  * - morph    the outgoing backdrop morphs into the next section's colour, the next one's content rises out of it
  * - slide    held frame drifts left and dims while the next is swept in from the right behind a lime edge (HomeProcessAbout slide)
  * - curtain  a straight edge with a lime rule rises and cuts the held section away, revealing the next one pinned underneath (CurtainPin)
- * - lens     the next section's image opens from a small rounded window to full bleed while the held one dims (Aperture / lens)
+ * - lens     the next section emerges out of an actual card of the held one (its rect and aspect) and grows to full screen (Aperture / lens)
  *
  * Overlay layers are pointer-events none and hidden at progress 0. Desktop only;
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
@@ -72,6 +72,19 @@ export function adjacent(prev: Element, next: Element): boolean {
   return n === next;
 }
 
+/**
+ * The section that currently follows `el` (its sibling box, skipping hidden
+ * siblings and thin strips), so a hand-off can target "whatever comes next"
+ * when the editor may insert a section there (e.g. the poster after the hero).
+ */
+export function following(el: HTMLElement | null): HTMLElement | null {
+  let box: HTMLElement | null = el;
+  while (box?.parentElement && box.parentElement.children.length < 2) box = box.parentElement;
+  let n = box?.nextElementSibling as HTMLElement | null;
+  while (n && (n.offsetHeight || 0) <= window.innerHeight * 0.25) n = n.nextElementSibling as HTMLElement | null;
+  return n;
+}
+
 const relative = (el: HTMLElement) => (getComputedStyle(el).position === "static" ? "relative" : undefined);
 const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
 
@@ -79,7 +92,13 @@ export function pinnedHandoff(
   prevIn: HTMLElement | null,
   nextIn: HTMLElement | null,
   effect: PinnedEffect,
-  opts: { origin?: () => Element | null; image?: Element | null; content?: Element | null } = {}
+  opts: {
+    origin?: () => Element | null;
+    image?: Element | null;
+    content?: Element | null;
+    /** lens: candidate cards the next section emerges from (nearest visible wins). */
+    from?: () => HTMLElement[];
+  } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
   const [prev, next] = siblingBoxesOf(prevIn, nextIn);
@@ -100,12 +119,21 @@ export function pinnedHandoff(
     gsap.set(next, { backgroundColor: nextBg });
   }
 
+  const refreshers: Array<() => void> = [];
   const tl = gsap.timeline({
     defaults: { ease: "none", duration: 1 },
     // Measured on the previous block (its start state is untransformed); the
     // window is its bottom travelling from the viewport bottom to the top,
     // i.e. exactly the next block's top doing the same.
-    scrollTrigger: { trigger: prev, start: "bottom bottom", end: "bottom top", scrub: true, invalidateOnRefresh: true },
+    scrollTrigger: {
+      trigger: prev,
+      start: "bottom bottom",
+      end: "bottom top",
+      scrub: true,
+      invalidateOnRefresh: true,
+      // A refresh moves the progress without firing onUpdate; repaint proxies.
+      onRefresh: () => refreshers.forEach((fn) => fn()),
+    },
   });
   const holdPrev = () => {
     if (prevStill) tl.fromTo(prev, { y: 0 }, { y: () => vh() }, 0);
@@ -113,6 +141,17 @@ export function pinnedHandoff(
   const holdNext = () => {
     if (nextStill) tl.fromTo(next, { y: () => -vh() }, { y: 0 }, 0);
     return nextStill;
+  };
+  // Proxy-painted effects follow the timeline's own progress (a spacer keeps
+  // its length at 1), so they track the scrub exactly in both directions.
+  const drive = (state: { p: number }, paint: () => void) => {
+    tl.to({}, { duration: 1 }, 0);
+    const sync = () => {
+      state.p = tl.progress();
+      paint();
+    };
+    tl.eventCallback("onUpdate", sync);
+    refreshers.push(sync);
   };
   const wash = (to: number, at = 0) => {
     const w = layer(prev, { background: WASH });
@@ -141,20 +180,36 @@ export function pinnedHandoff(
       break;
     }
     case "bloom": {
-      holdPrev();
-      const disc = layer(prev, { background: nextBg });
+      // ONE viewport-fixed disc over both sections (no per-section box, so no
+      // seam where one section ends). Nothing is held: the outgoing section
+      // scrolls away normally and the disc only starts once it is mostly past
+      // (35% of the window), floods the screen by 85%, then dissolves into the
+      // incoming section, which by then fills the viewport underneath.
+      const disc = layer(document.body, {
+        position: "fixed",
+        top: "0",
+        bottom: "0",
+        height: "auto",
+        background: nextBg,
+        zIndex: "90",
+      });
       const state = { p: 0 };
       const paint = () => {
-        const box = disc.getBoundingClientRect();
+        const p = state.p;
+        const w = window.innerWidth;
+        const h = vh();
         const o = opts.origin?.()?.getBoundingClientRect();
-        const x = o ? o.left + o.width / 2 - box.left : box.width / 2;
-        const y = o ? o.top + o.height / 2 - box.top : box.height / 2;
-        const far = Math.hypot(Math.max(x, box.width - x), Math.max(y, box.height - y)) + 8;
-        const e = Math.min(1, state.p / 0.8);
-        disc.style.visibility = e > 0 ? "visible" : "hidden";
-        disc.style.clipPath = `circle(${e <= 0 ? 0 : 36 + (far - 36) * e * e}px at ${x}px ${y}px)`;
+        const x = o ? Math.min(w, Math.max(0, o.left + o.width / 2)) : w / 2;
+        const y = o ? Math.min(h, Math.max(0, o.top + o.height / 2)) : h * 0.6;
+        const far = Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) + 8;
+        const e = Math.min(1, Math.max(0, (p - 0.35) / 0.5));
+        const fade = 1 - Math.min(1, Math.max(0, (p - 0.86) / 0.12));
+        disc.style.visibility = e > 0 && fade > 0 ? "visible" : "hidden";
+        disc.style.opacity = String(fade);
+        disc.style.clipPath = `circle(${e <= 0 ? 0 : 24 + (far - 24) * e * e}px at ${x}px ${y}px)`;
       };
-      tl.to(state, { p: 1, onUpdate: paint }, 0);
+      paint();
+      drive(state, paint);
       break;
     }
     case "morph": {
@@ -191,33 +246,88 @@ export function pinnedHandoff(
       break;
     }
     case "lens": {
+      // Post-card emerge (Aperture / lens, re-aimed): the closing section opens
+      // out of an actual blog card - from its rect and aspect ratio - and grows
+      // to the full screen, while the post's own picture dissolves into the
+      // CTA photo. The CTA copy only fades in once the window is (almost) full,
+      // so it is never seen clipped or distorted.
       holdPrev();
       const pinned = holdNext();
-      wash(0.65);
-      tl.fromTo(prev, { scale: 1, transformOrigin: "50% 100%" }, { scale: 0.92 }, 0);
+      wash(0.55);
       if (pinned) {
-        // Collapsed at progress 0 (nothing floats over the block before the window).
-        // Painted from a proxy: browsers normalise inset() strings (symmetric
-        // sides, "round 0"), which breaks GSAP's string interpolation.
-        const lens = { p: 0 };
+        type Rect = { l: number; t: number; w: number; h: number; r: number; img: string };
+        const state = { p: 0 };
         const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+        const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+        const inOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+        const ghost = layer(next, { top: "0", bottom: "auto", left: "0", right: "auto", width: "0", height: "0", zIndex: "1", overflow: "hidden" });
+        Object.assign(ghost.style, { backgroundSize: "cover", backgroundPosition: "50% 30%" });
+        let src: Rect | null = null;
+        let shown = "";
+        // The visible card nearest the middle of the screen (hidden or
+        // reordered cards simply drop out of the candidates).
+        const pick = (): Rect => {
+          const h = vh(), w = vw();
+          let best: { el: HTMLElement; r: DOMRect; d: number } | null = null;
+          for (const el of opts.from?.() ?? []) {
+            if (!el.offsetParent) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width < 40 || r.height < 40 || r.bottom < 0 || r.top > h || r.right < 0 || r.left > w) continue;
+            const d = Math.hypot(r.left + r.width / 2 - w / 2, r.top + r.height / 2 - h / 2);
+            if (!best || d < best.d) best = { el, r, d };
+          }
+          if (!best) return { l: w * 0.38, t: h * 0.3, w: w * 0.24, h: h * 0.4, r: 20, img: "" };
+          const img = best.el.querySelector("img");
+          return {
+            l: best.r.left,
+            t: best.r.top,
+            w: best.r.width,
+            h: best.r.height,
+            r: parseFloat(getComputedStyle(best.el).borderTopLeftRadius) || 18,
+            img: img?.currentSrc || img?.src || "",
+          };
+        };
         const paint = () => {
-          const p = lens.p;
+          const p = state.p;
           const h = vh(), w = vw(), H = next.offsetHeight;
-          // 0 -> 0.15: a small rounded window opens; 0.15 -> 1: it widens to full bleed.
-          const a = Math.min(1, p / 0.15);
-          const b = p <= 0.15 ? 0 : (p - 0.15) / 0.85;
-          const top = p <= 0.15 ? lerp(h * 0.5, h * 0.24, a) : lerp(h * 0.24, 0, b);
-          const side = p <= 0.15 ? lerp(w * 0.5, w * 0.32, a) : lerp(w * 0.32, 0, b);
-          const bottom = p <= 0.15 ? lerp(H - h * 0.5, H - h * 0.76, a) : lerp(H - h * 0.76, 0, b);
-          const round = p <= 0.15 ? 36 : lerp(36, 0, b);
-          next.style.clipPath = p >= 1 ? "" : `inset(${top}px ${side}px ${bottom}px ${side}px round ${round}px)`;
+          // Pick the card when the window opens (the held block keeps it still).
+          if (p <= 0.001) src = null;
+          else if (!src) src = pick();
+          if (p >= 1) {
+            src = null;
+            next.style.clipPath = "";
+            ghost.style.visibility = "hidden";
+            return;
+          }
+          if (!src) {
+            next.style.clipPath = `inset(0px 0px ${H}px 0px)`;
+            ghost.style.visibility = "hidden";
+            return;
+          }
+          const e = inOut(clamp01(p / 0.86));
+          const L = lerp(src.l, 0, e);
+          const T = lerp(src.t, 0, e);
+          const W = lerp(src.w, w, e);
+          const Hh = lerp(src.h, h, e);
+          const R = lerp(src.r, 0, e);
+          next.style.clipPath = `inset(${T}px ${Math.max(0, w - L - W)}px ${Math.max(0, H - T - Hh)}px ${L}px round ${R}px)`;
+          const fade = 1 - clamp01((p - 0.12) / 0.4);
+          ghost.style.visibility = src.img && fade > 0 && p > 0.001 ? "visible" : "hidden";
+          ghost.style.opacity = String(fade);
+          ghost.style.transform = `translate(${L}px, ${T}px)`;
+          ghost.style.width = `${W}px`;
+          ghost.style.height = `${Hh}px`;
+          if (src.img && shown !== src.img) {
+            shown = src.img;
+            ghost.style.backgroundImage = `url("${src.img.replace(/"/g, "%22")}")`;
+          }
         };
         // Recorded by the gsap.context, so its revert restores the original inline clip.
         gsap.set(next, { clipPath: "none" });
         paint();
-        tl.to(lens, { p: 1, onUpdate: paint }, 0);
-        if (opts.image) tl.fromTo(opts.image, { scale: 1.25 }, { scale: 1 }, 0);
+        drive(state, paint);
+        if (opts.image) tl.fromTo(opts.image, { scale: 1.14 }, { scale: 1 }, 0);
+        if (opts.content) tl.fromTo(opts.content, { opacity: 0, y: 28 }, { opacity: 1, y: 0, duration: 0.16 }, 0.8);
       }
       break;
     }

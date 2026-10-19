@@ -19,16 +19,15 @@ describe("motion pass: scroll choreography", () => {
     assert.match(lib, /export function handoff\(/);
     assert.match(lib, /filter: "brightness\(0\.55\)"/);
     for (const pair of [
-      [".v2-hero", ".fe-spath"],
       [".v2-modes", ".v2-session"],
-      [".v2-session", ".fe-topics"],
       [".fe-topics", ".v2-stories"],
       [".v2-stories", ".v2-pricing"],
       [".v2-pricing", ".fe-faq"],
-      [".mo-swipe", ".v2-close"],
     ]) {
       assert.ok(home.includes(`handoff(one("${pair[0]}"), one("${pair[1]}")`), pair.join(" -> "));
     }
+    // Hero hands off to whatever follows it (an inserted section is fine).
+    assert.ok(home.includes('handoff(one(".v2-hero"), following(one(".v2-hero")), "stack", true)'));
     const css = src("app/components/motion/handoffs.css");
     assert.match(css, /\.mo-curve::before/);
     assert.match(css, /data-a11y-motion="reduced"\] \.mo-curve::before/);

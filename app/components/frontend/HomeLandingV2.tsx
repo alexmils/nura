@@ -26,7 +26,6 @@ import {
 } from "@/lib/billing-constants";
 import type { LandingBlogPost } from "@/lib/landing-blog";
 import { SectionRise } from "@/app/components/motion/SectionRise";
-import { SectionWipe } from "@/app/components/motion/SectionWipe";
 import { useHomeChoreography } from "./useHomeChoreography";
 import {
   linesOf,
@@ -978,9 +977,7 @@ export function HomeLandingV2({
 
       "home-faq": <FaqSection />,
       "home-blog": (
-      <SectionWipe>
-        <BlogSection posts={blogPosts} />
-      </SectionWipe>
+      <BlogSection posts={blogPosts} />
       ),
 
       "home-close": (
