@@ -10,6 +10,7 @@ import {
 } from "@/lib/marketing-sections";
 import { Marquee } from "@/app/components/motion/Marquee";
 import { SectionMedia } from "../SectionMedia";
+import { PosterStage } from "./PosterSection";
 import { useSectionConfig } from "./MarketingCopy";
 import { RichArticle, RichInline } from "./RichText";
 import { SectionEdit } from "./SectionEdit";
@@ -79,6 +80,14 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
   const type = forced ?? customSectionType(id);
   const copy = useSectionConfig(id);
   if (!type) return null;
+  if (type === "poster") {
+    return (
+      <section className="fe-custom fe-custom--poster fe-has-edit" data-section={id}>
+        <SectionEdit id={id} />
+        <PosterStage copy={copy} />
+      </section>
+    );
+  }
   return (
     <section className={`fe-custom fe-custom--${type} fe-has-edit`} data-section={id}>
       <SectionEdit id={id} />

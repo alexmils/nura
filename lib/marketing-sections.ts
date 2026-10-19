@@ -1763,10 +1763,10 @@ export function isSectionOn(config: SectionConfig | undefined): boolean {
 
 /* ---------- Admin-added sections ---------- */
 
-export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "marquee", "faq", "cards"] as const;
+export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "marquee", "poster", "faq", "cards"] as const;
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
-const CUSTOM_ID = /^custom-(text|media|cta|marquee|faq|cards)-[a-z0-9]{8}$/;
+const CUSTOM_ID = /^custom-(text|media|cta|marquee|poster|faq|cards)-[a-z0-9]{8}$/;
 
 export function isCustomSectionId(id: string): boolean {
   return CUSTOM_ID.test(id);
@@ -1896,6 +1896,26 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
         { image: "/marketing/landing/wildflower-sky.jpg", alt: "" },
         { image: "/marketing/landing/quiet-hands.jpg", alt: "" },
       ],
+    },
+  },
+  poster: {
+    label: "Poster word (Heal)",
+    description: "A giant serif word that reveals letter by letter over a nature photo, with a small kicker row and a short line.",
+    fields: [
+      text("word", "Big word", "Up to 12 letters, e.g. Heal"),
+      image("image", "Nature image", "Sits under the word; the top of the letters is filled with it"),
+      text("alt", "Image alt text", "Describe the image, or leave empty if decorative"),
+      text("kicker", "Kicker row", "Small mono row at the top; separate items with |"),
+      text("line", "Short line", "Top right, e.g. Healing is not linear"),
+      text("note", "Corner note", "Bottom right over the photo, e.g. - Find your calm -"),
+    ],
+    defaults: {
+      word: "Heal",
+      image: "/marketing/landing/forest-path.jpg",
+      alt: "",
+      kicker: "NURA | EMDR AT HOME | GENTLE BY DESIGN",
+      line: "Healing is not linear",
+      note: "- Find your calm -",
     },
   },
   faq: {
