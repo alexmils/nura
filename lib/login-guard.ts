@@ -2,11 +2,14 @@ import { clientIp } from "@/lib/audit-log";
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import {
   ADMIN_GATE_PREFIX,
+  LOCKOUT_OUTCOMES,
   LOGIN_GUARD_DEFAULTS,
   clampGuardNumber,
   countsAsFailure,
   decideGuard,
   ipListed,
+  ipLockable,
+  isPrivateOrInternalIp,
   isValidGuardSlug,
   newGuardSlug,
   normalizeGuardEmail,
@@ -148,6 +151,25 @@ export async function regenerateLoginGuardSlug(): Promise<LoginGuardSettings> {
   });
 }
 
+const INTERNAL_IP_WARN_EVERY_MS = 10 * 60_000;
+let lastInternalIpWarnAt = 0;
+
+/**
+ * A private client IP means the proxy chain lost the real address (TRUST_PROXY,
+ * X-Forwarded-For). One shared IP lock would then block every visitor, so IP
+ * locks are skipped and this warns at most every 10 minutes. Email locks stay.
+ */
+function warnIfInternalIp(ip: string) {
+  if (!isPrivateOrInternalIp(ip)) return;
+  const now = Date.now();
+  if (now - lastInternalIpWarnAt < INTERNAL_IP_WARN_EVERY_MS) return;
+  lastInternalIpWarnAt = now;
+  console.warn(
+    `[login-guard] client IP ${ip} is private/internal; skipping IP lockout. ` +
+      "Check TRUST_PROXY and that the proxy chain forwards X-Forwarded-For."
+  );
+}
+
 async function insertAttempt(input: {
   ip: string;
   email: string;
@@ -183,7 +205,7 @@ async function failureCount(
        AND created_at > NOW() - ($3::int * INTERVAL '1 minute')`,
     [
       value,
-      ["bad_password", "unknown_user", "staff_public", "consumer_gate", "disabled"],
+      [...LOCKOUT_OUTCOMES],
       windowMinutes,
     ]
   );
@@ -210,7 +232,7 @@ async function upsertLock(
   lockMinutes: number
 ) {
   if (!subject || (kind === "email" && !subject.includes("@"))) return;
-  if (kind === "ip" && subject === "unknown") return;
+  if (kind === "ip" && !ipLockable(subject)) return;
   await getPool().query(
     `INSERT INTO login_locks (subject_key, kind, subject, failed_count, locked_until, updated_at)
      VALUES ($1, $2, $3, $4, NOW() + ($5::int * INTERVAL '1 minute'), NOW())
@@ -234,12 +256,14 @@ export async function precheckLogin(input: {
   const ip = normalizeGuardIp(clientIp(input.request));
   const email = normalizeGuardEmail(input.email);
   const whitelisted = ipListed(ip, settings.whitelist);
+  const ipCountable = ipLockable(ip);
+  if (!whitelisted) warnIfInternalIp(ip);
   const [ipFailures, emailFailures, ipLocked, emailLocked] = whitelisted
     ? [0, 0, false, false]
     : await Promise.all([
-        failureCount("ip", ip, settings.windowMinutes),
+        ipCountable ? failureCount("ip", ip, settings.windowMinutes) : 0,
         failureCount("email", email, settings.windowMinutes),
-        activeLock("ip", ip),
+        ipCountable ? activeLock("ip", ip) : false,
         activeLock("email", email),
       ]);
 
@@ -297,7 +321,7 @@ export async function noteLoginFailure(input: {
     failureCount("ip", input.ip, settings.windowMinutes),
     failureCount("email", input.email, settings.windowMinutes),
   ]);
-  if (input.ip !== "unknown" && ipFailures >= settings.maxAttempts) {
+  if (ipLockable(input.ip) && ipFailures >= settings.maxAttempts) {
     await upsertLock("ip", input.ip, ipFailures, settings.lockMinutes);
   }
   if (emailFailures >= settings.maxAttempts) {

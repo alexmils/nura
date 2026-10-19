@@ -10,15 +10,29 @@ export const LOGIN_GUARD_DEFAULTS = {
 
 const SLUG_RE = /^[A-Za-z0-9_-]{16,64}$/;
 
-const FAILURE_OUTCOMES = [
+/** Failures that spend the attempt budget: the credentials were not proven. */
+export const LOCKOUT_OUTCOMES = [
   "bad_password",
   "unknown_user",
-  "staff_public",
-  "consumer_gate",
   "disabled",
 ] as const;
 
+/**
+ * Proven credentials on the wrong sign-in page for the role. Recorded for the
+ * Security log, but never counted toward IP or email locks.
+ */
+export const WRONG_SURFACE_OUTCOMES = ["staff_public", "consumer_gate"] as const;
+
+const FAILURE_OUTCOMES = [...LOCKOUT_OUTCOMES, ...WRONG_SURFACE_OUTCOMES] as const;
+
 export type LoginFailureOutcome = (typeof FAILURE_OUTCOMES)[number];
+export type WrongSurfaceOutcome = (typeof WRONG_SURFACE_OUTCOMES)[number];
+
+/** Shown only after the password, Google account, or passkey is verified. */
+export const STAFF_ON_PUBLIC_MESSAGE =
+  "This account must sign in through the admin sign-in page.";
+export const MEMBER_ON_GATE_MESSAGE =
+  "This sign-in page is for staff only. Use the regular sign-in page.";
 
 export type LoginAttemptOutcome =
   | LoginFailureOutcome
@@ -28,6 +42,16 @@ export type LoginAttemptOutcome =
 
 export function isStaffRole(role: string | null | undefined): boolean {
   return role === "platform_admin" || role === "support";
+}
+
+export function wrongSurfaceOutcome(
+  role: string | null | undefined
+): WrongSurfaceOutcome {
+  return isStaffRole(role) ? "staff_public" : "consumer_gate";
+}
+
+export function wrongSurfaceMessage(role: string | null | undefined): string {
+  return isStaffRole(role) ? STAFF_ON_PUBLIC_MESSAGE : MEMBER_ON_GATE_MESSAGE;
 }
 
 /** Staff only on a matching operator gate. Everyone else only on public sign-in. */
@@ -106,6 +130,41 @@ export function ipMatchesEntry(ip: string, entry: string): boolean {
   return (ipN & mask) === (baseN & mask);
 }
 
+const INTERNAL_V4_RANGES = [
+  "10.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "127.0.0.0/8",
+] as const;
+
+/**
+ * True for loopback, RFC 1918, and IPv6 ULA (fc00::/7) addresses. Seeing one as
+ * the client IP means the proxy chain dropped the real address.
+ */
+export function isPrivateOrInternalIp(ip: string | null | undefined): boolean {
+  let value = (ip ?? "").trim().toLowerCase();
+  if (value.startsWith("[") && value.endsWith("]")) value = value.slice(1, -1);
+  if (!value || value === "unknown") return false;
+  if (value.startsWith("::ffff:") && ipv4ToInt(value.slice(7)) != null) {
+    value = value.slice(7);
+  }
+  if (ipv4ToInt(value) != null) {
+    return INTERNAL_V4_RANGES.some((range) => ipMatchesEntry(value, range));
+  }
+  if (!value.includes(":") || !/^[0-9a-f:]+$/.test(value)) return false;
+  if (value === "::1" || value === "0:0:0:0:0:0:0:1") return true;
+  const first = value.split(":")[0];
+  if (!first) return false;
+  const hextet = parseInt(first, 16);
+  return Number.isFinite(hextet) && (hextet & 0xfe00) === 0xfc00;
+}
+
+/** IP-based counting and locks only apply to a real, public client address. */
+export function ipLockable(ip: string | null | undefined): boolean {
+  const value = (ip ?? "").trim().toLowerCase();
+  return Boolean(value) && value !== "unknown" && !isPrivateOrInternalIp(value);
+}
+
 export function ipListed(ip: string, list: readonly string[]): boolean {
   return list.some((entry) => ipMatchesEntry(ip, entry));
 }
@@ -170,7 +229,7 @@ export function decideGuard(input: {
     };
   }
   const ipHot =
-    input.ip !== "unknown" &&
+    ipLockable(input.ip) &&
     (input.ipLocked || input.ipFailures >= input.maxAttempts);
   if (ipHot || input.emailLocked || input.emailFailures >= input.maxAttempts) {
     return {
@@ -183,8 +242,9 @@ export function decideGuard(input: {
   return { allow: true };
 }
 
+/** Only failures with unproven credentials count toward IP or email locks. */
 export function countsAsFailure(outcome: string): boolean {
-  return (FAILURE_OUTCOMES as readonly string[]).includes(outcome);
+  return (LOCKOUT_OUTCOMES as readonly string[]).includes(outcome);
 }
 
 export function newGuardSlug(): string {

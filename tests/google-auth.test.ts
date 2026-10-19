@@ -55,6 +55,17 @@ describe("googleAuthErrorMessage", () => {
     );
     assert.equal(googleAuthErrorMessage("other"), null);
   });
+
+  it("names the right sign-in page after a wrong-surface Google sign-in", () => {
+    assert.match(
+      googleAuthErrorMessage("google_staff_gate") ?? "",
+      /admin sign-in page/
+    );
+    assert.match(
+      googleAuthErrorMessage("google_member_gate") ?? "",
+      /regular sign-in page/
+    );
+  });
 });
 
 describe("canAutoLinkGoogleAccount", () => {
