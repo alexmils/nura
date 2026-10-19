@@ -1,4 +1,5 @@
-﻿import { BlogIndex } from "@/app/components/frontend/BlogIndex";
+import { BlogIndex } from "@/app/components/frontend/BlogIndex";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { listBlogCategories, listPublishedBlogPosts } from "@/lib/blog-db";
@@ -42,7 +43,7 @@ export default async function BlogPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildBlogIndexJsonLd(siteOrigin(publicUrl), posts)} />
-      <BlogIndex posts={posts} categories={categories} />
+      <PageSections page="blog" slots={{ "blog-index": <BlogIndex posts={posts} categories={categories} /> }} />
     </FrontendShell>
   );
 }

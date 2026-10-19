@@ -1,0 +1,197 @@
+/* Admin-added sections (custom-<type>-<id>). Neutral, on-brand defaults. */
+
+.fe-custom {
+  padding: clamp(3rem, 7vw, 6rem) 0;
+  color: var(--ink);
+}
+
+.fe-custom-inner {
+  width: min(100% - 2.5rem, 72rem);
+  margin: 0 auto;
+}
+
+.fe-custom-kicker {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+
+.fe-custom-title {
+  margin: 0 0 1.1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.fe-custom-body {
+  max-width: 44rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.fe-custom-body > :first-child {
+  margin-top: 0;
+}
+
+.fe-custom-body a,
+.fe-custom-faq a,
+.fe-custom-card a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.fe-custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.fe-custom-actions:empty {
+  display: none;
+}
+
+.fe-custom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0 1.4rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.fe-custom-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.fe-custom-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+}
+
+.fe-custom-split.is-right .fe-custom-media {
+  order: 2;
+}
+
+.fe-custom-media,
+.fe-custom-card-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  aspect-ratio: 4 / 3;
+  background: color-mix(in srgb, var(--ink) 7%, white);
+}
+
+.fe-custom-media-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+
+.fe-custom-band {
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--sage, #84b067) 16%, white);
+  text-align: center;
+}
+
+.fe-custom-band .fe-custom-actions {
+  justify-content: center;
+}
+
+.fe-custom-lead {
+  max-width: 40rem;
+  margin: 0 auto;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.fe-custom-faq {
+  max-width: 48rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.fe-custom-faq details {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.fe-custom-faq summary {
+  padding: 1.1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fe-custom-faq details p {
+  margin: 0 0 1.2rem;
+  line-height: 1.65;
+}
+
+.fe-custom-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.25rem;
+}
+
+.fe-custom-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, white 70%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fe-custom-card.is-link:hover {
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.fe-custom-card h3 {
+  margin: 0.3rem 0 0;
+  font-size: 1.15rem;
+}
+
+.fe-custom-card p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .fe-custom-split {
+    grid-template-columns: 1fr;
+  }
+
+  .fe-custom-split.is-right .fe-custom-media {
+    order: 0;
+  }
+}
+
+/* Inside a long-form article the article already sets width and padding. */
+.frontend-legal .fe-custom {
+  padding: 1.5rem 0;
+}
+
+.frontend-legal .fe-custom-inner {
+  width: 100%;
+}

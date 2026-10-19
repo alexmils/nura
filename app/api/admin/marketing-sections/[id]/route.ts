@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
 import {
   loadMarketingCopy,
+  resetMarketingSection,
   saveMarketingSection,
 } from "@/lib/marketing-sections-db";
 import {
@@ -41,6 +42,22 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
   const config = await saveMarketingSection(id, body);
+  revalidatePath("/", "layout");
+  return NextResponse.json({ config });
+}
+
+/** Reset to default: deletes the saved row. */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requirePlatformAdmin();
+  if (!isAuthContext(auth)) return auth;
+  const { id } = await params;
+  if (!getSectionDef(id)) {
+    return NextResponse.json({ error: "Unknown section." }, { status: 404 });
+  }
+  const config = await resetMarketingSection(id);
   revalidatePath("/", "layout");
   return NextResponse.json({ config });
 }

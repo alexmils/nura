@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, RotateCcw, Undo2, X } from "lucide-react";
 import {
   getSectionDef,
+  HIDDEN_ITEM_KEY,
   mediaNames,
   type Field,
   type ItemField,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/marketing-sections";
 import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
-import { commitSectionDraft, useEditorDraft } from "./section-draft";
+import { commitSectionDraft, setSectionDraft, useEditorDraft } from "./section-draft";
 
 export function MarketingSectionEditor({
   id,
@@ -31,7 +32,57 @@ export function MarketingSectionEditor({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [history, setHistory] = useState<SectionConfig[]>([]);
+  const lastEdit = useRef<{ key: string; at: number } | null>(null);
   useEditorDraft(id, config);
+
+  /** Applies an edit and records an undo step (typing in one field within 1s is one step). */
+  function change(key: string, apply: (current: SectionConfig) => SectionConfig) {
+    if (!config) return;
+    const now = Date.now();
+    const last = lastEdit.current;
+    if (!last || last.key !== key || now - last.at > 1000) {
+      setHistory((past) => [...past.slice(-79), config]);
+    }
+    lastEdit.current = { key, at: now };
+    setConfig(apply(config));
+  }
+
+  function undo() {
+    const previous = history[history.length - 1];
+    if (!previous) return;
+    setHistory(history.slice(0, -1));
+    lastEdit.current = null;
+    setConfig(previous);
+  }
+
+  async function resetToDefault() {
+    if (
+      !window.confirm(
+        "Reset this section to its default text and media? Saved changes for this section are removed."
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/marketing-sections/${id}`, { method: "DELETE" });
+      const body = (await res.json().catch(() => null)) as {
+        config?: SectionConfig;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.config) throw new Error(body?.error || "Could not reset.");
+      setSectionDraft(id, body.config);
+      commitSectionDraft(id);
+      router.refresh();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reset.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -125,9 +176,7 @@ export function MarketingSectionEditor({
                               field={field}
                               value={String(config[field.key] ?? "")}
                               onChange={(value) =>
-                                setConfig((current) =>
-                                  current ? { ...current, [field.key]: value } : current
-                                )
+                                change(field.key, (current) => ({ ...current, [field.key]: value }))
                               }
                             />
                           ))
@@ -137,7 +186,10 @@ export function MarketingSectionEditor({
                           field={group.field}
                           values={config}
                           onChange={(patch) =>
-                            setConfig((current) => (current ? { ...current, ...patch } : current))
+                            change(`${group.field.key}:${Object.keys(patch).join(",")}`, (current) => ({
+                              ...current,
+                              ...patch,
+                            }))
                           }
                         />
                       ) : null}
@@ -145,10 +197,11 @@ export function MarketingSectionEditor({
                         <ListEditor
                           field={group.field}
                           items={(config[group.field.key] as SectionItem[]) ?? []}
-                          onChange={(items) =>
-                            setConfig((current) =>
-                              current ? { ...current, [group.field.key]: items } : current
-                            )
+                          onChange={(items, key) =>
+                            change(`${group.field.key}:${key}`, (current) => ({
+                              ...current,
+                              [group.field.key]: items,
+                            }))
                           }
                         />
                       ) : null}
@@ -161,6 +214,22 @@ export function MarketingSectionEditor({
         </div>
         <footer className="fe-editor-foot">
           {error && config ? <p>{error}</p> : <span />}
+          <button
+            type="button"
+            onClick={undo}
+            disabled={!history.length || saving}
+            title="Undo last change"
+          >
+            <Undo2 size={14} aria-hidden /> Undo
+          </button>
+          <button
+            type="button"
+            onClick={() => void resetToDefault()}
+            disabled={!config || saving}
+            title="Reset this section to its default content"
+          >
+            <RotateCcw size={14} aria-hidden /> Reset
+          </button>
           <button type="button" onClick={onClose}>
             Cancel
           </button>
@@ -224,7 +293,7 @@ function ScalarControl({
     <label className="fe-editor-field">
       <span>{field.label}</span>
       {field.kind === "textarea" ? (
-        <textarea rows={4} value={value} onChange={(event) => onChange(event.target.value)} />
+        <textarea rows={(field.max ?? 0) > 2400 ? 18 : 4} value={value} onChange={(event) => onChange(event.target.value)} />
       ) : (
         <input value={value} onChange={(event) => onChange(event.target.value)} />
       )}
@@ -321,16 +390,45 @@ function ListEditor({
 }: {
   field: ListField;
   items: SectionItem[];
-  onChange: (items: SectionItem[]) => void;
+  onChange: (items: SectionItem[], key: string) => void;
 }) {
   const [open, setOpen] = useState(0);
 
   function patch(index: number, key: string, value: string) {
-    onChange(items.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+    onChange(
+      items.map((item, i) => (i === index ? { ...item, [key]: value } : item)),
+      `${index}.${key}`
+    );
   }
 
   function patchItem(index: number, next: Record<string, string>) {
-    onChange(items.map((item, i) => (i === index ? { ...item, ...next } : item)));
+    onChange(
+      items.map((item, i) => (i === index ? { ...item, ...next } : item)),
+      `${index}.${Object.keys(next).join(",")}`
+    );
+  }
+
+  function duplicate(index: number) {
+    const source = items[index];
+    if (!source || items.length >= field.max) return;
+    const copy: SectionItem = { ...source };
+    delete copy.id;
+    const next = items.slice();
+    next.splice(index + 1, 0, copy);
+    onChange(next, `dup-${Date.now()}`);
+    setOpen(index + 1);
+  }
+
+  function toggleHidden(index: number) {
+    const item = items[index];
+    if (!item) return;
+    const next: SectionItem = { ...item };
+    if (next[HIDDEN_ITEM_KEY] === "1") delete next[HIDDEN_ITEM_KEY];
+    else next[HIDDEN_ITEM_KEY] = "1";
+    onChange(
+      items.map((row, i) => (i === index ? next : row)),
+      `hide-${Date.now()}`
+    );
   }
 
   function move(index: number, delta: number) {
@@ -340,7 +438,7 @@ function ListEditor({
     const [row] = next.splice(index, 1);
     if (!row) return;
     next.splice(target, 0, row);
-    onChange(next);
+    onChange(next, `move-${Date.now()}`);
     setOpen(target);
   }
 
@@ -359,7 +457,7 @@ function ListEditor({
         blank[child.key] = "";
       }
     }
-    onChange([...items, blank]);
+    onChange([...items, blank], `add-${Date.now()}`);
     setOpen(items.length);
   }
 
@@ -367,8 +465,10 @@ function ListEditor({
     <div className="fe-editor-list">
       {items.map((item, index) => {
         const expanded = open === index;
+        const hidden = item[HIDDEN_ITEM_KEY] === "1";
         const title =
-          item.nav || item.title || item.name || item.q || item.label || `${field.itemLabel} ${index + 1}`;
+          (item.nav || item.title || item.name || item.q || item.label || item.heading || `${field.itemLabel} ${index + 1}`) +
+          (hidden ? " (hidden)" : "");
         return (
           <article key={item.id || index} className="fe-editor-item">
             <div className="fe-editor-item-bar">
@@ -388,14 +488,32 @@ function ListEditor({
                 <button type="button" onClick={() => move(index, 1)} aria-label="Move down">
                   Down
                 </button>
+                <button
+                  type="button"
+                  onClick={() => toggleHidden(index)}
+                  aria-pressed={!hidden}
+                  aria-label={hidden ? "Show item" : "Hide item"}
+                >
+                  {hidden ? "Show" : "Hide"}
+                </button>
                 {field.fixed ? null : (
-                  <button
-                    type="button"
-                    onClick={() => onChange(items.filter((_, i) => i !== index))}
-                    aria-label="Remove"
-                  >
-                    Remove
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => duplicate(index)}
+                      disabled={items.length >= field.max}
+                      aria-label="Duplicate"
+                    >
+                      Duplicate
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChange(items.filter((_, i) => i !== index), `rm-${Date.now()}`)}
+                      aria-label="Remove"
+                    >
+                      Remove
+                    </button>
+                  </>
                 )}
               </div>
             </div>

@@ -10,6 +10,7 @@ import {
   KNOWLEDGE_SERIES,
 } from "@/lib/knowledge-clips";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
 import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./knowledge.css";
@@ -69,6 +70,11 @@ export function KnowledgeHub() {
 
   return (
     <div className="fe-knowledge">
+      <PageSections
+        page="knowledge"
+        slots={{
+      "knowledge-hero": (
+      <>
       <section
         className="fe-knowledge-hero fe-has-edit"
         data-section="knowledge-hero"
@@ -143,7 +149,9 @@ export function KnowledgeHub() {
       </section>
 
       <p className="fe-knowledge-intro">{sectionText(heroCopy, "intro")}</p>
-
+      </>
+      ),
+      "knowledge-series": (
       <div className="fe-knowledge-body fe-has-edit" data-section="knowledge-series">
         <SectionEdit id="knowledge-series" />
         {seriesList.map((series) => (
@@ -175,6 +183,9 @@ export function KnowledgeHub() {
           </ul>
         </section>
       </div>
+      ),
+        }}
+      />
     </div>
   );
 }

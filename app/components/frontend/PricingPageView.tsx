@@ -25,6 +25,7 @@ import {
 } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { RichInline } from "./section-editor/RichText";
+import { PageSections } from "./section-editor/PageSections";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "lenis/dist/lenis.css";
@@ -51,12 +52,26 @@ export function PricingPageView() {
   const cards = sectionList(cardCopy, "cards").flatMap((card) => {
     const id = card.id as BillingPlanId;
     if (!BILLING_PLANS[id]) return [];
-    return [{ ...card, id, features: linesOf(card.features ?? ""), featured: id === "yearly" }];
+    return [
+      {
+        id,
+        title: card.title ?? "",
+        badge: card.badge ?? "",
+        details: card.details ?? "",
+        periodNote: card.periodNote ?? "",
+        features: linesOf(card.features ?? ""),
+        featured: id === "yearly",
+      },
+    ];
   });
   const [openFaq, setOpenFaq] = useState(0);
 
   return (
     <div className="fe-pricing-page">
+      <PageSections
+        page="pricing"
+        slots={{
+      "pricing-plans": (
       <section
         className="fe-pricing-section fe-pricing-section--page fe-has-edit"
         id="plans"
@@ -134,7 +149,8 @@ export function PricingPageView() {
           </div>
         </div>
       </section>
-
+      ),
+      "pricing-included": (
       <section
         className="fe-pricing-features fe-has-edit"
         data-section="pricing-included"
@@ -172,7 +188,8 @@ export function PricingPageView() {
           </div>
         </div>
       </section>
-
+      ),
+      "pricing-faq": (
       <section
         className="fe-faq fe-pricing-faq fe-has-edit"
         id="pricing-faq"
@@ -236,7 +253,8 @@ export function PricingPageView() {
           </p>
         </div>
       </section>
-
+      ),
+      "pricing-cta": (
       <section className="fe-pricing-cta fe-has-edit" data-section="pricing-cta" aria-label="Get started">
         <SectionEdit id="pricing-cta" />
         <div className="fe-container">
@@ -275,6 +293,9 @@ export function PricingPageView() {
           </div>
         </div>
       </section>
+      ),
+        }}
+      />
     </div>
   );
 }

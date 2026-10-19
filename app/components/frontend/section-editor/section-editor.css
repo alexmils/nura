@@ -459,3 +459,216 @@ html[data-editor-open] .frontend-back-to-top {
   object-fit: cover;
   border: 0;
 }
+
+/* ---------- Page layout (order / visibility / added sections) ---------- */
+
+.fe-editor-foot {
+  flex-wrap: wrap;
+}
+
+.fe-editor-foot > p,
+.fe-editor-foot > span:first-child {
+  flex: 1 1 100%;
+}
+
+.fe-editor-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fe-editor-item-bar div {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.fe-editor-item-bar button:disabled,
+.fe-layout-actions button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fe-editor-field select {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 0.55rem;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+}
+
+.fe-layout-fab {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 30%, transparent);
+  cursor: pointer;
+}
+
+.fe-layout-fab:hover {
+  background: var(--sage, #84b067);
+}
+
+.fe-hidden-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.5rem auto;
+  padding: 0.45rem 0.8rem;
+  max-width: 72rem;
+  border: 1px dashed color-mix(in srgb, var(--ink) 30%, transparent);
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--paper, #f7f6f1) 80%, white);
+  color: color-mix(in srgb, var(--ink) 75%, transparent);
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+}
+
+.fe-hidden-marker button {
+  border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.2rem 0.7rem;
+  cursor: pointer;
+}
+
+.fe-layout-help {
+  margin: 0 0 1rem;
+  color: color-mix(in srgb, var(--ink) 70%, transparent);
+  font-size: 0.9rem;
+}
+
+.fe-layout-list {
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.fe-layout-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 0.7rem;
+  background: #fff;
+}
+
+.fe-layout-row.is-hidden {
+  background: color-mix(in srgb, var(--ink) 5%, white);
+}
+
+.fe-layout-row.is-hidden .fe-layout-name strong {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.fe-layout-row.is-dragging {
+  opacity: 0.5;
+}
+
+.fe-layout-grip {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--ink) 45%, transparent);
+  cursor: grab;
+}
+
+.fe-layout-name {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fe-layout-name strong {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fe-layout-name code {
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  font-family: var(--font-alt, ui-monospace, monospace);
+  font-size: 0.7rem;
+}
+
+.fe-layout-name em {
+  color: #8b3a32;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.fe-layout-actions {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+}
+
+.fe-layout-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.fe-layout-actions button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--sage, #84b067) 18%, white);
+}
+
+.fe-layout-add {
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, white 55%, var(--paper, #f7f6f1));
+}
+
+.fe-layout-add h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.fe-layout-add-btn {
+  border: 0;
+  border-radius: 0.5rem;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.fe-editable-slot {
+  outline: 1px dashed transparent;
+}
+
+.fe-editable-slot:hover {
+  outline-color: color-mix(in srgb, var(--sage, #84b067) 60%, transparent);
+}

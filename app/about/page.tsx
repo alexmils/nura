@@ -1,4 +1,5 @@
-﻿import { AboutView } from "@/app/components/frontend/AboutView";
+import { AboutView } from "@/app/components/frontend/AboutView";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { getPublicAppUrl } from "@/lib/platform-settings";
@@ -24,7 +25,7 @@ export default async function AboutPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildAboutJsonLd(siteOrigin(publicUrl))} />
-      <AboutView />
+      <PageSections page="about" slots={{ "about-page": <AboutView /> }} />
     </FrontendShell>
   );
 }

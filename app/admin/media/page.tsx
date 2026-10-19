@@ -38,7 +38,7 @@ function MediaPageInner() {
             { id: "settings", label: "Settings" },
           ]}
           value={tab}
-          onChange={setTab}
+          onChange={(id) => setTab(id as "library" | "settings")}
         />
         {tab === "settings" ? <MediaSettings /> : <MediaLibrary />}
       </main>

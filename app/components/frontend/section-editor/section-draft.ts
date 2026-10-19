@@ -19,6 +19,11 @@ export function setSectionDraft(id: string, value: unknown) {
   emit();
 }
 
+/** Current draft value, if an editor has one open for `id`. */
+export function getSectionDraft<T>(id: string): T | undefined {
+  return drafts.get(id)?.value as T | undefined;
+}
+
 export function clearSectionDraft(id: string) {
   if (drafts.delete(id)) emit();
 }

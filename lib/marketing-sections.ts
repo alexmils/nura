@@ -7,7 +7,22 @@ import {
   SESSION_MODE_GUIDED_SHORT,
   SESSION_MODE_SELF_SHORT,
 } from "@/lib/brand";
+import { LOGIN_PATH } from "@/lib/app-base";
+import { EMDR_FAQ_ITEMS } from "@/lib/emdr-faq";
 import { LANDING_FAQ_ITEMS } from "@/lib/landing-faq";
+import {
+  CLINICAL_ADVISOR_FALLBACK,
+  CLINICAL_INTRO_ARTICLE,
+  CLINICAL_OUTRO_ARTICLE,
+  EMDR_CLOSE_NOTE,
+  EMDR_COMPARE_ROWS,
+  EMDR_COMPARE_SUMMARY,
+  EMDR_GUIDE_ARTICLE,
+  EMDR_INTRO_ARTICLE,
+  EMDR_PRIVACY_ANSWER,
+  LIMITS_ARTICLE,
+  SAFETY_ARTICLE,
+} from "@/lib/marketing-articles";
 import { PRICING_FAQ_ITEMS } from "@/lib/pricing-faq";
 import { PUBLIC_FAQ_ITEMS } from "@/lib/public-faq";
 import { legalEntityDisplayName } from "@/lib/legal-entity";
@@ -23,6 +38,8 @@ export type ScalarField = {
   kind: "text" | "textarea" | "image";
   href?: boolean;
   hint?: string;
+  /** Character cap. Defaults to 400 (text) / 2400 (textarea). */
+  max?: number;
 };
 
 /** Image or video slot. Stored as `{key}Kind`, `{key}Image`, `{key}Video`, `{key}Poster`, `{key}Alt`. */
@@ -74,6 +91,19 @@ const area = (key: string, label: string, hint?: string): ScalarField => ({
   label,
   kind: "textarea",
   hint,
+});
+
+const ARTICLE_MAX = 20000;
+const ARTICLE_HINT =
+  "Blank line = new block. # Heading, ## Subheading, ### Small heading, - list item, > note box, **bold**, [Label](/path).";
+
+/** Long-form body rendered by RichArticle. */
+const article = (key: string, label: string): ScalarField => ({
+  key,
+  label,
+  kind: "textarea",
+  hint: ARTICLE_HINT,
+  max: ARTICLE_MAX,
 });
 
 const link = (key: string, label: string): ScalarField => ({
@@ -968,7 +998,7 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
       sections: [
         {
           heading: "In the app",
-          body: "Open Need help from any signed-in screen. The chat answers common questions and can pass a message to the team when needed.",
+          body: "Open **Need help** from any signed-in screen. The chat answers common questions and can pass a message to the team when needed.",
         },
         {
           heading: "Email",
@@ -1021,16 +1051,304 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
       ],
     },
   },
+  {
+    id: "safety-page",
+    name: "Safety",
+    fields: [article("body", "Page text")],
+    defaults: { body: SAFETY_ARTICLE },
+  },
+  {
+    id: "limits-page",
+    name: "Limits",
+    fields: [article("body", "Page text")],
+    defaults: { body: LIMITS_ARTICLE },
+  },
+  {
+    id: "clinical-intro",
+    name: "Clinical review: intro",
+    fields: [article("body", "Text")],
+    defaults: { body: CLINICAL_INTRO_ARTICLE },
+  },
+  {
+    id: "clinical-advisor",
+    name: "Clinical review: advisor",
+    fields: [
+      text("title", "Heading"),
+      area("fallback", "Text while no advisor is named", "Links: [Label](/path)"),
+    ],
+    defaults: { title: "Named clinical advisor", fallback: CLINICAL_ADVISOR_FALLBACK },
+  },
+  {
+    id: "clinical-outro",
+    name: "Clinical review: related",
+    fields: [article("body", "Text")],
+    defaults: { body: CLINICAL_OUTRO_ARTICLE },
+  },
+  {
+    id: "emdr-intro",
+    name: "EMDR: guide",
+    fields: [article("body", "Text")],
+    defaults: { body: EMDR_INTRO_ARTICLE },
+  },
+  {
+    id: "emdr-compare",
+    name: "EMDR: comparison table",
+    fields: [
+      text("title", "Heading"),
+      text("colA", "Column 1"),
+      text("colB", "Column 2"),
+      {
+        key: "rows",
+        label: "Rows",
+        kind: "list",
+        itemLabel: "Row",
+        max: 20,
+        fields: [text("label", "Row label"), text("a", "Column 1"), text("b", "Column 2")],
+      },
+      article("summary", "Text under the table"),
+    ],
+    defaults: {
+      title: "AI-guided EMDR vs. in-person EMDR therapy",
+      colA: "Nura (AI-guided)",
+      colB: "In-person EMDR therapy",
+      rows: EMDR_COMPARE_ROWS.map((row) => ({ ...row })),
+      summary: EMDR_COMPARE_SUMMARY,
+    },
+  },
+  {
+    id: "emdr-guide",
+    name: "EMDR: who it is for and safety",
+    fields: [article("body", "Text")],
+    defaults: { body: EMDR_GUIDE_ARTICLE },
+  },
+  {
+    id: "emdr-faq",
+    name: "EMDR: FAQ",
+    fields: [
+      text("title", "Heading"),
+      {
+        key: "items",
+        label: "Questions",
+        kind: "list",
+        itemLabel: "Question",
+        max: 30,
+        fields: [text("q", "Question"), area("a", "Answer", "Links: [Label](/path), **bold**")],
+      },
+    ],
+    defaults: {
+      title: "Frequently asked questions",
+      items: faqDefaults(EMDR_FAQ_ITEMS).map((item) =>
+        item.q.startsWith("Is my data private") ? { ...item, a: EMDR_PRIVACY_ANSWER } : item
+      ),
+    },
+  },
+  {
+    id: "emdr-close",
+    name: "EMDR: start a session",
+    fields: [
+      text("title", "Heading"),
+      area("body", "Text", "Links: [Label](/path), **bold**"),
+      {
+        key: "actions",
+        label: "Buttons",
+        kind: "list",
+        itemLabel: "Button",
+        max: 4,
+        fields: [
+          text("label", "Label"),
+          link("href", "Link"),
+          text("style", "Style", "primary or ghost"),
+        ],
+      },
+      area("note", "Note", "Links: [Label](/path), **bold**"),
+    ],
+    defaults: {
+      title: "Start a session",
+      body: "Nura is free to try. No waiting list, no referral, no appointment.",
+      actions: [
+        { label: "Start a session", href: LOGIN_PATH, style: "primary" },
+        { label: "Read the safety guide", href: "/safety", style: "ghost" },
+        { label: "How a session is structured", href: "/learn", style: "ghost" },
+      ],
+      note: EMDR_CLOSE_NOTE,
+    },
+  },
 ];
 
-const BY_ID = new Map(MARKETING_SECTIONS.map((section) => [section.id, section]));
+/* ---------- Admin-added sections ---------- */
 
-export function getSectionDef(id: string): SectionDef | undefined {
-  return BY_ID.get(id);
+export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "faq", "cards"] as const;
+export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
+
+const CUSTOM_ID = /^custom-(text|media|cta|faq|cards)-[a-z0-9]{8}$/;
+
+export function isCustomSectionId(id: string): boolean {
+  return CUSTOM_ID.test(id);
 }
 
+export function customSectionType(id: string): CustomSectionType | null {
+  const match = CUSTOM_ID.exec(id);
+  return match ? (match[1] as CustomSectionType) : null;
+}
+
+export function newCustomSectionId(type: CustomSectionType): string {
+  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
+  const bytes = new Uint8Array(8);
+  globalThis.crypto.getRandomValues(bytes);
+  let suffix = "";
+  for (const byte of bytes) suffix += alphabet[byte % alphabet.length];
+  return `custom-${type}-${suffix}`;
+}
+
+const BODY_HINT = ARTICLE_HINT;
+
+export const CUSTOM_SECTION_TEMPLATES: Record<
+  CustomSectionType,
+  { label: string; description: string; fields: Field[]; defaults: SectionConfig }
+> = {
+  text: {
+    label: "Text block",
+    description: "Heading, text and an optional button.",
+    fields: [
+      text("kicker", "Kicker"),
+      text("title", "Heading"),
+      { ...article("body", "Text"), max: 8000, hint: BODY_HINT },
+      text("ctaLabel", "Button label", "Leave empty to hide the button"),
+      link("ctaHref", "Button link"),
+    ],
+    defaults: {
+      kicker: "",
+      title: "New section",
+      body: "Write your text here. Use **bold** and [links](/pricing).",
+      ctaLabel: "",
+      ctaHref: "",
+    },
+  },
+  media: {
+    label: "Image or video with text",
+    description: "Media on one side, text on the other.",
+    fields: [
+      media("media", "Image or video"),
+      text("side", "Media side", "left or right"),
+      text("kicker", "Kicker"),
+      text("title", "Heading"),
+      { ...article("body", "Text"), max: 8000, hint: BODY_HINT },
+      text("ctaLabel", "Button label", "Leave empty to hide the button"),
+      link("ctaHref", "Button link"),
+    ],
+    defaults: {
+      mediaKind: "image",
+      mediaImage: "",
+      mediaVideo: "",
+      mediaPoster: "",
+      mediaAlt: "",
+      side: "left",
+      kicker: "",
+      title: "New section",
+      body: "Write your text here.",
+      ctaLabel: "",
+      ctaHref: "",
+    },
+  },
+  cta: {
+    label: "Call to action",
+    description: "A centred band with a heading and buttons.",
+    fields: [
+      text("title", "Heading"),
+      area("body", "Text", "Links: [Label](/path), **bold**"),
+      text("ctaLabel", "Button label"),
+      link("ctaHref", "Button link"),
+      text("secondaryLabel", "Second button label", "Leave empty to hide"),
+      link("secondaryHref", "Second button link"),
+    ],
+    defaults: {
+      title: "Ready when you are",
+      body: "",
+      ctaLabel: "Start a session",
+      ctaHref: LOGIN_PATH,
+      secondaryLabel: "",
+      secondaryHref: "",
+    },
+  },
+  faq: {
+    label: "Questions (FAQ)",
+    description: "Expandable questions and answers.",
+    fields: [
+      text("kicker", "Kicker"),
+      text("title", "Heading"),
+      {
+        key: "items",
+        label: "Questions",
+        kind: "list",
+        itemLabel: "Question",
+        max: 30,
+        fields: [text("q", "Question"), area("a", "Answer", "Links: [Label](/path), **bold**")],
+      },
+    ],
+    defaults: {
+      kicker: "",
+      title: "Questions",
+      items: [{ q: "New question", a: "Answer." }],
+    },
+  },
+  cards: {
+    label: "Cards",
+    description: "A grid of cards with optional image and link.",
+    fields: [
+      text("kicker", "Kicker"),
+      text("title", "Heading"),
+      {
+        key: "items",
+        label: "Cards",
+        kind: "list",
+        itemLabel: "Card",
+        max: 12,
+        fields: [
+          media("media", "Image or video"),
+          text("title", "Title"),
+          area("body", "Text", "Links: [Label](/path), **bold**"),
+          link("href", "Link (optional)"),
+        ],
+      },
+    ],
+    defaults: {
+      kicker: "",
+      title: "New cards",
+      items: [
+        { title: "First card", body: "Card text." },
+        { title: "Second card", body: "Card text." },
+        { title: "Third card", body: "Card text." },
+      ],
+    },
+  },
+};
+
+const BY_ID = new Map(MARKETING_SECTIONS.map((section) => [section.id, section]));
+const CUSTOM_DEFS = new Map<string, SectionDef>();
+
+function customDef(id: string): SectionDef | undefined {
+  const type = customSectionType(id);
+  if (!type) return undefined;
+  const cached = CUSTOM_DEFS.get(id);
+  if (cached) return cached;
+  const template = CUSTOM_SECTION_TEMPLATES[type];
+  const def: SectionDef = {
+    id,
+    name: `Added: ${template.label}`,
+    fields: template.fields,
+    defaults: template.defaults,
+  };
+  if (CUSTOM_DEFS.size < 500) CUSTOM_DEFS.set(id, def);
+  return def;
+}
+
+export function getSectionDef(id: string): SectionDef | undefined {
+  return BY_ID.get(id) ?? customDef(id);
+}
+
+/** Built-in section ids plus admin-added `custom-<type>-<suffix>` ids. */
 export function isMarketingSectionId(id: string): boolean {
-  return BY_ID.has(id);
+  return BY_ID.has(id) || isCustomSectionId(id);
 }
 
 export function defaultMarketingCopy(): Record<string, SectionConfig> {
@@ -1055,6 +1373,7 @@ export function safeHref(value: string, fallback: string): string {
   }
   if (/^https:\/\/[^\s]+$/i.test(v)) return v.slice(0, 300);
   if (/^mailto:[^\s@]+@[^\s@]+$/i.test(v)) return v.slice(0, 300);
+  if (/^tel:\+?[0-9][0-9 ()-]{0,24}$/i.test(v)) return v.slice(0, 40);
   return fallback;
 }
 
@@ -1083,7 +1402,7 @@ function normalizeScalar(
   raw: unknown,
   fallback: string
 ): string {
-  const max = field.kind === "textarea" ? AREA_MAX : TEXT_MAX;
+  const max = field.max ?? (field.kind === "textarea" ? AREA_MAX : TEXT_MAX);
   const textValue = clampText(raw, max, fallback);
   if (field.kind === "image") return safeMediaUrl(textValue, fallback.trim());
   if (field.href) {
@@ -1131,10 +1450,14 @@ function itemHasContent(child: ItemField, item: SectionItem): boolean {
   return Boolean(item[child.key]?.trim());
 }
 
+/** List items carrying `_hidden: "1"` stay saved but are skipped by `sectionList`. */
+export const HIDDEN_ITEM_KEY = "_hidden";
+
 function mergeFixedItem(field: ListField, def: SectionItem, incoming: SectionItem): SectionItem {
   const next: SectionItem = {};
   if (typeof def.id === "string") next.id = def.id;
   for (const child of field.fields) applyItemField(next, child, incoming, def);
+  if (incoming[HIDDEN_ITEM_KEY] === "1") next[HIDDEN_ITEM_KEY] = "1";
   return next;
 }
 
@@ -1183,13 +1506,14 @@ function normalizeList(
       applyItemField(item, child, incoming, {});
       if (itemHasContent(child, item)) any = true;
     }
+    if (incoming[HIDDEN_ITEM_KEY] === "1") item[HIDDEN_ITEM_KEY] = "1";
     if (any) next.push(item);
   }
   return next;
 }
 
 export function normalizeSection(id: string, input: unknown): SectionConfig {
-  const def = BY_ID.get(id);
+  const def = getSectionDef(id);
   if (!def) return {};
   const source =
     input && typeof input === "object" && !Array.isArray(input)
@@ -1281,7 +1605,7 @@ export function sectionList(
   key: string
 ): SectionItem[] {
   const value = config?.[key];
-  return Array.isArray(value) ? value : [];
+  return Array.isArray(value) ? value.filter((item) => item[HIDDEN_ITEM_KEY] !== "1") : [];
 }
 
 export function linesOf(value: string): string[] {

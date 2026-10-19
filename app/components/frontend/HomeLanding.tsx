@@ -29,8 +29,10 @@ import {
   sectionList,
   sectionText,
   type SectionConfig,
+  type SectionItem,
 } from "@/lib/marketing-sections";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { PageSections } from "./section-editor/PageSections";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import { SessionPathSticky } from "./SessionPathSticky";
@@ -123,7 +125,7 @@ function StoriesStars({ className }: { className?: string }) {
 
 function StoriesSection() {
   const copy = useSectionConfig("home-stories");
-  const stories = sectionList(copy, "stories").map((story, index) => ({
+  const stories = sectionList(copy, "stories").map((story, index): SectionItem => ({
     ...story,
     image: story.image || STORY_IMAGES[index % STORY_IMAGES.length] || IMG.avatarMaya,
   }));
@@ -462,6 +464,10 @@ export function HomeLanding({
 
   return (
     <div ref={landingRef} className="fe-landing">
+      <PageSections
+        page="home"
+        slots={{
+      "home-hero": (
       <section className="fe-hero fe-has-edit" id="home" data-section="home-hero">
         <SectionEdit id="home-hero" lift />
         <div className="fe-hero-image-wrap">
@@ -548,17 +554,13 @@ export function HomeLanding({
           </div>
         </div>
       </section>
-
-      <SessionPathSticky />
-
-      <SessionTopicsGrid />
-
-      <SessionModesPair />
-
-      <HomePauseCta />
-
-      <HomeMemorySets />
-
+      ),
+      "home-how": <SessionPathSticky />,
+      "home-topics": <SessionTopicsGrid />,
+      "home-modes": <SessionModesPair />,
+      "home-pause": <HomePauseCta />,
+      "home-memory": <HomeMemorySets />,
+      "home-pricing": (
       <section className="fe-pricing-section fe-has-edit" id="prices" data-section="home-pricing">
         <SectionEdit id="home-pricing" />
         <div className="fe-container">
@@ -631,12 +633,12 @@ export function HomeLanding({
           </div>
         </div>
       </section>
-
-      <StoriesSection />
-
-      <BlogSection posts={blogPosts} />
-
-      <FaqSection />
+      ),
+      "home-stories": <StoriesSection />,
+      "home-blog": <BlogSection posts={blogPosts} />,
+      "home-faq": <FaqSection />,
+        }}
+      />
     </div>
   );
 }

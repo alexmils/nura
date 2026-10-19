@@ -1,4 +1,5 @@
-﻿import { EditorialView } from "@/app/components/frontend/EditorialView";
+import { EditorialView } from "@/app/components/frontend/EditorialView";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import {
   breadcrumbJsonLd,
@@ -42,7 +43,7 @@ export default async function EditorialPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: stringifyJsonLd(graph) }}
       />
-      <EditorialView />
+      <PageSections page="editorial" slots={{ "editorial-page": <EditorialView /> }} />
     </FrontendShell>
   );
 }

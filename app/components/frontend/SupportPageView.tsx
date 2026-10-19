@@ -2,7 +2,7 @@
 
 import { BRAND_LIMITS_LINE } from "@/lib/brand";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
-import { RichText } from "@/app/components/frontend/section-editor/RichText";
+import { RichInline, RichText } from "@/app/components/frontend/section-editor/RichText";
 import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
 import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 
@@ -21,7 +21,7 @@ export function SupportPageView() {
             <ul>
               {(section.body ?? "").split("\n").filter(Boolean).map((line) => (
                 <li key={line}>
-                  <RichText text={line} />
+                  <RichInline text={line} />
                 </li>
               ))}
             </ul>
