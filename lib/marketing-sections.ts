@@ -1,4 +1,5 @@
 import { TRIAL_DAYS } from "@/lib/billing-constants";
+import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
   BRAND_SPOKEN,
   BRAND_TAGLINE,
@@ -299,12 +300,22 @@ const BASE_SECTIONS: readonly SectionDef[] = [
       text("kicker", "Kicker"),
       text("more", "Link label"),
       link("moreHref", "Link"),
+      {
+        key: "topics",
+        label: "Topics on the ring",
+        kind: "list",
+        itemLabel: "Topic",
+        max: BLOG_CATEGORIES.length,
+        fixed: true,
+        fields: [text("label", "Label")],
+      },
     ],
     defaults: {
       title: "People start with.",
       kicker: "Guides",
       more: "Read the guides",
       moreHref: "/blog",
+      topics: BLOG_CATEGORIES.map((category) => ({ id: category.slug, label: category.name })),
     },
   },
   {

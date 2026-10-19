@@ -68,6 +68,7 @@
 }
 
 .fe-topics-orbit {
+  --topics-emerge: 1;
   position: relative;
   width: var(--topics-orbit-size);
   aspect-ratio: 1;
@@ -158,8 +159,9 @@
   top: 50%;
   width: 0;
   height: 0;
+  /* --topics-emerge: 0 = stacked behind the centre, 1 = on the ring */
   transform: rotate(calc(var(--topics-i) * 360deg / var(--topics-n)))
-    translateY(calc(-1 * var(--topics-orbit-r)))
+    translateY(calc(-1 * var(--topics-orbit-r) * var(--topics-emerge, 1)))
     rotate(calc(var(--topics-i) * -360deg / var(--topics-n)));
 }
 
@@ -355,6 +357,59 @@
     font-size: 0.98rem;
     padding: 0.7rem 0.65rem;
   }
+}
+
+/* ---- Scroll emerge (desktop): tall track, sticky frame, topics fly out of the centre.
+   Tablets and phones keep the grid; reduced motion keeps the static ring. ---- */
+@media (min-width: 861px) and (prefers-reduced-motion: no-preference) {
+  section.fe-topics.fe-topics--emerge {
+    --topics-orbit-size: min(40rem, 88vw, calc(100svh - 28rem));
+    display: block;
+    height: 230svh;
+    min-height: 0;
+    padding: 0;
+  }
+
+  section.fe-topics.fe-topics--emerge > .fe-topics-frame {
+    position: sticky;
+    top: 0;
+    box-sizing: border-box;
+    height: 100svh;
+    justify-content: center;
+    gap: clamp(2.75rem, 7vh, 4.5rem);
+    padding-block: clamp(5.5rem, 11vh, 7rem) clamp(1.5rem, 4vh, 2.5rem);
+  }
+
+  .fe-topics--emerge .fe-topics-stage {
+    gap: clamp(1.5rem, 4.5vh, 3rem);
+  }
+
+  .fe-topics--emerge .fe-topics-link {
+    opacity: clamp(0, calc((var(--topics-emerge, 1) - 0.18) * 2.6), 1);
+    transform: translate(-50%, -50%) scale(calc(0.55 + 0.45 * var(--topics-emerge, 1)));
+  }
+
+  .fe-topics--emerge .fe-topics-ring,
+  .fe-topics--emerge .fe-topics-glow {
+    scale: calc(0.45 + 0.55 * var(--topics-emerge, 1));
+    opacity: calc(0.25 + 0.75 * var(--topics-emerge, 1));
+  }
+
+  .fe-topics--emerge .fe-topics-core {
+    scale: calc(0.86 + 0.14 * var(--topics-emerge, 1));
+  }
+}
+
+/* The Nura panel's own "reduce motion" switch: short static band. */
+html[data-a11y-motion="reduced"] section.fe-topics.fe-topics--emerge {
+  height: auto;
+  min-height: 110svh;
+  padding: clamp(6rem, 12vw, 10rem) 0;
+}
+
+html[data-a11y-motion="reduced"] section.fe-topics.fe-topics--emerge > .fe-topics-frame {
+  position: relative;
+  height: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
