@@ -160,6 +160,9 @@ function siblingBoxes(a: HTMLElement, b: HTMLElement): [HTMLElement, HTMLElement
 
 const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
 
+export const siblingBoxesOf = siblingBoxes;
+export const pinnedInsideOf = pinnedInside;
+
 export function handoff(prevIn: HTMLElement | null, nextIn: HTMLElement | null, kind: HandoffKind, mobile = false): HandoffKind | null {
   if (!nextIn) return null;
   const [prev, next] = prevIn ? siblingBoxes(prevIn, nextIn) : [null, nextIn];
@@ -256,6 +259,7 @@ export function useChoreography(
         return () => {
           root.querySelectorAll("[data-mo-handoff]").forEach((el) => el.removeAttribute("data-mo-handoff"));
           root.querySelectorAll(".mo-curve").forEach((el) => el.classList.remove("mo-curve"));
+          root.querySelectorAll(".mo-layer").forEach((el) => el.remove());
         };
       }, root);
       ScrollTrigger.refresh();

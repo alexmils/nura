@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import gsap from "gsap";
 import { MOTION_STAGGER } from "@/lib/motion";
 import { arrive, handoff, scrub, useChoreography, type ChoreoContext } from "@/app/components/motion/choreography";
+import { pinnedHandoff } from "@/app/components/motion/pinned-handoffs";
 
 const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...root.querySelectorAll<T>(sel)];
 
@@ -12,22 +13,25 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * neighbours differ. The topics ring, plans spread, footer wordmark, CTA
  * marquee and the sticky "How it works" path keep their own motion.
  *
- * Every boundary is a whole-section hand-off (see `handoff` in choreography.ts,
- * adapted from alexandermils' SectionHandoff "rise"):
+ * Desktop: every boundary is a different pinned hand-off (pinned-handoffs.ts),
+ * each a port of an alexandermils mechanism (D:\Python\alexandermils):
  *
- * hero -> how it works     stack   how slides over; hero sinks, shrinks, dims (copy also recedes)
- * how it works -> modes    rise    SectionRise: inset rounded card opens to full bleed
- * modes -> session         curve   session's domed top flattens; modes sinks and dims
- * session -> topics        stack   topics slides over with rounded top; session shrinks and dims
- * topics -> stories        curve   stories' domed top flattens (topics stays still: it is pinned)
- * stories -> pricing       stack   pricing slides over; stories shrinks and dims
- * pricing -> faq           curve   faq's domed top flattens; pricing sinks and dims
- * faq -> blog              wipe    SectionWipe: mint wave veil lifts off (unchanged)
- * blog -> close            stack   close slides over; blog shrinks and dims
+ * hero -> how it works     zoom     hero photo pushes in to 145% and darkens while How rises over the held hero (SectionHandoff "zoom")
+ * how it works -> modes    rise     SectionRise: inset rounded card opens to full bleed (HomeJournalSection rounded rise)
+ * modes -> session         iris     session opens through a growing circle over the held board (SectionHandoff "iris")
+ * session -> topics        bloom    a disc in topics' colour grows from the play button and floods the frame (ScrollBloom)
+ * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
+ * stories -> pricing       slide    stories drifts left and dims, pricing sweeps in behind a lime edge (HomeProcessAbout slide)
+ * pricing -> faq           curtain  a rising edge with a lime rule cuts pricing away, FAQ pinned underneath (CurtainPin)
+ * faq -> blog              wipe     SectionWipe: mint wave veil lifts off (unchanged)
+ * blog -> close            lens     the closing photo opens from a small rounded window to full bleed (Aperture / lens)
+ *
+ * Phones: the lighter stack/curve hand-offs (choreography.ts `handoff`).
+ * A pair only animates while its two sections are still neighbours, so editor
+ * reorders, hides and inserted sections never produce a wrong hold.
  *
  * Inside the sections: trust chips tick in, the modes board scales up, the
- * session frame settles, features alternate in, the story reel glides, FAQ
- * questions tick in, and the closing photo settles from 120%.
+ * session frame settles, features alternate in and FAQ questions tick in.
  */
 export function buildHomeChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
@@ -36,13 +40,24 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   one(".mo-swipe")?.setAttribute("data-mo-handoff", "wipe");
   const trustWrap = one(".v2-trust-wrap");
   if (trustWrap) gsap.set(trustWrap, { position: "relative", zIndex: 3 });
-  handoff(one(".v2-hero"), one(".fe-spath"), "stack", mobile);
-  handoff(one(".v2-modes"), one(".v2-session"), "curve", mobile);
-  handoff(one(".v2-session"), one(".fe-topics"), "stack", mobile);
-  handoff(one(".fe-topics"), one(".v2-stories"), "curve", mobile);
-  handoff(one(".v2-stories"), one(".v2-pricing"), "stack", mobile);
-  handoff(one(".v2-pricing"), one(".fe-faq"), "curve", mobile);
-  handoff(one(".mo-swipe"), one(".v2-close"), "stack", mobile);
+  if (mobile) {
+    // Phones: the light stack/curve hand-offs (no virtual pins on a moving toolbar).
+    handoff(one(".v2-hero"), one(".fe-spath"), "stack", true);
+    handoff(one(".v2-modes"), one(".v2-session"), "curve", true);
+    handoff(one(".v2-session"), one(".fe-topics"), "stack", true);
+    handoff(one(".fe-topics"), one(".v2-stories"), "curve", true);
+    handoff(one(".v2-stories"), one(".v2-pricing"), "stack", true);
+    handoff(one(".v2-pricing"), one(".fe-faq"), "curve", true);
+    handoff(one(".mo-swipe"), one(".v2-close"), "stack", true);
+  } else {
+    pinnedHandoff(one(".v2-hero"), one(".fe-spath"), "zoom", { image: one(".v2-hero-photo"), content: one(".v2-hero-inner") });
+    pinnedHandoff(one(".v2-modes"), one(".v2-session"), "iris");
+    pinnedHandoff(one(".v2-session"), one(".fe-topics"), "bloom", { origin: () => one(".v2-video-play") ?? one(".v2-video-frame") });
+    pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories > .v2-container") });
+    pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "slide");
+    pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "curtain");
+    pinnedHandoff(one(".mo-swipe"), one(".v2-close"), "lens", { image: one(".v2-close-img") });
+  }
 
   const trust = root.querySelector(".v2-trust");
   if (trust) {
@@ -63,10 +78,6 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
 
   if (mobile) return;
 
-  const hero = root.querySelector(".v2-hero");
-  const heroInner = root.querySelector(".v2-hero-inner");
-  if (hero && heroInner) scrub(heroInner, { y: 0, opacity: 1 }, { y: -110, opacity: 0.15 }, hero, "top top", "bottom 15%");
-
   const modes = root.querySelector(".v2-modes");
   const board = root.querySelector(".v2-modes-board");
   if (modes && board) scrub(board, { y: 70, scale: 0.94 }, { y: 0, scale: 1 }, modes, "top 95%", "top 25%");
@@ -77,12 +88,6 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   const glow = root.querySelector(".v2-app-glow");
   if (session && glow) scrub(glow, { yPercent: 18 }, { yPercent: -18 }, session, "top bottom", "bottom top");
 
-  const reel = root.querySelector(".v2-story-slider");
-  if (reel) scrub(reel, { xPercent: 9, opacity: 0.25 }, { xPercent: 0, opacity: 1 }, reel, "top bottom", "top 50%");
-
-  const close = root.querySelector(".v2-close");
-  const closeImg = root.querySelector(".v2-close-img");
-  if (close && closeImg) scrub(closeImg, { scale: 1.2 }, { scale: 1 }, close, "top bottom", "top top");
 }
 
 export function useHomeChoreography(rootRef: RefObject<HTMLElement | null>) {
