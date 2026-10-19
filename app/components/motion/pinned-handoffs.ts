@@ -85,6 +85,17 @@ export function following(el: HTMLElement | null): HTMLElement | null {
   return n;
 }
 
+/** Document bottom of an element from layout, ignoring transforms. */
+export function layoutBottom(el: HTMLElement): number {
+  let y = 0;
+  let node: HTMLElement | null = el;
+  while (node) {
+    y += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return y + el.offsetHeight;
+}
+
 const relative = (el: HTMLElement) => (getComputedStyle(el).position === "static" ? "relative" : undefined);
 const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
 
@@ -127,8 +138,12 @@ export function pinnedHandoff(
     // i.e. exactly the next block's top doing the same.
     scrollTrigger: {
       trigger: prev,
-      start: "bottom bottom",
-      end: "bottom top",
+      // Measured from LAYOUT (offsets ignore transforms): neighbouring
+      // hand-offs translate these same blocks (e.g. the iris holds the session
+      // at -100vh until its own window), and a transform-skewed measurement
+      // would run this window a whole viewport early, over the wrong section.
+      start: () => layoutBottom(prev) - vh(),
+      end: () => layoutBottom(prev),
       scrub: true,
       invalidateOnRefresh: true,
       // A refresh moves the progress without firing onUpdate; repaint proxies.
@@ -191,7 +206,7 @@ export function pinnedHandoff(
         bottom: "0",
         height: "auto",
         background: nextBg,
-        zIndex: "90",
+        zIndex: "98", // above every section layer (topics orb etc.), under the header (99)
       });
       const state = { p: 0 };
       const paint = () => {

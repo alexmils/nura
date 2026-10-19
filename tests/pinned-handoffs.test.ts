@@ -36,7 +36,7 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
   });
 
   it("scrubs 1:1 on the previous block and never animates layout", () => {
-    assert.match(lib, /trigger: prev,\s*start: "bottom bottom",\s*end: "bottom top",\s*scrub: true/);
+    assert.match(lib, /trigger: prev,[\s\S]*?start: \(\) => layoutBottom\(prev\) - vh\(\),\s*end: \(\) => layoutBottom\(prev\),\s*scrub: true/);
     // Tweens only touch transform, opacity, clip-path, radius and colour.
     assert.doesNotMatch(lib, /tl\.(?:to|fromTo)\([^;]*\b(?:width|height|margin\w*|padding\w*|top|left)\s*:/);
     assert.doesNotMatch(lib, /margin|padding/);

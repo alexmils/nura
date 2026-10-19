@@ -603,6 +603,9 @@ const BASE_SECTIONS: readonly SectionDef[] = [
       link("secondaryHref", "Secondary link"),
     ],
     defaults: {
+      // Off by default: the page CTA above the footer already covers it.
+      // Still in the editor ("Show this section") to switch back on.
+      _off: "1",
       title: "Support that stays calm — start when you are ready",
       sub: `Built for practice between sessions. Create an account for a ${TRIAL_DAYS}-day trial, or sign in if you already use ${BRAND_SPOKEN}.`,
       primary: "Get started",
@@ -2197,7 +2200,7 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
     if (raw === "1" || (raw === undefined && offByDefault)) out[SECTION_OFF_KEY] = "1";
     else if (offByDefault) out[SECTION_OFF_KEY] = "0";
   }
-  Object.assign(out, normalizeBackground(source));
+  Object.assign(out, normalizeBackground(source), normalizeGradient(source));
   return out;
 }
 
@@ -2256,6 +2259,68 @@ export function sectionBackground(config: SectionConfig | undefined): SectionBac
   if (out.kind === "image" && !out.image) return null;
   if (out.kind === "video" && !out.video) return null;
   return out;
+}
+
+/* ---------- Optional gradient (every section; off by default) ---------- */
+
+export const GRADIENT_KEYS = ["gradOn", "gradMode", "gradFrom", "gradTo", "gradAngle", "gradOpacity"] as const;
+export const GRADIENT_DEFAULTS = { from: "#14301f", to: "#c6d67e", angle: 180, opacity: 60 } as const;
+
+export type SectionGradient = {
+  /** "overlay" sits on the image/video; "background" is the background itself. */
+  mode: "overlay" | "background";
+  from: string;
+  to: string;
+  /** Degrees, 0-360 (180 = top to bottom). */
+  angle: number;
+  /** 0-100, percent. */
+  opacity: number;
+};
+
+/** Only kept when switched on, so an untouched section stores nothing (no gradient by default). */
+export function normalizeGradient(source: Record<string, unknown>): SectionItem {
+  if (source.gradOn !== "1") return {};
+  const str = (key: string) => (typeof source[key] === "string" ? (source[key] as string).trim() : "");
+  const num = (key: string, min: number, max: number, fallback: number) => {
+    const n = Number.parseInt(str(key), 10);
+    return String(Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback);
+  };
+  return {
+    gradOn: "1",
+    gradMode: str("gradMode") === "background" ? "background" : "overlay",
+    gradFrom: HEX.test(str("gradFrom")) ? str("gradFrom").toLowerCase() : GRADIENT_DEFAULTS.from,
+    gradTo: HEX.test(str("gradTo")) ? str("gradTo").toLowerCase() : GRADIENT_DEFAULTS.to,
+    gradAngle: num("gradAngle", 0, 360, GRADIENT_DEFAULTS.angle),
+    gradOpacity: num("gradOpacity", 0, 100, GRADIENT_DEFAULTS.opacity),
+  };
+}
+
+/** The gradient to paint, or null (the default: no gradient). */
+export function sectionGradient(config: SectionConfig | undefined): SectionGradient | null {
+  if (!config) return null;
+  const g = normalizeGradient(config as Record<string, unknown>);
+  if (g.gradOn !== "1") return null;
+  const out: SectionGradient = {
+    mode: g.gradMode === "background" ? "background" : "overlay",
+    from: g.gradFrom ?? GRADIENT_DEFAULTS.from,
+    to: g.gradTo ?? GRADIENT_DEFAULTS.to,
+    angle: Number(g.gradAngle ?? GRADIENT_DEFAULTS.angle),
+    opacity: Number(g.gradOpacity ?? GRADIENT_DEFAULTS.opacity),
+  };
+  return out.opacity > 0 ? out : null;
+}
+
+export function gradientCss(g: SectionGradient): string {
+  return `linear-gradient(${g.angle}deg, ${g.from}, ${g.to})`;
+}
+
+/**
+ * Where a gradient lands: over the image/video when there is one and the mode
+ * is "overlay"; otherwise it is the background itself.
+ */
+export function gradientIsOverlay(g: SectionGradient, bg: SectionBackground | null, hasMedia = false): boolean {
+  if (g.mode !== "overlay") return false;
+  return hasMedia || bg?.kind === "image" || bg?.kind === "video";
 }
 
 export function replaceSectionMedia(

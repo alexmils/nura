@@ -1,7 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { getSectionDef, sectionBackground } from "@/lib/marketing-sections";
+import {
+  getSectionDef,
+  gradientCss,
+  gradientIsOverlay,
+  sectionBackground,
+  sectionGradient,
+  type SectionGradient,
+} from "@/lib/marketing-sections";
 import { useSectionConfig, useSectionOn } from "./MarketingCopy";
 import { SectionEdit } from "./SectionEdit";
 import { useIsPlatformAdmin } from "./useIsPlatformAdmin";
@@ -59,29 +66,49 @@ export function SectionGate({ id, children }: { id: string; children: ReactNode 
   return admin ? <HiddenSectionNote id={id} /> : null;
 }
 
+/** A linear gradient layer (decorative, no pointer events). */
+export function GradientLayer({ gradient, className }: { gradient: SectionGradient; className?: string }) {
+  return (
+    <div
+      className={className ? `fe-grad-layer ${className}` : "fe-grad-layer"}
+      aria-hidden
+      data-grad-mode={gradient.mode}
+      style={{ backgroundImage: gradientCss(gradient), opacity: gradient.opacity / 100 }}
+    />
+  );
+}
+
 /**
  * Paints the section's own Background setting behind its content.
  * With no background chosen the children render exactly as before.
  */
 export function SectionBackdrop({ id, children }: { id: string; children: ReactNode }) {
-  const bg = sectionBackground(useSectionConfig(id));
-  if (!bg || getSectionDef(id)?.ownBackground) return <>{children}</>;
-  const className = `fe-bgwrap fe-bgwrap--${bg.kind}${bg.kind !== "color" && bg.tone === "dark" ? " fe-bgwrap--dark" : ""}`;
+  const config = useSectionConfig(id);
+  const bg = sectionBackground(config);
+  const grad = sectionGradient(config);
+  if ((!bg && !grad) || getSectionDef(id)?.ownBackground) return <>{children}</>;
+  const overlay = grad ? gradientIsOverlay(grad, bg) : false;
+  // "As background": the gradient replaces the image/video.
+  const media = bg && !(grad && !overlay) ? bg : null;
+  const kind = bg?.kind ?? "gradient";
+  const className = `fe-bgwrap fe-bgwrap--${kind}${media && media.kind !== "color" && media.tone === "dark" ? " fe-bgwrap--dark" : ""}`;
   return (
-    <div className={className} data-bg-section={id} style={bg.kind === "color" ? { backgroundColor: bg.color } : undefined}>
-      {bg.kind === "video" ? (
+    <div className={className} data-bg-section={id} style={bg?.kind === "color" ? { backgroundColor: bg.color } : undefined}>
+      {grad && !overlay ? <GradientLayer gradient={grad} className="fe-bgwrap-grad" /> : null}
+      {!media ? null : media.kind === "video" ? (
         <div className="fe-bgwrap-media" aria-hidden>
-          <video src={bg.video} poster={bg.poster || undefined} autoPlay muted loop playsInline preload="metadata" />
+          <video src={media.video} poster={media.poster || undefined} autoPlay muted loop playsInline preload="metadata" />
         </div>
-      ) : bg.kind === "image" ? (
+      ) : media.kind === "image" ? (
         <div className="fe-bgwrap-media" aria-hidden>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={bg.image} alt="" loading="lazy" decoding="async" />
+          <img src={media.image} alt="" loading="lazy" decoding="async" />
         </div>
       ) : null}
-      {bg.kind !== "color" && bg.overlay > 0 ? (
-        <div className="fe-bgwrap-overlay" aria-hidden style={{ opacity: bg.overlay / 100 }} />
+      {media && media.kind !== "color" && media.overlay > 0 ? (
+        <div className="fe-bgwrap-overlay" aria-hidden style={{ opacity: media.overlay / 100 }} />
       ) : null}
+      {grad && overlay ? <GradientLayer gradient={grad} className="fe-bgwrap-grad" /> : null}
       {children}
     </div>
   );
