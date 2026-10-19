@@ -25,6 +25,7 @@ import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdi
 import { useSectionConfig, useSectionOn } from "@/app/components/frontend/section-editor/MarketingCopy";
 import { EditablePart, SectionBackdrop, SectionGate } from "@/app/components/frontend/section-editor/EditablePart";
 import { useIsPlatformAdmin } from "@/app/components/frontend/section-editor/useIsPlatformAdmin";
+import { FooterWordmark } from "./FooterWordmark";
 import "./frontend-footer.css";
 
 /** Giant white lockup for Lassie-style end reveal (vector — crisp at any size). */
@@ -78,6 +79,8 @@ export function FrontendFooter() {
   const legalOn = useSectionOn("footer-legal");
   const footerAdmin = useIsPlatformAdmin();
   const legal = legalOn ? sectionList(legalCopy, "legal") : [];
+  const wordmark = useSectionConfig("footer-wordmark");
+  const wordmarkOn = useSectionOn("footer-wordmark");
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [note, setNote] = useState("");
@@ -139,7 +142,7 @@ export function FrontendFooter() {
     <>
       <footer
         ref={footerRef}
-        className={`fe-site-footer${spotlightOn ? " is-spotlight" : ""}`}
+        className={`fe-site-footer${spotlightOn ? " is-spotlight" : ""}${wordmarkOn ? " fe-site-footer--wordmark" : ""}`}
         onPointerEnter={() => setSpotlightOn(true)}
         onPointerLeave={() => {
           setSpotlightOn(false);
@@ -270,6 +273,10 @@ export function FrontendFooter() {
           </div>
           </SectionBackdrop>
 
+          <EditablePart id="footer-wordmark">
+            <FooterWordmark config={wordmark} />
+          </EditablePart>
+
           <div className="fe-site-footer-meta">
             <p className="fe-site-footer-limits">
               {BRAND_LIMITS_LINE}{" "}
@@ -299,6 +306,8 @@ export function FrontendFooter() {
         </div>
       </footer>
       {/* In-flow peek after the footer (not position:fixed — that glued the logo on legal pages). */}
+      {/* The big wordmark replaces the after-footer peek; switching it off brings the peek back. */}
+      {wordmarkOn ? null : (
       <div className="fe-site-footer-reveal" aria-hidden>
         <div className="fe-site-footer-reveal-gradient" />
         {/* Mask keeps the SVG vector-sharp; filter on <img> would rasterize */}
@@ -310,6 +319,7 @@ export function FrontendFooter() {
           }}
         />
       </div>
+      )}
     </>
   );
 }

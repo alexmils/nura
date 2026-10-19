@@ -1202,6 +1202,15 @@ const sectionHead = (accentHint = "Words from the title shown in the green itali
 
 const V2_SECTIONS: SectionDef[] = [
   {
+    id: "footer-wordmark",
+    name: "Footer: big wordmark",
+    fields: [
+      text("text", "Wordmark", "\"nura\" uses the logo lettering; any other word is set in the brand font."),
+      text("color", "Colour", "Hex, e.g. #ffffff. It fades to transparent at the bottom."),
+    ],
+    defaults: { text: "nura", color: "#ffffff" },
+  },
+  {
     id: "home-hero",
     name: "Home: hero",
     ownBackground: true,
