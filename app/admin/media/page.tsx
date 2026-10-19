@@ -21,6 +21,7 @@ type Status = {
   hasApiSecret: boolean;
   configured: boolean;
   source: "settings" | "env" | "none";
+  problem?: string | null;
 };
 
 function MediaPageInner() {
@@ -196,8 +197,17 @@ function MediaSettings() {
       </p>
       <label>
         Cloud name
-        <input value={cloudName} onChange={(event) => setCloudName(event.target.value)} autoComplete="off" />
+        <input
+          value={cloudName}
+          onChange={(event) => setCloudName(event.target.value)}
+          placeholder="e.g. dxyz123ab (not your email)"
+          autoComplete="off"
+        />
       </label>
+      {status?.problem ? <p className="admin-media-error">{status.problem}</p> : null}
+      <p>
+        <small>Tip: paste the dashboard&apos;s API environment variable (cloudinary://...) into any field to fill all three.</small>
+      </p>
       <label>
         API key
         <input

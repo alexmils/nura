@@ -15,6 +15,8 @@ export type CloudinaryStatus = {
   hasApiSecret: boolean;
   configured: boolean;
   source: "settings" | "env" | "none";
+  /** What looks wrong with the stored values (never contains a secret). */
+  problem: string | null;
 };
 
 const API_ROOT = "https://api.cloudinary.com/v1_1";
@@ -45,16 +47,64 @@ export function resolveCloudinaryCredentials(
   return { creds: null, source: "none" };
 }
 
+/** Cloudinary cloud names: letters, digits, "-" and "_" (never an email or URL). */
+export const CLOUD_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
+/** The dashboard's "API environment variable": cloudinary://<key>:<secret>@<cloud>. */
+export function parseCloudinaryUrl(value: string): CloudinaryCredentials | null {
+  const match = /^(?:CLOUDINARY_URL=)?cloudinary:\/\/([^:\s]+):([^@\s]+)@([a-z0-9_-]+)\/?$/i.exec(value.trim());
+  if (!match) return null;
+  return { apiKey: match[1]!, apiSecret: match[2]!, cloudName: match[3]! };
+}
+
+/** Why a cloud name cannot be right, or null. Never echoes secrets. */
+export function cloudNameProblem(cloudName: string): string | null {
+  const name = cloudName.trim();
+  if (!name) return "Cloud name is required.";
+  if (name.includes("@")) {
+    return "The Cloud name looks like an email address. Use the Cloud name shown on your Cloudinary dashboard (Settings, API Keys), not your login email.";
+  }
+  if (/^https?:|\//i.test(name)) return "Enter only the Cloud name, not a URL.";
+  if (!CLOUD_NAME_RE.test(name)) return "The Cloud name can only contain letters, numbers, - and _.";
+  return null;
+}
+
+/** Turns a failed Admin API answer into a message that names the field to check. */
+export function cloudinaryErrorMessage(status: number, apiMessage: string | undefined, cloudName: string): string {
+  const message = apiMessage?.trim() || "";
+  const nameProblem = cloudNameProblem(cloudName);
+  if (nameProblem) return nameProblem;
+  if (status === 404) {
+    return `Cloudinary has no cloud named "${cloudName.trim()}". Check the Cloud name on your Cloudinary dashboard.`;
+  }
+  if (status === 401 || status === 403) {
+    if (/cloud_name mismatch/i.test(message)) {
+      return "These API keys belong to a different Cloudinary cloud. Check the Cloud name (or enter the key pair for this cloud).";
+    }
+    if (/api_key|unknown api key/i.test(message)) return "Cloudinary does not recognise the API key.";
+    if (/secret|signature/i.test(message)) return "Cloudinary rejected the API secret.";
+    return `Cloudinary rejected the credentials${message ? ` (${message})` : ""}. Check the API key and secret.`;
+  }
+  if (status === 420 || status === 429) return "Cloudinary rate limit reached. Try again in a minute.";
+  return message || `Could not list Cloudinary files (HTTP ${status}).`;
+}
+
 export function mergeCloudinaryInput(
   current: CloudinaryCredentials,
   input: CloudinaryCredentials
 ): CloudinaryCredentials {
+  // Pasting the dashboard's CLOUDINARY_URL into any field fills all three.
+  const pasted = [input.cloudName, input.apiKey, input.apiSecret].map(parseCloudinaryUrl).find(Boolean);
+  if (pasted) input = pasted;
   const cloudName = input.cloudName.trim();
-  if (!cloudName) throw new Error("Cloud name is required.");
+  const problem = cloudNameProblem(cloudName);
+  if (problem) throw new Error(problem);
   const apiKey = input.apiKey.trim();
   const apiSecret = input.apiSecret.trim();
+  if (apiKey && !/^\d{6,}$/.test(apiKey)) throw new Error("The API key is a number (digits only). Check the API key field.");
   const nameChanged = cloudName !== current.cloudName.trim();
-  if (nameChanged && (!apiKey || !apiSecret)) {
+  // Keys stay bound to their cloud, unless the stored name was never a valid one (e.g. an email typed by mistake).
+  if (nameChanged && !cloudNameProblem(current.cloudName) && (!apiKey || !apiSecret)) {
     throw new Error("Enter the API key and secret for this cloud name.");
   }
   if (!apiKey && !current.apiKey.trim()) throw new Error("API key is required.");
@@ -145,6 +195,7 @@ export async function getCloudinaryStatus(): Promise<CloudinaryStatus> {
     hasApiSecret: Boolean(resolved.creds?.apiSecret),
     configured: Boolean(resolved.creds),
     source: resolved.source,
+    problem: resolved.creds ? cloudNameProblem(resolved.creds.cloudName) : null,
   };
 }
 
@@ -184,7 +235,7 @@ export async function uploadToCloudinary(opts: {
   body.set("signature", signCloudinaryParams(signed, creds.apiSecret));
   for (const [key, value] of Object.entries(signed)) body.set(key, value);
   const endpoint = opts.resource === "video" ? "video/upload" : "image/upload";
-  const res = await fetch(`${API_ROOT}/${creds.cloudName}/${endpoint}`, {
+  const res = await fetch(`${API_ROOT}/${encodeURIComponent(creds.cloudName)}/${endpoint}`, {
     method: "POST",
     body,
     signal: AbortSignal.timeout(120000),
@@ -195,7 +246,7 @@ export async function uploadToCloudinary(opts: {
     error?: { message?: string };
   } | null;
   if (!res.ok || !data?.secure_url || !data.public_id) {
-    throw new Error(data?.error?.message || "Cloudinary upload failed.");
+    throw new Error(res.ok ? "Cloudinary upload failed." : cloudinaryErrorMessage(res.status, data?.error?.message, creds.cloudName));
   }
   return { url: data.secure_url, publicId: data.public_id };
 }
@@ -218,7 +269,7 @@ export async function listCloudinaryAssets(resource: "image" | "video"): Promise
       max_results: "100",
     });
     if (cursor) params.set("next_cursor", cursor);
-    const url = `${API_ROOT}/${creds.cloudName}/resources/${resource}/upload?${params}`;
+    const url = `${API_ROOT}/${encodeURIComponent(creds.cloudName)}/resources/${resource}/upload?${params}`;
     const res = await fetch(url, {
       headers: { Authorization: basicAuth(creds) },
       signal: AbortSignal.timeout(20000),
@@ -235,7 +286,7 @@ export async function listCloudinaryAssets(resource: "image" | "video"): Promise
       error?: { message?: string };
     } | null;
     if (!res.ok) {
-      throw new Error(data?.error?.message || "Could not list Cloudinary files.");
+      throw new Error(cloudinaryErrorMessage(res.status, data?.error?.message, creds.cloudName));
     }
     return {
       items: (data?.resources ?? []).map((item) => ({
