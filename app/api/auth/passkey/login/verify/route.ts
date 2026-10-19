@@ -28,7 +28,11 @@ import {
   sessionAllowedForRole,
   surfaceForGate,
 } from "@/lib/login-guard";
-import { isStaffRole, normalizeGuardEmail } from "@/lib/login-guard-policy";
+import {
+  normalizeGuardEmail,
+  wrongSurfaceMessage,
+  wrongSurfaceOutcome,
+} from "@/lib/login-guard-policy";
 
 export async function POST(request: Request) {
   try {
@@ -109,12 +113,13 @@ export async function POST(request: Request) {
         ip: guard.ip,
         email: normalizeGuardEmail(user.email),
         surface,
-        outcome: isStaffRole(user.role) ? "staff_public" : "consumer_gate",
+        outcome: wrongSurfaceOutcome(user.role),
         whitelisted: guard.whitelisted,
       });
+      // The passkey is verified here, so naming the right page leaks nothing.
       return NextResponse.json(
-        { error: "Passkey sign-in failed" },
-        { status: 401 }
+        { error: wrongSurfaceMessage(user.role) },
+        { status: 403 }
       );
     }
 

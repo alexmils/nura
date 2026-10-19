@@ -21,7 +21,11 @@ import {
   sessionAllowedForRole,
   surfaceForGate,
 } from "@/lib/login-guard";
-import { isStaffRole, normalizeGuardEmail } from "@/lib/login-guard-policy";
+import {
+  normalizeGuardEmail,
+  wrongSurfaceMessage,
+  wrongSurfaceOutcome,
+} from "@/lib/login-guard-policy";
 
 const INVALID = "Invalid email or password";
 
@@ -93,10 +97,12 @@ export async function POST(request: Request) {
 
     const gateAccepted = surface === "operator";
     if (!sessionAllowedForRole(user.role, gateAccepted)) {
+      // The password is proven here, so naming the right page leaks nothing.
+      // Wrong-surface refusals do not count toward lockouts.
       return fail(
-        isStaffRole(user.role) ? "staff_public" : "consumer_gate",
-        401,
-        INVALID
+        wrongSurfaceOutcome(user.role),
+        403,
+        wrongSurfaceMessage(user.role)
       );
     }
 

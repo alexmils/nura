@@ -1,4 +1,8 @@
 import { APP_BASE, LOGIN_PATH } from "@/lib/app-base";
+import {
+  MEMBER_ON_GATE_MESSAGE,
+  STAFF_ON_PUBLIC_MESSAGE,
+} from "@/lib/login-guard-policy";
 
 const GATE_SLUG = /^[A-Za-z0-9_-]{16,64}$/;
 
@@ -39,6 +43,10 @@ export function googleAuthErrorMessage(code: string | null): string | null {
       return "An account with this email already exists. Sign in with your password first.";
     case "google_conflict":
       return "This Google account is already linked to another Nura user.";
+    case "google_staff_gate":
+      return STAFF_ON_PUBLIC_MESSAGE;
+    case "google_member_gate":
+      return MEMBER_ON_GATE_MESSAGE;
     case "google_denied":
       return "Sign-in failed. Try again.";
     case "google_locked":
