@@ -5,14 +5,19 @@ import { describe, it } from "node:test";
 const src = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 
 describe("home plan cards spread", () => {
-  it("scrubs x/rotation only, from measured offsets, desktop + motion-ok only", () => {
+  it("uses Mindix's IX3 values: 250px / 20px / 10deg, 0.4s linear, once at top 50%", () => {
     const hook = src("app/components/frontend/usePlanSpread.ts");
+    assert.match(hook, /x: 250, y: 20, rotation: 10, duration: 0\.4, ease: "none", start: 0\.5/);
+    assert.match(hook, /once: true,\s*onEnter: \(\) => tween\.play\(\)/);
     assert.match(hook, /min-width: 901px\) and \(prefers-reduced-motion: no-preference\)/);
     assert.match(hook, /isA11yReduceMotionPreferred/);
-    assert.match(hook, /scrub: 0\.6/);
-    assert.match(hook, /x: 0,\s+rotation: 0/);
-    assert.doesNotMatch(hook, /opacity:/);
+    assert.doesNotMatch(hook, /opacity:|scrub/);
     assert.match(hook, /offsetLeft/);
+    assert.match(hook, /layoutTop\(grid\)/);
+  });
+
+  it("is the only motion on the plan cards (landing reveal skips them)", () => {
+    assert.match(src("app/components/frontend/useLandingMotion.ts"), /if \(el\.closest\("\.v2-price-grid"\)\) return false;/);
   });
 
   it("re-measures when shown cards change and re-spaces the row", () => {

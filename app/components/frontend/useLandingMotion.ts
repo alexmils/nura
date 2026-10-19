@@ -131,6 +131,8 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         const items = [
           ...section.querySelectorAll<HTMLElement>(":scope .fe-animate"),
         ].filter((el) => {
+          /* Plan cards are owned by usePlanSpread (Mindix stack -> spread). */
+          if (el.closest(".v2-price-grid")) return false;
           /* Kit sits inside .fe-spath — do not play its copy at How it works start. */
           if (section.classList.contains("fe-spath") && el.closest(".fe-spath-kit")) {
             return false;
