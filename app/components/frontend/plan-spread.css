@@ -1,0 +1,8 @@
+/* Plan cards spread out from the middle on scroll (see usePlanSpread). */
+
+@media (min-width: 901px) {
+  /* Shown cards share the row, so hiding one re-spaces the rest. */
+  .fe-v2 .v2-price-grid {
+    grid-template-columns: repeat(var(--plans-n, 3), minmax(0, 1fr));
+  }
+}

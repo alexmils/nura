@@ -41,6 +41,7 @@ import { BlogSection, FaqSection } from "./HomeLanding";
 import { SessionPathSticky } from "./SessionPathSticky";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { useLandingMotion } from "./useLandingMotion";
+import { usePlanSpread } from "./usePlanSpread";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./landing-v2.css";
@@ -448,6 +449,8 @@ export function HomeLandingV2({
       featured: plan.id === "yearly",
     }));
   const SESSION_VIDEO_URL = sectionText(session, "videoUrl").trim();
+  const planGridRef = useRef<HTMLDivElement | null>(null);
+  usePlanSpread(planGridRef, PLANS.map((plan) => plan.id).join(","));
   const trustIcons = [Check, Check, ShieldCheck];
   const stripIcons: Record<string, typeof Check> = { trial: Check, cancel: Check, private: Lock, between: Sparkles };
   const featureIcons: Record<string, typeof Check> = { sets: Sun, voice: Headphones, ground: Leaf, notes: Lock };
@@ -948,7 +951,11 @@ export function HomeLandingV2({
             sub={sectionText(pricing, "sub")}
             id="v2-pricing-title"
           />
-          <div className="v2-price-grid">
+          <div
+            className="v2-price-grid"
+            ref={planGridRef}
+            style={{ ["--plans-n" as string]: PLANS.length }}
+          >
             {PLANS.map((plan) => (
               <PricingCard
                 key={plan.id}
