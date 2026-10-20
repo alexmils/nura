@@ -1242,6 +1242,12 @@
   color: var(--v2-ink);
 }
 
+/* The modes band can carry a photo, so the fixed yellow blend strip no longer
+   matches what is above it; start the session clean instead. */
+.v2-session::before {
+  content: none;
+}
+
 .v2-session .v2-kicker {
   color: var(--v2-green-700);
 }
