@@ -1,14 +1,54 @@
 /** Pure sign-in guard rules. Persistence lives in `lib/login-guard.ts`. */
 
-export const ADMIN_GATE_PREFIX = "/entry";
-
 export const LOGIN_GUARD_DEFAULTS = {
   maxAttempts: 5,
   windowMinutes: 15,
   lockMinutes: 30,
 } as const;
 
-const SLUG_RE = /^[A-Za-z0-9_-]{16,64}$/;
+/**
+ * Root paths the site already owns. The private sign-in path is a single root
+ * segment, so it must never shadow a real page (or a reserved API/console one).
+ */
+export const RESERVED_GUARD_SLUGS = new Set([
+  "_next",
+  "about",
+  "admin",
+  "api",
+  "app",
+  "billing",
+  "blog",
+  "brand-assets",
+  "changelog",
+  "checkout",
+  "create-account",
+  "create-password",
+  "dev",
+  "editorial",
+  "emdr",
+  "entry",
+  "faq",
+  "forgot-password",
+  "health",
+  "knowledge",
+  "learn",
+  "limits",
+  "login",
+  "og",
+  "og-image",
+  "onboarding",
+  "pricing",
+  "privacy",
+  "reset-password",
+  "safety",
+  "settings",
+  "signup",
+  "support",
+  "terms",
+]);
+
+/** 6–64 chars, starts with a letter, letters/numbers/hyphens only. */
+const SLUG_RE = /^[A-Za-z][A-Za-z0-9-]{5,63}$/;
 
 /** Failures that spend the attempt budget: the credentials were not proven. */
 export const LOCKOUT_OUTCOMES = [
@@ -63,14 +103,23 @@ export function roleMayUseSurface(
   return !gateAccepted;
 }
 
+export function normalizeGuardSlug(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function isValidGuardSlug(value: string): boolean {
-  return SLUG_RE.test(value);
+  const slug = value.trim();
+  if (!SLUG_RE.test(slug)) return false;
+  return !RESERVED_GUARD_SLUGS.has(slug.toLowerCase());
 }
 
 export function slugError(value: string): string | null {
   const slug = value.trim();
   if (isValidGuardSlug(slug)) return null;
-  return "Use 16 to 64 letters, numbers, hyphens, or underscores.";
+  if (SLUG_RE.test(slug)) {
+    return "That address is already used by the site. Pick another.";
+  }
+  return "Use 6 to 64 letters, numbers, or hyphens, and start with a letter.";
 }
 
 export function normalizeGuardIp(ip: string | null | undefined): string {
@@ -248,6 +297,12 @@ export function countsAsFailure(outcome: string): boolean {
 }
 
 export function newGuardSlug(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  return Buffer.from(bytes).toString("base64url");
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  const rest = `${letters}0123456789`;
+  let slug = letters[bytes[0]! % letters.length]!;
+  for (let i = 1; i < bytes.length; i += 1) {
+    slug += rest[bytes[i]! % rest.length];
+  }
+  return slug;
 }
