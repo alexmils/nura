@@ -41,6 +41,7 @@ import {
 import { HeroTemplateBody, heroInkStyle, useReducedMotion, type HeroParts } from "./HeroTemplates";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
 import { useSectionConfig, usePageLayout } from "./section-editor/MarketingCopy";
+import { useIsPlatformAdmin } from "./section-editor/useIsPlatformAdmin";
 import { PageSections } from "./section-editor/PageSections";
 import { AccentText } from "./AccentText";
 import { BlogSection, FaqSection } from "./HomeLanding";
@@ -313,11 +314,18 @@ export function HomeLandingV2({
     }
   }
   const SESSION_VIDEO_URL = sectionText(session, "videoUrl").trim();
+  // EditablePart adds a wrapper for admins, so the section nodes are rebuilt
+  // when the role resolves; the motion hooks must re-attach to the new nodes.
+  const isAdmin = useIsPlatformAdmin();
   const planGridRef = useRef<HTMLDivElement | null>(null);
-  usePlanSpread(planGridRef, PLANS.map((plan) => plan.id).join(","));
+  usePlanSpread(planGridRef, `${PLANS.map((plan) => plan.id).join(",")}|${isAdmin}`);
   const storiesRef = useRef<HTMLElement | null>(null);
   const storyTrackRef = useRef<HTMLDivElement | null>(null);
-  useStoryTrack(storiesRef, storyTrackRef, STORIES.map((story) => story.name).join("|"));
+  useStoryTrack(
+    storiesRef,
+    storyTrackRef,
+    `${STORIES.map((story) => story.name).join("|")}|${isAdmin}`
+  );
   const trustIcons = [Check, Check, ShieldCheck];
   const stripIcons: Record<string, typeof Check> = { trial: Check, cancel: Check, private: Lock, between: Sparkles };
   const featureIcons: Record<string, typeof Check> = { sets: Sun, voice: Headphones, ground: Leaf, notes: Lock };
