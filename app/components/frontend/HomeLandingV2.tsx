@@ -206,13 +206,13 @@ function PricingCard({ plan, cta, featuresLabel }: { plan: PlanCard; cta: string
         className={`v2-btn${plan.featured ? " v2-btn--primary" : " v2-btn--outline"}`}
       >
         {cta}
-        <ArrowRight size={16} aria-hidden />
+        <ArrowRight size={18} aria-hidden />
       </Link>
       <p className="v2-price-features-label">{featuresLabel}</p>
       <ul className="v2-price-features">
         {plan.features.map((feature) => (
           <li key={feature}>
-            <Check size={16} strokeWidth={2.4} aria-hidden />
+            <Check size={18} strokeWidth={2.4} aria-hidden />
             <span>{feature}</span>
           </li>
         ))}
