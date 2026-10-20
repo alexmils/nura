@@ -281,32 +281,6 @@
   color: #9a4a42;
 }
 
-.frontend-header-mobile-user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--fe-line);
-}
-
-.frontend-header-mobile-user-name {
-  margin: 0;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: var(--fe-fg);
-}
-
-.frontend-header-mobile-user-email {
-  margin: 0.15rem 0 0;
-  font-size: 1.0625rem;
-  color: var(--fe-muted);
-}
-
-.frontend-header-mobile-signout {
-  color: #9a4a42;
-}
-
 .frontend-header-cta {
   display: inline-flex;
   align-items: center;
@@ -410,51 +384,233 @@
   color: var(--fe-fg);
 }
 
+/* Full-screen mobile menu — large light links, one action, account foot.
+   It is portaled to <body>, outside the .frontend-home token scope, so the
+   brand tokens it needs are restated here. */
 .frontend-header-mobile {
-  display: grid;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--fe-line);
-  border-radius: 1.25rem;
-  background: color-mix(in srgb, var(--fe-bg) 92%, #fff);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 16px 40px rgba(42, 48, 32, 0.12);
+  --fe-fg: #2a3020;
+  --fe-muted: #5a5c2b;
+  --fe-accent: #4a7234;
+  --fe-accent-fg: #f7fdf7;
+  --fe-pistachio: #c6d67e;
+  --fe-line: rgba(42, 48, 32, 0.12);
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Warm paper ground, deep-green type; pistachio only on the action. */
+  background: #eae8dd;
+  color: var(--fe-fg);
+  font-family: var(--font-sans);
+  pointer-events: auto;
+  animation: fe-mobile-sheet-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.frontend-header--overlay:not(.frontend-header-scrolled) .frontend-header-mobile {
-  border-color: color-mix(in srgb, #fff 14%, transparent);
-  background: color-mix(in srgb, #26332d 88%, transparent);
+@keyframes fe-mobile-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
-.frontend-header--overlay:not(.frontend-header-scrolled) .frontend-header-mobile-link {
-  color: #daffd3;
+@keyframes fe-mobile-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.frontend-header-mobile-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+  padding: 0 clamp(1.25rem, 5vw, 2.5rem);
+}
+
+.frontend-header-mobile-brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--fe-fg);
+  text-decoration: none;
+}
+
+.frontend-header-mobile-brand .brand-logo {
+  height: 1.5rem;
+  width: auto;
+  max-width: 10rem;
+}
+
+.frontend-header-mobile-close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--fe-fg) 15%, transparent);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--fe-fg);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.frontend-header-mobile-close:hover {
+  background: var(--fe-pistachio);
+}
+
+.frontend-header-mobile-close:active {
+  transform: scale(0.96);
+}
+
+.frontend-header-mobile-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.5rem clamp(1.5rem, 6vw, 2.5rem) 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.frontend-header-mobile-nav {
+  display: flex;
+  flex-direction: column;
 }
 
 .frontend-header-mobile-link {
   display: block;
-  padding: 0.65rem 0.5rem;
+  padding: 0.75rem 0;
   color: var(--fe-fg);
-  font-size: 1.0625rem;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: clamp(2rem, 8.5vw, 2.75rem);
+  font-weight: 300;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
   text-decoration: none;
-  border-radius: 0.5rem;
-  transition: background 0.2s ease;
+  animation: fe-mobile-item-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(60ms + var(--i, 0) * 45ms);
 }
 
 .frontend-header-mobile-link:hover,
 .frontend-header-mobile-link[aria-current="page"] {
-  background: color-mix(in srgb, var(--fe-gold) 35%, transparent);
+  text-decoration: underline;
+  text-decoration-color: var(--fe-pistachio);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+.frontend-header-mobile-cta {
+  display: flex;
+  width: fit-content;
+  min-width: 14rem;
+  max-width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: 56px;
+  margin-top: 2.5rem;
+  padding: 0 1.5rem;
+  border-radius: 999px;
+  background: var(--fe-pistachio);
+  color: var(--fe-fg);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
+  /* backwards, not both: after the entrance the animation must release the
+     transform so the hover lift can apply. */
+  animation: fe-mobile-item-in 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 45ms);
+}
+
+.frontend-header-mobile-cta:hover {
+  background: var(--fe-accent);
+  color: var(--fe-accent-fg);
+  box-shadow: 0 10px 26px color-mix(in srgb, var(--fe-accent) 28%, transparent);
+  transform: translateY(-1px);
+}
+
+.frontend-header-mobile-cta svg {
+  flex: none;
+  transition: transform 0.25s ease;
+}
+
+.frontend-header-mobile-cta:hover svg {
+  transform: translateX(4px);
+}
+
+.frontend-header-mobile-foot {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem clamp(1.5rem, 6vw, 2.5rem) max(1rem, env(safe-area-inset-bottom));
+  border-top: 1px solid color-mix(in srgb, var(--fe-fg) 15%, transparent);
+}
+
+.frontend-header-mobile-foot-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+  /* Keep the Sign in / account hit area as wide as its content, not the row. */
+  max-width: min(12rem, 50vw);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fe-fg);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.frontend-header-mobile-foot-link:hover {
   color: var(--fe-accent);
 }
 
-.frontend-header-mobile-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-  margin-top: 0.75rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--fe-line);
+.frontend-header-mobile-foot-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.frontend-header-mobile-foot-muted {
+  color: var(--fe-muted);
+}
+
+.frontend-header-mobile-avatar.avatar-sm {
+  width: 28px;
+  height: 28px;
 }
 
 @media (min-width: 992px) {
@@ -505,4 +661,38 @@
   .frontend-header-pill {
     transition: none;
   }
+  .frontend-header-mobile,
+  .frontend-header-mobile-link,
+  .frontend-header-mobile-cta {
+    animation: none;
+  }
+  .frontend-header-mobile-cta,
+  .frontend-header-mobile-cta svg {
+    transition: none;
+  }
+  .frontend-header-mobile-cta:hover,
+  .frontend-header-mobile-cta:hover svg {
+    transform: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .frontend-header,
+html[data-a11y-motion="reduced"] .frontend-header-pill {
+  transition: none;
+}
+
+html[data-a11y-motion="reduced"] .frontend-header-mobile,
+html[data-a11y-motion="reduced"] .frontend-header-mobile-link,
+html[data-a11y-motion="reduced"] .frontend-header-mobile-cta {
+  animation: none;
+}
+
+html[data-a11y-motion="reduced"] .frontend-header-mobile-cta,
+html[data-a11y-motion="reduced"] .frontend-header-mobile-cta svg {
+  transition: none;
+}
+
+html[data-a11y-motion="reduced"] .frontend-header-mobile-cta:hover,
+html[data-a11y-motion="reduced"] .frontend-header-mobile-cta:hover svg {
+  transform: none;
 }
