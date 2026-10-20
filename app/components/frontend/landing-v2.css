@@ -1734,6 +1734,10 @@
 .v2-stories.is-story-scroll .v2-story-viewport {
   overflow: hidden;
   overscroll-behavior-x: auto;
+  /* Cut cards at the text column on the way out so the last frame has no
+     sliver left of the heading; the next card still peeks in from the
+     screen edge on the way in. */
+  clip-path: inset(0 0 0 var(--story-gutter));
 }
 
 .v2-story-track {
@@ -1787,7 +1791,9 @@
 
 /* Every card is a full, equally sized tile in the strip — no active state. */
 .v2-story-card {
-  flex: 0 0 clamp(19rem, 27vw, 26rem);
+  /* On desktop useStoryTrack sets the width so exactly three cards fill the
+     container (clean end state); phones keep the swipe-friendly fallback. */
+  flex: 0 0 var(--story-card-w, clamp(19rem, 27vw, 26rem));
   scroll-snap-align: start;
   display: flex;
   flex-direction: column;
@@ -1796,6 +1802,13 @@
   padding: clamp(1.5rem, 3vw, 2.25rem);
   border-radius: 1.5rem;
   opacity: 1;
+  /* More solid than the shared glass so quotes stay readable on the yellow. */
+  --v2-glass-fill: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.94),
+    rgba(255, 255, 255, 0.83)
+  );
+  --v2-glass-border: rgba(255, 255, 255, 0.95);
   /* Story cards sit on a saturated flat yellow, so the shared glass shadow's
      80px blur fogs the gaps between the cards. Keep the lift tight and crisp. */
   box-shadow: 0 18px 38px -26px rgba(31, 53, 39, 0.42);

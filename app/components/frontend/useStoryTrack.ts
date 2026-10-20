@@ -35,7 +35,21 @@ export function useStoryTrack(
     const mm = gsap.matchMedia();
 
     mm.add(SCROLL_QUERY, () => {
+      const viewport = track.parentElement as HTMLElement | null;
+
       const setRunway = () => {
+        // Fit exactly three cards to the container so the last card lands on
+        // the text edge with no sliver of a card peeking on the left.
+        if (viewport) {
+          const gutter = parseFloat(getComputedStyle(track).paddingLeft) || 0;
+          const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+          const content = viewport.clientWidth - gutter * 2;
+          if (content > 0) {
+            const width = Math.max(240, (content - gap * 2) / 3);
+            track.style.setProperty("--story-card-w", `${width}px`);
+          }
+        }
+
         const distance = trackOverflow(track);
         section.style.setProperty("--story-runway", `${distance}px`);
         section.classList.toggle("is-story-scroll", distance > 0);
@@ -73,6 +87,7 @@ export function useStoryTrack(
         tween.kill();
         section.style.removeProperty("--story-runway");
         section.classList.remove("is-story-scroll");
+        track.style.removeProperty("--story-card-w");
         gsap.set(track, { clearProps: "transform" });
       };
     });
