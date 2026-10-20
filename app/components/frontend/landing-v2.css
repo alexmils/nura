@@ -2635,3 +2635,55 @@
     width: 100%;
   }
 }
+
+/* Hero + trust strip as one unit: the strip sits at the bottom of the hero,
+   inside the first viewport, and travels with the hero's hand-off. */
+.v2-hero--trust {
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 100svh;
+}
+
+.v2-hero--trust .v2-hero-inner {
+  flex: 1 0 auto;
+  min-height: 0;
+  padding-bottom: clamp(1.5rem, 4vh, 3rem);
+}
+
+.v2-hero-trust-slot {
+  position: relative;
+  z-index: 5;
+  width: 100%;
+  padding-bottom: clamp(1rem, 3vh, 2rem);
+}
+
+.v2-hero-trust-slot .v2-trust-wrap {
+  margin-top: 0;
+}
+
+@media (max-width: 640px) {
+  .v2-hero--trust .v2-hero-inner {
+    padding-top: clamp(6.5rem, 13vh, 8rem);
+  }
+
+  .v2-hero-trust-slot .v2-trust {
+    padding: 0.75rem 0.9rem;
+    gap: 0.4rem 0.9rem;
+  }
+
+  .v2-hero-trust-slot .v2-trust-line {
+    font-size: 0.8rem;
+  }
+
+  .v2-hero-trust-slot .v2-trust-chips {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .v2-hero-trust-slot .v2-trust-chips li {
+    flex: none;
+  }
+}

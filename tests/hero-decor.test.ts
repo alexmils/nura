@@ -24,10 +24,21 @@ describe("hero decorations follow the Background panel", () => {
     const c = src("app/components/frontend/HomeLandingV2.tsx");
     assert.match(c, /\{heroDecor \? <div className="v2-hero-sky" aria-hidden \/> : null\}/);
     assert.match(c, /\{heroDecor \? <div className="v2-hero-sun" aria-hidden \/> : null\}/);
-    assert.match(c, /heroDecor \? "v2-hero" : "v2-hero v2-hero--plain"/);
+    assert.match(c, /\$\{heroDecor \? "" : " v2-hero--plain"\}/);
     assert.match(c, /closeBg \? null : <span className="v2-close-tint"/);
     const css = src("app/components/frontend/landing-v2.css");
     assert.match(css, /\.v2-hero--plain \.v2-hero-photo \{[^}]*mask-image: none;/);
     assert.doesNotMatch(css, /\.v2-hero-(tint|scrim|flowers) \{/);
+  });
+});
+
+describe("hero + trust strip are one unit", () => {
+  it("renders the strip inside the hero when it is the next shown section", () => {
+    const c = readFileSync(new URL("../app/components/frontend/HomeLandingV2.tsx", import.meta.url), "utf8");
+    assert.match(c, /shownIds\[shownIds\.indexOf\("home-hero"\) \+ 1\] === "home-trust"/);
+    assert.match(c, /"home-trust": trustInHero \? null :/);
+    assert.match(c, /<div className="v2-hero-trust-slot">/);
+    const css = readFileSync(new URL("../app/components/frontend/landing-v2.css", import.meta.url), "utf8");
+    assert.match(css, /\.v2-hero--trust \{[^}]*min-height: 100svh;/);
   });
 });

@@ -39,7 +39,7 @@ import {
   sectionDecor,
 } from "@/lib/marketing-sections";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
-import { useSectionConfig } from "./section-editor/MarketingCopy";
+import { useSectionConfig, usePageLayout } from "./section-editor/MarketingCopy";
 import { PageSections } from "./section-editor/PageSections";
 import { AccentText } from "./AccentText";
 import { BlogSection, FaqSection } from "./HomeLanding";
@@ -240,6 +240,27 @@ export function HomeLandingV2({
   const heroGradOver = heroGrad ? gradientIsOverlay(heroGrad, heroBg, true) : false;
   // Sky, sun and haze belong to the Default background only (and can be switched off).
   const heroDecor = sectionDecor(hero);
+  // Hero + trust strip are one unit (strip inside the hero, in the first
+  // viewport) whenever the strip is the next shown section after the hero.
+  const homeLayout = usePageLayout("home");
+  const shownIds = homeLayout.sections.filter((entry) => !entry.hidden).map((entry) => entry.id);
+  const trustInHero = shownIds[shownIds.indexOf("home-hero") + 1] === "home-trust" && shownIds.includes("home-hero");
+  // A function: stripIcons is declared further down.
+  const trustStrip = () => (
+      <div className="v2-trust-wrap">
+        <div className="v2-glass v2-glass--strong v2-trust">
+          <p className="v2-trust-line">{sectionText(trust, "line")}</p>
+          <ul className="v2-trust-chips">
+            {sectionList(trust, "chips").map((chip, index) => {
+              const Icon = stripIcons[chip.id ?? ""] ?? Check;
+              return (
+                <li key={chip.id || index}><Icon size={14} aria-hidden /> {chip.label}</li>
+              );
+            })}
+          </ul>
+        </div>
+      </div>
+  );
   const closeBg = sectionBackground(close);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
@@ -318,7 +339,7 @@ export function HomeLandingV2({
         slots={{
       "home-hero": (
       <EditablePart id="home-hero" lift backdrop={false}>
-      <section className={heroDecor ? "v2-hero" : "v2-hero v2-hero--plain"} id="home" aria-labelledby="v2-hero-title">
+      <section className={`v2-hero${heroDecor ? "" : " v2-hero--plain"}${trustInHero ? " v2-hero--trust" : ""}`} id="home" aria-labelledby="v2-hero-title">
         {heroDecor ? <div className="v2-hero-sky" aria-hidden /> : null}
         {heroDecor ? <div className="v2-hero-sun" aria-hidden /> : null}
         {heroGrad && !heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad v2-hero-grad--bg" /> : null}
@@ -375,25 +396,21 @@ export function HomeLandingV2({
             </ul>
           </div>
         </div>
+        {trustInHero ? (
+          <div className="v2-hero-trust-slot">
+            <EditablePart id="home-trust" backdrop={false}>
+              {trustStrip()}
+            </EditablePart>
+          </div>
+        ) : null}
       </section>
       </EditablePart>
       ),
 
-      "home-trust": (
+      // With the trust strip straight after the hero it renders inside the hero (one unit).
+      "home-trust": trustInHero ? null : (
       <EditablePart id="home-trust" backdrop={false}>
-      <div className="v2-trust-wrap">
-        <div className="v2-glass v2-glass--strong v2-trust">
-          <p className="v2-trust-line">{sectionText(trust, "line")}</p>
-          <ul className="v2-trust-chips">
-            {sectionList(trust, "chips").map((chip, index) => {
-              const Icon = stripIcons[chip.id ?? ""] ?? Check;
-              return (
-                <li key={chip.id || index}><Icon size={14} aria-hidden /> {chip.label}</li>
-              );
-            })}
-          </ul>
-        </div>
-      </div>
+        {trustStrip()}
       </EditablePart>
       ),
 
