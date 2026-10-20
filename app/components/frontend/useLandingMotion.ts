@@ -252,36 +252,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
       /* Session path duo is driven in SessionPathSticky (stage-local flip). */
 
-      /* —— Self-guided finale: far → zoom in on scroll —— */
-      const finaleZoom = root.querySelector<HTMLElement>(".fe-spath-finale-zoom");
-      const finale = root.querySelector<HTMLElement>(".fe-spath-finale");
-      if (finale && finaleZoom) {
-        gsap.fromTo(
-          finaleZoom,
-          {
-            scale: 0.62,
-            y: 96,
-            rotateX: 9,
-            opacity: 0.38,
-            filter: "blur(10px)",
-          },
-          {
-            scale: 1,
-            y: 0,
-            rotateX: 0,
-            opacity: 1,
-            filter: "blur(0px)",
-            ease: "none",
-            scrollTrigger: {
-              trigger: finale,
-              start: "top 92%",
-              end: "top 28%",
-              scrub: 0.85,
-              invalidateOnRefresh: true,
-            },
-          }
-        );
-      }
+      /* The finale's entrance now belongs to the stages -> "Between sessions" hand-off in useHomeChoreography (rounded rise on desktop, stack on phones). */
 
     }, root);
 

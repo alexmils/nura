@@ -17,7 +17,10 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * each a port of an alexandermils mechanism (D:\Python\alexandermils):
  *
  * hero -> next section     zoom     hero photo pushes in to 145% and darkens while How rises over the held hero (SectionHandoff "zoom")
- * how it works -> modes    rise     SectionRise: inset rounded card opens to full bleed (HomeJournalSection rounded rise)
+ * how stages -> between    rise     "Between sessions" opens from an inset rounded card to full bleed as it comes up (the rounded rise; the sticky track above is never transformed). Phones: stack
+ * between -> languages     curve    languages arrive with a dome-shaped top edge in their own colour that flattens as they come up
+ * languages -> modes       tilt     languages are held and tip back gently into a rounded card while modes rises over it (phones: stack)
+ * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
  * modes -> session         iris     session opens through a growing circle over the held board (SectionHandoff "iris")
  * session -> topics        bloom    once session is mostly past, one viewport-fixed disc in topics' colour grows from the play button, floods the screen and dissolves into topics (ScrollBloom)
  * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
@@ -36,9 +39,32 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
 export function buildHomeChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
   const one = (sel: string) => root.querySelector<HTMLElement>(sel);
-  one(".mo-section-rise")?.setAttribute("data-mo-handoff", "rise");
   const trustWrap = one(".v2-trust-wrap");
   if (trustWrap) gsap.set(trustWrap, { position: "relative", zIndex: 3 });
+  // "How it works" tail: the stage track -> "Between sessions" -> languages -> modes.
+  // Each part may be hidden in the editor; a missing or empty block skips its boundary.
+  const finale = one(".fe-spath-finale");
+  const track = finale?.closest(".fe-spath")?.querySelector<HTMLElement>(".fe-spath-panels") ?? null;
+  const kitSection = one(".fe-spath-kit-section");
+  const kit = kitSection && kitSection.offsetHeight > window.innerHeight * 0.25 ? kitSection : null;
+  const modesBox = one(".mo-section-rise");
+  if (mobile) handoff(track, finale, "stack", true);
+  else if (track && finale) {
+    // Rounded rise: the poster -> How boundary just above is already a stack.
+    finale.setAttribute("data-mo-handoff", "rise");
+    scrub(
+      finale,
+      { clipPath: "inset(0px 5vw 0px 5vw round 48px 48px 0px 0px)", yPercent: 4 },
+      { clipPath: "inset(0px 0vw 0px 0vw round 0px 0px 0px 0px)", yPercent: 0 },
+      finale,
+      "top bottom",
+      "top 35%"
+    );
+  }
+  handoff(finale, kit, "curve", mobile);
+  if (mobile) handoff(kit, modesBox, "stack", true);
+  else pinnedHandoff(kit, modesBox, "tilt");
+
   if (mobile) {
     // Phones: the light stack/curve hand-offs (no virtual pins on a moving toolbar).
     handoff(one(".v2-hero"), following(one(".v2-hero")), "stack", true);

@@ -458,7 +458,8 @@ export function HomeLandingV2({
 
       "home-modes": (
       <EditablePart id="home-modes" backdrop={false}>
-      <SectionRise from={4} radius={40}>
+      {/* Languages -> modes is the choreography's "tilt" (one effect per boundary). */}
+      <SectionRise from={4} radius={40} still>
       <section className="v2-section v2-modes" id="modes" aria-labelledby="v2-modes-title">
         <div className="v2-container">
           <SectionHead

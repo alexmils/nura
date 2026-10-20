@@ -27,12 +27,13 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  * - slide    held frame drifts left and dims while the next is swept in from the right behind a lime edge (HomeProcessAbout slide)
  * - curtain  a straight edge with a lime rule rises and cuts the held section away, revealing the next one pinned underneath (CurtainPin)
  * - lens     the next section emerges out of an actual card of the held one (its rect and aspect) and grows to full screen (Aperture / lens)
+ * - tilt     the outgoing block is held and folds away: it tips back gently in perspective into a rounded card, a light tint over it, while the next one rises over it
  *
  * Overlay layers are pointer-events none and hidden at progress 0. Desktop only;
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "iris" | "bloom" | "morph" | "slide" | "curtain" | "lens";
+export type PinnedEffect = "zoom" | "iris" | "bloom" | "morph" | "slide" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -96,6 +97,8 @@ export function layoutBottom(el: HTMLElement): number {
   return y + el.offsetHeight;
 }
 
+/** The block's painted colour, a touch deeper (fills the space around a shrinking card). */
+const tintOf = (el: HTMLElement) => `color-mix(in srgb, ${paintedBg(el)} 88%, #2a3020)`;
 const relative = (el: HTMLElement) => (getComputedStyle(el).position === "static" ? "relative" : undefined);
 const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
 
@@ -174,6 +177,27 @@ export function pinnedHandoff(
   };
 
   switch (effect) {
+    case "tilt": {
+      holdPrev();
+      if (prevStill) {
+        tl.fromTo(
+          prev,
+          { rotateX: 0, scale: 1, transformPerspective: 1600, transformOrigin: "50% 100%", borderRadius: 0 },
+          { rotateX: 7, scale: 0.92, borderRadius: 32 },
+          0
+        );
+        // A soft spread in the card's own (slightly deepened) colour fills the
+        // space it leaves (no bare page, no black). It exists ONLY inside the
+        // window: a 120vmax spread left on a positioned block would paint over
+        // the sections around it (it greyed out "Between sessions" above).
+        gsap.set(prev, { overflow: "hidden", boxShadow: "none" });
+        tl.set(prev, { boxShadow: () => `0 0 0 120vmax ${tintOf(prev)}` }, 0.002);
+        tl.set(prev, { boxShadow: "none" }, 0.998);
+      }
+      wash(0.18);
+      tl.fromTo(next, { boxShadow: "0 -40px 80px -30px rgba(42, 48, 32, 0.28)" }, { boxShadow: "0 0px 0px 0px rgba(14, 18, 10, 0)" }, 0);
+      break;
+    }
     case "zoom": {
       holdPrev();
       const target = opts.image ?? prev;

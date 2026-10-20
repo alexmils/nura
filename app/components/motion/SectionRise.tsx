@@ -13,6 +13,8 @@ type SectionRiseProps = {
   from?: number;
   /** Top-corner radius at the start of the rise, in px. */
   radius?: number;
+  /** Keep the wrapper but run no clip (a page choreography owns this boundary). */
+  still?: boolean;
 };
 
 /**
@@ -31,12 +33,13 @@ export function SectionRise({
   className,
   from = 5,
   radius = 48,
+  still = false,
 }: SectionRiseProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
+    if (!el || still) return;
 
     const reduced =
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
@@ -68,7 +71,7 @@ export function SectionRise({
 
     ScrollTrigger.refresh();
     return () => ctx.revert();
-  }, [from, radius]);
+  }, [from, radius, still]);
 
   return (
     <div ref={ref} className={`mo-section-rise${className ? ` ${className}` : ""}`}>
