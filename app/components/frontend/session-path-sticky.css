@@ -1110,7 +1110,9 @@ html[data-a11y-motion="reduced"] .fe-spath-finale-edge {
   /* Size to the content: a fixed 92–110svh box either clipped the facts or
      left a long empty tail before Modes. The section reads as one band now. */
   padding: clamp(5rem, 9vw, 7rem) 0;
-  border-top: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
+  /* No seam rule: the morph hand-off already blends this band into the one
+     above it, and the 1px line read as a flickering break while scrolling. */
+  border-top: 0;
   /* Plain rgb for the colour morph: a computed color(srgb …) value interpolates
      through black in GSAP. Keep the same pale pistachio the accent mix gave. */
   background: #f3f7f0;

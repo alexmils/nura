@@ -760,6 +760,14 @@
   margin-top: 3rem;
   padding: 1.2rem;
   border-radius: 1.5rem;
+  /* The board floats over the section photo; a firmer fill keeps the glass
+     reading the same as different parts of the photo pass behind it. */
+  --v2-glass-fill: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.86),
+    rgba(255, 255, 255, 0.7)
+  );
+  --v2-glass-border: rgba(255, 255, 255, 0.8);
 }
 
 .v2-modes-tabs {

@@ -262,30 +262,32 @@ export function pinnedHandoff(
       if (next.offsetHeight >= vh() * 0.95) {
         tl.fromTo(next, { y: () => -vh() }, { y: 0 }, 0);
       }
-      const core = next.querySelector<HTMLElement>(".fe-topics-core");
       const head = next.querySelector<HTMLElement>(".fe-topics-head");
       const stage = next.querySelector<HTMLElement>(".fe-topics-stage");
-      // Both rects share the same transform, so their difference is the mark's
-      // position inside the section's own box (what clip-path expects).
+      // The circle grows out of the brand mark in the page header, not out of
+      // the guides' own core: that mark belongs to the incoming section and
+      // must not surface while the session is still on screen.
+      const brand =
+        (["frontend-header-brand", "frontend-header-mobile-brand"]
+          .map((cls) => document.querySelector<HTMLElement>(`.${cls}`))
+          .find((el) => el && el.getBoundingClientRect().width > 0) as HTMLElement | undefined) ?? null;
+      // The section is counter-translated so its top-left sits on the viewport
+      // top-left for the whole hand-off, so viewport and clip coordinates are
+      // the same; measuring the brand directly avoids a start-frame race.
       const mark = () => {
-        const box = next.getBoundingClientRect();
-        const r = core?.getBoundingClientRect();
+        const r = brand ? brand.getBoundingClientRect() : null;
         return {
-          box,
-          r,
-          x: r ? r.left + r.width / 2 - box.left : box.width / 2,
-          y: r ? r.top + r.height / 2 - box.top : box.height * 0.62,
+          x: r && r.width ? r.left + r.width / 2 : 92,
+          y: r && r.height ? r.top + r.height / 2 : 72,
         };
       };
       const circle = (open: boolean) => {
         const m = mark();
-        // The section is taller than the viewport (sticky track); only the
-        // first viewport is on screen while it is held, so grow the circle to
-        // cover the viewport, never the whole section box.
-        const bottom = Math.max(0, vh() - m.y);
+        // Only the first viewport of the (taller) section is on screen while
+        // it is held, so the circle covers the viewport, not the section box.
         const radius = open
-          ? Math.hypot(Math.max(m.x, m.box.width - m.x), Math.max(m.y, bottom)) + 40
-          : Math.max(24, (m.r?.width ?? 80) / 2);
+          ? Math.hypot(Math.max(m.x, vw() - m.x), Math.max(m.y, vh() - m.y)) + 40
+          : 0;
         return `circle(${radius}px at ${m.x}px ${m.y}px)`;
       };
       tl.fromTo(
@@ -309,16 +311,21 @@ export function pinnedHandoff(
       break;
     }
     case "morph": {
-      // A wrapper shell can hold the layout while the visible section lives
-      // inside it; `tint` keeps the colour blend on that visible section.
-      const from = paintedBg(opts.tint ?? prev);
-      gsap.set(prev, { backgroundColor: from });
-      tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
-      if (opts.tint && opts.tint !== prev) {
-        gsap.set(opts.tint, { backgroundColor: from });
-        tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+      // When the incoming block paints a photo/video, there is no solid colour
+      // to blend to; tweening would pull `paintedBg` up to the page canvas and
+      // smear it (a cream band on a photo). The content still rises.
+      if (!next.querySelector(".fe-bgwrap-media")) {
+        // A wrapper shell can hold the layout while the visible section lives
+        // inside it; `tint` keeps the colour blend on that visible section.
+        const from = paintedBg(opts.tint ?? prev);
+        gsap.set(prev, { backgroundColor: from });
+        tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        if (opts.tint && opts.tint !== prev) {
+          gsap.set(opts.tint, { backgroundColor: from });
+          tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        }
+        tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
       }
-      tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
       const content = opts.content ?? next.firstElementChild;
       const contentY = opts.morphY ?? 160;
       if (content) tl.fromTo(content, { y: contentY, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.1);
