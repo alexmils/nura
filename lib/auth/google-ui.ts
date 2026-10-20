@@ -2,9 +2,9 @@ import { APP_BASE, LOGIN_PATH } from "@/lib/app-base";
 import {
   MEMBER_ON_GATE_MESSAGE,
   STAFF_ON_PUBLIC_MESSAGE,
+  isValidGuardSlug,
+  normalizeGuardSlug,
 } from "@/lib/login-guard-policy";
-
-const GATE_SLUG = /^[A-Za-z0-9_-]{16,64}$/;
 
 export type GoogleOAuthReturnTo = "login" | "create-account";
 
@@ -19,9 +19,10 @@ export function googleAuthErrorPath(
   code: string,
   gateSlug?: string | null
 ): string {
+  const gate = normalizeGuardSlug(gateSlug ?? "");
   const base =
-    gateSlug && GATE_SLUG.test(gateSlug)
-      ? `/entry/${gateSlug}`
+    gate && isValidGuardSlug(gate)
+      ? `/${gate}`
       : returnTo === "create-account"
         ? `${APP_BASE}/create-account`
         : LOGIN_PATH;

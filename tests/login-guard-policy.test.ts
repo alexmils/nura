@@ -36,9 +36,16 @@ describe("operator sign-in surface", () => {
     assert.doesNotMatch(STAFF_ON_PUBLIC_MESSAGE, /invalid email or password/i);
   });
 
-  it("rejects short slugs", () => {
-    assert.ok(slugError("admin"));
+  it("accepts a private root path the admin chooses", () => {
+    assert.equal(slugError("dsadsa31"), null);
+    assert.equal(slugError("abcdef"), null);
     assert.equal(slugError("abcdefghijklmnop"), null);
+    assert.ok(slugError("abcde")); // too short
+    assert.ok(slugError("admin")); // reserved console path
+    assert.ok(slugError("about")); // reserved site page
+    assert.ok(slugError("9dsadsa")); // must start with a letter
+    assert.ok(slugError("dsadsa_31")); // no underscores
+    assert.ok(slugError("dsadsa.31")); // no dots
   });
 });
 

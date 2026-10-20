@@ -1,7 +1,6 @@
 import { clientIp } from "@/lib/audit-log";
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import {
-  ADMIN_GATE_PREFIX,
   LOCKOUT_OUTCOMES,
   LOGIN_GUARD_DEFAULTS,
   clampGuardNumber,
@@ -14,6 +13,7 @@ import {
   newGuardSlug,
   normalizeGuardEmail,
   normalizeGuardIp,
+  normalizeGuardSlug,
   roleMayUseSurface,
   type LoginAttemptOutcome,
 } from "@/lib/login-guard-policy";
@@ -64,7 +64,7 @@ function toSettings(row: GuardRow): LoginGuardSettings {
   const slug = row.slug;
   return {
     slug,
-    path: `${ADMIN_GATE_PREFIX}/${slug}`,
+    path: `/${slug}`,
     maxAttempts: clampGuardNumber(
       row.max_attempts,
       LOGIN_GUARD_DEFAULTS.maxAttempts,
@@ -85,7 +85,20 @@ export async function getLoginGuardSettings(): Promise<LoginGuardSettings> {
     `SELECT slug, max_attempts, window_minutes, lock_minutes, whitelist, blocklist
      FROM login_guard WHERE id = 1`
   );
-  if (rows[0]) return toSettings(rows[0]);
+  if (rows[0]) {
+    // Addresses generated before the root-level path could contain "_" or
+    // uppercase. Lowercase a valid one; rotate one the current rules reject so
+    // the gate never points at an address no page can match.
+    const stored = rows[0].slug;
+    const lower = normalizeGuardSlug(stored);
+    if (isValidGuardSlug(lower) && lower === stored) return toSettings(rows[0]);
+    const slug = isValidGuardSlug(lower) ? lower : newGuardSlug();
+    await pool.query(
+      `UPDATE login_guard SET slug = $1, updated_at = NOW() WHERE id = 1`,
+      [slug]
+    );
+    return toSettings({ ...rows[0], slug });
+  }
 
   const slug = newGuardSlug();
   await pool.query(
@@ -107,9 +120,10 @@ export async function getLoginGuardSettings(): Promise<LoginGuardSettings> {
 }
 
 export async function gateSlugMatches(slug: string): Promise<boolean> {
-  if (!isValidGuardSlug(slug)) return false;
+  const candidate = normalizeGuardSlug(slug);
+  if (!isValidGuardSlug(candidate)) return false;
   const settings = await getLoginGuardSettings();
-  return settings.slug === slug;
+  return settings.slug === candidate;
 }
 
 export async function saveLoginGuardSettings(input: {
@@ -120,6 +134,7 @@ export async function saveLoginGuardSettings(input: {
   whitelist: string[];
   blocklist: string[];
 }): Promise<LoginGuardSettings> {
+  const slug = normalizeGuardSlug(input.slug);
   await getLoginGuardSettings();
   await getPool().query(
     `UPDATE login_guard
@@ -132,7 +147,7 @@ export async function saveLoginGuardSettings(input: {
          updated_at = NOW()
      WHERE id = 1`,
     [
-      input.slug,
+      slug,
       input.maxAttempts,
       input.windowMinutes,
       input.lockMinutes,
@@ -351,9 +366,10 @@ export async function noteLoginSuccess(input: {
 }
 
 export async function staffGateAccepted(gate: string | undefined): Promise<boolean> {
-  if (!gate || !isValidGuardSlug(gate)) return false;
+  const candidate = normalizeGuardSlug(gate ?? "");
+  if (!candidate || !isValidGuardSlug(candidate)) return false;
   const settings = await getLoginGuardSettings();
-  return settings.slug === gate;
+  return settings.slug === candidate;
 }
 
 export async function surfaceForGate(

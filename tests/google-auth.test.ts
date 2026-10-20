@@ -33,8 +33,8 @@ describe("googleAuthErrorPath", () => {
       "/app/create-account?error=google_cancelled"
     );
     assert.equal(
-      googleAuthErrorPath("login", "google_denied", "abcdefghijklmnop"),
-      "/entry/abcdefghijklmnop?error=google_denied"
+      googleAuthErrorPath("login", "google_denied", "dsadsa31"),
+      "/dsadsa31?error=google_denied"
     );
   });
 });

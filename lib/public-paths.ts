@@ -1,5 +1,4 @@
 import { APP_BASE, LOGIN_PATH, isAppConsolePath } from "@/lib/app-base";
-import { ADMIN_GATE_PREFIX } from "@/lib/login-guard-policy";
 
 const FRONTEND_EXACT = new Set(["/", ""]);
 
@@ -98,15 +97,6 @@ export function isFrontendPublicPath(pathname: string): boolean {
   );
 }
 
-/** Auth screens under /app that do not require a session. */
-/** Operator sign-in. Public to browsers, not linked, not indexed. */
-export function isAdminGatePath(pathname: string): boolean {
-  return (
-    pathname === ADMIN_GATE_PREFIX ||
-    pathname.startsWith(`${ADMIN_GATE_PREFIX}/`)
-  );
-}
-
 export function isAuthPublicPath(pathname: string): boolean {
   return AUTH_PUBLIC_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
@@ -118,7 +108,6 @@ export function isAuthPublicPath(pathname: string): boolean {
  * Includes frontend, auth screens, public auth APIs, and static/API probes.
  */
 export function isUnauthenticatedPublicPath(pathname: string): boolean {
-  if (isAdminGatePath(pathname)) return true;
   if (PUBLIC_EXACT.has(pathname)) return true;
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) return true;
   if (isFrontendPublicPath(pathname)) return true;

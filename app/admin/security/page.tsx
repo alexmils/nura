@@ -6,6 +6,7 @@ import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import { fetchJson } from "@/lib/fetch-json";
 import type { LoginAttemptRow, LoginLockRow } from "@/lib/login-guard";
+import { slugError } from "@/lib/login-guard-policy";
 
 const TABS = [
   { id: "limits", label: "Limits" },
@@ -95,6 +96,12 @@ function AdminSecurityPageInner() {
   }, [load]);
 
   const save = async () => {
+    const slugProblem = slugError(slug);
+    if (slugProblem) {
+      setNotice("");
+      setError(slugProblem);
+      return;
+    }
     setSaving(true);
     setError("");
     setNotice("");
@@ -163,8 +170,14 @@ function AdminSecurityPageInner() {
 
   const copyPath = async () => {
     if (!settings) return;
+    const slugProblem = slugError(slug);
+    if (slugProblem) {
+      setError(slugProblem);
+      return;
+    }
+    setError("");
     const origin = window.location.origin;
-    await navigator.clipboard.writeText(`${origin}${settings.path}`);
+    await navigator.clipboard.writeText(`${origin}/${slug}`);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };
@@ -199,13 +212,27 @@ function AdminSecurityPageInner() {
               <input
                 className="field"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.trim())}
+                placeholder="dsadsa31"
+                onChange={(e) =>
+                  setSlug(
+                    e.target.value
+                      .replace(/^\/+/, "")
+                      .trim()
+                      .toLowerCase()
+                  )
+                }
                 autoComplete="off"
                 spellCheck={false}
               />
             </label>
             <p className="admin-panel-sub">
-              <code className="admin-code">{settings.path}</code>
+              Type your own address. For example, <code className="admin-code">dsadsa31</code>{" "}
+              makes staff sign in at <code className="admin-code">/dsadsa31</code>. Use 6 to 64
+              letters, numbers, or hyphens, starting with a letter.
+            </p>
+            <p className="admin-panel-sub">
+              Staff sign in at <code className="admin-code">/{slug || settings.slug}</code>
+              {slug !== settings.slug ? " after saving." : "."}
             </p>
             <div className="admin-table-actions">
               <button type="button" className="btn-secondary" onClick={() => void copyPath()}>
@@ -217,7 +244,7 @@ function AdminSecurityPageInner() {
                 disabled={saving}
                 onClick={() => void regenerate()}
               >
-                New random address
+                Generate random
               </button>
             </div>
             <label className="admin-field-label">
