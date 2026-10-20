@@ -12,7 +12,7 @@ When editing **app chrome** (`/app`, `/admin`, shared components except `fronten
 2. Follow `.cursor/rules/nura-brand.mdc` for name, color, type, and voice. Do not reintroduce Inter, `#10a37f`, or the **BLS** acronym in user-facing copy (use Free / Set running / visual sets / session controls — not “moving ball” as the default Free pitch).
 
 3. **Layout**: dark sidebar (`#3D4129`), mint canvas (`#EDF9ED` / `#A4EDA5` tint); flat surfaces, 1px borders, 6–8px radius.
-   - Accent: `#84B067` primary; pistachio `#C6D67E` focus only
+   - Accent: `#4A7234` filled controls; sage `#84B067` surfaces and icons; pistachio `#C6D67E` focus only
    - Sentence case labels
 
 4. **Tokens**: CSS variables in `app/globals.css`. **Typography**: **Source Sans 3 only on `/app`** (`.app-shell` and `.auth-shell` remap `--font-display` → sans). **Admin (`.admin-shell`) is Source Sans 3 only** — no Fraunces on page titles, card titles, or KPIs. Fraunces is marketing **home hero title only** (`.fe-hero-title`).

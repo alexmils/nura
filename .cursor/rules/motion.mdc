@@ -1,0 +1,78 @@
+---
+description: Nura motion system — tokens, primitives, page transitions, hand-offs, and the hard rules for marketing frontend animation
+globs: app/components/frontend/**,app/components/motion/**,app/globals.css,lib/motion.ts,lib/page-transitions.ts
+alwaysApply: true
+---
+
+# Nura motion system (must follow)
+
+The brand lives through motion. Everything animates from one set of tokens, so
+new sections stay consistent instead of drifting. **Extend the shared component,
+never invent a one-off tween.**
+
+Source of truth:
+- Tokens + presets: `lib/motion.ts` (mirrored as `--mo-*` in
+  `app/components/motion/motion.css`)
+- Page transitions: `lib/page-transitions.ts` + `app/components/motion/page-transitions.css`
+- Components: `app/components/motion/` (`Reveal`, `StaggerText`, `CountUp`,
+  `Marquee`, `SectionRise`, `SectionWipe`, `SectionBloom`,
+  `PageTransitionOverlay`, `MotionProvider`)
+
+## Tokens (never hardcode)
+
+- Duration: `--mo-dur-instant/fast/base/slow/slower` (.18 → 1.35s)
+- Easing: `--mo-ease-out` (arrivals), `--mo-ease-in-out` (transitions),
+  `--mo-ease-soft` (hovers), `--mo-ease-wave` (the brand lift), `--mo-ease-pop`
+- Stagger: `--mo-stagger` (.045s)
+- Shadows: `--mo-shadow-lift`, `--mo-shadow-card` (ink-tinted, never neutral black)
+
+The legacy `--ease` var and the existing GSAP `.fe-animate` / letter-rise
+entrances stay; new work uses the motion primitives.
+
+## What to use where
+
+| Need | Use |
+|---|---|
+| Content entrance on scroll | `Reveal` |
+| Lead paragraph / mid-weight heading rise | `StaggerText` |
+| Big marketing section H2 | `LetterRevealHeading` (letter-rise — see `letter-rise-headings.mdc`) |
+| Number counting up | `CountUp` |
+| Horizontal ticker | `Marquee` |
+| Section opens from an inset card as it scrolls in | `SectionRise` |
+| Next section wiped in by a wave-edged veil | `SectionWipe` |
+| Next section eased in by a pistachio bloom | `SectionBloom` (available, not wired) |
+| Route change | `PageTransitionOverlay` (mounted once in `FrontendShellClient`) |
+| Card hover / press feedback | `interactions.css` utilities (`.mo-lift`, `.mo-press`, `.mo-underline`) |
+
+## Hard rules
+
+1. **Reduced motion.** Every pattern collapses to plain stacked blocks: no clip,
+   no pin, no transform. Both `@media (prefers-reduced-motion: reduce)` and the
+   site-wide `html[data-a11y-motion="reduced"]` attribute must be handled, and
+   content that starts hidden must be forced visible.
+2. **No reuse on neighbours.** Two adjacent section hand-offs must differ. Check
+   the current order in `HomeLanding.tsx` before adding one; add any new pattern
+   to the catalogue in `docs/motion-brand.md`.
+3. **No invisible click blockers.** Any full-size overlay is `pointer-events: none`;
+   only the visible panel inside it is `pointer-events: auto`. (The page-transition
+   overlay is `auto` only during the cover phase.)
+4. **No layout shift.** Scroll hand-offs use `clip-path` / `transform` / `opacity`
+   only — never negative margins, spacers or pins that leave gaps.
+5. **Scroll-linked effects are linear in scroll.** Easing belongs to time-based
+   animations only. Never tie a tween to scroll position with a time-based ease.
+6. **Don't clip sticky sections.** `SectionRise` / `SectionWipe` / `SectionBloom`
+   (clip / overflow) must not wrap a section with `position: sticky` / `fixed`
+   children — clipping creates a containing block and breaks them. This is why
+   `SessionPathSticky` ("how it works") stays plain.
+7. **SSR must match.** Start states are deterministic (inline style vars from
+   props), never read `window` during render.
+8. **Palette only.** Transitions and overlays use the pistachio palette (mint,
+   pistachio, sage, olive-ink, ink, ground/white). No new colours.
+
+## Page transitions
+
+One transition is active site-wide; default `waveSweep`. Do not add a second
+overlay or per-page transition. New transitions go in `PAGE_TRANSITIONS` +
+`transitionLayers` (`lib/page-transitions.ts`) and a matching `[data-pt="…"]`
+block in `page-transitions.css`. The shop/app flows may run a notch faster
+(`FAST_FACTOR`).

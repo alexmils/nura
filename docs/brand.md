@@ -38,10 +38,12 @@ Disclaimer (always visible on marketing): self-help tool, not a licensed therapi
 | Token | Hex | Use |
 |---|---|---|
 | Paper (mint) | `#A4EDA5` | Highlights, canvas tint, light surfaces |
-| Pistachio | `#C6D67E` | Focus, hover, selection — never body text or default borders |
-| Sage (earth) | `#84B067` | Wordmark, icons, primary buttons |
-| Olive | `#948F4E` | Muted text, secondary chrome |
+| Pistachio | `#C6D67E` | Focus, hover, selection — never body text or default borders. Token: `--pistachio` (`--gold` still aliases it) |
+| Sage (earth) | `#84B067` | Wordmark, icons, large surfaces. Not under white text |
+| Action | `#4A7234` | Filled buttons and small accent text. White on this passes AA |
+| Olive | `#5A5C2B` | Muted text |
 | Ink | `#2A3020` | Body text |
+| Star | `#E8C547` | Rating stars (`--star`) |
 | Sidebar | `#3D4129` | App / admin sidebar (dark olive) |
 
 Page background uses a softened mint (`#EDF9ED`). Constants: `lib/brand.ts` → `BRAND_COLORS`.
