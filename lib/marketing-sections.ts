@@ -240,6 +240,22 @@ const BASE_SECTIONS: readonly SectionDef[] = [
     },
   },
   {
+    id: "home-how-intro",
+    name: "Home: how it works intro",
+    fields: [
+      text("badge", "Badge"),
+      area("intro1", "Intro line 1"),
+      area("intro2", "Intro line 2"),
+      area("intro3", "Intro line 3"),
+    ],
+    defaults: {
+      badge: "How it works",
+      intro1: "Ground first. Choose your rhythm. Check in after each set.",
+      intro2: "Close gently when it’s enough — then Free between sessions.",
+      intro3: "One calm loop in the app. No rush. No cold starts.",
+    },
+  },
+  {
     id: "home-how",
     name: "Home: how it works",
     fields: [
@@ -2011,9 +2027,8 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
     description: "A giant serif word that reveals letter by letter over a nature photo, with a small kicker row and a short line.",
     fields: [
       text("word", "Big word", "Up to 12 letters, e.g. Heal"),
-      image("image", "Nature image", "Sits under the word; the top of the letters is filled with it"),
+      image("image", "Heal image", "The photo behind the Heal word. Change it here; the top of the letters is filled with it."),
       text("alt", "Image alt text", "Describe the image, or leave empty if decorative"),
-      text("kicker", "Kicker row", "Small mono row at the top; separate items with |"),
       text("line", "Short line", "Top right, e.g. Healing is not linear"),
       text("note", "Corner note", "Bottom right over the photo, e.g. - Find your calm -"),
     ],
@@ -2021,7 +2036,6 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
       word: "Heal",
       image: "/marketing/landing/forest-path.jpg",
       alt: "",
-      kicker: "NURA | EMDR AT HOME | GENTLE BY DESIGN",
       line: "Healing is not linear",
       note: "- Find your calm -",
     },

@@ -47,6 +47,9 @@ import { PageSections } from "./section-editor/PageSections";
 import { AccentText } from "./AccentText";
 import { BlogSection, FaqSection } from "./HomeLanding";
 import { SessionPathSticky } from "./SessionPathSticky";
+import { HowIntroSection } from "./HowIntroSection";
+import { BetweenSessionsSection } from "./BetweenSessionsSection";
+import { LanguagesSection } from "./LanguagesSection";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { useLandingMotion } from "./useLandingMotion";
 import { usePlanSpread } from "./usePlanSpread";
@@ -454,7 +457,10 @@ export function HomeLandingV2({
       </EditablePart>
       ),
 
+      "home-how-intro": <HowIntroSection />,
       "home-how": <SessionPathSticky />,
+      "home-how-between": <BetweenSessionsSection />,
+      "home-how-languages": <LanguagesSection />,
 
       "home-modes": (
       <EditablePart id="home-modes" backdrop={false}>

@@ -21,10 +21,10 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * between -> languages     curve    languages arrive with a dome-shaped top edge in their own colour that flattens as they come up
  * languages -> modes       tilt     languages are held and tip back gently into a rounded card while modes rises over it (phones: stack)
  * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
- * modes -> session         iris     session opens through a growing circle over the held board (SectionHandoff "iris")
- * session -> topics        bloom    once session is mostly past, one viewport-fixed disc in topics' colour grows from the play button, floods the screen and dissolves into topics (ScrollBloom)
+ * modes -> session         lift     the held board settles back while session rises over it as a soft sheet (no circle)
+ * session -> topics        halo     topics rises over the held session and its nura core leads: the halo around the logo grows, the core settles
  * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
- * stories -> pricing       slide    stories drifts left and dims, pricing sweeps in behind a lime edge (HomeProcessAbout slide)
+ * stories -> pricing       settle   calm sheet rise: stories eases back under a soft pricing-coloured wash while pricing rises over it, corners flattening
  * pricing -> faq           curtain  a rising edge with a lime rule cuts pricing away, FAQ pinned underneath (CurtainPin)
  * faq -> blog              (none)   plain hand-off; the old mint wave band was removed
  * blog -> close            lens     the closing CTA emerges out of the nearest visible blog card (its rect and aspect) and grows to full screen, copy fades in last (Aperture / lens)
@@ -44,7 +44,9 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   // "How it works" tail: the stage track -> "Between sessions" -> languages -> modes.
   // Each part may be hidden in the editor; a missing or empty block skips its boundary.
   const finale = one(".fe-spath-finale");
-  const track = finale?.closest(".fe-spath")?.querySelector<HTMLElement>(".fe-spath-panels") ?? null;
+  // "Between sessions" is its own section (home-how-between); its predecessor
+  // is the sticky stage track inside home-how.
+  const track = one(".fe-spath-panels");
   const kitSection = one(".fe-spath-kit-section");
   const kit = kitSection && kitSection.offsetHeight > window.innerHeight * 0.25 ? kitSection : null;
   const modesBox = one(".mo-section-rise");
@@ -73,15 +75,21 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     handoff(one(".v2-stories"), one(".v2-pricing"), "stack", true);
     handoff(one(".v2-pricing"), one(".fe-faq"), "curve", true);
   } else {
-    // Whatever follows the hero (How it works, or an inserted section such as the poster).
-    pinnedHandoff(one(".v2-hero"), following(one(".v2-hero")), "zoom", { image: one(".v2-hero-photo"), content: one(".v2-hero-inner") });
-    pinnedHandoff(one(".v2-modes"), one(".v2-session"), "iris");
+    // Whatever follows the hero (the how intro, or an inserted section such as the poster).
+    const afterHero = following(one(".v2-hero"));
+    pinnedHandoff(one(".v2-hero"), afterHero, "zoom", { image: one(".v2-hero-photo"), content: one(".v2-hero-inner") });
+    // The held hero stays above plain siblings for one viewport; the block after
+    // the incoming one (the Heal poster behind the how intro) must stack above
+    // it or its photo/strip bleeds through the join.
+    const afterNext = afterHero?.nextElementSibling as HTMLElement | null;
+    if (afterNext) gsap.set(afterNext, { position: getComputedStyle(afterNext).position === "static" ? "relative" : undefined, zIndex: 3 });
+    pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
     pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories > .v2-container") });
-    pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "slide");
+    pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");
     pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "curtain");
   }
-  // Session -> topics on every screen: one viewport-fixed disc, no seam.
-  pinnedHandoff(one(".v2-session"), one(".fe-topics"), "bloom", { origin: () => one(".v2-video-play") ?? one(".v2-video-frame") });
+  // Session -> topics on every screen: no overlay disc, the topics nura mark leads.
+  pinnedHandoff(one(".v2-session"), one(".fe-topics"), "halo");
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),

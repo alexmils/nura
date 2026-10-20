@@ -18,6 +18,16 @@
   --spath-nav-h: 0px;
 }
 
+/* "How it works" intro above the Heal poster: separate section, one visual block. */
+.fe-spath-intro-section {
+  position: relative;
+  z-index: 1;
+  scroll-margin-top: 5.5rem;
+  padding: clamp(8rem, 16vw, 12rem) 0 clamp(1.25rem, 2.5vw, 2rem);
+  /* Pure white, same as the poster's top: one joined block. */
+  background: #fff;
+}
+
 /* —— Intro (Attio “Platform” + big H2) —— */
 .fe-spath-intro {
   padding: clamp(1.5rem, 4vw, 2.5rem) 0 0;

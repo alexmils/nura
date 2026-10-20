@@ -68,7 +68,7 @@ describe("motion pass: scroll choreography", () => {
 
   it("is wired on home and on every other public page", () => {
     assert.match(src("app/components/frontend/HomeLandingV2.tsx"), /useHomeChoreography\(landingRef\)/);
-    assert.match(src("app/components/frontend/HomeLandingV2.tsx"), /<SectionRise from=\{4\} radius=\{40\}>/);
+    assert.match(src("app/components/frontend/HomeLandingV2.tsx"), /<SectionRise from=\{4\} radius=\{40\} still>/);
     assert.match(src("app/components/frontend/FrontendShellClient.tsx"), /<PageChoreography \/>/);
   });
 });

@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { appPath } from "@/lib/app-base";
 import {
   getLandingLenis,
   scrollToLandingSection,
@@ -12,11 +10,9 @@ import {
   NoColdStartDemo,
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
-import { sectionList, sectionText } from "@/lib/marketing-sections";
+import { sectionList } from "@/lib/marketing-sections";
 import { SectionMedia } from "./SectionMedia";
-import { AccentText } from "./AccentText";
 import { LetterRevealHeading } from "./LetterRevealHeading";
-import { SessionLoopKit } from "./SessionLoopKit";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { EditablePart, HiddenSectionNote } from "./section-editor/EditablePart";
 import { useSectionConfig, useSectionOn } from "./section-editor/MarketingCopy";
@@ -97,11 +93,9 @@ function centerChipInNav(list: HTMLUListElement | null, id: StageId) {
 
 /** Attio-style sticky path: intro above, then sticky nav | scrolling stages. */
 export function SessionPathSticky() {
-  const copy = useSectionConfig("home-how");
   const stagesCopy = useSectionConfig("home-how-stages");
   const rhythmCopy = useSectionConfig("home-how-rhythm");
   const groundCopy = useSectionConfig("home-how-ground");
-  const between = useSectionConfig("home-how-between");
   const rhythmOn = useSectionOn("home-how-rhythm");
   const groundOn = useSectionOn("home-how-ground");
   const admin = useIsPlatformAdmin();
@@ -249,31 +243,12 @@ export function SessionPathSticky() {
   }
 
   return (
-    <>
     <section
       ref={rootRef}
-      id="how-it-works"
       className="fe-spath fe-has-edit"
       data-section="home-how"
-      aria-labelledby={`${baseId}-heading`}
+      aria-labelledby="fe-how-intro-title"
     >
-      <EditablePart id="home-how">
-      <div className="fe-container fe-spath-intro">
-        <p className="fe-spath-badge">{sectionText(copy, "badge")}</p>
-        <h2 id={`${baseId}-heading`} className="fe-spath-intro-title">
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--1">
-            {sectionText(copy, "intro1")}{" "}
-          </span>
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--2">
-            {sectionText(copy, "intro2")}{" "}
-          </span>
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--3">
-            {sectionText(copy, "intro3")}
-          </span>
-        </h2>
-      </div>
-      </EditablePart>
-
       <EditablePart id="home-how-stages">
       <div className="fe-spath-track-wrap">
         <div className="fe-container fe-spath-track">
@@ -463,41 +438,6 @@ export function SessionPathSticky() {
       </div>
       </EditablePart>
 
-      <EditablePart id="home-how-between">
-      <div className="fe-spath-finale">
-        <div className="fe-spath-finale-zoom">
-        <div className="fe-container fe-spath-finale-inner">
-          <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
-          <h3 className="fe-spath-finale-title">
-            <AccentText
-              text={sectionText(between, "betweenTitle")}
-              accent={sectionText(between, "betweenAccent")}
-            />
-          </h3>
-          <p className="fe-spath-finale-line">
-            {sectionText(between, "betweenLine")}
-          </p>
-          <Link
-            href={sectionText(between, "betweenCtaHref") || appPath("/create-account")}
-            className="fe-spath-cta frontend-btn-ghost"
-          >
-            {sectionText(between, "betweenCta")}
-          </Link>
-        </div>
-        </div>
-      </div>
-      </EditablePart>
-
     </section>
-
-    <section
-      className="fe-spath-kit-section"
-      aria-label="Session language support"
-    >
-      <EditablePart id="home-how-languages">
-        <SessionLoopKit />
-      </EditablePart>
-    </section>
-    </>
   );
 }

@@ -9,16 +9,17 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
   const home = src("app/components/frontend/useHomeChoreography.ts");
 
   const pairs: Array<[string, string, string]> = [
-    [".v2-modes", ".v2-session", "iris"],
-    [".v2-session", ".fe-topics", "bloom"],
+    [".v2-modes", ".v2-session", "lift"],
+    [".v2-session", ".fe-topics", "halo"],
     [".fe-topics", ".v2-stories", "morph"],
-    [".v2-stories", ".v2-pricing", "slide"],
+    [".v2-stories", ".v2-pricing", "settle"],
     [".v2-pricing", ".fe-faq", "curtain"],
     [".fe-blog", ".v2-close", "lens"],
   ];
 
   it("wires a distinct effect to every desktop home boundary", () => {
-    assert.ok(home.includes('pinnedHandoff(one(".v2-hero"), following(one(".v2-hero")), "zoom"'), "hero -> next zoom");
+    assert.ok(home.includes('const afterHero = following(one(".v2-hero"))'), "hero -> next target");
+    assert.ok(home.includes('pinnedHandoff(one(".v2-hero"), afterHero, "zoom"'), "hero -> next zoom");
     for (const [a, b, fx] of pairs) {
       assert.ok(home.includes(`pinnedHandoff(one("${a}"), one("${b}"), "${fx}"`), `${a} -> ${b} ${fx}`);
     }
@@ -27,10 +28,10 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
   });
 
   it("implements every effect and names its alexandermils source", () => {
-    for (const fx of ["zoom", "iris", "bloom", "morph", "slide", "curtain", "lens"]) {
+    for (const fx of ["zoom", "lift", "halo", "morph", "settle", "curtain", "lens"]) {
       assert.match(lib, new RegExp(`case "${fx}"`));
     }
-    for (const source of ["SectionHandoff", "CurtainPin", "ScrollBloom", "Aperture", "HomeProcessAbout"]) {
+    for (const source of ["SectionHandoff", "CurtainPin", "Aperture"]) {
       assert.ok(lib.includes(source), source);
     }
   });
@@ -49,9 +50,10 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
     assert.match(home, /if \(mobile\)[\s\S]*handoff\(one\("\.v2-hero"\), following\(one\("\.v2-hero"\)\), "stack", true\)[\s\S]*\} else \{[\s\S]*pinnedHandoff/);
   });
 
-  it("blooms with one viewport-fixed disc (no section seam), starting once session is mostly past", () => {
-    assert.match(lib, /layer\(document\.body, \{\s*position: "fixed"/);
-    assert.match(lib, /\(p - 0\.35\) \/ 0\.5/);
+  it("leads with the nura mark instead of a full-screen disc", () => {
+    assert.match(lib, /\.fe-topics-glow/);
+    assert.match(lib, /\.fe-topics-core/);
+    assert.doesNotMatch(lib, /layer\(document\.body/);
     assert.match(src("app/components/motion/choreography.ts"), /document\.querySelectorAll\("\.mo-layer"\)\.forEach\(\(el\) => el\.remove\(\)\)/);
   });
 

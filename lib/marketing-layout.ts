@@ -23,7 +23,10 @@ export const MARKETING_PAGES = {
     slots: [
       { id: "home-hero" },
       { id: "home-trust" },
+      { id: "home-how-intro", label: "Home: how it works intro" },
       { id: "home-how" },
+      { id: "home-how-between" },
+      { id: "home-how-languages" },
       { id: "home-modes" },
       { id: "home-session" },
       { id: "home-topics" },

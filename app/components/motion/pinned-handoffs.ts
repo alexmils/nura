@@ -4,10 +4,10 @@ import gsap from "gsap";
 import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
 
 /**
- * Pinned section hand-offs, ported from D:\Python\alexandermils
- * (src/components/motion/SectionHandoff.tsx, CurtainPin.tsx, ScrollBloom.tsx,
- * Aperture.tsx, HomeProcessAbout.tsx, HomeTestimonialsSection.tsx; rules in
- * .cursor/rules/transitions.mdc).
+ * Pinned section hand-offs, partly ported from D:\Python\alexandermils
+ * (src/components/motion/SectionHandoff.tsx, CurtainPin.tsx, Aperture.tsx;
+ * rules in .cursor/rules/transitions.mdc) plus Nura's own quiet family
+ * (lift / settle / halo) for the boundaries that should not shout.
  *
  * The studio site pins the outgoing section (sticky, bottom on the viewport
  * bottom), pulls the next one up 100svh underneath/over it, and runs ONE
@@ -21,10 +21,10 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  *
  * Effects (one per boundary, neighbours differ):
  * - zoom     outgoing image scales up into the screen and darkens while the next slides over (SectionHandoff "zoom")
- * - iris     the next section opens through a growing circle over the held one (SectionHandoff "iris")
- * - bloom    a disc in the next section's colour grows from a focal element until it floods the held one (ScrollBloom)
+ * - lift     the held block settles back a touch while the next rises over it as a soft sheet (no clip, no circle)
+ * - halo     the next block rises over the held one and its own brand mark leads: the halo around the nura core grows, the core settles (no full-screen disc)
  * - morph    the outgoing backdrop morphs into the next section's colour, the next one's content rises out of it
- * - slide    held frame drifts left and dims while the next is swept in from the right behind a lime edge (HomeProcessAbout slide)
+ * - settle   calm sheet rise: the held block eases back under a soft wash in the next block's colour while that block rises over it, top corners flattening as it lands
  * - curtain  a straight edge with a lime rule rises and cuts the held section away, revealing the next one pinned underneath (CurtainPin)
  * - lens     the next section emerges out of an actual card of the held one (its rect and aspect) and grows to full screen (Aperture / lens)
  * - tilt     the outgoing block is held and folds away: it tips back gently in perspective into a rounded card, a light tint over it, while the next one rises over it
@@ -33,7 +33,7 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "iris" | "bloom" | "morph" | "slide" | "curtain" | "lens" | "tilt";
+export type PinnedEffect = "zoom" | "lift" | "halo" | "morph" | "settle" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -107,7 +107,6 @@ export function pinnedHandoff(
   nextIn: HTMLElement | null,
   effect: PinnedEffect,
   opts: {
-    origin?: () => Element | null;
     image?: Element | null;
     content?: Element | null;
     /** lens: candidate cards the next section emerges from (nearest visible wins). */
@@ -207,48 +206,39 @@ export function pinnedHandoff(
       tl.fromTo(next, { borderTopLeftRadius: 48, borderTopRightRadius: 48 }, { borderTopLeftRadius: 0, borderTopRightRadius: 0 }, 0);
       break;
     }
-    case "iris": {
+    case "lift": {
+      // Calm rise: the held modes block settles back a touch (its board dims)
+      // while session rises over it as a soft sheet. No clip, no circle, no wash.
       holdPrev();
-      holdNext();
-      wash(0.6);
-      // Grow to the viewport's corners over most of the window, then release.
-      const corner = () => Math.hypot(window.innerWidth / 2, vh() / 2) + 4;
-      const r = () => Math.hypot(next.offsetWidth, next.offsetHeight);
-      tl.fromTo(next, { clipPath: () => `circle(0px at 50% ${vh() / 2}px)` }, { clipPath: () => `circle(${corner()}px at 50% ${vh() / 2}px)`, duration: 0.85 }, 0);
-      tl.to(next, { clipPath: () => `circle(${r()}px at 50% ${vh() / 2}px)`, duration: 0.15 }, 0.85);
+      if (prevStill) {
+        tl.fromTo(prev, { scale: 1 }, { scale: 0.98 }, 0);
+        const board = prev.querySelector<HTMLElement>(".v2-modes-board");
+        if (board) tl.fromTo(board, { opacity: 1 }, { opacity: 0.55, duration: 0.6 }, 0);
+      }
+      tl.fromTo(
+        next,
+        { borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: "0 -28px 60px -28px rgba(42, 48, 32, 0.22)" },
+        { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: 0.7 },
+        0
+      );
       break;
     }
-    case "bloom": {
-      // ONE viewport-fixed disc over both sections (no per-section box, so no
-      // seam where one section ends). Nothing is held: the outgoing section
-      // scrolls away normally and the disc only starts once it is mostly past
-      // (35% of the window), floods the screen by 85%, then dissolves into the
-      // incoming section, which by then fills the viewport underneath.
-      const disc = layer(document.body, {
-        position: "fixed",
-        top: "0",
-        bottom: "0",
-        height: "auto",
-        background: nextBg,
-        zIndex: "98", // above every section layer (topics orb etc.), under the header (99)
-      });
-      const state = { p: 0 };
-      const paint = () => {
-        const p = state.p;
-        const w = window.innerWidth;
-        const h = vh();
-        const o = opts.origin?.()?.getBoundingClientRect();
-        const x = o ? Math.min(w, Math.max(0, o.left + o.width / 2)) : w / 2;
-        const y = o ? Math.min(h, Math.max(0, o.top + o.height / 2)) : h * 0.6;
-        const far = Math.hypot(Math.max(x, w - x), Math.max(y, h - y)) + 8;
-        const e = Math.min(1, Math.max(0, (p - 0.35) / 0.5));
-        const fade = 1 - Math.min(1, Math.max(0, (p - 0.86) / 0.12));
-        disc.style.visibility = e > 0 && fade > 0 ? "visible" : "hidden";
-        disc.style.opacity = String(fade);
-        disc.style.clipPath = `circle(${e <= 0 ? 0 : 24 + (far - 24) * e * e}px at ${x}px ${y}px)`;
-      };
-      paint();
-      drive(state, paint);
+    case "halo": {
+      // No full-screen disc: the topics block rises over the held session while
+      // its own nura core leads the arrival - the halo around the logo grows
+      // and the core settles, so the transition reads as the mark expanding.
+      holdPrev();
+      if (prevStill) tl.fromTo(prev, { scale: 1 }, { scale: 0.985 }, 0);
+      const glow = next.querySelector<HTMLElement>(".fe-topics-glow");
+      const core = next.querySelector<HTMLElement>(".fe-topics-core");
+      if (glow) tl.fromTo(glow, { scale: 0.45, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.85 }, 0.15);
+      if (core) tl.fromTo(core, { scale: 0.9 }, { scale: 1, duration: 0.7 }, 0.2);
+      tl.fromTo(
+        next,
+        { borderTopLeftRadius: 32, borderTopRightRadius: 32, boxShadow: "0 -30px 60px -30px rgba(42, 48, 32, 0.24)" },
+        { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: 0.75 },
+        0
+      );
       break;
     }
     case "morph": {
@@ -260,17 +250,21 @@ export function pinnedHandoff(
       if (content) tl.fromTo(content, { y: 160, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.1);
       break;
     }
-    case "slide": {
+    case "settle": {
+      // Calm sheet rise: stories is held and eases back a hair while a soft
+      // pricing-coloured veil settles over it, and pricing itself rises over
+      // the held block with rounded top corners that flatten as it lands. No
+      // sideways travel, no cut edge, no dark wash, no held next block.
       holdPrev();
-      const pinned = holdNext();
-      tl.fromTo(prev, { x: 0 }, { x: () => -window.innerWidth * 0.35 }, 0);
-      wash(0.55);
-      if (pinned) {
-        tl.fromTo(next, { clipPath: "inset(0px 0px 0px 100%)" }, { clipPath: "inset(0px 0px 0px 0%)" }, 0);
-        const edge = layer(next, { top: "0", bottom: "auto", height: "100vh", width: "6px", right: "auto", background: LIME, zIndex: "70" });
-        tl.fromTo(edge, { autoAlpha: 1, x: () => window.innerWidth }, { x: 0 }, 0);
-        tl.to(edge, { autoAlpha: 0, duration: 0.05 }, 0.95);
-      }
+      if (prevStill) tl.fromTo(prev, { scale: 1 }, { scale: 0.985 }, 0);
+      const veil = layer(prev, { background: nextBg });
+      tl.fromTo(veil, { autoAlpha: 0 }, { autoAlpha: 0.38 }, 0);
+      tl.fromTo(
+        next,
+        { borderTopLeftRadius: 32, borderTopRightRadius: 32, boxShadow: "0 -30px 60px -30px rgba(42, 48, 32, 0.24)" },
+        { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: 0.75 },
+        0
+      );
       break;
     }
     case "curtain": {
@@ -303,6 +297,16 @@ export function pinnedHandoff(
         Object.assign(ghost.style, { backgroundSize: "cover", backgroundPosition: "50% 30%" });
         let src: Rect | null = null;
         let shown = "";
+        let concealed = false;
+        // `clip-path: inset(0 0 <height>px)` on a fractional-height block leaves a
+        // ~1px antialiased sliver of it painted over the section above (a stray
+        // full-width rule in the blog). autoAlpha hides it exactly; gsap records
+        // the change, so the context revert restores it.
+        const conceal = (on: boolean) => {
+          if (concealed === on) return;
+          concealed = on;
+          gsap.set(next, { autoAlpha: on ? 0 : 1 });
+        };
         // The visible card nearest the middle of the screen (hidden or
         // reordered cards simply drop out of the candidates).
         const pick = (): Rect => {
@@ -335,14 +339,17 @@ export function pinnedHandoff(
           if (p >= 1) {
             src = null;
             next.style.clipPath = "";
+            conceal(false);
             ghost.style.visibility = "hidden";
             return;
           }
           if (!src) {
-            next.style.clipPath = `inset(0px 0px ${H}px 0px)`;
+            next.style.clipPath = `inset(0px 0px ${Math.ceil(H) + 1}px 0px)`;
+            conceal(true);
             ghost.style.visibility = "hidden";
             return;
           }
+          conceal(false);
           const e = inOut(clamp01(p / 0.86));
           const L = lerp(src.l, 0, e);
           const T = lerp(src.t, 0, e);
