@@ -87,9 +87,21 @@ Current wiring on `/`:
 
 - `HomeMemorySets → pricing` = **Rounded rise** (`SectionRise` on pricing).
 - `stories → journal` = **Wave wipe** (`SectionWipe` around `BlogSection`).
+- `how stages → between` = **Letterbox** (`useHomeChoreography`: the finale opens
+  from a centre slit with lime rules, driven by the numeric `--finale-wipe`
+  variable, while its copy lifts in). The sticky track above is never transformed.
+- `between → languages` = **Colour morph** (`pinnedHandoff(..., "morph")`): both
+  blocks shift into the languages colour and its content rises out. No panel
+  sliding over another panel.
 - Everything else uses `Reveal` / letter-rise entrances plus the existing GSAP
   `.fe-animate` scroll reveals. (`journal → FAQ` was tried with a cut/bloom and
   left plain — see the note on the FAQ hand-off.)
+
+Do not tween `clip-path` **strings** with GSAP here — `inset(...)` jumps to the
+end value instead of interpolating. Animate a unitless CSS variable (e.g.
+`--finale-wipe: 100 → 0`) and use it inside `calc()` in the CSS clip/inset.
+Also keep the two colours in a colour morph as plain `rgb()`/hex values; a
+computed `color(srgb …)` value interpolates through black.
 
 No two adjacent boundaries repeat a pattern (rise → plain → wipe → plain).
 

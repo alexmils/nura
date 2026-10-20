@@ -17,8 +17,8 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * each a port of an alexandermils mechanism (D:\Python\alexandermils):
  *
  * hero -> next section     zoom     hero photo pushes in to 145% and darkens while How rises over the held hero (SectionHandoff "zoom")
- * how stages -> between    rise     "Between sessions" opens from an inset rounded card to full bleed as it comes up (the rounded rise; the sticky track above is never transformed). Phones: stack
- * between -> languages     curve    languages arrive with a dome-shaped top edge in their own colour that flattens as they come up
+ * how stages -> between    wipe     "Between sessions" unfolds from its top edge while its copy lifts in (the sticky track above is never transformed). Phones: stack
+ * between -> languages     morph    both blocks shift into the languages colour and the language content rises out of it (no panel over a panel)
  * languages -> modes       tilt     languages are held and tip back gently into a rounded card while modes rises over it (phones: stack)
  * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
  * modes -> session         lift     the held board settles back while session rises over it as a soft sheet (no circle)
@@ -50,20 +50,37 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   const kitSection = one(".fe-spath-kit-section");
   const kit = kitSection && kitSection.offsetHeight > window.innerHeight * 0.25 ? kitSection : null;
   const modesBox = one(".mo-section-rise");
+  const finaleZoom = finale?.querySelector<HTMLElement>(".fe-spath-finale-zoom");
   if (mobile) handoff(track, finale, "stack", true);
   else if (track && finale) {
-    // Rounded rise: the poster -> How boundary just above is already a stack.
-    finale.setAttribute("data-mo-handoff", "rise");
+    // Curtain drop: the finale unfolds from its top edge instead of shrinking
+    // into a rounded window. The sticky track above is never transformed.
+    finale.setAttribute("data-mo-handoff", "wipe");
     scrub(
       finale,
-      { clipPath: "inset(0px 5vw 0px 5vw round 48px 48px 0px 0px)", yPercent: 4 },
-      { clipPath: "inset(0px 0vw 0px 0vw round 0px 0px 0px 0px)", yPercent: 0 },
+      { "--finale-wipe": 100 } as gsap.TweenVars,
+      { "--finale-wipe": 0 } as gsap.TweenVars,
       finale,
-      "top bottom",
-      "top 35%"
+      "top 92%",
+      "top 32%"
     );
+    if (finaleZoom) {
+      scrub(
+        finaleZoom,
+        { y: 34, opacity: 0, scale: 0.97 },
+        { y: 0, opacity: 1, scale: 1 },
+        finale,
+        "top 92%",
+        "top 42%"
+      );
+    }
+    const finaleEdge = finale.querySelector<HTMLElement>(".fe-spath-finale-edge");
+    if (finaleEdge) {
+      scrub(finaleEdge, { opacity: 1 }, { opacity: 0 }, finale, "top 45%", "top 32%");
+    }
   }
-  handoff(finale, kit, "curve", mobile);
+  if (mobile) handoff(finale, kit, "curve", true);
+  else pinnedHandoff(finale, kit, "morph", { content: one(".fe-spath-kit") });
   if (mobile) handoff(kit, modesBox, "stack", true);
   else pinnedHandoff(kit, modesBox, "tilt");
 

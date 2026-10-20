@@ -24,6 +24,7 @@ export function BetweenSessionsSection() {
       aria-labelledby="fe-between-title"
     >
       <SectionEdit id="home-how-between" />
+      <span className="fe-spath-finale-edge" aria-hidden />
       <div className="fe-spath-finale-zoom">
         <div className="fe-container fe-spath-finale-inner">
           <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
