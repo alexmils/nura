@@ -122,9 +122,10 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       morphY: 48,
       // finale sits inside the pale shell; blend the visible section colour.
       tint: finale,
+      fade: false,
     });
   if (mobile) handoff(kit, modesBox, "stack", true);
-  else pinnedHandoff(kit, modesBox, "morph", { content: one(".v2-modes"), morphY: 64 });
+  else pinnedHandoff(kit, modesBox, "morph", { content: one(".v2-modes"), morphY: 64, fade: false });
 
   if (mobile) {
     // Phones: the light stack/curve hand-offs (no virtual pins on a moving toolbar).

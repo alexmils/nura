@@ -114,6 +114,8 @@ export function pinnedHandoff(
     from?: () => HTMLElement[];
     /** morph: starting y offset of the incoming content (default 160). */
     morphY?: number;
+    /** morph: fade the incoming content in (default true). */
+    fade?: boolean;
     /** morph: element whose colour drives the blend when the box is a wrapper. */
     tint?: HTMLElement | null;
   } = {}
@@ -328,7 +330,16 @@ export function pinnedHandoff(
       }
       const content = opts.content ?? next.firstElementChild;
       const contentY = opts.morphY ?? 160;
-      if (content) tl.fromTo(content, { y: contentY, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.1);
+      if (content) {
+        // `fade: false` keeps the incoming copy at full opacity so a section
+        // held mid-arrival never reads as translucent.
+        tl.fromTo(
+          content,
+          { y: contentY, opacity: opts.fade === false ? 1 : 0 },
+          { y: 0, opacity: 1, duration: 0.9 },
+          0.1
+        );
+      }
       break;
     }
     case "settle": {
