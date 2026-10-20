@@ -41,17 +41,20 @@ describe("poster word section (Heal)", () => {
     assert.match(c, /aria-label=\{letters\.join\(""\)\}/);
   });
 
-  it("is the poster layout: white top, photo below the edge, word straddling it", () => {
+  it("is the poster layout: one photo, feathered paper on top, word cut out of it", () => {
     const c = src("app/components/frontend/section-editor/PosterSection.tsx");
     const css = src("app/components/frontend/section-editor/custom-sections.css");
-    // Photo covers the stage but is clipped to below the edge; the top stays white.
-    assert.match(css, /\.fe-poster-photo \{[^}]*clip-path: inset\(var\(--poster-cut\) 0 0 0\)/);
-    assert.match(css, /\.fe-poster-stage \{[^}]*background: #fff;/);
-    // Above the edge the letters are filled with the photo; below it they are white.
-    assert.match(css, /\.fe-poster-layer--photo\.has-photo \.fe-poster-letter \{[^}]*background-clip: text;/);
-    assert.match(css, /\.fe-poster-layer--white \{[^}]*clip-path: inset\(var\(--poster-cut\) 0 0 0\)/);
-    assert.match(c, /fe-poster-layer--photo/);
-    assert.match(c, /backgroundPosition = /);
+    // ONE photo covers the stage; the paper (section colour, white by default) sits over the top.
+    assert.match(css, /\.fe-poster-photo \{\s*position: absolute;\s*inset: 0;/);
+    assert.match(css, /--poster-paper: #ffffff;/);
+    assert.match(css, /\.fe-poster-paper \{[^}]*background: var\(--poster-paper\);/);
+    // Soft feathered edge (mask), not a hard cut; the white copy uses the same feather inverted.
+    assert.match(css, /\.fe-poster\.has-image \.fe-poster-paper \{[^}]*mask-image: linear-gradient\(\s*180deg,\s*#000 calc\(var\(--poster-cut\) - var\(--poster-feather\)\)/);
+    assert.match(css, /\.fe-poster-word--white \{[^}]*mask-image: linear-gradient\(\s*180deg,\s*transparent calc\(var\(--poster-cut\) - var\(--poster-feather\)\)/);
+    // Letters are windows onto the same photo: black letters blended "lighten" on the paper.
+    assert.match(css, /mix-blend-mode: lighten;/);
+    assert.match(c, /POSTER_ON_PAPER = 0\.55/);
+    assert.match(c, /--poster-cut/);
     // Very large but fully visible.
     assert.match(c, /stage\.clientWidth \* \(stage\.clientWidth < 700 \? 0\.86 : 0\.9\)/);
     assert.match(c, /start: \(\) => layoutTop\(root\)/);

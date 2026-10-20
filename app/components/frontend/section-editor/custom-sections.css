@@ -294,17 +294,20 @@
 }
 
 
-/* ---- Poster word ("Heal"): white top, photo bottom, word across the edge ---- */
+/* ---- Poster word ("Heal"): one photo, paper over the top, word straddling the edge ---- */
 .fe-custom.fe-custom--poster {
-  --poster-ink: #1d2a17;
-  --poster-cut: 50%;
   padding: 0;
-  background: #fff;
-  color: var(--poster-ink);
+  background: transparent;
 }
 
 .fe-poster {
+  /* Overridden inline: section colour (Background panel) and its ink; the edge from JS. */
+  --poster-paper: #ffffff;
+  --poster-ink: #1d2a17;
+  --poster-cut: 52%;
+  --poster-feather: 18px;
   position: relative;
+  color: var(--poster-ink);
   /* Static (reduced motion): one screen. Scrolly: a runway the stage is held over. */
   height: max(560px, 100svh);
 }
@@ -318,24 +321,52 @@
   height: max(560px, 100svh);
   overflow: hidden;
   isolation: isolate;
-  background: #fff;
+  background: var(--poster-paper);
   will-change: transform;
 }
 
-/* The photo covers the stage but only shows below the edge. */
+/* ONE photo for the whole stage; everything else is positioned against the same box. */
 .fe-poster-photo {
   position: absolute;
   inset: 0;
   z-index: 0;
-  clip-path: inset(var(--poster-cut) 0 0 0);
-  transform-origin: 50% 75%;
 }
 
 .fe-poster-photo img {
   display: block;
   width: 100%;
   height: 100%;
+  max-width: none;
   object-fit: cover;
+  object-position: center;
+}
+
+/* Paper over the top, feathered into the photo at the edge. */
+.fe-poster-paper {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--poster-paper);
+}
+
+.fe-poster.has-image .fe-poster-paper {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 calc(var(--poster-cut) - var(--poster-feather)),
+    transparent calc(var(--poster-cut) + var(--poster-feather))
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 calc(var(--poster-cut) - var(--poster-feather)),
+    transparent calc(var(--poster-cut) + var(--poster-feather))
+  );
+  /* Black letters on light paper, blended "lighten": paper stays paper, letters show the photo. */
+  mix-blend-mode: lighten;
+}
+
+/* Dark paper: white letters, blended "darken", same effect. */
+.fe-poster.has-image.is-dark-paper .fe-poster-paper {
+  mix-blend-mode: darken;
 }
 
 .fe-poster-top,
@@ -350,7 +381,7 @@
   top: clamp(104px, 14vh, 132px);
   left: clamp(16px, 2.4vw, 36px);
   right: clamp(16px, 2.4vw, 36px);
-  z-index: 3;
+  z-index: 4;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.9rem;
@@ -369,9 +400,10 @@
 
 .fe-poster-line {
   position: absolute;
-  top: clamp(150px, 22vh, 210px);
-  right: clamp(16px, 14vw, 240px);
-  z-index: 3;
+  /* Level with the kicker, clear of the tall letters. */
+  top: clamp(104px, 14vh, 132px);
+  right: clamp(16px, 8vw, 160px);
+  z-index: 4;
   max-width: 15ch;
   margin: 0;
   font-size: clamp(0.82rem, 1.05vw, 1rem);
@@ -379,12 +411,13 @@
   color: var(--poster-ink);
 }
 
+/* Every copy of the word is stage-sized, so all of them share one box. */
 .frontend-home .fe-custom--poster .fe-poster-word,
 .fe-custom--poster .fe-poster-word {
   position: absolute;
   inset: 0;
   z-index: 2;
-  display: grid;
+  display: block;
   margin: 0;
   pointer-events: none;
   font-family: var(--font-fraunces), ui-serif, Georgia, serif;
@@ -396,39 +429,54 @@
   will-change: transform;
 }
 
-/* Three stacked copies of the word, each the size of the stage, centred on the edge. */
 .fe-poster-word-inner {
-  grid-area: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 100%;
-  /* JS fits it to ~90% of the width (and half the height); this is the pre-fit guess. */
-  font-size: min(calc(140vw / var(--poster-len)), 50svh);
+  /* Centred on 40% of the stage: most of the word sits on the paper. */
+  height: 80%;
+  /* JS fits it to ~90% of the width; this is the pre-fit guess. */
+  font-size: min(calc(140vw / var(--poster-len)), 42svh);
 }
 
 .fe-poster-letter {
   display: inline-block;
   padding: 0.04em 0.01em;
-  background-repeat: no-repeat;
   will-change: transform, opacity, filter;
 }
 
-.fe-poster-layer--ink,
-.fe-poster-layer--photo {
+/* The cut-out: ink without a photo, black (light paper) or white (dark paper) as a window. */
+.fe-poster-layer--window {
   color: var(--poster-ink);
 }
 
-.fe-poster-layer--photo.has-photo .fe-poster-letter {
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
+.fe-poster.has-image .fe-poster-layer--window {
+  color: #000;
 }
 
-.fe-poster-layer--white {
+.fe-poster.has-image.is-dark-paper .fe-poster-layer--window {
   color: #fff;
-  clip-path: inset(var(--poster-cut) 0 0 0);
+}
+
+/* White letters only where the photo shows (the paper's feather, inverted). */
+.fe-custom--poster .fe-poster-word--white {
+  z-index: 3;
+  color: #fff;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent calc(var(--poster-cut) - var(--poster-feather)),
+    #000 calc(var(--poster-cut) + var(--poster-feather))
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent calc(var(--poster-cut) - var(--poster-feather)),
+    #000 calc(var(--poster-cut) + var(--poster-feather))
+  );
+}
+
+.fe-custom--poster .fe-poster-word--fill {
+  z-index: 3;
 }
 
 .fe-poster-layer--fill {
@@ -440,7 +488,7 @@
   /* Clear of the floating back-to-top / help buttons. */
   right: clamp(72px, 8vw, 128px);
   bottom: clamp(88px, 13vh, 120px);
-  z-index: 3;
+  z-index: 4;
   margin: 0;
   color: #fff;
   font-size: clamp(0.78rem, 0.95vw, 0.95rem);
@@ -465,6 +513,7 @@
   .fe-poster-line {
     top: clamp(140px, 20vh, 170px);
     right: 16px;
+    left: auto;
   }
 }
 

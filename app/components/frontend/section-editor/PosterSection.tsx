@@ -4,15 +4,18 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { isA11yReduceMotionPreferred } from "@/lib/a11y-preferences";
-import { sectionText, type SectionConfig } from "@/lib/marketing-sections";
+import { sectionBackground, sectionText, type SectionConfig } from "@/lib/marketing-sections";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
 /**
- * "Heal" poster, after the "Light" poster: a white top half, the photo across
- * the bottom half (full width), and one giant heavy serif word straddling the
- * edge. Above the edge the letters are filled with the photo (background-clip:
- * text, aligned with the photo below); below it they are white over the photo.
+ * "Heal" poster, after the "Light" poster. ONE photo covers the whole stage.
+ * Over it a paper layer (the section colour, white by default) covers the top
+ * and fades into the photo with a feathered mask. The word is cut out of that
+ * paper (mix-blend lighten with black letters), so above the edge the letters
+ * are windows onto the very same photo: pixel-aligned by construction. A white
+ * copy of the word shows only where the photo is (the same feather, inverted).
+ * The edge crosses the letters about halfway down.
  * Scroll-scrubbed over a runway (the stage is held in view by counter-
  * translation, no pin spacer):
  *   1. letters rise, de-blur and fade in one by one (reverses on scroll up);
@@ -24,6 +27,27 @@ if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
  */
 
 export const POSTER_WORD_MAX = 12;
+
+/** Where the photo's top edge cuts the word: this share of the letters sits on the paper. */
+export const POSTER_ON_PAPER = 0.55;
+/** Feather of the paper/photo edge, as a share of the letter height. */
+export const POSTER_FEATHER = 0.035;
+
+/** Dark or light ink for text on the section colour (white by default). */
+export function paperIsLight(paper: string): boolean {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(paper);
+  if (!m) return true;
+  const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16) / 255);
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b! > 0.55;
+}
+
+export function posterInk(paper: string): string {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(paper);
+  if (!m) return "#1d2a17";
+  const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16) / 255);
+  const lum = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  return lum > 0.55 ? "#1d2a17" : "#f4f7ef";
+}
 
 export function posterLetters(word: string): string[] {
   return Array.from(word.trim()).slice(0, POSTER_WORD_MAX);
@@ -78,44 +102,34 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
   const line = sectionText(copy, "line").trim();
   const note = sectionText(copy, "note").trim();
   const signature = `${letters.join("")}|${image}`;
+  // Section colour comes from the Background panel (Color); white by default.
+  const bg = sectionBackground(copy);
+  const paper = bg?.kind === "color" ? bg.color : "#ffffff";
 
-  // Fit the word (as large as it can be, fully visible) and paint the photo
-  // through the letters so it lines up with the photo below the edge.
+  // Fit the word (as large as it can be, fully visible) and put the
+  // paper/photo edge across it.
   useEffect(() => {
     const root = rootRef.current;
     const stage = root?.querySelector<HTMLElement>(".fe-poster-stage");
-    const word = root?.querySelector<HTMLElement>(".fe-poster-word");
-    if (!root || !stage || !word) return;
-    let natural: { w: number; h: number } | null = null;
+    if (!root || !stage) return;
     let frame = 0;
     const fit = () => {
-      const rows = [...word.querySelectorAll<HTMLElement>(".fe-poster-word-inner")];
+      const rows = [...stage.querySelectorAll<HTMLElement>(".fe-poster-word-inner")];
       if (!rows.length) return;
       rows.forEach((row) => (row.style.fontSize = "100px"));
       const glyphs = rows[0]!.querySelectorAll<HTMLElement>(".fe-poster-letter");
       const firstG = glyphs[0];
       const lastG = glyphs[glyphs.length - 1];
       const measured = firstG && lastG ? lastG.offsetLeft + lastG.offsetWidth - firstG.offsetLeft || 1 : 1;
-      const size = Math.max(48, Math.min((100 * stage.clientWidth * (stage.clientWidth < 700 ? 0.86 : 0.9)) / measured, (stage.clientHeight * 0.5) / 0.8));
+      const size = Math.max(48, Math.min((100 * stage.clientWidth * (stage.clientWidth < 700 ? 0.86 : 0.9)) / measured, (stage.clientHeight * 0.42) / 0.8));
       rows.forEach((row) => (row.style.fontSize = `${size}px`));
-      if (natural && image) {
-        const sw = stage.clientWidth;
-        const sh = stage.clientHeight;
-        const scale = Math.max(sw / natural.w, sh / natural.h);
-        const w = natural.w * scale;
-        const h = natural.h * scale;
-        word.querySelectorAll<HTMLElement>(".fe-poster-layer--photo .fe-poster-letter").forEach((el) => {
-          let x = 0;
-          let y = 0;
-          for (let node: HTMLElement | null = el; node && node !== stage; node = node.offsetParent as HTMLElement | null) {
-            x += node.offsetLeft;
-            y += node.offsetTop;
-          }
-          el.style.backgroundImage = `url("${image.replace(/"/g, "%22")}")`;
-          el.style.backgroundSize = `${w}px ${h}px`;
-          el.style.backgroundPosition = `${(sw - w) / 2 - x}px ${(sh - h) / 2 - y}px`;
-        });
-        word.querySelector(".fe-poster-layer--photo")?.classList.add("has-photo");
+      if (firstG) {
+        // Glyph box without its padding; offsets are relative to the stage-sized word box.
+        const pad = size * 0.04;
+        const top = firstG.offsetTop + pad;
+        const glyphH = firstG.offsetHeight - pad * 2;
+        root.style.setProperty("--poster-cut", `${Math.round(top + glyphH * POSTER_ON_PAPER)}px`);
+        root.style.setProperty("--poster-feather", `${Math.round(glyphH * POSTER_FEATHER)}px`);
       }
       ScrollTrigger.refresh();
     };
@@ -123,14 +137,6 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(fit);
     };
-    if (image) {
-      const img = new Image();
-      img.onload = () => {
-        natural = { w: img.naturalWidth || 1, h: img.naturalHeight || 1 };
-        schedule();
-      };
-      img.src = image;
-    }
     schedule();
     void document.fonts?.ready.then(schedule);
     const observer = new ResizeObserver(schedule);
@@ -139,7 +145,7 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [signature, image]);
+  }, [signature]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -147,7 +153,9 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
     gsap.registerPlugin(ScrollTrigger);
     const section = (root.closest("section") as HTMLElement | null) ?? root;
     const stage = root.querySelector<HTMLElement>(".fe-poster-stage")!;
-    const wordEl = root.querySelector<HTMLElement>(".fe-poster-word")!;
+    // Every copy of the word (window, white, fill) moves as one.
+    const words = [...root.querySelectorAll<HTMLElement>(".fe-poster-word")];
+    const wordEl = words[0]!;
     const layers = [...root.querySelectorAll<HTMLElement>(".fe-poster-word-inner:not(.fe-poster-layer--fill)")].map((row) => [
       ...row.querySelectorAll<HTMLElement>(".fe-poster-letter"),
     ]);
@@ -192,17 +200,17 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
         return diveScale(g.width * 0.16, window.innerWidth, window.innerHeight);
       };
       const fill = nextColour(section);
-      tl.set(wordEl, { transformOrigin: origin }, dive);
+      tl.set(words, { transformOrigin: origin }, dive);
       if (asides.length) tl.to(asides, { opacity: 0, duration: 0.4, ease: "none" }, dive);
       if (fillRow) {
         gsap.set(fillRow, { color: fill, opacity: 0 });
         tl.to(fillRow, { opacity: 1, duration: 0.7, ease: "none" }, dive);
       }
-      tl.fromTo(wordEl, { scale: 1 }, { scale, duration: 2.2, ease: "power3.in", immediateRender: false }, dive + 0.15);
+      tl.fromTo(words, { scale: 1 }, { scale, duration: 2.2, ease: "power3.in", immediateRender: false }, dive + 0.15);
       if (photo) tl.fromTo(photo, { filter: "brightness(1)" }, { filter: "brightness(0.8)", duration: 2.2, ease: "power1.in" }, dive + 0.15);
       // Fully covered: hand the colour to the stage so the release is seamless.
       tl.set(stage, { backgroundColor: fill }, dive + 2.3);
-      tl.set([wordEl, photo].filter(Boolean), { autoAlpha: 0 }, dive + 2.35);
+      tl.set([...words, photo, root.querySelector(".fe-poster-paper")].filter(Boolean), { autoAlpha: 0 }, dive + 2.35);
       tl.to({}, { duration: 0.3 });
     }, root);
     return () => {
@@ -212,8 +220,8 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 
-  const glyphRow = (cls: string, hidden: boolean) => (
-    <span className={`fe-poster-word-inner ${cls}`} aria-hidden={hidden || undefined}>
+  const glyphRow = (cls: string) => (
+    <span className={`fe-poster-word-inner ${cls}`} aria-hidden>
       {letters.map((letter, index) => (
         <span key={index} className="fe-poster-letter">
           {letter === " " ? "\u00a0" : letter}
@@ -221,9 +229,18 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       ))}
     </span>
   );
-  const style = { "--poster-len": Math.max(letters.length, 3) } as CSSProperties;
+  const style = {
+    "--poster-len": Math.max(letters.length, 3),
+    "--poster-paper": paper,
+    "--poster-ink": posterInk(paper),
+  } as CSSProperties;
+  const light = paperIsLight(paper);
   return (
-    <div ref={rootRef} className="fe-poster" style={style}>
+    <div
+      ref={rootRef}
+      className={`fe-poster${image ? " has-image" : ""}${light ? "" : " is-dark-paper"}`}
+      style={style}
+    >
       <div className="fe-poster-stage">
         {image ? (
           <div className="fe-poster-photo">
@@ -231,6 +248,16 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
             <img src={image} alt={alt} loading="lazy" decoding="async" />
           </div>
         ) : null}
+        {/* The paper over the top, feathered into the photo; the word is cut out of it. */}
+        <div className="fe-poster-paper">
+          {letters.length ? (
+            <h2 className="fe-poster-word fe-poster-word--window" aria-label={letters.join("")}>
+              {glyphRow("fe-poster-layer--window")}
+            </h2>
+          ) : null}
+        </div>
+        {letters.length && image ? <div className="fe-poster-word fe-poster-word--white" aria-hidden>{glyphRow("fe-poster-layer--white")}</div> : null}
+        {letters.length ? <div className="fe-poster-word fe-poster-word--fill" aria-hidden>{glyphRow("fe-poster-layer--fill")}</div> : null}
         {kicker.length ? (
           <p className="fe-poster-top fe-poster-aside">
             {kicker.map((part, index) => (
@@ -239,14 +266,6 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
           </p>
         ) : null}
         {line ? <p className="fe-poster-line fe-poster-aside">{line}</p> : null}
-        {letters.length ? (
-          <h2 className="fe-poster-word" aria-label={letters.join("")}>
-            {/* On white: the photo shows through the letters. Over the photo: white letters. */}
-            {glyphRow(image ? "fe-poster-layer--photo" : "fe-poster-layer--ink", true)}
-            {image ? glyphRow("fe-poster-layer--white", true) : null}
-            {glyphRow("fe-poster-layer--fill", true)}
-          </h2>
-        ) : null}
         {note ? <p className="fe-poster-note fe-poster-aside">{note}</p> : null}
       </div>
     </div>
