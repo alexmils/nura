@@ -312,8 +312,10 @@
   height: max(560px, 100svh);
 }
 
+/* Runway: reveal + dive, plus one screen the next section overlaps (JS sets the
+   negative margin), so the page is no longer than before. */
 .fe-poster.is-scrolly {
-  height: max(1200px, 220svh);
+  height: max(1760px, 320svh);
 }
 
 .fe-poster-stage {
@@ -498,7 +500,7 @@
 
 @media (max-width: 640px) {
   .fe-poster.is-scrolly {
-    height: max(900px, 185svh);
+    height: max(1460px, 285svh);
   }
 
   .fe-poster-top {

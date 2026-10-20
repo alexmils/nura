@@ -166,6 +166,17 @@ export function PosterStage({ copy, id }: { copy: SectionConfig; id?: string }) 
     const photo = root.querySelector<HTMLElement>(".fe-poster-photo");
     const asides = root.querySelectorAll<HTMLElement>(".fe-poster-aside");
     root.classList.add("is-scrolly");
+    // Overlap the next block by one stage height so it slides up over the
+    // stage once the dive has filled it with that block's colour.
+    let host: HTMLElement = section;
+    while (!host.nextElementSibling && host.parentElement && host.parentElement !== document.body) host = host.parentElement;
+    const nextBlock = host.nextElementSibling as HTMLElement | null;
+    const restore = { margin: host.style.marginBottom, position: nextBlock?.style.position ?? "", z: nextBlock?.style.zIndex ?? "" };
+    if (nextBlock) {
+      host.style.marginBottom = "calc(-1 * max(560px, 100svh))";
+      if (getComputedStyle(nextBlock).position === "static") nextBlock.style.position = "relative";
+      nextBlock.style.zIndex = "2";
+    }
     const ctx = gsap.context(() => {
       const vh = () => window.innerHeight;
       const travel = () => Math.max(0, root.offsetHeight - vh());
@@ -179,7 +190,12 @@ export function PosterStage({ copy, id }: { copy: SectionConfig; id?: string }) 
       // Hold the stage in view for the runway (virtual pin).
       gsap.fromTo(stage, { y: 0 }, { y: () => travel(), ease: "none", scrollTrigger: range });
 
-      const tl = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { ...range, scrub: 0.5 } });
+      // The story ends one stage-height early: for the last screen the next
+      // section rises over the held, fully coloured stage (no blank screen).
+      const tl = gsap.timeline({
+        defaults: { ease: "power2.out" },
+        scrollTrigger: { ...range, end: () => layoutTop(root) + Math.max(vh() * 0.5, travel() - stage.offsetHeight), scrub: 0.5 },
+      });
       const step = 0.32;
       for (let i = 0; i < count; i += 1) {
         const group = layers.map((row) => row[i]).filter(Boolean);
@@ -217,6 +233,11 @@ export function PosterStage({ copy, id }: { copy: SectionConfig; id?: string }) 
     return () => {
       ctx.revert();
       root.classList.remove("is-scrolly");
+      host.style.marginBottom = restore.margin;
+      if (nextBlock) {
+        nextBlock.style.position = restore.position;
+        nextBlock.style.zIndex = restore.z;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
