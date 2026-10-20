@@ -62,7 +62,7 @@ describe("poster word section (Heal)", () => {
     assert.match(c, /diveScale\(/);
   });
   it("renders through CustomSection and scales down on phones", () => {
-    assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} \/>/);
+    assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} id=\{id\} \/>/);
     const css = src("app/components/frontend/section-editor/custom-sections.css");
     assert.match(css, /\.fe-custom\.fe-custom--poster/);
     assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.fe-poster\.is-scrolly \{/);

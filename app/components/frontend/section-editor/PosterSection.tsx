@@ -4,6 +4,7 @@ import { useEffect, useRef, type CSSProperties } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { isA11yReduceMotionPreferred } from "@/lib/a11y-preferences";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
 import { sectionBackground, sectionText, type SectionConfig } from "@/lib/marketing-sections";
 
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
@@ -92,7 +93,7 @@ function nextColour(section: HTMLElement): string {
   return getComputedStyle(document.body).backgroundColor || "#ffffff";
 }
 
-export function PosterStage({ copy }: { copy: SectionConfig }) {
+export function PosterStage({ copy, id }: { copy: SectionConfig; id?: string }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const word = sectionText(copy, "word");
   const letters = posterLetters(word);
@@ -245,7 +246,14 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
         {image ? (
           <div className="fe-poster-photo">
             {/* eslint-disable-next-line @next/next/no-img-element -- admin images can be any Cloudinary or site URL */}
-            <img src={image} alt={alt} loading="lazy" decoding="async" />
+            <img
+              src={image}
+              alt={alt}
+              loading="lazy"
+              decoding="async"
+              data-frame-key={id ? frameKey(id, "image") : undefined}
+              style={storedFrameStyle(sectionText(copy, "imagePos"))}
+            />
           </div>
         ) : null}
         {/* The paper over the top, feathered into the photo; the word is cut out of it. */}

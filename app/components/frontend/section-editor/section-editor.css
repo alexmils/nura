@@ -876,3 +876,36 @@ html[data-editor-open] .frontend-back-to-top {
   position: relative;
   overflow: hidden;
 }
+
+/* Per-image position/zoom (Edit / Done beside each image). */
+.fe-editor-frame {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.fe-editor-frame small {
+  flex-basis: 100%;
+}
+
+.fe-editor-frame-btn {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid var(--border, rgb(0 0 0 / 0.15));
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fe-editor-frame-btn.is-on {
+  border-color: #3f6b2a;
+  background: #3f6b2a;
+  color: #fff;
+}
+
+html[data-frame-drag] [data-frame-key] {
+  transition: none !important;
+}

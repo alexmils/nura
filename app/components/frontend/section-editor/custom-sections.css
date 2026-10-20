@@ -524,3 +524,10 @@
     will-change: auto;
   }
 }
+
+/* Zoomed photos (per-image position/zoom) stay inside their frames. */
+.fe-custom-marquee-tile,
+.fe-custom-media,
+.fe-custom-card-media {
+  overflow: hidden;
+}

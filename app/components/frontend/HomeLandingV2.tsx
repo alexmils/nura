@@ -1,4 +1,5 @@
 "use client";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -85,7 +86,7 @@ function needsUnoptimized(src: string): boolean {
 }
 
 /** Admin-chosen background in place of a band's built-in photo. */
-function BandBackground({ bg, className }: { bg: SectionBackground; className: string }) {
+function BandBackground({ bg, className, frame }: { bg: SectionBackground; className: string; frame?: string }) {
   const fill = { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } as const;
   return (
     <>
@@ -93,7 +94,7 @@ function BandBackground({ bg, className }: { bg: SectionBackground; className: s
         <video className={className} src={bg.video} poster={bg.poster || undefined} autoPlay muted loop playsInline style={fill} />
       ) : bg.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className={className} src={bg.image} alt="" style={fill} />
+        <img className={className} src={bg.image} alt="" data-frame-key={frame} style={{ ...fill, ...storedFrameStyle(bg.imagePos) }} />
       ) : (
         <span className={className} style={{ ...fill, background: bg.color }} />
       )}
@@ -323,7 +324,7 @@ export function HomeLandingV2({
         {heroGrad && !heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad v2-hero-grad--bg" /> : null}
         <div className="v2-hero-photo" aria-hidden hidden={Boolean(heroGrad && !heroGradOver)}>
           {heroBg ? (
-            <BandBackground bg={heroBg} className="v2-hero-photo-img" />
+            <BandBackground bg={heroBg} className="v2-hero-photo-img" frame={frameKey("home-hero", "bgImage")} />
           ) : (
             <Image
               src="/marketing/landing/green-landscape.jpg"
@@ -801,7 +802,7 @@ export function HomeLandingV2({
       <EditablePart id="home-close" backdrop={false}>
       <section className="v2-close" id="start" aria-labelledby="v2-close-title">
         {closeBg ? (
-          <BandBackground bg={closeBg} className="v2-close-img" />
+          <BandBackground bg={closeBg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
         ) : (
           <Image
             src="/marketing/landing/green-meadow.jpg"

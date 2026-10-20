@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
 import {
+  HIDDEN_ITEM_KEY,
   customSectionType,
   sectionList,
   sectionText,
   type SectionConfig,
+  type SectionItem,
   type CustomSectionType,
 } from "@/lib/marketing-sections";
 import { Marquee } from "@/app/components/motion/Marquee";
@@ -55,18 +58,32 @@ function Head({ copy }: { copy: SectionConfig }) {
 /** Enough tiles that one copy of the strip is wider than a wide screen. */
 const MARQUEE_MIN_TILES = 12;
 
-function ImageMarquee({ copy }: { copy: SectionConfig }) {
-  const images = sectionList(copy, "images").filter((item) => (item.image ?? "").trim());
+/** Visible list items with their index in the saved list (the frame key needs the saved index). */
+function itemsWithIndex(copy: SectionConfig, key: string): { item: SectionItem; at: number }[] {
+  const raw = copy[key];
+  if (!Array.isArray(raw)) return sectionList(copy, key).map((item, at) => ({ item, at }));
+  return raw.map((item, at) => ({ item, at })).filter(({ item }) => item[HIDDEN_ITEM_KEY] !== "1");
+}
+
+function ImageMarquee({ copy, id }: { copy: SectionConfig; id: string }) {
+  const images = itemsWithIndex(copy, "images").filter(({ item }) => (item.image ?? "").trim());
   if (!images.length) return null;
   const reps = Math.ceil(MARQUEE_MIN_TILES / images.length);
   const tiles = Array.from({ length: reps }, () => images).flat();
   return (
     <div className="fe-custom-marquee">
       <Marquee duration={Math.max(30, tiles.length * 4)} pauseOnHover={false}>
-        {tiles.map((item, index) => (
+        {tiles.map(({ item, at }, index) => (
           <div key={index} className={`fe-custom-marquee-tile${index % 2 ? " is-short" : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- admin images can be any Cloudinary or site URL */}
-            <img src={item.image} alt={item.alt ?? ""} loading="lazy" decoding="async" />
+            <img
+              src={item.image}
+              alt={item.alt ?? ""}
+              loading="lazy"
+              decoding="async"
+              data-frame-key={frameKey(id, `images.${at}.image`)}
+              style={storedFrameStyle(item.imagePos)}
+            />
           </div>
         ))}
       </Marquee>
@@ -84,7 +101,7 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
     return (
       <section className="fe-custom fe-custom--poster fe-has-edit" data-section={id}>
         <SectionEdit id={id} />
-        <PosterStage copy={copy} />
+        <PosterStage copy={copy} id={id} />
       </section>
     );
   }
@@ -117,6 +134,8 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
                 video={sectionText(copy, "mediaVideo")}
                 poster={sectionText(copy, "mediaPoster")}
                 alt={sectionText(copy, "mediaAlt")}
+                frameKey={frameKey(id, "mediaImage")}
+                framePos={sectionText(copy, "mediaImagePos")}
               />
             </div>
             <div className="fe-custom-split-text">
@@ -187,7 +206,7 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
           <>
             <Head copy={copy} />
             <div className="fe-custom-cards">
-              {sectionList(copy, "items").map((item, index) => {
+              {itemsWithIndex(copy, "items").map(({ item, at }, index) => {
                 const body = (
                   <>
                     {item.mediaImage || item.mediaVideo ? (
@@ -199,6 +218,8 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
                           video={item.mediaVideo ?? ""}
                           poster={item.mediaPoster ?? ""}
                           alt={item.mediaAlt ?? ""}
+                          frameKey={frameKey(id, `items.${at}.mediaImage`)}
+                          framePos={item.mediaImagePos ?? ""}
                         />
                       </div>
                     ) : null}
@@ -224,7 +245,7 @@ export function CustomSection({ id, type: forced }: { id: string; type?: CustomS
           </>
         ) : null}
       </div>
-      {type === "marquee" ? <ImageMarquee copy={copy} /> : null}
+      {type === "marquee" ? <ImageMarquee copy={copy} id={id} /> : null}
     </section>
   );
 }

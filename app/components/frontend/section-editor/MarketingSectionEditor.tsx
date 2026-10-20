@@ -1,6 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { FrameDragPad } from "@/app/components/admin/FrameDragPad";
+import { FrameEdit } from "@/app/components/admin/FrameEdit";
+import { flushActiveFrameDrag, parseFrameKey, patchFramePath, readFramePath } from "@/app/components/admin/frame-drag";
+import { frameKey } from "@/lib/image-position";
 import { useRouter } from "next/navigation";
 import { RotateCcw, Undo2, X } from "lucide-react";
 import {
@@ -22,6 +26,19 @@ import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
 import { commitSectionDraft, setSectionDraft, useEditorDraft } from "./section-draft";
 
+/**
+ * Which section (and list item) an image belongs to, so its Edit button and
+ * the photo on the page share a frame key: "<section>::<path>", where path is
+ * "bgImage", "image", "mediaImage" or "<list>.<index>.<imageKey>".
+ */
+type FrameScope = {
+  section: string;
+  prefix: string;
+  read: (path: string) => string;
+  write: (path: string, position: unknown) => void;
+};
+const FrameCtx = createContext<FrameScope | null>(null);
+
 export function MarketingSectionEditor({
   id,
   onClose,
@@ -37,6 +54,12 @@ export function MarketingSectionEditor({
   const [history, setHistory] = useState<SectionConfig[]>([]);
   const lastEdit = useRef<{ key: string; at: number } | null>(null);
   useEditorDraft(id, config);
+  const frameScope: FrameScope = {
+    section: id,
+    prefix: "",
+    read: (path) => readFramePath(config, path),
+    write: (path, position) => change(`frame:${path}`, (current) => patchFramePath(current, path, position)),
+  };
 
   /** Applies an edit and records an undo step (typing in one field within 1s is one step). */
   function change(key: string, apply: (current: SectionConfig) => SectionConfig) {
@@ -119,13 +142,19 @@ export function MarketingSectionEditor({
 
   async function save() {
     if (!config) return;
+    // A photo still in Edit mode keeps where it was dragged to.
+    let toSave = config;
+    flushActiveFrameDrag((key, position) => {
+      const parsed = parseFrameKey(key);
+      if (parsed?.scope === id) toSave = patchFramePath(toSave, parsed.id, position);
+    });
     setSaving(true);
     setError(null);
     try {
       const res = await fetch(`/api/admin/marketing-sections/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
+        body: JSON.stringify(toSave),
       });
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
       if (!res.ok) throw new Error(body?.error || "Could not save.");
@@ -148,6 +177,8 @@ export function MarketingSectionEditor({
 
   return (
     <EditorLayer className="fe-editor-layer" role="dialog" aria-modal="true" aria-label={`Edit ${title}`}>
+      <FrameCtx.Provider value={frameScope}>
+      <FrameDragPad />
       <div className="fe-editor-drawer" data-lenis-prevent>
         <header className="fe-editor-head">
           <div>
@@ -254,6 +285,7 @@ export function MarketingSectionEditor({
           </button>
         </footer>
       </div>
+      </FrameCtx.Provider>
     </EditorLayer>
   );
 }
@@ -269,7 +301,7 @@ function ScalarControl({
 }) {
   if (field.kind === "image") {
     return (
-      <ImageSlot label={field.label} hint={field.hint} value={value} onChange={onChange} />
+      <ImageSlot label={field.label} hint={field.hint} value={value} onChange={onChange} frameField={field.key} />
     );
   }
   return (
@@ -290,16 +322,38 @@ function ImageSlot({
   hint,
   value,
   onChange,
+  frameField,
 }: {
   label: string;
   hint?: string;
   value: string;
   onChange: (value: string) => void;
+  /** The image's key in the section data: adds Edit (drag to move, scroll to zoom) / Done. */
+  frameField?: string;
 }) {
+  const scope = useContext(FrameCtx);
+  const path = scope && frameField ? `${scope.prefix}${frameField}` : "";
+  const stored = scope && path ? scope.read(path) : "";
   return (
     <div className="fe-editor-field">
       <span>{label}</span>
       <ReplaceableThumb src={value} onReplace={onChange} />
+      {scope && path && value ? (
+        <div className="fe-editor-frame">
+          <FrameEdit
+            frameKey={frameKey(scope.section, path)}
+            url={value}
+            value={stored || undefined}
+            onDone={(position) => scope.write(path, position)}
+          />
+          {stored ? (
+            <button type="button" className="fe-editor-frame-btn" onClick={() => scope.write(path, null)}>
+              Reset position
+            </button>
+          ) : null}
+          <small>Edit, then drag the photo on the page to move it and scroll to zoom. Done keeps it.</small>
+        </div>
+      ) : null}
       {hint ? <small>{hint}</small> : null}
     </div>
   );
@@ -339,6 +393,7 @@ function MediaControls({
           hint={field.hint}
           value={read(names.image)}
           onChange={(url) => onChange({ [names.image]: url })}
+          frameField={names.image}
         />
       ) : (
         <>
@@ -439,6 +494,7 @@ function ListEditor({
     onChange([...items, blank], `add-${Date.now()}`);
   }
 
+  const frameParent = useContext(FrameCtx);
   return (
     <div className="fe-editor-list">
       {items.map((item, index) => {
@@ -486,15 +542,17 @@ function ListEditor({
                 )}
               </div>
             </div>
-            {field.fields.map((child) => (
-              <ItemFieldControl
-                key={child.key}
-                field={child}
-                item={item}
-                onPatch={(key, value) => patch(index, key, value)}
-                onPatchItem={(next) => patchItem(index, next)}
-              />
-            ))}
+            <FrameCtx.Provider value={frameParent ? { ...frameParent, prefix: `${field.key}.${index}.` } : null}>
+              {field.fields.map((child) => (
+                <ItemFieldControl
+                  key={child.key}
+                  field={child}
+                  item={item}
+                  onPatch={(key, value) => patch(index, key, value)}
+                  onPatchItem={(next) => patchItem(index, next)}
+                />
+              ))}
+            </FrameCtx.Provider>
           </article>
         );
       })}
@@ -549,7 +607,7 @@ function BackgroundControls({
         ))}
       </div>
       {kind === "image" ? (
-        <ImageSlot label="Image" value={read("bgImage")} onChange={(url) => onChange({ bgImage: url }, "image")} hint="Covers the whole section." />
+        <ImageSlot label="Image" value={read("bgImage")} onChange={(url) => onChange({ bgImage: url }, "image")} hint="Covers the whole section." frameField="bgImage" />
       ) : null}
       {kind === "video" ? (
         <>

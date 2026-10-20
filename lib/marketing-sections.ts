@@ -1,4 +1,5 @@
 import { TRIAL_DAYS } from "@/lib/billing-constants";
+import { formatImagePosition, framePosKey } from "@/lib/image-position";
 import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
   BRAND_SPOKEN,
@@ -2086,12 +2087,22 @@ export function normalizeMediaSlot(
   return out;
 }
 
+/** Per-image position/zoom ("x y zoom", see lib/image-position); untouched images store nothing. */
+function keepFramePos(out: SectionItem, source: Record<string, unknown> | SectionItem, imageKey: string) {
+  const key = framePosKey(imageKey);
+  const raw = (source as Record<string, unknown>)[key];
+  const stored = formatImagePosition(typeof raw === "string" ? raw : "");
+  if (stored) out[key] = stored;
+}
+
 function applyItemField(item: SectionItem, child: ItemField, incoming: SectionItem, def: SectionItem) {
   if (child.kind === "media") {
     Object.assign(item, normalizeMediaSlot(child.key, incoming, def));
+    keepFramePos(item, incoming, mediaNames(child.key).image);
     return;
   }
   item[child.key] = normalizeScalar(child, incoming[child.key], def[child.key] ?? "");
+  if (child.kind === "image") keepFramePos(item, incoming, child.key);
 }
 
 function itemHasContent(child: ItemField, item: SectionItem): boolean {
@@ -2185,12 +2196,14 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
         out,
         normalizeMediaSlot(field.key, source, def.defaults as SectionItem)
       );
+      keepFramePos(out as SectionItem, source, mediaNames(field.key).image);
     } else {
       out[field.key] = normalizeScalar(
         field,
         source[field.key],
         typeof fallback === "string" ? fallback : ""
       );
+      if (field.kind === "image") keepFramePos(out as SectionItem, source, field.key);
     }
   }
   if (!def.noHide) {
@@ -2232,6 +2245,8 @@ export type SectionBackground = {
   /** 0-90, percent. */
   overlay: number;
   tone: "light" | "dark";
+  /** Position/zoom of the image ("x y zoom"), "" = as designed. */
+  imagePos: string;
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -2251,6 +2266,7 @@ export function normalizeBackground(source: Record<string, unknown>): SectionIte
     bgColor: HEX.test(color) ? color.toLowerCase() : "#ffffff",
     bgOverlay: String(Number.isFinite(overlay) ? Math.min(90, Math.max(0, overlay)) : BG_DEFAULT_OVERLAY),
     bgTone: str("bgTone") === "dark" ? "dark" : "light",
+    ...(formatImagePosition(str("bgImagePos")) ? { bgImagePos: formatImagePosition(str("bgImagePos")) } : {}),
   };
 }
 
@@ -2267,6 +2283,7 @@ export function sectionBackground(config: SectionConfig | undefined): SectionBac
     color: bg.bgColor ?? "#ffffff",
     overlay: Number(bg.bgOverlay ?? BG_DEFAULT_OVERLAY),
     tone: bg.bgTone === "dark" ? "dark" : "light",
+    imagePos: bg.bgImagePos ?? "",
   };
   if (out.kind === "image" && !out.image) return null;
   if (out.kind === "video" && !out.video) return null;

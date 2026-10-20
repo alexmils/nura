@@ -1,4 +1,5 @@
 "use client";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
 
 import type { ReactNode } from "react";
 import {
@@ -100,9 +101,9 @@ export function SectionBackdrop({ id, children }: { id: string; children: ReactN
           <video src={media.video} poster={media.poster || undefined} autoPlay muted loop playsInline preload="metadata" />
         </div>
       ) : media.kind === "image" ? (
-        <div className="fe-bgwrap-media" aria-hidden>
+        <div className="fe-bgwrap-media" aria-hidden style={{ overflow: "hidden" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={media.image} alt="" loading="lazy" decoding="async" />
+          <img src={media.image} alt="" loading="lazy" decoding="async" data-frame-key={frameKey(id, "bgImage")} style={storedFrameStyle(media.imagePos)} />
         </div>
       ) : null}
       {media && media.kind !== "color" && media.overlay > 0 ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { storedFrameStyle } from "@/lib/image-position";
 
 function embedSrc(url: string): string | null {
   const yt = url.match(
@@ -23,7 +24,13 @@ export function SectionMedia({
   poster,
   alt,
   className,
+  frameKey,
+  framePos,
 }: {
+  /** Shared with the editor's Edit button (drag to move, scroll to zoom). */
+  frameKey?: string;
+  /** Stored position/zoom ("x y zoom"); empty = as designed. */
+  framePos?: string;
   kind: string;
   image: string;
   video: string;
@@ -71,6 +78,6 @@ export function SectionMedia({
   return (
     // Uploaded files and https stills are not in the image optimizer allowlist.
     // eslint-disable-next-line @next/next/no-img-element
-    <img className={className} src={still} alt={alt} />
+    <img className={className} src={still} alt={alt} data-frame-key={frameKey} style={storedFrameStyle(framePos)} />
   );
 }
