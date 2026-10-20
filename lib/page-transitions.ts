@@ -67,6 +67,26 @@ export const FAST_FACTOR = 0.55;
 
 export const DEFAULT_PAGE_TRANSITION: PageTransition = "waveSweep";
 
+/**
+ * Automatic rotation for the marketing overlay. These are the quiet, brand-safe
+ * transitions; `sageColumns`, `stackUp`, `doors`, `iris` and `dots` are left out
+ * on purpose so no navigation feels loud.
+ */
+export const AUTO_PAGE_TRANSITIONS = [
+  "fade",
+  "blurDissolve",
+  "waveSweep",
+  "mintCurtain",
+  "logoFlash",
+] as const satisfies readonly Exclude<PageTransition, "none">[];
+
+/** The calm rotation, wrapping in both directions. */
+export function pageTransitionAt(index: number): Exclude<PageTransition, "none"> {
+  const pool = AUTO_PAGE_TRANSITIONS;
+  const i = ((Math.trunc(index) % pool.length) + pool.length) % pool.length;
+  return pool[i]!;
+}
+
 export function isPageTransition(value: unknown): value is PageTransition {
   return typeof value === "string" && (PAGE_TRANSITIONS as readonly string[]).includes(value);
 }

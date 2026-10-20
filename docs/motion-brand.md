@@ -60,11 +60,16 @@ swaps underneath → reveal. CSS keyframes only, no dependency. Built from the
 pistachio palette (mint `#A4EDA5`, pistachio `#C6D67E`, sage `#84B067`,
 olive-ink `#3D4129`, ink `#2A3020`, ground `#EDF9ED`).
 
-One transition is active site-wide (default `waveSweep` — the signature, a sage
-panel with the Nura wave edge). Others in the library:
+No single transition is pinned by default. The overlay rotates through a **calm**
+set so consecutive route changes differ and never feel like the same wipe:
 
-`fade` (through mint) · `blurDissolve` · `waveSweep` · `mintCurtain` ·
-`sageColumns` · `stackUp` · `doors` · `iris` · `dots` · `logoFlash` · `none`.
+`fade` (through mint) → `blurDissolve` → `waveSweep` → `mintCurtain` →
+`logoFlash` → back.
+
+Pass an explicit `kind` to pin one (including `none`). The rest of the library
+stays available for a future per-route/admin choice — `sageColumns` · `stackUp` ·
+`doors` · `iris` · `dots` — but they are deliberately left out of the automatic
+rotation because they read as too loud for every navigation.
 
 Timings in `TRANSITION_TIMING` (cover ~320–560ms, reveal ~460–560ms); the shop /
 app flows may run a notch faster (`FAST_FACTOR`). Reduced motion gets the plain
@@ -94,9 +99,9 @@ Current wiring on `/`:
 - `between → languages` = **Colour morph** (`pinnedHandoff(..., "morph")`): both
   blocks shift into the languages colour and its content rises out. No panel
   sliding over another panel.
-- `video → how` = **Page slide** (`useHomeChoreography`): the video screen exits
-  right while a full-screen sheet and the first How stage's inner copy enter from
-  the left and move right. The How section overlaps **two** video viewports
+- `video → how` = **Page slide** (`useHomeChoreography`): the video image exits
+  left while a full-screen sheet and the first How stage's inner copy enter from
+  the right and move left. The How section overlaps **two** video viewports
   (`margin-top: -200svh`) so the video screen stays sticky for the whole slide;
   only the zero-height sheet and the stage inner translate, never the sticky
   nav/panels. One viewport of overlap would make the video drift up and the
