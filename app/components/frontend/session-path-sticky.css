@@ -1083,11 +1083,9 @@ html[data-a11y-motion="reduced"] .fe-spath-finale-edge {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Full section height: the content is the densest on the page (language
-     chips + three facts) and the morph rises it in; a shorter box clipped the
-     facts at the bottom while the next section approached. */
-  min-height: 110svh;
-  padding: clamp(6rem, 12vw, 10rem) 0;
+  /* Size to the content: a fixed 92–110svh box either clipped the facts or
+     left a long empty tail before Modes. The section reads as one band now. */
+  padding: clamp(5rem, 9vw, 7rem) 0;
   border-top: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
   /* Plain rgb for the colour morph: a computed color(srgb …) value interpolates
      through black in GSAP. Keep the same pale pistachio the accent mix gave. */
