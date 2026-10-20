@@ -64,8 +64,7 @@ export function ReplaceableThumb({
           <span>Add</span>
         )}
         <span className="fe-replace-hover" aria-hidden>
-          <Pencil size={16} />
-          {src ? "Change" : "Upload"}
+          <Pencil size={18} />
         </span>
       </button>
       {menu ? (

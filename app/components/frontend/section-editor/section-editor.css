@@ -375,6 +375,13 @@ html[data-editor-open] .frontend-back-to-top {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--ink) 55%, transparent);
+  transition: opacity 0.15s ease;
+}
+
+/* Hover shows only the pencil in the middle, never the empty "Add" label. */
+.fe-replace-thumb:hover > span:not(.fe-replace-hover),
+.fe-replace-thumb:focus-visible > span:not(.fe-replace-hover) {
+  opacity: 0;
 }
 
 .fe-replace-badge {

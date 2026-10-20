@@ -745,16 +745,28 @@ function BackgroundControls({
         ))}
       </div>
       {kind === "image" ? (
-        <ImageSlot label="Image" value={read("bgImage")} onChange={(url) => onChange({ bgImage: url }, "image")} hint="Covers the whole section." frameField="bgImage" />
+        <ImageSlot
+          compact
+          label="Image"
+          value={read("bgImage")}
+          onChange={(url) => onChange({ bgImage: url }, "image")}
+          hint="Covers the whole section."
+          frameField="bgImage"
+        />
       ) : null}
       {kind === "video" ? (
         <>
-          <div className="fe-editor-field">
+          <div className="fe-editor-field fe-editor-field--thumb">
             <span>Video</span>
             <ReplaceableThumb mediaType="video" src={read("bgVideo")} onReplace={(url) => onChange({ bgVideo: url }, "video")} />
             <small>Plays muted, looped, behind the content.</small>
           </div>
-          <ImageSlot label="Poster (optional)" value={read("bgPoster")} onChange={(url) => onChange({ bgPoster: url }, "poster")} />
+          <ImageSlot
+            compact
+            label="Poster (optional)"
+            value={read("bgPoster")}
+            onChange={(url) => onChange({ bgPoster: url }, "poster")}
+          />
         </>
       ) : null}
       {kind === "color" ? (
