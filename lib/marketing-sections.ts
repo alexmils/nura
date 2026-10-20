@@ -2024,13 +2024,15 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
   },
   poster: {
     label: "Poster word (Heal)",
-    description: "A giant serif word that reveals letter by letter over a nature photo, with a small kicker row and a short line.",
+    description:
+      "A giant serif word over a nature photo. With a video set, scrolling zooms the camera through the letters and into the film.",
     fields: [
       text("word", "Big word", "Up to 12 letters, e.g. Heal"),
       image("image", "Heal image", "The photo behind the Heal word. Change it here; the top of the letters is filled with it."),
       text("alt", "Image alt text", "Describe the image, or leave empty if decorative"),
       text("line", "Short line", "Top right, e.g. Healing is not linear"),
       text("note", "Corner note", "Bottom right over the photo, e.g. - Find your calm -"),
+      media("media", "Video after the word", "Optional. The camera dives through the word and this video opens. Import it from Cloudinary."),
     ],
     defaults: {
       word: "Heal",
@@ -2038,6 +2040,11 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
       alt: "",
       line: "Healing is not linear",
       note: "- Find your calm -",
+      mediaKind: "video",
+      mediaImage: "",
+      mediaVideo: "",
+      mediaPoster: "",
+      mediaAlt: "",
     },
   },
   faq: {

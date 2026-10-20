@@ -311,12 +311,37 @@
   height: max(560px, 100svh);
 }
 
+/* With a video, the poster stays pinned while the camera dives through it. */
+.fe-poster.has-through {
+  height: calc(var(--poster-runway, 170svh) + max(560px, 100svh));
+}
+
+.fe-poster-pin {
+  height: max(560px, 100svh);
+}
+
+.fe-poster.has-through .fe-poster-pin {
+  position: sticky;
+  top: 0;
+}
+
 .fe-poster-stage {
   position: relative;
-  height: max(560px, 100svh);
+  height: 100%;
   overflow: hidden;
   isolation: isolate;
   background: var(--poster-paper);
+  /* The depth the camera flies through. */
+  perspective: 1100px;
+  perspective-origin: 50% 42%;
+}
+
+/* Everything painted on the poster travels together through the dive. */
+.fe-poster-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 50% 41%;
   will-change: transform;
 }
 
@@ -443,12 +468,55 @@
   }
 }
 
+/* The film the camera dives into; hidden until the zoom opens it. */
+.fe-poster-through {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  opacity: 0;
+  visibility: hidden;
+  transform-origin: center;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fe-poster-letter,
   .fe-poster-stage,
-  .fe-custom--poster .fe-poster-word {
+  .fe-poster-scene,
+  .fe-custom--poster .fe-poster-word,
+  .fe-poster-through {
     will-change: auto;
   }
+  /* No pin, no dive: the poster stays the plain static frame. */
+  .fe-poster.has-through {
+    height: max(560px, 100svh);
+  }
+  .fe-poster.has-through .fe-poster-pin {
+    position: relative;
+  }
+  .fe-poster-through {
+    display: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .fe-poster.has-through {
+  height: max(560px, 100svh);
+}
+
+html[data-a11y-motion="reduced"] .fe-poster.has-through .fe-poster-pin {
+  position: relative;
+}
+
+html[data-a11y-motion="reduced"] .fe-poster-through {
+  display: none;
+}
+
+html[data-a11y-motion="reduced"] .fe-poster-scene {
+  will-change: auto;
 }
 
 /* Zoomed photos (per-image position/zoom) stay inside their frames. */

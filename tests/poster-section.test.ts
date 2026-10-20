@@ -6,7 +6,9 @@ import {
   CUSTOM_SECTION_TYPES,
   customSectionType,
   isCustomSectionId,
+  mediaNames,
   newCustomSectionId,
+  normalizeSection,
 } from "../lib/marketing-sections";
 
 const src = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -20,18 +22,37 @@ describe("poster word section (Heal)", () => {
     assert.ok(isCustomSectionId("custom-poster-heal0001"));
   });
 
-  it("exposes word, image, alt, line and note with Heal defaults", () => {
+  it("exposes word, image, alt, line, note and a Cloudinary video", () => {
     const t = CUSTOM_SECTION_TEMPLATES.poster;
     const keys = t.fields.map((f) => f.key);
-    for (const k of ["word", "image", "alt", "line", "note"]) assert.ok(keys.includes(k), k);
+    for (const k of ["word", "image", "alt", "line", "note", "media"]) assert.ok(keys.includes(k), k);
     assert.equal(t.fields.find((f) => f.key === "image")?.kind, "image");
     assert.equal(t.defaults.word, "Heal");
     assert.match(String(t.defaults.image), /^\/marketing\/landing\/.+\.jpg$/);
+    const names = mediaNames("media");
+    assert.equal(t.defaults[names.kind], "video");
+    assert.equal(normalizeSection("custom-poster-heal0001", null)[names.kind], "video");
   });
 
-  it("is static: no scroll timeline, only the fit recalculates on resize", () => {
+  it("pins and dives into the video only when one is set", () => {
     const c = src("app/components/frontend/section-editor/PosterSection.tsx");
-    assert.doesNotMatch(c, /scrub:|gsap\.timeline|is-scrolly|reducedMotion/);
+    const css = src("app/components/frontend/section-editor/custom-sections.css");
+    // Statically no runway; the has-through modifier adds the 170svh dive.
+    assert.match(c, /const hasThrough = Boolean\(through\)/);
+    assert.match(c, /POSTER_DIVE_VH = 170/);
+    assert.match(css, /\.fe-poster\.has-through \.fe-poster-pin \{\s*position: sticky;\s*top: 0;/);
+    assert.match(css, /perspective: 1100px/);
+    // Scroll-scrubbed camera: scale + 3D tilt through the letters, then the film.
+    assert.match(c, /start: "top top"[\s\S]*?end: "bottom bottom"[\s\S]*?scrub: true/);
+    assert.match(c, /scale: 3\.4, rotateX: 7, rotateY: -3/);
+    assert.match(c, /autoAlpha: 1, scale: 1/);
+    // Video plays only in view, reduced motion stays the static poster.
+    assert.match(c, /\.play\(\)/);
+    assert.match(c, /\.pause\(\)/);
+    assert.match(c, /isA11yReduceMotionPreferred/);
+    assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.fe-poster\.has-through \{\s*height: max\(560px, 100svh\);/);
+    assert.match(css, /html\[data-a11y-motion="reduced"\] \.fe-poster\.has-through/);
+    // The word still fits to the stage and is recalculated on resize.
     assert.match(c, /new ResizeObserver\(schedule\)/);
     assert.match(c, /aria-label=\{letters\.join\(""\)\}/);
   });
@@ -47,7 +68,7 @@ describe("poster word section (Heal)", () => {
     // The word is a window onto the same photo (image as the letters' background).
     assert.match(css, /\.fe-custom--poster \.fe-poster-word--photo \{[\s\S]*?background-clip: text;/);
     assert.match(css, /-webkit-text-fill-color: transparent/);
-    // No gradient at the section edge; no scroll runway.
+    // No gradient at the section edge; the old scrolly class is gone.
     assert.doesNotMatch(css, /\.fe-poster-stage::before \{/);
     assert.doesNotMatch(css, /\.fe-poster\.is-scrolly/);
     // Very large but fully visible: fit iteratively at the real optical size
