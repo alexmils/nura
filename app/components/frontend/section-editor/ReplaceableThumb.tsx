@@ -124,10 +124,13 @@ export function ReplaceableThumb({
       {error ? <small>{error}</small> : null}
       {picker ? (
         <CloudinaryPicker
+          used={[]}
+          single
           mediaType={mediaType}
+          current={src}
           onClose={() => setPicker(false)}
-          onPick={(url) => {
-            onReplace(url);
+          onImport={(urls) => {
+            if (urls[0]) onReplace(urls[0]);
             setPicker(false);
           }}
         />

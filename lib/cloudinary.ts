@@ -219,7 +219,7 @@ export async function uploadToCloudinary(opts: {
   resource: "image" | "video";
   type: string;
   folder?: string;
-}): Promise<{ url: string; publicId: string }> {
+}): Promise<{ url: string; publicId: string; assetId?: string }> {
   const creds = await getCloudinaryCredentials();
   if (!creds) {
     throw new Error("Connect Cloudinary under Media, then Settings.");
@@ -243,12 +243,13 @@ export async function uploadToCloudinary(opts: {
   const data = (await res.json().catch(() => null)) as {
     secure_url?: string;
     public_id?: string;
+    asset_id?: string;
     error?: { message?: string };
   } | null;
   if (!res.ok || !data?.secure_url || !data.public_id) {
     throw new Error(res.ok ? "Cloudinary upload failed." : cloudinaryErrorMessage(res.status, data?.error?.message, creds.cloudName));
   }
-  return { url: data.secure_url, publicId: data.public_id };
+  return { url: data.secure_url, publicId: data.public_id, assetId: data.asset_id };
 }
 
 export type CloudinaryAsset = {
