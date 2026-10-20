@@ -1656,6 +1656,13 @@
   background: #f4dd8a;
 }
 
+/* The topics -> stories hand-off already morphs the backdrop into this
+   yellow, so the section starts clean: a pistachio blend band on top of the
+   saturated yellow reads as a grey-green haze. */
+.v2-stories::before {
+  content: none;
+}
+
 .v2-stories-head {
   display: flex;
   align-items: flex-end;
@@ -1763,16 +1770,21 @@
     box-shadow 0.45s ease;
 }
 
+/* Story cards sit on a saturated flat yellow, so the shared glass shadow's
+   80px blur fogs the gaps between the cards. Keep the lift tight and crisp. */
 .v2-story-card.is-prev,
 .v2-story-card.is-next {
   opacity: 0.5;
   transform: scale(0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 10px 24px -18px rgba(10, 30, 20, 0.28);
 }
 
 .v2-story-card.is-active {
   opacity: 1;
   transform: scale(1);
-  box-shadow: 0 34px 80px -36px rgba(31, 53, 39, 0.55);
+  box-shadow: 0 18px 38px -26px rgba(31, 53, 39, 0.42);
   animation: v2-story-focus-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
