@@ -1887,10 +1887,10 @@ export function isSectionOn(config: SectionConfig | undefined): boolean {
 
 /* ---------- Admin-added sections ---------- */
 
-export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "marquee", "poster", "faq", "cards"] as const;
+export const CUSTOM_SECTION_TYPES = ["text", "media", "cta", "marquee", "poster", "video", "faq", "cards"] as const;
 export type CustomSectionType = (typeof CUSTOM_SECTION_TYPES)[number];
 
-const CUSTOM_ID = /^custom-(text|media|cta|marquee|poster|faq|cards)-[a-z0-9]{8}$/;
+const CUSTOM_ID = /^custom-(text|media|cta|marquee|poster|video|faq|cards)-[a-z0-9]{8}$/;
 
 export function isCustomSectionId(id: string): boolean {
   return CUSTOM_ID.test(id);
@@ -2025,14 +2025,13 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
   poster: {
     label: "Poster word (Heal)",
     description:
-      "A giant serif word over a nature photo. With a video set, scrolling zooms the camera through the letters and into the film.",
+      "A giant serif word over a nature photo. Put a Video screen right after it and scrolling zooms through the word into the film.",
     fields: [
       text("word", "Big word", "Up to 12 letters, e.g. Heal"),
       image("image", "Heal image", "The photo behind the Heal word. Change it here; the top of the letters is filled with it."),
       text("alt", "Image alt text", "Describe the image, or leave empty if decorative"),
       text("line", "Short line", "Top right, e.g. Healing is not linear"),
       text("note", "Corner note", "Bottom right over the photo, e.g. - Find your calm -"),
-      media("media", "Video after the word", "Optional. The camera dives through the word and this video opens. Import it from Cloudinary."),
     ],
     defaults: {
       word: "Heal",
@@ -2040,6 +2039,16 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
       alt: "",
       line: "Healing is not linear",
       note: "- Find your calm -",
+    },
+  },
+  video: {
+    label: "Video screen",
+    description:
+      "A full-screen film with its own Edit chip. Directly after the Heal poster, the poster zooms through the word and opens it.",
+    fields: [
+      media("media", "Video", "The film. Import it from Cloudinary."),
+    ],
+    defaults: {
       mediaKind: "video",
       mediaImage: "",
       mediaVideo: "",

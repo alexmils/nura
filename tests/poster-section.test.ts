@@ -6,9 +6,7 @@ import {
   CUSTOM_SECTION_TYPES,
   customSectionType,
   isCustomSectionId,
-  mediaNames,
   newCustomSectionId,
-  normalizeSection,
 } from "../lib/marketing-sections";
 
 const src = (p: string) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -22,33 +20,43 @@ describe("poster word section (Heal)", () => {
     assert.ok(isCustomSectionId("custom-poster-heal0001"));
   });
 
-  it("exposes word, image, alt, line, note and a Cloudinary video", () => {
+  it("exposes word, image, alt, line and note; the video is its own section", () => {
     const t = CUSTOM_SECTION_TEMPLATES.poster;
     const keys = t.fields.map((f) => f.key);
-    for (const k of ["word", "image", "alt", "line", "note", "media"]) assert.ok(keys.includes(k), k);
+    for (const k of ["word", "image", "alt", "line", "note"]) assert.ok(keys.includes(k), k);
     assert.equal(t.fields.find((f) => f.key === "image")?.kind, "image");
     assert.equal(t.defaults.word, "Heal");
     assert.match(String(t.defaults.image), /^\/marketing\/landing\/.+\.jpg$/);
-    const names = mediaNames("media");
-    assert.equal(t.defaults[names.kind], "video");
-    assert.equal(normalizeSection("custom-poster-heal0001", null)[names.kind], "video");
+    assert.ok(!keys.includes("media"), "the film moved to the Video screen section");
+    assert.ok((CUSTOM_SECTION_TYPES as readonly string[]).includes("video"));
   });
 
-  it("pins and dives into the video only when one is set", () => {
+  it("pins and dives into the next video screen", () => {
     const c = src("app/components/frontend/section-editor/PosterSection.tsx");
+    const custom = src("app/components/frontend/section-editor/CustomSection.tsx");
     const css = src("app/components/frontend/section-editor/custom-sections.css");
-    // Statically no runway; the has-through modifier adds the 170svh dive.
-    assert.match(c, /const hasThrough = Boolean\(through\)/);
-    assert.match(c, /POSTER_DIVE_VH = 170/);
+    // The dive is a layout pairing: poster directly before a video screen.
+    assert.match(custom, /const dive = nextType === "video"/);
+    assert.match(custom, /<PosterStage copy=\{copy\} id=\{id\} dive=\{dive\} \/>/);
+    assert.match(c, /const hasThrough = dive;/);
+    assert.match(c, /POSTER_DIVE_VH = 100/);
     assert.match(css, /\.fe-poster\.has-through \.fe-poster-pin \{\s*position: sticky;\s*top: 0;/);
     assert.match(css, /perspective: 1100px/);
-    // Scroll-scrubbed camera: scale + 3D tilt through the letters, then the film.
+    // Scroll-scrubbed camera: a shallow zoom with a hint of tilt.
     assert.match(c, /start: "top top"[\s\S]*?end: "bottom bottom"[\s\S]*?scrub: true/);
-    assert.match(c, /scale: 3\.4, rotateX: 7, rotateY: -3/);
-    assert.match(c, /autoAlpha: 1, scale: 1/);
-    // Video plays only in view, reduced motion stays the static poster.
-    assert.match(c, /\.play\(\)/);
-    assert.match(c, /\.pause\(\)/);
+    assert.match(c, /scale: 1\.55, rotateX: 3, rotateY: -1\.5/);
+    // The word goes first, then the poster dissolves into the screen below.
+    assert.match(c, /autoAlpha: 0, duration: 0\.16 \}, 0\.02/);
+    assert.match(c, /autoAlpha: 0, duration: 0\.45 \}, 0\.1/);
+    assert.match(css, /\.fe-poster\.has-through \.fe-poster-stage \{\s*background: transparent;/);
+    // The poster must stack ABOVE the video pulled up underneath it, including
+    // behind the admin's editable wrappers (where the hero hand-off's
+    // neighbour walk can differ).
+    assert.match(
+      css,
+      /\.fe-custom\.fe-custom--poster\.fe-custom--poster-dive \{\s*position: relative;\s*z-index: 3;\s*background: transparent;\s*pointer-events: none;/
+    );
+    // Reduced motion stays the static poster.
     assert.match(c, /isA11yReduceMotionPreferred/);
     assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.fe-poster\.has-through \{\s*height: max\(560px, 100svh\);/);
     assert.match(css, /html\[data-a11y-motion="reduced"\] \.fe-poster\.has-through/);
@@ -86,7 +94,7 @@ describe("poster word section (Heal)", () => {
     assert.match(c, /POSTER_BASELINE = 0\.79/);
   });
   it("renders through CustomSection and scales down on phones", () => {
-    assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} id=\{id\} \/>/);
+    assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} id=\{id\} dive=\{dive\} \/>/);
     const css = src("app/components/frontend/section-editor/custom-sections.css");
     assert.match(css, /\.fe-custom\.fe-custom--poster/);
     assert.match(css, /@media \(max-width: 640px\)/);

@@ -4,7 +4,13 @@ import dynamic from "next/dynamic";
 import { Fragment, useSyncExternalStore, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { LayoutList } from "lucide-react";
-import { getSectionDef, hasSectionParts, isCustomSectionId } from "@/lib/marketing-sections";
+import {
+  customSectionType,
+  getSectionDef,
+  hasSectionParts,
+  isCustomSectionId,
+  type CustomSectionType,
+} from "@/lib/marketing-sections";
 import { MARKETING_PAGES, slotLabel, type MarketingPageId } from "@/lib/marketing-layout";
 import { CustomSection } from "./CustomSection";
 import { SectionGate } from "./EditablePart";
@@ -56,6 +62,10 @@ export function PageSections({
     () => openPage === page,
     () => false
   );
+  // Custom sections can be choreographed as a pair (poster -> video screen).
+  const shown = layout.sections.filter((entry) => !entry.hidden);
+  const typeOf = (id?: string): CustomSectionType | null =>
+    id && isCustomSectionId(id) ? customSectionType(id) : null;
   return (
     <>
       {layout.sections.map((entry) => {
@@ -63,9 +73,14 @@ export function PageSections({
           return admin ? <HiddenMarker key={entry.id} page={page} id={entry.id} /> : null;
         }
         if (isCustomSectionId(entry.id)) {
+          const at = shown.indexOf(entry);
           return (
             <SectionGate key={entry.id} id={entry.id}>
-              <CustomSection id={entry.id} />
+              <CustomSection
+                id={entry.id}
+                nextType={typeOf(shown[at + 1]?.id)}
+                prevType={typeOf(shown[at - 1]?.id)}
+              />
             </SectionGate>
           );
         }

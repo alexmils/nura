@@ -80,9 +80,12 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     pinnedHandoff(one(".v2-hero"), afterHero, "zoom", { image: one(".v2-hero-photo"), content: one(".v2-hero-inner") });
     // The held hero stays above plain siblings for one viewport; the block after
     // the incoming one (the Heal poster behind the how intro) must stack above
-    // it or its photo/strip bleeds through the join.
+    // it or its photo/strip bleeds through the join. The video screen pulled up
+    // under the poster is the exception: it must stay BELOW the poster.
     const afterNext = afterHero?.nextElementSibling as HTMLElement | null;
-    if (afterNext) gsap.set(afterNext, { position: getComputedStyle(afterNext).position === "static" ? "relative" : undefined, zIndex: 3 });
+    if (afterNext && !afterNext.classList.contains("fe-custom--video-under")) {
+      gsap.set(afterNext, { position: getComputedStyle(afterNext).position === "static" ? "relative" : undefined, zIndex: 3 });
+    }
     pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
     pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories > .v2-container") });
     pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");

@@ -301,6 +301,22 @@
   background: #fff;
 }
 
+/* Diving into the next Video screen: the poster itself must not paint over it.
+   Pointer events pass through to the video's Edit chip; the poster's own chip
+   stays clickable. The explicit z-index keeps the poster ABOVE the video screen
+   pulled up underneath it - the hero hand-off sets this for visitors, but its
+   neighbour walk differs behind the admin's editable wrappers. */
+.fe-custom.fe-custom--poster.fe-custom--poster-dive {
+  position: relative;
+  z-index: 3;
+  background: transparent;
+  pointer-events: none;
+}
+
+.fe-custom--poster-dive [data-admin-chip] {
+  pointer-events: auto;
+}
+
 .fe-poster {
   /* Overridden inline: section colour (Background panel) and its ink; the edge from JS. */
   --poster-paper: #ffffff;
@@ -311,9 +327,9 @@
   height: max(560px, 100svh);
 }
 
-/* With a video, the poster stays pinned while the camera dives through it. */
+/* With a video screen next, the poster stays pinned while the camera dives. */
 .fe-poster.has-through {
-  height: calc(var(--poster-runway, 170svh) + max(560px, 100svh));
+  height: calc(var(--poster-runway, 100svh) + max(560px, 100svh));
 }
 
 .fe-poster-pin {
@@ -334,6 +350,11 @@
   /* The depth the camera flies through. */
   perspective: 1100px;
   perspective-origin: 50% 42%;
+}
+
+/* The video screen is pinned underneath; the stage itself must not paint over it. */
+.fe-poster.has-through .fe-poster-stage {
+  background: transparent;
 }
 
 /* Everything painted on the poster travels together through the dive. */
@@ -468,38 +489,72 @@
   }
 }
 
-/* The film the camera dives into; hidden until the zoom opens it. */
-.fe-poster-through {
+/* ---- Video screen: a full-bleed film with its own Edit chip ---- */
+.fe-custom.fe-custom--video {
+  padding: 0;
+  background: #06120b;
+}
+
+.fe-video-screen {
+  position: relative;
+  height: max(560px, 100svh);
+  overflow: hidden;
+  isolation: isolate;
+  background: #06120b;
+}
+
+.fe-video-media {
   position: absolute;
   inset: 0;
-  z-index: 6;
   width: 100%;
   height: 100%;
   max-width: none;
   object-fit: cover;
-  opacity: 0;
-  visibility: hidden;
-  transform-origin: center;
-  will-change: transform, opacity;
+}
+
+.fe-video-empty {
+  position: absolute;
+  inset: 0;
+  background: #06120b;
+}
+
+/* Directly after the diving poster: pull the block up behind it and pin the
+   screen for the poster's runway, then one more screen of its own. The
+   --poster-runway value mirrors POSTER_DIVE_VH in PosterSection.tsx. */
+.fe-custom--video-under {
+  --poster-runway: 100svh;
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-1 * (var(--poster-runway) + max(560px, 100svh)));
+  height: calc(var(--poster-runway) + 2 * max(560px, 100svh));
+}
+
+.fe-custom--video-under .fe-video-screen {
+  position: sticky;
+  top: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fe-poster-letter,
   .fe-poster-stage,
   .fe-poster-scene,
-  .fe-custom--poster .fe-poster-word,
-  .fe-poster-through {
+  .fe-custom--poster .fe-poster-word {
     will-change: auto;
   }
-  /* No pin, no dive: the poster stays the plain static frame. */
+  /* No pin, no dive: the poster stays the plain static frame and the video
+     screen sits after it in normal flow. */
   .fe-poster.has-through {
     height: max(560px, 100svh);
   }
   .fe-poster.has-through .fe-poster-pin {
     position: relative;
   }
-  .fe-poster-through {
-    display: none;
+  .fe-custom--video-under {
+    margin-top: 0;
+    height: auto;
+  }
+  .fe-custom--video-under .fe-video-screen {
+    position: relative;
   }
 }
 
@@ -511,12 +566,17 @@ html[data-a11y-motion="reduced"] .fe-poster.has-through .fe-poster-pin {
   position: relative;
 }
 
-html[data-a11y-motion="reduced"] .fe-poster-through {
-  display: none;
-}
-
 html[data-a11y-motion="reduced"] .fe-poster-scene {
   will-change: auto;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video-under {
+  margin-top: 0;
+  height: auto;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video-under .fe-video-screen {
+  position: relative;
 }
 
 /* Zoomed photos (per-image position/zoom) stay inside their frames. */

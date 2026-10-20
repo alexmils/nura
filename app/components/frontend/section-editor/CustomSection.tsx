@@ -14,6 +14,7 @@ import {
 import { Marquee } from "@/app/components/motion/Marquee";
 import { SectionMedia } from "../SectionMedia";
 import { PosterStage } from "./PosterSection";
+import { VideoScreen } from "./VideoSection";
 import { useSectionConfig } from "./MarketingCopy";
 import { RichArticle, RichInline } from "./RichText";
 import { SectionEdit } from "./SectionEdit";
@@ -93,15 +94,41 @@ function ImageMarquee({ copy, id }: { copy: SectionConfig; id: string }) {
 }
 
 /** Renders an admin-added section (`custom-<type>-<suffix>`). */
-export function CustomSection({ id, type: forced }: { id: string; type?: CustomSectionType }) {
+export function CustomSection({
+  id,
+  type: forced,
+  nextType,
+  prevType,
+}: {
+  id: string;
+  type?: CustomSectionType;
+  /** Type of the next visible section (for the poster -> video dive). */
+  nextType?: CustomSectionType | null;
+  /** Type of the previous visible section (for the video screen under the poster). */
+  prevType?: CustomSectionType | null;
+}) {
   const type = forced ?? customSectionType(id);
   const copy = useSectionConfig(id);
   if (!type) return null;
   if (type === "poster") {
+    const dive = nextType === "video";
     return (
-      <section className="fe-custom fe-custom--poster fe-has-edit" data-section={id}>
+      <section
+        className={`fe-custom fe-custom--poster fe-has-edit${dive ? " fe-custom--poster-dive" : ""}`}
+        data-section={id}
+      >
         <SectionEdit id={id} />
-        <PosterStage copy={copy} id={id} />
+        <PosterStage copy={copy} id={id} dive={dive} />
+      </section>
+    );
+  }
+  if (type === "video") {
+    return (
+      <section
+        className={`fe-custom fe-custom--video fe-has-edit${prevType === "poster" ? " fe-custom--video-under" : ""}`}
+        data-section={id}
+      >
+        <VideoScreen copy={copy} id={id} />
       </section>
     );
   }
