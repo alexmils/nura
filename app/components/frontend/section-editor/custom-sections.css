@@ -293,22 +293,51 @@
   }
 }
 
-/* ---- Poster word ("Heal"): giant serif over a nature photo ---------------- */
+/* ---- Poster word ("Heal"): viewport-wide serif over a full-bleed photo ---- */
 .fe-custom.fe-custom--poster {
-  --poster-cut: 41%;
-  --poster-ink: #1d2a17;
-  padding: clamp(14px, 2.4vw, 32px) clamp(12px, 2.4vw, 32px) 0;
-  background: #fff;
+  --poster-ink: #ffffff;
+  padding: 0;
+  background: #1d2a17;
   color: var(--poster-ink);
 }
 
 .fe-poster {
   position: relative;
-  max-width: 1480px;
-  height: clamp(560px, 64vw, 980px);
-  margin: 0 auto;
+  /* Static (reduced motion): one screen. Scrolly: a runway the stage is held over. */
+  height: max(560px, 100svh);
+}
+
+.fe-poster.is-scrolly {
+  height: max(1300px, 240svh);
+}
+
+.fe-poster-stage {
+  position: relative;
+  height: max(560px, 100svh);
   overflow: hidden;
   isolation: isolate;
+  will-change: transform;
+}
+
+.fe-poster-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform-origin: 50% 60%;
+}
+
+.fe-poster-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(10 18 8 / 0.28), rgb(10 18 8 / 0.05) 40%, rgb(10 18 8 / 0.35));
+}
+
+.fe-poster-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .fe-poster-top,
@@ -316,14 +345,16 @@
 .fe-poster-note {
   font-family: var(--font-fe-alt), ui-monospace, SFMono-Regular, Menlo, monospace;
   font-weight: 400;
+  color: #fff;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.35);
 }
 
 .fe-poster-top {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 4;
+  top: clamp(84px, 11vh, 120px);
+  left: clamp(16px, 2.4vw, 36px);
+  right: clamp(16px, 2.4vw, 36px);
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem 0.9rem;
@@ -336,32 +367,18 @@
 .fe-poster-top span + span::before {
   content: "|";
   margin-right: 0.9rem;
-  opacity: 0.55;
+  opacity: 0.6;
 }
 
 .fe-poster-line {
   position: absolute;
-  top: 9%;
-  right: 16%;
-  z-index: 4;
+  top: clamp(124px, 17vh, 170px);
+  right: clamp(16px, 6vw, 120px);
+  z-index: 3;
   max-width: 15ch;
   margin: 0;
   font-size: clamp(0.82rem, 1.05vw, 1rem);
   line-height: 1.35;
-}
-
-.fe-poster-photo {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  clip-path: inset(var(--poster-cut) 0 0 0);
-}
-
-.fe-poster-photo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 
 .frontend-home .fe-custom--poster .fe-poster-word,
@@ -371,62 +388,46 @@
   z-index: 2;
   margin: 0;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-fraunces), ui-serif, Georgia, serif;
-  font-size: min(clamp(108px, 28vw, 440px), calc(118vw / var(--poster-len)), calc(1560px / var(--poster-len)));
   font-weight: 800;
   font-variation-settings: "SOFT" 0, "WONK" 0, "opsz" 144;
   line-height: 0.8;
   letter-spacing: -0.035em;
   white-space: nowrap;
   color: var(--poster-ink);
+  will-change: transform;
 }
 
 .fe-poster-word-inner {
-  position: absolute;
-  top: 14%;
-  left: 0;
-  right: 0;
+  display: block;
+  /* JS fits it to 96% of the viewport width; this is the pre-fit guess. */
+  font-size: min(calc(150vw / var(--poster-len)), 70svh);
   text-align: center;
 }
 
 .fe-poster-letter {
   display: inline-block;
   padding: 0.04em 0.01em;
-  background-repeat: no-repeat;
+  text-shadow: 0 6px 40px rgb(0 0 0 / 0.18);
   will-change: transform, opacity, filter;
-}
-
-.fe-poster-word--photo.has-photo .fe-poster-letter {
-  color: transparent;
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-.fe-custom--poster .fe-poster-word.fe-poster-word--white {
-  z-index: 3;
-  color: #fff;
-  clip-path: inset(var(--poster-cut) 0 0 0);
 }
 
 .fe-poster-note {
   position: absolute;
-  right: 2.5%;
-  bottom: 4%;
-  z-index: 4;
+  right: clamp(16px, 2.4vw, 36px);
+  bottom: clamp(18px, 4vh, 40px);
+  z-index: 3;
   margin: 0;
-  color: #fff;
   font-size: clamp(0.78rem, 0.95vw, 0.95rem);
   letter-spacing: 0.04em;
-  text-shadow: 0 1px 10px rgb(0 0 0 / 0.35);
 }
 
 @media (max-width: 640px) {
-  .fe-custom.fe-custom--poster {
-    --poster-cut: 38%;
-  }
-
-  .fe-poster {
-    height: clamp(460px, 130vw, 640px);
+  .fe-poster.is-scrolly {
+    height: max(1000px, 200svh);
   }
 
   .fe-poster-top {
@@ -439,17 +440,15 @@
   }
 
   .fe-poster-line {
-    top: 10%;
-    right: 4%;
-  }
-
-  .fe-poster-word-inner {
-    top: 20%;
+    top: clamp(118px, 18vh, 150px);
+    right: 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fe-poster-letter {
+  .fe-poster-letter,
+  .fe-poster-stage,
+  .fe-custom--poster .fe-poster-word {
     will-change: auto;
   }
 }

@@ -33,16 +33,28 @@ describe("poster word section (Heal)", () => {
     const c = src("app/components/frontend/section-editor/PosterSection.tsx");
     assert.match(c, /scrub: 0\.5/);
     assert.match(c, /yPercent: 62, opacity: 0, filter: "blur\(18px\)"/);
-    assert.match(c, /if \(!stage \|\| reducedMotion\(\)\) return;/);
+    assert.match(c, /if \(!root \|\| reducedMotion\(\) \|\| !letters\.length\) return;/);
     assert.match(c, /ctx\.revert\(\)/);
-    assert.doesNotMatch(c, /width:|height:|margin|padding/);
+    // Animated props are transform/opacity/filter/colour only (no layout tweens).
+    const tweens = c.slice(c.indexOf("const ctx = gsap.context"));
+    assert.doesNotMatch(tweens, /\b(width|height|margin|padding|top|left):/);
     assert.match(c, /aria-label=\{letters\.join\(""\)\}/);
+  });
+
+  it("is a full-bleed photo with a viewport-wide word and a dive-through-the-letter hand-off", () => {
+    const c = src("app/components/frontend/section-editor/PosterSection.tsx");
+    const css = src("app/components/frontend/section-editor/custom-sections.css");
+    assert.match(css, /\.fe-poster-photo \{\s*position: absolute;\s*inset: 0;/);
+    assert.match(c, /stage\.clientWidth \* 0\.96/);
+    assert.match(c, /start: \(\) => layoutTop\(root\)/);
+    assert.match(c, /color: fill/);
+    assert.match(c, /diveScale\(/);
   });
 
   it("renders through CustomSection and scales down on phones", () => {
     assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} \/>/);
     const css = src("app/components/frontend/section-editor/custom-sections.css");
     assert.match(css, /\.fe-custom\.fe-custom--poster/);
-    assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.fe-poster \{/);
+    assert.match(css, /@media \(max-width: 640px\)[\s\S]*\.fe-poster\.is-scrolly \{/);
   });
 });
