@@ -84,6 +84,8 @@ export function SessionTopicsGrid({
     return category ? [{ slug: category.slug, name: item.label?.trim() || category.name }] : [];
   });
   const count = topics.length;
+  const moreLabel = sectionText(copy, "more") || "Read the guides";
+  const moreHref = sectionText(copy, "moreHref") || "/blog";
   const sectionRef = useRef<HTMLElement | null>(null);
   const orbitRef = useRef<HTMLDivElement | null>(null);
   useTopicsEmerge(sectionRef, orbitRef, count);
@@ -111,7 +113,11 @@ export function SessionTopicsGrid({
             <div className="fe-topics-ring fe-topics-ring--outer" aria-hidden />
             <div className="fe-topics-ring fe-topics-ring--mid" aria-hidden />
 
-            <div className="fe-topics-core" aria-hidden>
+            <Link
+              href={moreHref}
+              className="fe-topics-core"
+              aria-label={moreLabel}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element -- circle lockup asset; avoid srcset bloat */}
               <img
                 className="fe-topics-core-logo"
@@ -122,7 +128,11 @@ export function SessionTopicsGrid({
                 decoding="async"
                 loading="lazy"
               />
-            </div>
+              <span className="fe-topics-core-label" aria-hidden>
+                {moreLabel}
+                <span className="fe-topics-core-arrow">→</span>
+              </span>
+            </Link>
 
             <ul
               className="fe-topics-spin"
@@ -147,12 +157,6 @@ export function SessionTopicsGrid({
             </ul>
           </div>
 
-          <Link href={sectionText(copy, "moreHref")} className="fe-topics-more fe-animate">
-            {sectionText(copy, "more")}
-            <span className="fe-topics-more-arrow" aria-hidden>
-              →
-            </span>
-          </Link>
         </div>
       </div>
     </section>

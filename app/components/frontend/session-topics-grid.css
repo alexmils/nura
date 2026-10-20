@@ -61,8 +61,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* Orbiting labels → Read the guides CTA */
-  gap: clamp(4.25rem, 7.5vw, 6rem);
   width: 100%;
   padding-bottom: clamp(0.75rem, 2vw, 1.5rem);
 }
@@ -83,7 +81,7 @@
   inset: 32%;
   border-radius: 50%;
   background: radial-gradient(
-    circle at 50% 45%,
+    circle at 50% 50%,
     var(--topics-glow) 0%,
     color-mix(in srgb, var(--fe-mint, #a4eda5) 22%, transparent) 42%,
     transparent 72%
@@ -126,13 +124,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Ink disk comes from the asset — soft mint halo only */
-  background: transparent;
+  /* The asset is the ink disk; keep the same ink behind it so the logo can
+     cross-fade to the guides label on hover without losing the circle. */
+  background: var(--fe-fg, #2a3020);
   box-shadow:
     0 0 0 5px color-mix(in srgb, #fff 78%, var(--fe-mint, #a4eda5)),
     0 0 48px color-mix(in srgb, var(--fe-mint, #a4eda5) 45%, transparent),
     0 16px 36px color-mix(in srgb, var(--fe-fg, #2a3020) 14%, transparent);
-  pointer-events: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: box-shadow 0.25s ease;
+}
+
+.fe-topics-core:hover,
+.fe-topics-core:focus-visible {
+  box-shadow:
+    0 0 0 6px color-mix(in srgb, #fff 82%, var(--fe-mint, #a4eda5)),
+    0 0 64px color-mix(in srgb, var(--fe-mint, #a4eda5) 60%, transparent),
+    0 18px 40px color-mix(in srgb, var(--fe-fg, #2a3020) 18%, transparent);
+}
+
+.fe-topics-core:focus-visible {
+  outline: none;
 }
 
 .fe-topics-core-logo {
@@ -141,6 +154,54 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
+  transition:
+    opacity 0.2s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fe-topics-core-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 1.1rem;
+  color: var(--fe-mint, #a4eda5);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.fe-topics-core-arrow {
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.fe-topics-core:hover .fe-topics-core-logo,
+.fe-topics-core:focus-visible .fe-topics-core-logo {
+  opacity: 0;
+  transform: scale(0.92);
+}
+
+.fe-topics-core:hover .fe-topics-core-label,
+.fe-topics-core:focus-visible .fe-topics-core-label {
+  opacity: 1;
+  transform: none;
+}
+
+.fe-topics-core:hover .fe-topics-core-arrow,
+.fe-topics-core:focus-visible .fe-topics-core-arrow {
+  transform: translateX(3px);
 }
 
 .fe-topics-spin {
@@ -209,50 +270,6 @@
   background: transparent;
   outline: none;
   box-shadow: 0 0 0 2px var(--fe-pistachio, #c6d67e);
-}
-
-.fe-topics-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.85rem 1.45rem 0.85rem 1.55rem;
-  border-radius: 999px;
-  background: var(--fe-fg, #2a3020);
-  color: #fff;
-  font-family: var(--font-sans);
-  font-size: 0.98rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  text-decoration: none;
-  border: 1.5px solid var(--fe-fg, #2a3020);
-  transition:
-    background 0.22s ease,
-    border-color 0.22s ease,
-    color 0.22s ease,
-    transform 0.22s ease,
-    box-shadow 0.22s ease;
-  z-index: 5;
-}
-
-.fe-topics-more:hover {
-  background: var(--fe-pistachio, #c6d67e);
-  border-color: var(--fe-pistachio, #c6d67e);
-  color: var(--fe-fg, #2a3020);
-  transform: translateY(-1px);
-}
-
-.fe-topics-more:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px var(--fe-pistachio, #c6d67e);
-}
-
-.fe-topics-more-arrow {
-  display: inline-block;
-  transition: transform 0.2s ease;
-}
-
-.fe-topics-more:hover .fe-topics-more-arrow {
-  transform: translateX(3px);
 }
 
 @keyframes fe-topics-orbit-spin {
@@ -395,8 +412,12 @@
     opacity: calc(0.25 + 0.75 * var(--topics-emerge, 1));
   }
 
+  /* Keep the translation and the emerge scale in ONE transform: a separate
+     `scale` property runs before `transform` and shifted the disc ~10px off
+     the ring centre at emerge < 1. */
   .fe-topics--emerge .fe-topics-core {
-    scale: calc(0.86 + 0.14 * var(--topics-emerge, 1));
+    transform: translate(-50%, -50%)
+      scale(calc(0.86 + 0.14 * var(--topics-emerge, 1)));
   }
 }
 
@@ -417,9 +438,5 @@ html[data-a11y-motion="reduced"] section.fe-topics.fe-topics--emerge > .fe-topic
   .fe-topics-counter,
   .fe-topics-ring--mid {
     animation: none !important;
-  }
-
-  .fe-topics-more:hover {
-    transform: none;
   }
 }
