@@ -188,7 +188,6 @@ function PricingCard({ plan, cta, featuresLabel }: { plan: PlanCard; cta: string
   const meta = BILLING_PLANS[plan.id];
   return (
     <article className={`v2-price v2-glass v2-glass--strong fe-animate${plan.featured ? " is-featured" : ""}`}>
-      {plan.featured ? <span className="v2-price-glow" aria-hidden /> : null}
       <div className="v2-price-top">
         <div>
           <h3 className="v2-price-name">{plan.name}</h3>

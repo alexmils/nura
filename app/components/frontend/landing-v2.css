@@ -1953,8 +1953,17 @@
     min-height: 31rem;
   }
 
-  /* Reserve three lines so every card's price sits on the same baseline. */
+  /* Fixed blocks keep all three cards on the same horizontal rhythm:
+     description, price + note, then the CTA. */
   .v2-price-details {
+    min-height: 5.1rem;
+  }
+
+  .v2-price-top {
+    min-height: 4.35rem;
+  }
+
+  .v2-price-cost {
     min-height: 5.1rem;
   }
 }
@@ -1972,18 +1981,6 @@
     0 30px 62px -30px rgba(29, 51, 35, 0.5);
   border-color: rgba(74, 114, 52, 0.4);
   transform: translateY(-0.5rem);
-}
-
-.v2-price-glow {
-  position: absolute;
-  inset: -34% -18% auto;
-  height: 66%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(164, 237, 165, 0.5),
-    transparent 66%
-  );
-  pointer-events: none;
 }
 
 .v2-price-top {
@@ -2029,10 +2026,10 @@
 }
 
 .v2-price-amount {
-  font-family: var(--font-display);
-  font-size: clamp(3rem, 4.2vw, 3.7rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
+  font-family: var(--font-sans);
+  font-size: clamp(2.9rem, 4vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
   line-height: 1;
   color: var(--v2-ink);
 }
@@ -2128,8 +2125,9 @@
   color: var(--v2-green-700);
 }
 
-.v2-pricing-note {
-  margin-top: 1.5rem;
+/* Beats the global `.fe-v2 .v2-section p { margin: 0 }` reset. */
+.fe-v2 .v2-section .v2-pricing-note {
+  margin-top: 2.75rem;
   text-align: center;
   font-size: 0.9rem;
   color: var(--v2-muted);
