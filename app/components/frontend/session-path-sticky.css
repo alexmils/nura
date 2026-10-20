@@ -37,6 +37,12 @@
     margin-top: -200svh;
     padding-top: 0;
     background: transparent;
+    /* The pale sheet is a sticky 100svh layer pinned for the whole stage. At
+       the section's tail it would otherwise hang past the border box and paint
+       over the next section (a long pale screen). `clip` bounds it to this
+       section without creating a scroll container, so the sticky stage panels
+       keep working (unlike `hidden`). */
+    overflow: clip;
   }
 
   .fe-custom--video + .fe-spath .fe-spath-track-wrap {
