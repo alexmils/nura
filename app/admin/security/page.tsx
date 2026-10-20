@@ -9,6 +9,7 @@ import type { LoginAttemptRow, LoginLockRow } from "@/lib/login-guard";
 import { slugError } from "@/lib/login-guard-policy";
 
 const TABS = [
+  { id: "settings", label: "Settings" },
   { id: "limits", label: "Limits" },
   { id: "addresses", label: "Addresses" },
   { id: "attempts", label: "Attempts" },
@@ -41,7 +42,7 @@ const OUTCOME_LABEL: Record<string, string> = {
 function AdminSecurityPageInner() {
   const [tab, setTab] = useAdminTab(
     TABS.map((item) => item.id),
-    "limits"
+    "settings"
   );
   const [settings, setSettings] = useState<Settings | null>(null);
   const [attempts, setAttempts] = useState<LoginAttemptRow[]>([]);
@@ -201,11 +202,11 @@ function AdminSecurityPageInner() {
         {error && <p className="text-[var(--destructive)]">{error}</p>}
         {notice && <p className="admin-panel-sub">{notice}</p>}
 
-        {tab === "limits" && settings && (
+        {tab === "settings" && settings && (
           <section className="admin-panel">
             <p className="admin-panel-sub">
-              Share this address only with people who run Nura. A wrong address
-              shows a normal missing page.
+              Staff sign in on this private address. Share it only with people
+              who run Nura. A wrong address shows a normal missing page.
             </p>
             <label className="admin-field-label">
               Private path
@@ -247,6 +248,19 @@ function AdminSecurityPageInner() {
                 Generate random
               </button>
             </div>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={saving}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Save address"}
+            </button>
+          </section>
+        )}
+
+        {tab === "limits" && settings && (
+          <section className="admin-panel">
             <label className="admin-field-label">
               Attempts before lock
               <input

@@ -282,7 +282,12 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         icon: "security",
         adminOnly: true,
         children: [
-          { href: "/admin/security", label: "Limits", tab: "limits" },
+          { href: "/admin/security", label: "Settings", tab: "settings" },
+          {
+            href: "/admin/security?tab=limits",
+            label: "Limits",
+            tab: "limits",
+          },
           {
             href: "/admin/security?tab=addresses",
             label: "Addresses",
@@ -369,7 +374,7 @@ export const ADMIN_DEFAULT_TAB_BY_PATH: Record<string, string> = {
   "/admin/email": "delivery",
   "/admin/ai": "ai",
   "/admin/platform": "brand",
-  "/admin/security": "limits",
+  "/admin/security": "settings",
   "/admin/seo": "overview",
   "/admin/marketing": "meta",
 };
