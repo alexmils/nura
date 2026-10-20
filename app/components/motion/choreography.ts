@@ -70,9 +70,16 @@ export function arrive(
     to[key] = key === "opacity" || key === "scale" ? 1 : 0;
   }
   gsap.set(todo, from);
+  const show = (batch: Element[]) => {
+    const fresh = batch.filter((el) => !ctx.seen.has(el));
+    fresh.forEach((el) => ctx.seen.add(el));
+    if (fresh.length) gsap.set(fresh, { clearProps: "transform,translate,rotate,scale,opacity" });
+  };
   ScrollTrigger.batch(todo, {
     start: opts.start ?? "top 88%",
     once: true,
+    // Also when the page loads (or client-navigates back) already scrolled past.
+    onLeave: (batch) => show(batch),
     onEnter: (batch) => {
       batch.forEach((el) => ctx.seen.add(el));
       gsap.to(batch, {
@@ -279,6 +286,17 @@ export function useChoreography(
     };
     const tree = new MutationObserver(onMutate);
     tree.observe(root, { childList: true, subtree: true });
+    // Late images, fonts and accordions change the page height after the build:
+    // re-measure so an arrival never waits below content that is already on screen.
+    let lastHeight = root.offsetHeight;
+    let sizeTimer = 0;
+    const size = new ResizeObserver(() => {
+      if (Math.abs(root.offsetHeight - lastHeight) < 2) return;
+      lastHeight = root.offsetHeight;
+      window.clearTimeout(sizeTimer);
+      sizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200);
+    });
+    size.observe(root);
     const a11y = new MutationObserver(run);
     a11y.observe(document.documentElement, { attributes: true, attributeFilter: ["data-a11y-motion"] });
     const mq = window.matchMedia(CHOREO_MOBILE_QUERY);
@@ -289,6 +307,8 @@ export function useChoreography(
       window.clearTimeout(first);
       window.clearTimeout(timer);
       tree.disconnect();
+      size.disconnect();
+      window.clearTimeout(sizeTimer);
       a11y.disconnect();
       mq.removeEventListener("change", run);
       rq.removeEventListener("change", run);
@@ -329,10 +349,8 @@ function cardGroups(root: HTMLElement): HTMLElement[][] {
  * - Card rows: "cascade" — rise + settle from 96%, alternate cards travel further.
  * - Accordions: "ticker" — items slide in from the left one by one.
  * - Large images in a clipping frame: "drift" — parallax inside the frame.
- * - Section-to-section: every block after the first takes a section-level
- *   hand-off, alternating "stack" (slides over the previous, which shrinks and
- *   dims) and "curve" (domed top edge that flattens), so neighbours differ.
- * Phones get the arrivals and lighter hand-offs, no image drift.
+ * Section hand-offs and image drift are home-only (they hold content
+ * transformed/dimmed mid-scroll, which read as broken on content pages).
  */
 export function buildPageChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
@@ -377,39 +395,7 @@ export function buildPageChoreography(ctx: ChoreoContext) {
   const items = take([...root.querySelectorAll("details, .fe-faq-item")]);
   if (items.length) arrive(items, { x: -28 * travel, opacity: 0 }, ctx, { start: "top 94%", stagger: MOTION_STAGGER.base * 1.5 });
 
-  // Section hand-offs between blocks
-  const units = [...root.querySelectorAll<HTMLElement>("[data-section]")].filter(
-    (el) => !el.parentElement?.closest("[data-section]")
-  );
-  const blocks =
-    units.length > 1
-      ? units
-      : units.length === 1
-        ? ([...units[0].querySelectorAll<HTMLElement>(":scope > *, :scope > * > section")].filter(
-            (el) => el.tagName === "SECTION" || el.offsetHeight >= 260
-          ) as HTMLElement[])
-        : [];
-  let n = 0;
-  blocks.forEach((block, index) => {
-    if (index === 0 || block.closest(CHOREO_EXCLUDE) || block.querySelector(".fe-custom--marquee, .fe-topics, .v2-price-grid")) return;
-    const prev = blocks[index - 1];
-    const safePrev = prev.closest(CHOREO_EXCLUDE) || prev.querySelector(".fe-custom--marquee, .fe-topics, .v2-price-grid") ? null : prev;
-    handoff(safePrev, block, n++ % 2 ? "curve" : "stack", mobile);
-  });
-
-  if (mobile) return;
-
-  // Drift
-  root.querySelectorAll<HTMLImageElement>("img").forEach((img) => {
-    const frame = img.parentElement;
-    if (!frame || !usable(img)) return;
-    const box = img.getBoundingClientRect();
-    if (box.width < 280 || box.height < 160) return;
-    if (!/hidden|clip/.test(getComputedStyle(frame).overflow)) return;
-    // Cards already move (and zoom on hover); images with their own transform transition stay put.
-    if (cards.some((card) => card.contains(img))) return;
-    const style = getComputedStyle(img);
-    if (/transform|all/.test(style.transitionProperty) && parseFloat(style.transitionDuration) > 0) return;
-    scrub(img, { yPercent: -5, scale: 1.12 }, { yPercent: 5, scale: 1.12 }, frame, "top bottom", "bottom top");
-  });
+  // No section hand-offs, pins, masks or image drift here: those scroll-held
+  // moves are the HOME page's own (useHomeChoreography). Other pages only get
+  // once-only arrivals that always end at the element's natural state.
 }

@@ -49,7 +49,13 @@ describe("motion pass: scroll choreography", () => {
   it("rebuilds when editable sections are shown, hidden or reordered", () => {
     assert.match(lib, /querySelectorAll\("\[data-section\]"\)/);
     assert.match(lib, /new MutationObserver\(onMutate\)/);
-    assert.match(lib, /n\+\+ % 2 \? "curve" : "stack"/);
+  });
+
+  it("keeps scroll-held hand-offs, masks and drift on the home page only", () => {
+    const page = lib.slice(lib.indexOf("export function buildPageChoreography"));
+    assert.doesNotMatch(page, /handoff\(|scrub\(|pinnedHandoff/);
+    // Arrivals also resolve when the page is already scrolled past them.
+    assert.match(lib, /onLeave: \(batch\) => show\(batch\)/);
   });
 
   it("leaves the topics ring, plans spread, footer wordmark, CTA marquee and sticky stages alone", () => {
@@ -58,10 +64,6 @@ describe("motion pass: scroll choreography", () => {
     }
     // Pinned sections are never transformed as the outgoing block.
     assert.match(lib, /const movePrev = prev && !pinnedInside\(prev\)/);
-  });
-
-  it("phones get arrivals only", () => {
-    assert.match(lib, /if \(mobile\) return;/);
   });
 
   it("is wired on home and on every other public page", () => {
