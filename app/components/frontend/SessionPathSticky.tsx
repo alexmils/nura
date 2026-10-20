@@ -244,10 +244,20 @@ export function SessionPathSticky() {
     setActive(id);
     lockUntilRef.current = Date.now() + 1400;
     const nav = rootRef.current?.querySelector<HTMLElement>(".fe-spath-nav");
-    const extra = nav
-      ? -Math.round(nav.getBoundingClientRect().height + 10)
-      : 0;
-    scrollToLandingSection(`session-path-${id}`, extra);
+    // On desktop the nav is a sticky side column as tall as the stage, so its
+    // box height must not be subtracted from the scroll target; only the mobile
+    // horizontal nav sits above the panels and needs the offset.
+    const extra =
+      nav && compactNav ? -Math.round(nav.getBoundingClientRect().height + 10) : 0;
+    // After the full-screen video, the first stage's sentinel also owns the
+    // hand-off viewport. Ground first's content starts one viewport lower, so
+    // its nav jump must not land back on the video.
+    const afterVideo = Boolean(
+      rootRef.current?.previousElementSibling?.classList.contains("fe-custom--video")
+    );
+    const handoff =
+      id === "ground" && !compactNav && afterVideo ? window.innerHeight : 0;
+    scrollToLandingSection(`session-path-${id}`, extra + handoff);
     window.setTimeout(() => {
       pinStageInView();
       centerChipInNav(navListRef.current, id);
