@@ -187,15 +187,12 @@ export async function middleware(request: NextRequest) {
       }
       const session = await getSessionFromRequest(request);
       if (session) {
-        const { role, setCookies, synced } = await resolveRoleFromDb(request);
-        // Staff may open the sign-in screen while signed in so they can edit
-        // its visual background. Everyone else is sent on as before.
-        if (pathname === LOGIN_PATH && isAdminRole(role ?? "user")) {
-          return applyCrawlHeaders(
-            pathname,
-            withCookies(NextResponse.next(), setCookies, synced)
-          );
+        // The sign-in screen stays reachable while signed in. Staff use it to
+        // edit the visual background, and anyone may switch accounts.
+        if (pathname === LOGIN_PATH) {
+          return applyCrawlHeaders(pathname, NextResponse.next());
         }
+        const { role, setCookies, synced } = await resolveRoleFromDb(request);
         // Do not call /api/auth/access here — under Cloudflare Access that
         // nested public-URL fetch causes ERR_TOO_MANY_REDIRECTS.
         // Send consumers to /app; AppAccessGate + APIs enforce onboarding.
