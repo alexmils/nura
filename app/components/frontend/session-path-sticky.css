@@ -43,6 +43,17 @@
     border-top-color: transparent;
   }
 
+  /* The video hand-off consumes the first viewport of this section. Give the
+     first stage (Ground first) that extra scroll range so the active-stage
+     sentinel math still starts there instead of jumping to rhythm. */
+  .fe-custom--video + .fe-spath .fe-spath-stage-scroll {
+    height: 500vh;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-sentinel:first-child {
+    flex-grow: 2;
+  }
+
   .fe-custom--video + .fe-spath .fe-spath-slide-hold {
     display: block;
     position: sticky;

@@ -465,14 +465,17 @@ export function SessionPathSticky() {
                       </ul>
                     </div>
                   ) : (
-                    <MediaPlaceholder
-                      label={stage.mediaLabel}
-                      kind={stage.mediaKind}
-                      image={stage.mediaImage}
-                      video={stage.mediaVideo}
-                      poster={stage.mediaPoster}
-                      alt={stage.mediaAlt}
-                    />
+                    <div className="fe-spath-stage-media fe-has-edit">
+                      <SectionEdit id="home-how-stages" lift />
+                      <MediaPlaceholder
+                        label={stage.mediaLabel}
+                        kind={stage.mediaKind}
+                        image={stage.mediaImage}
+                        video={stage.mediaVideo}
+                        poster={stage.mediaPoster}
+                        alt={stage.mediaAlt}
+                      />
+                    </div>
                   )}
                 </div>
               </article>
