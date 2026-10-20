@@ -25,7 +25,7 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * session -> topics        halo     topics rises over the held session and its nura core leads: the halo around the logo grows, the core settles
  * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
  * stories -> pricing       settle   calm sheet rise: stories eases back under a soft pricing-coloured wash while pricing rises over it, corners flattening
- * pricing -> faq           curtain  a rising edge with a lime rule cuts pricing away, FAQ pinned underneath (CurtainPin)
+ * pricing -> faq           (none)   plain scroll; no hand-off on either breakpoint
  * faq -> blog              (none)   plain hand-off; the old mint wave band was removed
  * blog -> close            lens     the closing CTA emerges out of the nearest visible blog card (its rect and aspect) and grows to full screen, copy fades in last (Aperture / lens)
  *
@@ -126,7 +126,6 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     handoff(one(".v2-modes"), one(".v2-session"), "curve", true);
     handoff(one(".fe-topics"), one(".v2-stories"), "curve", true);
     handoff(one(".v2-stories"), one(".v2-pricing"), "stack", true);
-    handoff(one(".v2-pricing"), one(".fe-faq"), "curve", true);
   } else {
     // Whatever follows the hero (the how intro, or an inserted section such as the poster).
     const afterHero = following(one(".v2-hero"));
@@ -142,7 +141,6 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
     pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories .v2-container") });
     pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");
-    pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "curtain");
   }
   // Session -> topics on every screen: no overlay disc, the topics nura mark leads.
   pinnedHandoff(one(".v2-session"), one(".fe-topics"), "halo");
