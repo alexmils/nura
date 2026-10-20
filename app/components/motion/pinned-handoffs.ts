@@ -114,6 +114,8 @@ export function pinnedHandoff(
     from?: () => HTMLElement[];
     /** morph: starting y offset of the incoming content (default 160). */
     morphY?: number;
+    /** morph: element whose colour drives the blend when the box is a wrapper. */
+    tint?: HTMLElement | null;
   } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
@@ -307,9 +309,15 @@ export function pinnedHandoff(
       break;
     }
     case "morph": {
-      const from = paintedBg(prev);
+      // A wrapper shell can hold the layout while the visible section lives
+      // inside it; `tint` keeps the colour blend on that visible section.
+      const from = paintedBg(opts.tint ?? prev);
       gsap.set(prev, { backgroundColor: from });
       tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+      if (opts.tint && opts.tint !== prev) {
+        gsap.set(opts.tint, { backgroundColor: from });
+        tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+      }
       tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
       const content = opts.content ?? next.firstElementChild;
       const contentY = opts.morphY ?? 160;

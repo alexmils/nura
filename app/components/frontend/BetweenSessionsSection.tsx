@@ -18,33 +18,37 @@ export function BetweenSessionsSection() {
   const between = useSectionConfig("home-how-between");
 
   return (
-    <section
-      className="fe-spath-finale fe-has-edit"
-      data-section="home-how-between"
-      aria-labelledby="fe-between-title"
-    >
-      <SectionEdit id="home-how-between" />
-      <span className="fe-spath-finale-edge" aria-hidden />
-      <div className="fe-spath-finale-zoom">
-        <div className="fe-container fe-spath-finale-inner">
-          <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
-          <h3 id="fe-between-title" className="fe-spath-finale-title">
-            <AccentText
-              text={sectionText(between, "betweenTitle")}
-              accent={sectionText(between, "betweenAccent")}
-            />
-          </h3>
-          <p className="fe-spath-finale-line">
-            {sectionText(between, "betweenLine")}
-          </p>
-          <Link
-            href={sectionText(between, "betweenCtaHref") || appPath("/create-account")}
-            className="fe-spath-cta frontend-btn-ghost"
-          >
-            {sectionText(between, "betweenCta")}
-          </Link>
+    // The shell carries the stage's pale sheet so the section's wipe slit
+    // reveals that colour, not the page canvas, while it opens.
+    <div className="fe-between-shell">
+      <section
+        className="fe-spath-finale fe-has-edit"
+        data-section="home-how-between"
+        aria-labelledby="fe-between-title"
+      >
+        <SectionEdit id="home-how-between" />
+        <span className="fe-spath-finale-edge" aria-hidden />
+        <div className="fe-spath-finale-zoom">
+          <div className="fe-container fe-spath-finale-inner">
+            <p className="fe-spath-finale-kicker">{sectionText(between, "betweenKicker")}</p>
+            <h3 id="fe-between-title" className="fe-spath-finale-title">
+              <AccentText
+                text={sectionText(between, "betweenTitle")}
+                accent={sectionText(between, "betweenAccent")}
+              />
+            </h3>
+            <p className="fe-spath-finale-line">
+              {sectionText(between, "betweenLine")}
+            </p>
+            <Link
+              href={sectionText(between, "betweenCtaHref") || appPath("/create-account")}
+              className="fe-spath-cta frontend-btn-ghost"
+            >
+              {sectionText(between, "betweenCta")}
+            </Link>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </div>
   );
 }

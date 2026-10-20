@@ -694,6 +694,24 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   color: var(--fe-muted, #5a5c2b);
 }
 
+/* Matches the stage sheet above, so the finale's opening slit shows the same
+   pale colour instead of the page canvas. Kept on a pseudo-element so the
+   morph hand-off can still tween the shell's own background colour. */
+.fe-between-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.fe-between-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: #f7fcf7;
+}
+
 .fe-spath-finale {
   position: relative;
   margin-top: 0;

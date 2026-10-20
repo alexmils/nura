@@ -116,7 +116,13 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     }
   }
   if (mobile) handoff(finale, kit, "curve", true);
-  else pinnedHandoff(finale, kit, "morph", { content: one(".fe-spath-kit"), morphY: 48 });
+  else
+    pinnedHandoff(finale, kit, "morph", {
+      content: one(".fe-spath-kit"),
+      morphY: 48,
+      // finale sits inside the pale shell; blend the visible section colour.
+      tint: finale,
+    });
   if (mobile) handoff(kit, modesBox, "stack", true);
   else pinnedHandoff(kit, modesBox, "morph", { content: one(".v2-modes"), morphY: 64 });
 
