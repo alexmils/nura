@@ -274,6 +274,11 @@ export function SessionPathSticky() {
           <span className="fe-spath-slide-edge" />
         </span>
       </span>
+      {/* White sweep bar: leads the incoming sheet like a curtain, then leaves
+          to the left so it never sits on the stage after the slide. */}
+      <span className="fe-spath-curtain-hold" aria-hidden>
+        <span className="fe-spath-slide-curtain" />
+      </span>
       <EditablePart id="home-how-stages">
       <div className="fe-spath-track-wrap">
         <div className="fe-container fe-spath-track">

@@ -101,7 +101,9 @@ Current wiring on `/`:
   sliding over another panel.
 - `video → how` = **Page slide** (`useHomeChoreography`): the video image exits
   left while a full-screen sheet and the first How stage's inner copy enter from
-  the right and move left. The How section overlaps **two** video viewports
+  the right and move left. A **50vw white curtain** leads the sheet (mid-transition
+  reads: video · white bar · new page edge) and leaves to the left so it never
+  sits on the stage. The How section overlaps **two** video viewports
   (`margin-top: -200svh`) so the video screen stays sticky for the whole slide;
   only the zero-height sheet and the stage inner translate, never the sticky
   nav/panels. One viewport of overlap would make the video drift up and the

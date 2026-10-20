@@ -54,12 +54,23 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     if (howSection && video?.classList.contains("fe-custom--video")) {
       const screen = video.querySelector<HTMLElement>(".fe-video-screen");
       const sheet = howSection.querySelector<HTMLElement>(".fe-spath-slide-bg");
+      const curtain = howSection.querySelector<HTMLElement>(".fe-spath-slide-curtain");
       const edge = howSection.querySelector<HTMLElement>(".fe-spath-slide-edge");
       const nav = howSection.querySelector<HTMLElement>(".fe-spath-nav");
       const inner = howSection.querySelector<HTMLElement>(".fe-spath-panel .fe-spath-panel-inner");
       const vw = () => window.innerWidth;
       if (screen) scrub(screen, { x: 0 }, { x: () => -vw() }, howSection, "top top", "+=100%");
       if (sheet) scrub(sheet, { x: vw }, { x: 0 }, howSection, "top top", "+=100%");
+      if (curtain) {
+        scrub(
+          curtain,
+          { x: vw },
+          { x: () => -curtain.offsetWidth },
+          howSection,
+          "top top",
+          "+=100%"
+        );
+      }
       if (inner) scrub(inner, { x: vw }, { x: 0 }, howSection, "top top", "+=100%");
       if (nav) scrub(nav, { opacity: 0 }, { opacity: 1 }, howSection, "top top", "+=100%");
       if (edge) scrub(edge, { opacity: 1 }, { opacity: 0 }, howSection, "top top", "+=100%");
