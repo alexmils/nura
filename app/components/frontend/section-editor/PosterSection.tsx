@@ -10,17 +10,22 @@ if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
 /**
  * "Heal" poster (after the "Light" poster). ONE photo covers the whole stage.
- * A paper layer (the section colour, white by default) covers the top and
- * fades into the photo with a feathered mask. The word is cut out of that
- * paper (mix-blend lighten with black letters), so it grows out of the photo
- * below and dissolves into the white above. Static: no scroll animation - the
- * poster is always fully visible, only the fit is recalculated on resize.
+ * A paper layer (the section colour, white by default) covers the top with a
+ * hard edge that sits on the word's baseline, so the letters stand on the
+ * photo. The word is a window onto the same photo (the image is clipped to the
+ * glyphs), so the white block above and the photo below read as one poster.
+ * Static: no scroll animation - the poster is always fully visible, only the
+ * fit and the edge are recalculated on resize.
  */
 
 export const POSTER_WORD_MAX = 12;
 
-/** The hard white/photo edge crosses the letters this far down their visual height. */
-export const POSTER_CROSS = 0.55;
+/**
+ * The paper/photo edge sits exactly on the word's baseline, so the flat bottoms
+ * of H, h and l stand on the photo (as in the reference poster). Used only when
+ * canvas metrics are unavailable; the live value comes from the real font.
+ */
+export const POSTER_BASELINE = 0.79;
 
 
 /** Dark or light ink for text on the section colour (white by default). */
@@ -85,17 +90,31 @@ export function PosterStage({ copy, id }: { copy: SectionConfig; id?: string }) 
       }
       rows.forEach((row) => (row.style.fontSize = `${size}px`));
       if (firstG) {
-        // HEAL stands ON the image's edge: the hard white/photo line crosses
-        // the painted letters just below their middle, so the word dips into
-        // the photo (a Range measures the visual glyphs, not the line-height
-        // box). Offsets are relative to the stage box.
+        // HEAL stands ON the image's edge: the hard white/photo line is the
+        // word's baseline, so the bottom of every flat letter (H, h, l) rests
+        // on the photo. A Range rect spans the font's full em box (ascent +
+        // descent), not the ink, so the baseline is derived from the same
+        // font metrics the browser laid the text out with.
         const node = firstG.firstChild;
         if (node) {
           const range = document.createRange();
           range.selectNodeContents(node);
           const rect = range.getBoundingClientRect();
           const stageRect = stage.getBoundingClientRect();
-          root.style.setProperty("--poster-cut", `${Math.round(rect.top - stageRect.top + rect.height * POSTER_CROSS)}px`);
+          const style = getComputedStyle(firstG);
+          const ctx = document.createElement("canvas").getContext("2d");
+          let baseline = rect.top + rect.height * POSTER_BASELINE;
+          if (ctx) {
+            ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+            // Any glyph yields the same font-wide ascent/descent.
+            const metrics = ctx.measureText(firstG.textContent || "H");
+            const ascent = metrics.fontBoundingBoxAscent;
+            const descent = metrics.fontBoundingBoxDescent;
+            if (ascent > 0 && descent >= 0) {
+              baseline = rect.top + rect.height * (ascent / (ascent + descent));
+            }
+          }
+          root.style.setProperty("--poster-cut", `${Math.round(baseline - stageRect.top)}px`);
         }
       }
       ScrollTrigger.refresh();

@@ -54,11 +54,15 @@ describe("poster word section (Heal)", () => {
     // (Fraunces glyph widths do not scale linearly from a 100px probe).
     assert.match(c, /const maxWidth = stage\.clientWidth \* \(stage\.clientWidth < 700 \? 0\.94 : 0\.98\)/);
     assert.match(c, /for \(let pass = 0; pass < 4; pass \+= 1\)/);
-    // The hard edge crosses the painted letters just below their middle.
+    // The hard edge sits on the word's baseline: the flat bottoms of the
+    // letters stand on the photo (the Range rect is the font em box, so the
+    // baseline comes from canvas font metrics).
     assert.match(c, /--poster-cut/);
     assert.match(c, /document\.createRange\(\)/);
-    assert.match(c, /rect\.height \* POSTER_CROSS/);
-    assert.match(c, /POSTER_CROSS = 0\.55/);
+    assert.match(c, /fontBoundingBoxAscent/);
+    assert.match(c, /fontBoundingBoxDescent/);
+    assert.match(c, /rect\.height \* POSTER_BASELINE/);
+    assert.match(c, /POSTER_BASELINE = 0\.79/);
   });
   it("renders through CustomSection and scales down on phones", () => {
     assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} id=\{id\} \/>/);
