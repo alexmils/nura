@@ -19,7 +19,7 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * hero -> next section     zoom     hero photo pushes in to 145% and darkens while How rises over the held hero (SectionHandoff "zoom")
  * how stages -> between    wipe     "Between sessions" unfolds from its top edge while its copy lifts in (the sticky track above is never transformed). Phones: stack
  * between -> languages     morph    both blocks shift into the languages colour and the language content rises out of it (no panel over a panel)
- * languages -> modes       tilt     languages are held and tip back gently into a rounded card while modes rises over it (phones: stack)
+ * languages -> modes       morph    the languages surface shifts into the modes colour while the modes board rises in (phones: stack)
  * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
  * modes -> session         lift     the held board settles back while session rises over it as a soft sheet (no circle)
  * session -> topics        halo     topics rises over the held session and its nura core leads: the halo around the logo grows, the core settles
@@ -116,9 +116,9 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     }
   }
   if (mobile) handoff(finale, kit, "curve", true);
-  else pinnedHandoff(finale, kit, "morph", { content: one(".fe-spath-kit") });
+  else pinnedHandoff(finale, kit, "morph", { content: one(".fe-spath-kit"), morphY: 48 });
   if (mobile) handoff(kit, modesBox, "stack", true);
-  else pinnedHandoff(kit, modesBox, "tilt");
+  else pinnedHandoff(kit, modesBox, "morph", { content: one(".v2-modes"), morphY: 64 });
 
   if (mobile) {
     // Phones: the light stack/curve hand-offs (no virtual pins on a moving toolbar).

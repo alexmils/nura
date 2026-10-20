@@ -111,6 +111,8 @@ export function pinnedHandoff(
     content?: Element | null;
     /** lens: candidate cards the next section emerges from (nearest visible wins). */
     from?: () => HTMLElement[];
+    /** morph: starting y offset of the incoming content (default 160). */
+    morphY?: number;
   } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
@@ -189,7 +191,12 @@ export function pinnedHandoff(
         // space it leaves (no bare page, no black). It exists ONLY inside the
         // window: a 120vmax spread left on a positioned block would paint over
         // the sections around it (it greyed out "Between sessions" above).
-        gsap.set(prev, { overflow: "hidden", boxShadow: "none" });
+        gsap.set(prev, { boxShadow: "none" });
+        /* Clip only while the card is actually tipped: a build-time
+           overflow:hidden clipped the previous section's content during the
+           preceding hand-off (the language facts). */
+        tl.set(prev, { overflow: "hidden" }, 0.001);
+        tl.set(prev, { overflow: "visible" }, 0.999);
         tl.set(prev, { boxShadow: () => `0 0 0 120vmax ${tintOf(prev)}` }, 0.002);
         tl.set(prev, { boxShadow: "none" }, 0.998);
       }
@@ -247,7 +254,8 @@ export function pinnedHandoff(
       tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
       tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
       const content = opts.content ?? next.firstElementChild;
-      if (content) tl.fromTo(content, { y: 160, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.1);
+      const contentY = opts.morphY ?? 160;
+      if (content) tl.fromTo(content, { y: contentY, opacity: 0 }, { y: 0, opacity: 1, duration: 0.9 }, 0.1);
       break;
     }
     case "settle": {
