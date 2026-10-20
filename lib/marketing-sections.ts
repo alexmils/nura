@@ -2201,6 +2201,7 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
     else if (offByDefault) out[SECTION_OFF_KEY] = "0";
   }
   Object.assign(out, normalizeBackground(source), normalizeGradient(source));
+  if (source[BG_DECOR_KEY] === "off") out[BG_DECOR_KEY] = "off";
   return out;
 }
 
@@ -2210,6 +2211,17 @@ export const BG_KINDS = ["image", "video", "color"] as const;
 export type SectionBgKind = (typeof BG_KINDS)[number];
 export const BG_KEYS = ["bgKind", "bgImage", "bgVideo", "bgPoster", "bgColor", "bgOverlay", "bgTone"] as const;
 export const BG_DEFAULT_OVERLAY = 40;
+/** "off" hides a section's built-in decorations (e.g. the hero's sky, sun and haze). */
+export const BG_DECOR_KEY = "bgDecor";
+
+/**
+ * Built-in decorations only belong to the Default background: any custom
+ * image/video/colour turns them off, and the editor can switch them off too.
+ */
+export function sectionDecor(config: SectionConfig | undefined): boolean {
+  if (sectionBackground(config)) return false;
+  return config?.[BG_DECOR_KEY] !== "off";
+}
 
 export type SectionBackground = {
   kind: SectionBgKind;

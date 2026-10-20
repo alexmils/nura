@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { RotateCcw, Undo2, X } from "lucide-react";
 import {
   getSectionDef,
+  BG_DECOR_KEY,
   BG_DEFAULT_OVERLAY,
   GRADIENT_DEFAULTS,
   HIDDEN_ITEM_KEY,
@@ -184,6 +185,7 @@ export function MarketingSectionEditor({
                 </label>
               )}
               <BackgroundControls
+                decorations={id === "home-hero"}
                 values={config}
                 onChange={(patch, key) => change(`bg:${key}`, (current) => ({ ...current, ...patch }))}
               />
@@ -516,7 +518,10 @@ const BG_OPTIONS = [
 function BackgroundControls({
   values,
   onChange,
+  decorations = false,
 }: {
+  /** The section has built-in decorations (sky, sun, haze) on its Default background. */
+  decorations?: boolean;
   values: SectionConfig;
   onChange: (patch: Record<string, string>, key: string) => void;
 }) {
@@ -607,6 +612,16 @@ function BackgroundControls({
             ))}
           </div>
         </>
+      ) : null}
+      {decorations && !kind ? (
+        <label className="fe-editor-check">
+          <input
+            type="checkbox"
+            checked={read(BG_DECOR_KEY) !== "off"}
+            onChange={(event) => onChange({ [BG_DECOR_KEY]: event.target.checked ? "" : "off" }, "decor")}
+          />
+          <span>Default decorations (sky, sun, haze)</span>
+        </label>
       ) : null}
       <GradientControls values={values} onChange={onChange} />
     </fieldset>

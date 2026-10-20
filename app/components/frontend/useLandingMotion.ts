@@ -111,7 +111,9 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
           }
         );
 
-        gsap.to(".v2-hero-sun", {
+        // The sun is a Default-background decoration only (absent with a custom background).
+        const sun = v2Hero.querySelector(".v2-hero-sun");
+        if (sun) gsap.to(sun, {
           yPercent: 16,
           ease: "none",
           scrollTrigger: {

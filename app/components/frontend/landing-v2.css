@@ -409,54 +409,36 @@
   mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 100%);
 }
 
+/* Custom background (or decorations off): the photo fills the hero, untouched;
+   overlay and gradient come only from the editor. */
+.v2-hero--plain {
+  background: var(--v2-paper);
+}
+
+.v2-hero--plain .v2-hero-photo {
+  top: 0;
+  height: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.v2-hero--plain .v2-hero-photo-img {
+  filter: none;
+}
+
 .v2-hero-photo-img {
   object-fit: cover;
   object-position: center bottom;
   filter: saturate(1.08) brightness(1.03);
 }
 
-.v2-hero-tint {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: linear-gradient(
-    180deg,
-    rgba(231, 236, 192, 0) 44%,
-    rgba(231, 236, 192, 0) 62%,
-    rgba(231, 236, 192, 0.3) 82%,
-    rgba(231, 236, 192, 0.62) 100%
-  );
-  pointer-events: none;
-}
 
-.v2-hero-flowers {
-  position: absolute;
-  bottom: -1%;
-  left: 0;
-  z-index: 3;
-  width: 100%;
-  height: clamp(16rem, 34vw, 27rem);
-  pointer-events: none;
-}
 
 .v2-flower-sway {
   animation: v2-sway 6.5s ease-in-out infinite alternate;
   transform-box: fill-box;
 }
 
-.v2-hero-scrim {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  background: radial-gradient(
-    ellipse 72% 62% at 50% 43%,
-    rgba(12, 28, 19, 0.8) 0%,
-    rgba(12, 28, 19, 0.58) 42%,
-    rgba(12, 28, 19, 0.2) 68%,
-    transparent 82%
-  );
-  pointer-events: none;
-}
 
 .v2-hero-inner {
   position: relative;

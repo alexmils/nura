@@ -35,6 +35,7 @@ import {
   type SectionBackground,
   sectionGradient,
   gradientIsOverlay,
+  sectionDecor,
 } from "@/lib/marketing-sections";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
@@ -236,6 +237,8 @@ export function HomeLandingV2({
   // Optional gradient (off by default): over the photo, or replacing it as the background.
   const heroGrad = sectionGradient(hero);
   const heroGradOver = heroGrad ? gradientIsOverlay(heroGrad, heroBg, true) : false;
+  // Sky, sun and haze belong to the Default background only (and can be switched off).
+  const heroDecor = sectionDecor(hero);
   const closeBg = sectionBackground(close);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
@@ -314,9 +317,9 @@ export function HomeLandingV2({
         slots={{
       "home-hero": (
       <EditablePart id="home-hero" lift backdrop={false}>
-      <section className="v2-hero" id="home" aria-labelledby="v2-hero-title">
-        <div className="v2-hero-sky" aria-hidden />
-        <div className="v2-hero-sun" aria-hidden />
+      <section className={heroDecor ? "v2-hero" : "v2-hero v2-hero--plain"} id="home" aria-labelledby="v2-hero-title">
+        {heroDecor ? <div className="v2-hero-sky" aria-hidden /> : null}
+        {heroDecor ? <div className="v2-hero-sun" aria-hidden /> : null}
         {heroGrad && !heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad v2-hero-grad--bg" /> : null}
         <div className="v2-hero-photo" aria-hidden hidden={Boolean(heroGrad && !heroGradOver)}>
           {heroBg ? (
@@ -808,7 +811,8 @@ export function HomeLandingV2({
             className="v2-close-img"
           />
         )}
-        <span className="v2-close-tint" aria-hidden />
+        {/* Built-in tint only over the default photo; a custom background uses the editor overlay. */}
+        {closeBg ? null : <span className="v2-close-tint" aria-hidden />}
         <div className="v2-close-inner">
           <div className="v2-glass v2-glass--dark v2-close-card fe-animate">
             <p className="v2-kicker">{sectionText(close, "kicker")}</p>
