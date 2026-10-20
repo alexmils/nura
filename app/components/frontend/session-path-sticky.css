@@ -1107,8 +1107,9 @@ html[data-a11y-motion="reduced"] .fe-spath-finale-edge {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* Size to the content: a fixed 92–110svh box either clipped the facts or
-     left a long empty tail before Modes. The section reads as one band now. */
+  /* A full section of its own: the next band must not peek in under the facts
+     while this one is on screen. */
+  min-height: 100svh;
   padding: clamp(5rem, 9vw, 7rem) 0;
   /* No seam rule: the morph hand-off already blends this band into the one
      above it, and the 1px line read as a flickering break while scrolling. */

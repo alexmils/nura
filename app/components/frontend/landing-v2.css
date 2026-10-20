@@ -743,6 +743,8 @@
 
 .v2-modes {
   --v2-from: #edf9ed;
+  /* The section photo carries the band; the blend strip read as a white haze
+     over the top edge of the image. */
   background:
     linear-gradient(
       180deg,
@@ -751,6 +753,10 @@
       rgba(247, 223, 143, 0.6) 100%
     ),
     url("/marketing/landing/golden-hills.jpg") center / cover no-repeat;
+}
+
+.v2-modes::before {
+  content: none;
 }
 
 .v2-modes-board {
