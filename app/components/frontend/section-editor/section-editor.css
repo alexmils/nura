@@ -871,7 +871,10 @@ html[data-editor-open] .frontend-back-to-top {
   isolation: isolate;
 }
 
-.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay):not(.fe-bgwrap-grad) {
+.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay):not(.fe-bgwrap-grad),
+/* Admin wrappers and motion wrappers (e.g. SectionRise) can sit between the
+   backdrop and the section, so clear every section inside the block. */
+.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay):not(.fe-bgwrap-grad) section {
   background: transparent !important;
 }
 

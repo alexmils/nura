@@ -317,14 +317,18 @@ export function HomeLandingV2({
   // EditablePart adds a wrapper for admins, so the section nodes are rebuilt
   // when the role resolves; the motion hooks must re-attach to the new nodes.
   const isAdmin = useIsPlatformAdmin();
+  // A Background panel change adds a backdrop wrapper, which remounts the
+  // section; the motion hooks below re-key so they bind to the new nodes.
+  const pricingBackdrop = Boolean(sectionBackground(pricing) || sectionGradient(pricing));
+  const storiesBackdrop = Boolean(sectionBackground(storiesCopy) || sectionGradient(storiesCopy));
   const planGridRef = useRef<HTMLDivElement | null>(null);
-  usePlanSpread(planGridRef, `${PLANS.map((plan) => plan.id).join(",")}|${isAdmin}`);
+  usePlanSpread(planGridRef, `${PLANS.map((plan) => plan.id).join(",")}|${isAdmin}|${pricingBackdrop}`);
   const storiesRef = useRef<HTMLElement | null>(null);
   const storyTrackRef = useRef<HTMLDivElement | null>(null);
   useStoryTrack(
     storiesRef,
     storyTrackRef,
-    `${STORIES.map((story) => story.name).join("|")}|${isAdmin}`
+    `${STORIES.map((story) => story.name).join("|")}|${isAdmin}|${storiesBackdrop}`
   );
   const trustIcons = [Check, Check, ShieldCheck];
   const stripIcons: Record<string, typeof Check> = { trial: Check, cancel: Check, private: Lock, between: Sparkles };
