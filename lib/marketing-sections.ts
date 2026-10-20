@@ -284,8 +284,13 @@ const BASE_SECTIONS: readonly SectionDef[] = [
         itemLabel: "Card",
         max: 3,
         fixed: true,
-        fields: [text("label", "Label"), text("hint", "Hint")],
+        fields: [
+          image("icon", "Icon", "Small square icon at the top of the card. Upload or import from Cloudinary."),
+          text("label", "Label"),
+          text("hint", "Hint"),
+        ],
       },
+      media("rhythmMedia", "Image or video", "The large frame below the cards. Leave blank to keep the placeholder."),
       {
         key: "ground",
         label: "Ground pair",
@@ -341,10 +346,15 @@ const BASE_SECTIONS: readonly SectionDef[] = [
         },
       ],
       rhythm: [
-        { label: "Eyes", hint: "Visual sets" },
-        { label: "Ears", hint: "Audio cues" },
-        { label: "Hands", hint: "Gamepad" },
+        { icon: "", label: "Eyes", hint: "Visual sets" },
+        { icon: "", label: "Ears", hint: "Audio cues" },
+        { icon: "", label: "Hands", hint: "Gamepad" },
       ],
+      rhythmMediaKind: "image",
+      rhythmMediaImage: "",
+      rhythmMediaVideo: "",
+      rhythmMediaPoster: "",
+      rhythmMediaAlt: "",
       ground: [
         { id: "safe", title: "Safe place first.", line: "Feet on the floor before anything heavy." },
         { id: "cold", title: "No cold starts.", line: "Intake and breath, then the set." },
@@ -1685,7 +1695,7 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
   "home-how": [
     { id: "home-how", name: "Home: how it works", keys: ["badge", "intro1", "intro2", "intro3"] },
     { id: "home-how-stages", name: "Home: session stages", keys: ["stages"] },
-    { id: "home-how-rhythm", name: "Home: rhythm cards", keys: ["rhythm"], labels: { rhythm: "Cards" } },
+    { id: "home-how-rhythm", name: "Home: rhythm cards", keys: ["rhythm", "rhythmMedia"], labels: { rhythm: "Cards" } },
     { id: "home-how-ground", name: "Home: grounding cards", keys: ["ground"], labels: { ground: "Cards" } },
     {
       id: "home-how-between",

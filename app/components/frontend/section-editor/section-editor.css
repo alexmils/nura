@@ -340,6 +340,43 @@ html[data-editor-open] .frontend-back-to-top {
   object-fit: cover;
 }
 
+/* Image/video fields fill the panel; icon fields are a small square. The
+   wrapper used to shrink to the "Add" label, making a tall narrow pill. */
+.fe-editor-field > .fe-replace {
+  display: block;
+  width: 100%;
+}
+
+.fe-editor-field--thumb > .fe-replace {
+  width: 4.5rem;
+}
+
+.fe-editor-field--thumb .fe-replace-thumb {
+  width: 4.5rem;
+  height: 4.5rem;
+  min-height: 0;
+}
+
+.fe-editor-field--thumb .fe-replace-thumb img,
+.fe-editor-field--thumb .fe-replace-thumb video {
+  width: 100%;
+  height: 100%;
+}
+
+.fe-replace-thumb > span:not(.fe-replace-hover) {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+}
+
 .fe-replace-badge {
   position: absolute;
   inset: 0;

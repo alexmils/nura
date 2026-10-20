@@ -10,7 +10,13 @@ import {
   NoColdStartDemo,
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
-import { sectionList } from "@/lib/marketing-sections";
+import {
+  HIDDEN_ITEM_KEY,
+  mediaNames,
+  sectionList,
+  sectionText,
+} from "@/lib/marketing-sections";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
 import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SectionEdit } from "./section-editor/SectionEdit";
@@ -111,7 +117,18 @@ export function SessionPathSticky() {
     mediaPoster: stage.mediaPoster,
     mediaAlt: stage.mediaAlt,
   }));
-  const rhythm = sectionList(rhythmCopy, "rhythm");
+  // Keep each card's saved index so its icon frame key matches the editor.
+  const rhythmAll = Array.isArray(rhythmCopy.rhythm) ? rhythmCopy.rhythm : [];
+  const rhythm = rhythmAll
+    .map((card, at) => ({ card, at }))
+    .filter(({ card }) => card[HIDDEN_ITEM_KEY] !== "1");
+  const rhythmNames = mediaNames("rhythmMedia");
+  const rhythmKind = sectionText(rhythmCopy, rhythmNames.kind);
+  const rhythmImage = sectionText(rhythmCopy, rhythmNames.image);
+  const rhythmVideo = sectionText(rhythmCopy, rhythmNames.video);
+  const rhythmPoster = sectionText(rhythmCopy, rhythmNames.poster);
+  const rhythmAlt = sectionText(rhythmCopy, rhythmNames.alt);
+  const rhythmHasMedia = Boolean(rhythmImage || rhythmVideo);
   const ground = sectionList(groundCopy, "ground");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);
@@ -334,9 +351,24 @@ export function SessionPathSticky() {
                     >
                       <SectionEdit id="home-how-rhythm" />
                       <ul className="fe-spath-rhythm-grid">
-                        {rhythm.map((card) => (
-                          <li key={card.label} className="fe-spath-rhythm-card">
-                            <span className="fe-spath-rhythm-icon" aria-hidden />
+                        {rhythm.map(({ card, at }) => (
+                          <li key={card.label || at} className="fe-spath-rhythm-card">
+                            <span
+                              className={`fe-spath-rhythm-icon${card.icon ? " has-image" : ""}`}
+                              aria-hidden
+                            >
+                              {card.icon ? (
+                                // eslint-disable-next-line @next/next/no-img-element -- admin icons can be any Cloudinary or site URL
+                                <img
+                                  src={card.icon}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  data-frame-key={frameKey("home-how-rhythm", `rhythm.${at}.icon`)}
+                                  style={storedFrameStyle(card.iconPos)}
+                                />
+                              ) : null}
+                            </span>
                             {active === "rhythm" ? (
                               <LetterRevealHeading
                                 as="span"
@@ -358,11 +390,11 @@ export function SessionPathSticky() {
                       </ul>
                       <MediaPlaceholder
                         label={stage.mediaLabel}
-                        kind={stage.mediaKind}
-                        image={stage.mediaImage}
-                        video={stage.mediaVideo}
-                        poster={stage.mediaPoster}
-                        alt={stage.mediaAlt}
+                        kind={rhythmHasMedia ? rhythmKind : stage.mediaKind}
+                        image={rhythmHasMedia ? rhythmImage : stage.mediaImage}
+                        video={rhythmHasMedia ? rhythmVideo : stage.mediaVideo}
+                        poster={rhythmHasMedia ? rhythmPoster : stage.mediaPoster}
+                        alt={rhythmHasMedia ? rhythmAlt : stage.mediaAlt}
                       />
                     </div>
                   ) : stage.id === "ground" ? (

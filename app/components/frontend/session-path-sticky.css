@@ -508,11 +508,26 @@
 }
 
 .fe-spath-rhythm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.45rem;
   background: color-mix(in srgb, var(--fe-accent, #84b067) 28%, transparent);
   margin-bottom: 0.25rem;
+  overflow: hidden;
+}
+
+.fe-spath-rhythm-icon.has-image {
+  background: transparent;
+}
+
+.fe-spath-rhythm-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .fe-spath-rhythm-label {

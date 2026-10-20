@@ -16,6 +16,7 @@ import {
   MARKETING_SECTIONS,
   normalizeSection,
   sectionBackground,
+  sectionList,
   sectionText,
 } from "../lib/marketing-sections.ts";
 import { parseArticle } from "../lib/rich-article.ts";
@@ -57,6 +58,23 @@ describe("one panel per visual section", () => {
     assert.equal(sectionText(between, "betweenKicker"), "Between sessions");
     assert.equal(sectionText(between, "betweenCtaHref"), "/app/create-account");
     assert.equal(sectionText(between, "betweenAccent"), "Self-guided");
+
+    // Rhythm cards: an icon per card plus the big image/video frame, both in
+    // the rhythm panel (where their placeholders render).
+    const rhythmDef = getSectionDef("home-how-rhythm");
+    assert.ok(rhythmDef);
+    assert.deepEqual(rhythmDef.fields.map((field) => field.key), ["rhythm", "rhythmMedia"]);
+    const rhythmField = rhythmDef.fields.find((field) => field.key === "rhythm");
+    const rhythmChildren = rhythmField?.kind === "list" ? rhythmField.fields : [];
+    assert.deepEqual(rhythmChildren.map((field) => field.key), ["icon", "label", "hint"]);
+    assert.equal(rhythmChildren.find((field) => field.key === "icon")?.kind, "image");
+    assert.equal(rhythmDef.fields.find((field) => field.key === "rhythmMedia")?.kind, "media");
+    const rhythm = normalizeSection("home-how-rhythm", null);
+    assert.equal(sectionText(rhythm, "rhythmMediaKind"), "image");
+    const cards = sectionList(rhythm, "rhythm");
+    assert.equal(cards.length, 3);
+    assert.equal(cards[0]?.label, "Eyes");
+    assert.equal(cards[0]?.icon, "");
   });
 
   it("every section id is unique", () => {

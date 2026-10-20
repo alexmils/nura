@@ -429,7 +429,14 @@ function ScalarControl({
 }) {
   if (field.kind === "image") {
     return (
-      <ImageSlot label={field.label} hint={field.hint} value={value} onChange={onChange} frameField={field.key} />
+      <ImageSlot
+        label={field.label}
+        hint={field.hint}
+        value={value}
+        onChange={onChange}
+        frameField={field.key}
+        compact={field.key === "icon"}
+      />
     );
   }
   return (
@@ -451,6 +458,7 @@ function ImageSlot({
   value,
   onChange,
   frameField,
+  compact = false,
 }: {
   label: string;
   hint?: string;
@@ -458,12 +466,14 @@ function ImageSlot({
   onChange: (value: string) => void;
   /** The image's key in the section data: adds Edit (drag to move, scroll to zoom) / Done. */
   frameField?: string;
+  /** Small square preview for icons instead of the wide media preview. */
+  compact?: boolean;
 }) {
   const scope = useContext(FrameCtx);
   const path = scope && frameField ? `${scope.prefix}${frameField}` : "";
   const stored = scope && path ? scope.read(path) : "";
   return (
-    <div className="fe-editor-field">
+    <div className={`fe-editor-field${compact ? " fe-editor-field--thumb" : ""}`}>
       <span>{label}</span>
       <ReplaceableThumb src={value} onReplace={onChange} />
       {scope && path && value ? (
