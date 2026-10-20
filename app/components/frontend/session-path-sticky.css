@@ -18,6 +18,113 @@
   --spath-nav-h: 0px;
 }
 
+/* Hidden unless a full-screen video sits directly above (desktop). */
+.fe-spath-slide-hold {
+  display: none;
+}
+
+@media (min-width: 860px) {
+  /* Video -> How hand-off (Alexander Mils page slide): overlap the video's
+     last viewport, slide a full-screen pale sheet and the first stage's inner
+     content in from the right, while the video screen goes left. The sticky
+     nav/panels themselves are never transformed. */
+  .fe-custom--video + .fe-spath {
+    position: relative;
+    z-index: 3;
+    /* Two viewports of overlap: one for the slide, one so the video screen's
+       sticky range still covers the whole slide (no vertical drift). */
+    margin-top: -200svh;
+    padding-top: 0;
+    background: transparent;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+    border-top-color: transparent;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-hold {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100svh;
+    background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+    /* Enters from the left and moves right, like the reference's page slide. */
+    transform: translateX(-100%);
+    will-change: transform;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: 3px;
+    background: var(--fe-pistachio, #c6d67e);
+    will-change: opacity;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-nav {
+    opacity: 0;
+    will-change: opacity;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-custom--video + .fe-spath {
+    margin-top: 0;
+    padding-top: 200px;
+    background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+  }
+  .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+    border-top-color: color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
+  }
+  .fe-custom--video + .fe-spath .fe-spath-slide-hold {
+    display: none;
+  }
+  .fe-custom--video + .fe-spath .fe-spath-nav {
+    opacity: 1;
+  }
+  .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+    transform: none !important;
+  }
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath {
+  margin-top: 0;
+  padding-top: 200px;
+  background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+  border-top-color: color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-slide-hold {
+  display: none;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-nav {
+  opacity: 1;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+  transform: none !important;
+}
+
 /* "How it works" intro above the Heal poster: separate section, one visual block. */
 .fe-spath-intro-section {
   position: relative;

@@ -266,6 +266,14 @@ export function SessionPathSticky() {
       data-section="home-how"
       aria-labelledby="fe-how-intro-title"
     >
+      {/* Desktop hand-off after a full-screen video: a zero-height sticky hold
+          so the incoming pale sheet can slide over the video without adding
+          layout height or transforming the sticky stage. */}
+      <span className="fe-spath-slide-hold" aria-hidden>
+        <span className="fe-spath-slide-bg">
+          <span className="fe-spath-slide-edge" />
+        </span>
+      </span>
       <EditablePart id="home-how-stages">
       <div className="fe-spath-track-wrap">
         <div className="fe-container fe-spath-track">

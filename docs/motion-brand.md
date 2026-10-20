@@ -82,6 +82,7 @@ two adjacent boundaries must differ. Catalogue:
 | Bloom | `SectionBloom` — a soft pistachio disc grows from the top and dissolves | available, not wired (reads as a tint over a light section) |
 | Curtain cut | pinned outgoing + rising clip edge | two full-bleed sections |
 | Letterbox / aperture | bars close and part through black | into a black-and-white / dark section |
+| Page slide | pinned outgoing + full-screen sheet and stage inner translate horizontally | a full-screen film handing into a sticky stage |
 
 Current wiring on `/`:
 
@@ -93,6 +94,13 @@ Current wiring on `/`:
 - `between → languages` = **Colour morph** (`pinnedHandoff(..., "morph")`): both
   blocks shift into the languages colour and its content rises out. No panel
   sliding over another panel.
+- `video → how` = **Page slide** (`useHomeChoreography`): the video screen exits
+  right while a full-screen sheet and the first How stage's inner copy enter from
+  the left and move right. The How section overlaps **two** video viewports
+  (`margin-top: -200svh`) so the video screen stays sticky for the whole slide;
+  only the zero-height sheet and the stage inner translate, never the sticky
+  nav/panels. One viewport of overlap would make the video drift up and the
+  slide read as diagonal.
 - Everything else uses `Reveal` / letter-rise entrances plus the existing GSAP
   `.fe-animate` scroll reveals. (`journal → FAQ` was tried with a cut/bloom and
   left plain — see the note on the FAQ hand-off.)
