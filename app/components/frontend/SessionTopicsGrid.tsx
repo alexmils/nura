@@ -7,7 +7,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { isA11yReduceMotionPreferred } from "@/lib/a11y-preferences";
 import { blogCategoryBySlug } from "@/lib/blog-categories";
 import { sectionList, sectionText } from "@/lib/marketing-sections";
-import { LetterRevealHeading } from "./LetterRevealHeading";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import "./session-topics-grid.css";
@@ -86,6 +85,12 @@ export function SessionTopicsGrid({
   const count = topics.length;
   const moreLabel = sectionText(copy, "more") || "Read the guides";
   const moreHref = sectionText(copy, "moreHref") || "/blog";
+  // Same head treatment as the other home sections: kicker, title with the
+  // green italic accent, then a subline.
+  const title = sectionText(copy, "title");
+  const accent = sectionText(copy, "accent");
+  const sub = sectionText(copy, "sub");
+  const accentAt = accent ? title.indexOf(accent) : -1;
   const sectionRef = useRef<HTMLElement | null>(null);
   const orbitRef = useRef<HTMLDivElement | null>(null);
   useTopicsEmerge(sectionRef, orbitRef, count);
@@ -100,11 +105,20 @@ export function SessionTopicsGrid({
     >
       <SectionEdit id="home-topics" />
       <div className="fe-container fe-topics-frame">
-        <div className="fe-topics-head">
-          <LetterRevealHeading id="fe-topics-title" className="fe-topics-title">
-            {sectionText(copy, "title")}
-          </LetterRevealHeading>
-          <p className="fe-section-kicker fe-topics-kicker fe-animate">{sectionText(copy, "kicker")}</p>
+        <div className="fe-topics-head fe-animate">
+          <p className="fe-section-kicker fe-topics-kicker">{sectionText(copy, "kicker")}</p>
+          <h2 id="fe-topics-title" className="fe-topics-title">
+            {accentAt >= 0 ? (
+              <>
+                {title.slice(0, accentAt)}
+                <em className="fe-topics-em">{accent}</em>
+                {title.slice(accentAt + accent.length)}
+              </>
+            ) : (
+              title
+            )}
+          </h2>
+          {sub ? <p className="fe-topics-sub">{sub}</p> : null}
         </div>
 
         <div className="fe-topics-stage">

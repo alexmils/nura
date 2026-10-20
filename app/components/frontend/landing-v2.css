@@ -153,6 +153,60 @@
   color: var(--v2-muted);
 }
 
+/* Topics uses the same head shape as every other home section: kicker,
+   instrument-sans title with the green italic accent, then the subline. */
+.fe-v2 .fe-topics > .fe-topics-frame {
+  max-width: 80rem;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.fe-v2 .fe-topics-head {
+  align-items: flex-start;
+  gap: 1.4rem;
+  max-width: 44rem;
+  margin: 0;
+  text-align: left;
+}
+
+.fe-v2 .fe-topics-title {
+  max-width: none;
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(2.1rem, 4.6vw, 3.8rem);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.045em;
+  text-align: left;
+  color: var(--v2-ink);
+  text-wrap: balance;
+}
+
+.fe-v2 .fe-topics-em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  color: var(--v2-green-700);
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 45, "WONK" 0.4, "opsz" 144;
+}
+
+.fe-v2 .fe-topics-kicker {
+  margin: 0;
+  font-family: var(--font-alt);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  color: var(--v2-green-700);
+}
+
+.fe-v2 .fe-topics-sub {
+  margin: 0;
+  max-width: 38rem;
+  font-size: clamp(1rem, 1.4vw, 1.125rem);
+  line-height: 1.6;
+  color: var(--v2-muted);
+}
+
 /* —— Glass + controls —— */
 
 .v2-glass {

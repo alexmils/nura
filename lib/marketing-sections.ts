@@ -374,8 +374,10 @@ const BASE_SECTIONS: readonly SectionDef[] = [
     id: "home-topics",
     name: "Home: topic guides",
     fields: [
-      text("title", "Title"),
       text("kicker", "Kicker"),
+      text("title", "Title"),
+      text("accent", "Accent words", "Words from the title shown in the green italic accent."),
+      area("sub", "Subline"),
       text("more", "Link label"),
       link("moreHref", "Link"),
       {
@@ -389,8 +391,10 @@ const BASE_SECTIONS: readonly SectionDef[] = [
       },
     ],
     defaults: {
-      title: "People start with.",
       kicker: "Guides",
+      title: "People start with.",
+      accent: "start",
+      sub: "Short reads for the place you're starting from.",
       more: "Read the guides",
       moreHref: "/blog",
       topics: BLOG_CATEGORIES.map((category) => ({ id: category.slug, label: category.name })),
