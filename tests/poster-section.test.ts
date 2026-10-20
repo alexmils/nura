@@ -41,16 +41,23 @@ describe("poster word section (Heal)", () => {
     assert.match(c, /aria-label=\{letters\.join\(""\)\}/);
   });
 
-  it("is a full-bleed photo with a viewport-wide word and a dive-through-the-letter hand-off", () => {
+  it("is the poster layout: white top, photo below the edge, word straddling it", () => {
     const c = src("app/components/frontend/section-editor/PosterSection.tsx");
     const css = src("app/components/frontend/section-editor/custom-sections.css");
-    assert.match(css, /\.fe-poster-photo \{\s*position: absolute;\s*inset: 0;/);
-    assert.match(c, /stage\.clientWidth \* 0\.96/);
+    // Photo covers the stage but is clipped to below the edge; the top stays white.
+    assert.match(css, /\.fe-poster-photo \{[^}]*clip-path: inset\(var\(--poster-cut\) 0 0 0\)/);
+    assert.match(css, /\.fe-poster-stage \{[^}]*background: #fff;/);
+    // Above the edge the letters are filled with the photo; below it they are white.
+    assert.match(css, /\.fe-poster-layer--photo\.has-photo \.fe-poster-letter \{[^}]*background-clip: text;/);
+    assert.match(css, /\.fe-poster-layer--white \{[^}]*clip-path: inset\(var\(--poster-cut\) 0 0 0\)/);
+    assert.match(c, /fe-poster-layer--photo/);
+    assert.match(c, /backgroundPosition = /);
+    // Very large but fully visible.
+    assert.match(c, /stage\.clientWidth \* \(stage\.clientWidth < 700 \? 0\.86 : 0\.9\)/);
     assert.match(c, /start: \(\) => layoutTop\(root\)/);
     assert.match(c, /color: fill/);
     assert.match(c, /diveScale\(/);
   });
-
   it("renders through CustomSection and scales down on phones", () => {
     assert.match(src("app/components/frontend/section-editor/CustomSection.tsx"), /type === "poster"[\s\S]*<PosterStage copy=\{copy\} \/>/);
     const css = src("app/components/frontend/section-editor/custom-sections.css");

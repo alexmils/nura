@@ -9,14 +9,17 @@ import { sectionText, type SectionConfig } from "@/lib/marketing-sections";
 if (typeof window !== "undefined") gsap.registerPlugin(ScrollTrigger);
 
 /**
- * "Heal" poster: a full-bleed nature photo with one viewport-wide heavy serif
- * word. Scroll-scrubbed in three beats over a ~2.6-screen runway (the stage is
- * held in view by counter-translation, no pin spacer):
+ * "Heal" poster, after the "Light" poster: a white top half, the photo across
+ * the bottom half (full width), and one giant heavy serif word straddling the
+ * edge. Above the edge the letters are filled with the photo (background-clip:
+ * text, aligned with the photo below); below it they are white over the photo.
+ * Scroll-scrubbed over a runway (the stage is held in view by counter-
+ * translation, no pin spacer):
  *   1. letters rise, de-blur and fade in one by one (reverses on scroll up);
  *   2. the kicker, line and note settle in;
- *   3. "through the word": the camera dives into the first letter's stem; the
- *      letters fill with the NEXT section's colour while they grow until that
- *      colour covers the screen, so the next section arrives through the word.
+ *   3. "through the word": the letters fill with the NEXT section's colour and
+ *      the camera dives into the first letter's stem until that colour covers
+ *      the screen, so the next section arrives through the word.
  * transform/opacity/filter only. Reduced motion: a static one-screen poster.
  */
 
@@ -76,27 +79,58 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
   const note = sectionText(copy, "note").trim();
   const signature = `${letters.join("")}|${image}`;
 
-  // Fit the word to the viewport width (as large as it can be).
+  // Fit the word (as large as it can be, fully visible) and paint the photo
+  // through the letters so it lines up with the photo below the edge.
   useEffect(() => {
     const root = rootRef.current;
     const stage = root?.querySelector<HTMLElement>(".fe-poster-stage");
-    const inner = root?.querySelector<HTMLElement>(".fe-poster-word-inner");
-    if (!root || !stage || !inner) return;
+    const word = root?.querySelector<HTMLElement>(".fe-poster-word");
+    if (!root || !stage || !word) return;
+    let natural: { w: number; h: number } | null = null;
     let frame = 0;
     const fit = () => {
-      inner.style.fontSize = "100px";
-      const natural = inner.scrollWidth || 1;
-      const maxW = stage.clientWidth * 0.96;
-      const maxH = stage.clientHeight * 0.78;
-      const size = Math.min((100 * maxW) / natural, maxH / 0.8);
-      inner.style.fontSize = `${Math.max(48, size)}px`;
-      root.style.setProperty("--poster-fit", "1");
+      const rows = [...word.querySelectorAll<HTMLElement>(".fe-poster-word-inner")];
+      if (!rows.length) return;
+      rows.forEach((row) => (row.style.fontSize = "100px"));
+      const glyphs = rows[0]!.querySelectorAll<HTMLElement>(".fe-poster-letter");
+      const firstG = glyphs[0];
+      const lastG = glyphs[glyphs.length - 1];
+      const measured = firstG && lastG ? lastG.offsetLeft + lastG.offsetWidth - firstG.offsetLeft || 1 : 1;
+      const size = Math.max(48, Math.min((100 * stage.clientWidth * (stage.clientWidth < 700 ? 0.86 : 0.9)) / measured, (stage.clientHeight * 0.5) / 0.8));
+      rows.forEach((row) => (row.style.fontSize = `${size}px`));
+      if (natural && image) {
+        const sw = stage.clientWidth;
+        const sh = stage.clientHeight;
+        const scale = Math.max(sw / natural.w, sh / natural.h);
+        const w = natural.w * scale;
+        const h = natural.h * scale;
+        word.querySelectorAll<HTMLElement>(".fe-poster-layer--photo .fe-poster-letter").forEach((el) => {
+          let x = 0;
+          let y = 0;
+          for (let node: HTMLElement | null = el; node && node !== stage; node = node.offsetParent as HTMLElement | null) {
+            x += node.offsetLeft;
+            y += node.offsetTop;
+          }
+          el.style.backgroundImage = `url("${image.replace(/"/g, "%22")}")`;
+          el.style.backgroundSize = `${w}px ${h}px`;
+          el.style.backgroundPosition = `${(sw - w) / 2 - x}px ${(sh - h) / 2 - y}px`;
+        });
+        word.querySelector(".fe-poster-layer--photo")?.classList.add("has-photo");
+      }
       ScrollTrigger.refresh();
     };
     const schedule = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(fit);
     };
+    if (image) {
+      const img = new Image();
+      img.onload = () => {
+        natural = { w: img.naturalWidth || 1, h: img.naturalHeight || 1 };
+        schedule();
+      };
+      img.src = image;
+    }
     schedule();
     void document.fonts?.ready.then(schedule);
     const observer = new ResizeObserver(schedule);
@@ -105,7 +139,7 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [signature]);
+  }, [signature, image]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -114,7 +148,12 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
     const section = (root.closest("section") as HTMLElement | null) ?? root;
     const stage = root.querySelector<HTMLElement>(".fe-poster-stage")!;
     const wordEl = root.querySelector<HTMLElement>(".fe-poster-word")!;
-    const glyphs = [...root.querySelectorAll<HTMLElement>(".fe-poster-letter")];
+    const layers = [...root.querySelectorAll<HTMLElement>(".fe-poster-word-inner:not(.fe-poster-layer--fill)")].map((row) => [
+      ...row.querySelectorAll<HTMLElement>(".fe-poster-letter"),
+    ]);
+    const fillRow = root.querySelector<HTMLElement>(".fe-poster-layer--fill");
+    const count = layers[0]?.length ?? 0;
+    const glyphs = layers[0] ?? [];
     const photo = root.querySelector<HTMLElement>(".fe-poster-photo");
     const asides = root.querySelectorAll<HTMLElement>(".fe-poster-aside");
     root.classList.add("is-scrolly");
@@ -131,19 +170,16 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       // Hold the stage in view for the runway (virtual pin).
       gsap.fromTo(stage, { y: 0 }, { y: () => travel(), ease: "none", scrollTrigger: range });
 
-      // The reveal starts while the poster scrolls in, so the first letters rise as it arrives.
-      const tl = gsap.timeline({
-        defaults: { ease: "power2.out" },
-        scrollTrigger: { ...range, start: () => layoutTop(root) - vh() * 0.55, scrub: 0.5 },
-      });
+      const tl = gsap.timeline({ defaults: { ease: "power2.out" }, scrollTrigger: { ...range, scrub: 0.5 } });
       const step = 0.32;
-      glyphs.forEach((glyph, i) => {
-        tl.fromTo(glyph, { yPercent: 62, opacity: 0, filter: "blur(18px)" }, { yPercent: 0, opacity: 1, filter: "blur(0px)", duration: 1 }, i * step);
-      });
-      const revealEnd = (glyphs.length - 1) * step + 1;
+      for (let i = 0; i < count; i += 1) {
+        const group = layers.map((row) => row[i]).filter(Boolean);
+        tl.fromTo(group, { yPercent: 62, opacity: 0, filter: "blur(18px)" }, { yPercent: 0, opacity: 1, filter: "blur(0px)", duration: 1 }, i * step);
+      }
+      const revealEnd = (count - 1) * step + 1;
       if (asides.length) tl.fromTo(asides, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.12 }, revealEnd * 0.6);
       // A short beat to read it.
-      const dive = revealEnd + 0.7;
+      const dive = revealEnd + 0.9;
       const first = glyphs[0]!;
       const origin = () => {
         const w = wordEl.getBoundingClientRect();
@@ -158,12 +194,16 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
       const fill = nextColour(section);
       tl.set(wordEl, { transformOrigin: origin }, dive);
       if (asides.length) tl.to(asides, { opacity: 0, duration: 0.4, ease: "none" }, dive);
-      tl.to(glyphs, { color: fill, textShadow: "0 0 0 rgba(0,0,0,0)", duration: 0.7, ease: "none" }, dive);
+      if (fillRow) {
+        gsap.set(fillRow, { color: fill, opacity: 0 });
+        tl.to(fillRow, { opacity: 1, duration: 0.7, ease: "none" }, dive);
+      }
       tl.fromTo(wordEl, { scale: 1 }, { scale, duration: 2.2, ease: "power3.in", immediateRender: false }, dive + 0.15);
-      if (photo) tl.fromTo(photo, { scale: 1, filter: "brightness(1)" }, { scale: 1.12, filter: "brightness(0.82)", duration: 2.2, ease: "power1.in", immediateRender: false }, dive + 0.15);
+      if (photo) tl.fromTo(photo, { filter: "brightness(1)" }, { filter: "brightness(0.8)", duration: 2.2, ease: "power1.in" }, dive + 0.15);
       // Fully covered: hand the colour to the stage so the release is seamless.
       tl.set(stage, { backgroundColor: fill }, dive + 2.3);
       tl.set([wordEl, photo].filter(Boolean), { autoAlpha: 0 }, dive + 2.35);
+      tl.to({}, { duration: 0.3 });
     }, root);
     return () => {
       ctx.revert();
@@ -172,6 +212,15 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature]);
 
+  const glyphRow = (cls: string, hidden: boolean) => (
+    <span className={`fe-poster-word-inner ${cls}`} aria-hidden={hidden || undefined}>
+      {letters.map((letter, index) => (
+        <span key={index} className="fe-poster-letter">
+          {letter === " " ? "\u00a0" : letter}
+        </span>
+      ))}
+    </span>
+  );
   const style = { "--poster-len": Math.max(letters.length, 3) } as CSSProperties;
   return (
     <div ref={rootRef} className="fe-poster" style={style}>
@@ -192,13 +241,10 @@ export function PosterStage({ copy }: { copy: SectionConfig }) {
         {line ? <p className="fe-poster-line fe-poster-aside">{line}</p> : null}
         {letters.length ? (
           <h2 className="fe-poster-word" aria-label={letters.join("")}>
-            <span className="fe-poster-word-inner" aria-hidden>
-              {letters.map((letter, index) => (
-                <span key={index} className="fe-poster-letter">
-                  {letter === " " ? "\u00a0" : letter}
-                </span>
-              ))}
-            </span>
+            {/* On white: the photo shows through the letters. Over the photo: white letters. */}
+            {glyphRow(image ? "fe-poster-layer--photo" : "fe-poster-layer--ink", true)}
+            {image ? glyphRow("fe-poster-layer--white", true) : null}
+            {glyphRow("fe-poster-layer--fill", true)}
           </h2>
         ) : null}
         {note ? <p className="fe-poster-note fe-poster-aside">{note}</p> : null}
