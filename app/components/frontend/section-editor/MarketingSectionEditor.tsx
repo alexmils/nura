@@ -12,9 +12,13 @@ import {
   BG_DECOR_KEY,
   BG_DEFAULT_OVERLAY,
   GRADIENT_DEFAULTS,
+  HERO_TEMPLATE_KEY,
+  fieldInTemplate,
   HIDDEN_ITEM_KEY,
   SECTION_OFF_KEY,
   mediaNames,
+  type Field,
+  type FieldOption,
   type ItemField,
   type ListField,
   type MediaFieldDef,
@@ -25,6 +29,7 @@ import {
 import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
 import { commitSectionDraft, setSectionDraft, useEditorDraft } from "./section-draft";
+import "./editor-templates.css";
 
 /**
  * Which section (and list item) an image belongs to, so its Edit button and
@@ -60,6 +65,11 @@ export function MarketingSectionEditor({
     read: (path) => readFramePath(config, path),
     write: (path, position) => change(`frame:${path}`, (current) => patchFramePath(current, path, position)),
   };
+
+  // Hero templates: only the chosen (previewed) template's own fields are shown.
+  const template = String(config?.[HERO_TEMPLATE_KEY] || "default");
+  const pickerFields = def ? def.fields.filter(isPicker) : [];
+  const colorFields = def ? def.fields.filter(isColor) : [];
 
   /** Applies an edit and records an undo step (typing in one field within 1s is one step). */
   function change(key: string, apply: (current: SectionConfig) => SectionConfig) {
@@ -215,12 +225,20 @@ export function MarketingSectionEditor({
                   <span>Show this section</span>
                 </label>
               )}
+              {pickerFields.map((field) => (
+                <TemplatePicker
+                  key={field.key}
+                  field={field}
+                  value={String(config[field.key] ?? "")}
+                  onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+                />
+              ))}
               <BackgroundControls
-                decorations={id === "home-hero"}
+                decorations={id === "home-hero" && template === "default"}
                 values={config}
                 onChange={(patch, key) => change(`bg:${key}`, (current) => ({ ...current, ...patch }))}
               />
-              {def.fields.map((field) => {
+              {def.fields.filter((field) => !isPicker(field) && !isColor(field) && fieldInTemplate(field, template)).map((field) => {
                 if (field.kind === "list") {
                   return (
                     <fieldset key={field.key} className="fe-editor-group">
@@ -261,6 +279,19 @@ export function MarketingSectionEditor({
                   />
                 );
               })}
+              {colorFields.length ? (
+                <fieldset className="fe-editor-group">
+                  <legend>Text colours</legend>
+                  {colorFields.map((field) => (
+                    <ColorControl
+                      key={field.key}
+                      field={field}
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+                    />
+                  ))}
+                </fieldset>
+              ) : null}
             </>
           )}
         </div>
@@ -287,6 +318,103 @@ export function MarketingSectionEditor({
       </div>
       </FrameCtx.Provider>
     </EditorLayer>
+  );
+}
+
+function isPicker(field: Field): field is ScalarField {
+  return field.kind !== "list" && field.kind !== "media" && Boolean(field.options?.length);
+}
+
+function isColor(field: Field): field is ScalarField {
+  return field.kind !== "list" && field.kind !== "media" && Boolean(field.color);
+}
+
+/** Layout picker with a schematic preview per option; picking updates the page at once (Save keeps it). */
+function TemplatePicker({
+  field,
+  value,
+  onChange,
+}: {
+  field: ScalarField;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const options = field.options ?? [];
+  const current = options.some((option) => option.value === value) ? value : options[0]?.value;
+  return (
+    <fieldset className="fe-editor-group fe-editor-tpl">
+      <legend>{field.label}</legend>
+      <div className="fe-editor-tpl-grid" role="radiogroup" aria-label={field.label}>
+        {options.map((option: FieldOption) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={current === option.value}
+            className={`fe-editor-tpl-option${current === option.value ? " is-on" : ""}`}
+            onClick={() => onChange(option.value)}
+            title={option.hint}
+          >
+            <span className={`fe-tpl-thumb fe-tpl-thumb--${option.value}`} aria-hidden>
+              <i className="t-media" />
+              <i className="t-line t-line--1" />
+              <i className="t-line t-line--2" />
+              <i className="t-line t-line--3" />
+              <i className="t-btn" />
+              <i className="t-extra" />
+            </span>
+            <strong>{option.label}</strong>
+            {option.hint ? <small>{option.hint}</small> : null}
+          </button>
+        ))}
+      </div>
+      <small className="fe-editor-tpl-note">The page shows the picked template right away. Save keeps it; Cancel goes back. Each template keeps its own media and extras.</small>
+    </fieldset>
+  );
+}
+
+function ColorControl({
+  field,
+  value,
+  onChange,
+}: {
+  field: ScalarField;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const valid = /^#[0-9a-f]{6}$/i.test(value);
+  const [hex, setHex] = useState(value);
+  useEffect(() => setHex(value), [value]);
+  return (
+    <div className="fe-editor-field fe-editor-color">
+      <span>{field.label}</span>
+      <div>
+        <input
+          type="color"
+          aria-label={`${field.label}: pick`}
+          value={valid ? value : "#ffffff"}
+          onChange={(event) => onChange(event.target.value.toLowerCase())}
+        />
+        <input
+          aria-label={`${field.label}: hex`}
+          value={hex}
+          maxLength={7}
+          placeholder="As designed"
+          onChange={(event) => {
+            const next = event.target.value.trim();
+            setHex(next);
+            if (!next) onChange("");
+            else if (/^#[0-9a-f]{6}$/i.test(next)) onChange(next.toLowerCase());
+          }}
+        />
+        {value ? (
+          <button type="button" className="fe-editor-frame-btn" onClick={() => onChange("")}>
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {field.hint ? <small>{field.hint}</small> : null}
+    </div>
   );
 }
 

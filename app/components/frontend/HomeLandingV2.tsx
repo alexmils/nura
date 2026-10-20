@@ -37,7 +37,10 @@ import {
   sectionGradient,
   gradientIsOverlay,
   sectionDecor,
+  heroInk,
+  heroTemplate,
 } from "@/lib/marketing-sections";
+import { HeroTemplateBody, heroInkStyle, useReducedMotion, type HeroParts } from "./HeroTemplates";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
 import { useSectionConfig, usePageLayout } from "./section-editor/MarketingCopy";
 import { PageSections } from "./section-editor/PageSections";
@@ -50,6 +53,7 @@ import { usePlanSpread } from "./usePlanSpread";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./landing-v2.css";
+import "./hero-templates.css";
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
@@ -238,8 +242,17 @@ export function HomeLandingV2({
   // Optional gradient (off by default): over the photo, or replacing it as the background.
   const heroGrad = sectionGradient(hero);
   const heroGradOver = heroGrad ? gradientIsOverlay(heroGrad, heroBg, true) : false;
-  // Sky, sun and haze belong to the Default background only (and can be switched off).
-  const heroDecor = sectionDecor(hero);
+  // Hero layout template ("default" = the original centred hero).
+  const heroTpl = heroTemplate(hero);
+  const heroStyle = heroInkStyle(heroInk(hero));
+  // Templates show a background video's poster under reduced motion.
+  const reduceMotion = useReducedMotion();
+  const heroBgShown =
+    heroTpl !== "default" && reduceMotion && heroBg?.kind === "video" && heroBg.poster
+      ? { ...heroBg, kind: "image" as const, image: heroBg.poster, imagePos: "" }
+      : heroBg;
+  // Sky, sun and haze belong to the Default template on the Default background only (and can be switched off).
+  const heroDecor = heroTpl === "default" && sectionDecor(hero);
   // Hero + trust strip are one unit (strip inside the hero, in the first
   // viewport) whenever the strip is the next shown section after the hero.
   const homeLayout = usePageLayout("home");
@@ -332,6 +345,51 @@ export function HomeLandingV2({
     },
   ];
 
+  // One set of hero copy elements; every template arranges these (the load reveal targets their classes).
+  const heroParts: HeroParts = {
+    kicker: (
+      <p className="v2-hero-kicker">
+        <span className="v2-hero-kicker-dot" aria-hidden />
+        {sectionText(hero, "kicker")}
+      </p>
+    ),
+    title: (
+      <h1 className="v2-hero-title" id="v2-hero-title">
+        <span className="v2-hero-title-line">{sectionText(hero, "title1")}</span>
+        <span className="v2-hero-title-line">
+          <Accent text={sectionText(hero, "title2")} accent={sectionText(hero, "accent")} className="v2-em v2-hero-em" />
+        </span>
+      </h1>
+    ),
+    sub: <p className="v2-hero-sub">{sectionText(hero, "sub")}</p>,
+    actions: (
+      <div className="v2-hero-actions">
+        <Link href={sectionText(hero, "primaryHref")} className="v2-btn v2-btn--lime">
+          {sectionText(hero, "primary")}
+          <ArrowRight size={17} aria-hidden />
+        </Link>
+        {sectionText(hero, "secondary") ? (
+          <a href={sectionText(hero, "secondaryHref") || "#how-it-works"} className="v2-btn v2-btn--ghost">
+            <Play size={15} aria-hidden />
+            {sectionText(hero, "secondary")}
+          </a>
+        ) : null}
+      </div>
+    ),
+    checks: (
+      <ul className="v2-hero-trust">
+        {sectionList(hero, "trust").map((item, index) => {
+          const Icon = trustIcons[index] ?? Check;
+          return (
+            <li key={item.id || index}>
+              <Icon size={15} aria-hidden /> {item.label}
+            </li>
+          );
+        })}
+      </ul>
+    ),
+  };
+
   return (
     <div ref={landingRef} className="fe-v2">
       <PageSections
@@ -339,13 +397,18 @@ export function HomeLandingV2({
         slots={{
       "home-hero": (
       <EditablePart id="home-hero" lift backdrop={false}>
-      <section className={`v2-hero${heroDecor ? "" : " v2-hero--plain"}${trustInHero ? " v2-hero--trust" : ""}`} id="home" aria-labelledby="v2-hero-title">
+      <section
+        className={`v2-hero${heroDecor ? "" : " v2-hero--plain"}${heroTpl === "default" ? "" : ` v2-hero--tpl v2-hero--tpl-${heroTpl}`}${trustInHero ? " v2-hero--trust" : ""}`}
+        id="home"
+        aria-labelledby="v2-hero-title"
+        style={heroStyle}
+      >
         {heroDecor ? <div className="v2-hero-sky" aria-hidden /> : null}
         {heroDecor ? <div className="v2-hero-sun" aria-hidden /> : null}
         {heroGrad && !heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad v2-hero-grad--bg" /> : null}
         <div className="v2-hero-photo" aria-hidden hidden={Boolean(heroGrad && !heroGradOver)}>
           {heroBg ? (
-            <BandBackground bg={heroBg} className="v2-hero-photo-img" frame={frameKey("home-hero", "bgImage")} />
+            <BandBackground bg={heroBgShown ?? heroBg} className="v2-hero-photo-img" frame={frameKey("home-hero", "bgImage")} />
           ) : (
             <Image
               src="/marketing/landing/green-landscape.jpg"
@@ -359,43 +422,20 @@ export function HomeLandingV2({
           {heroGrad && heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad" /> : null}
         </div>
 
-        <div className="v2-hero-inner">
-          <div className="v2-hero-copy">
-            <p className="v2-hero-kicker">
-              <span className="v2-hero-kicker-dot" aria-hidden />
-              {sectionText(hero, "kicker")}
-            </p>
-            <h1 className="v2-hero-title" id="v2-hero-title">
-              <span className="v2-hero-title-line">{sectionText(hero, "title1")}</span>
-              <span className="v2-hero-title-line">
-                <Accent text={sectionText(hero, "title2")} accent={sectionText(hero, "accent")} className="v2-em v2-hero-em" />
-              </span>
-            </h1>
-            <p className="v2-hero-sub">{sectionText(hero, "sub")}</p>
-            <div className="v2-hero-actions">
-              <Link href={sectionText(hero, "primaryHref")} className="v2-btn v2-btn--lime">
-                {sectionText(hero, "primary")}
-                <ArrowRight size={17} aria-hidden />
-              </Link>
-              {sectionText(hero, "secondary") ? (
-                <a href={sectionText(hero, "secondaryHref") || "#how-it-works"} className="v2-btn v2-btn--ghost">
-                  <Play size={15} aria-hidden />
-                  {sectionText(hero, "secondary")}
-                </a>
-              ) : null}
+        {heroTpl !== "default" && !heroBg && !heroGrad ? <div className="v2-tpl-scrim" aria-hidden /> : null}
+        {heroTpl === "default" ? (
+          <div className="v2-hero-inner">
+            <div className="v2-hero-copy">
+              {heroParts.kicker}
+              {heroParts.title}
+              {heroParts.sub}
+              {heroParts.actions}
+              {heroParts.checks}
             </div>
-            <ul className="v2-hero-trust">
-              {sectionList(hero, "trust").map((item, index) => {
-                const Icon = trustIcons[index] ?? Check;
-                return (
-                  <li key={item.id || index}>
-                    <Icon size={15} aria-hidden /> {item.label}
-                  </li>
-                );
-              })}
-            </ul>
           </div>
-        </div>
+        ) : (
+          <HeroTemplateBody hero={hero} template={heroTpl} parts={heroParts} />
+        )}
         {trustInHero ? (
           <div className="v2-hero-trust-slot">
             <EditablePart id="home-trust" backdrop={false}>

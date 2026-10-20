@@ -42,7 +42,15 @@ export type ScalarField = {
   hint?: string;
   /** Character cap. Defaults to 400 (text) / 2400 (textarea). */
   max?: number;
+  /** A fixed choice (stored as its value); the editor shows a picker. */
+  options?: readonly FieldOption[];
+  /** Hex colour ("#rrggbb" or blank); the editor shows a colour swatch. */
+  color?: boolean;
+  /** Only shown (and rendered) for these hero templates. */
+  templates?: readonly string[];
 };
+
+export type FieldOption = { value: string; label: string; hint?: string };
 
 /** Image or video slot. Stored as `{key}Kind`, `{key}Image`, `{key}Video`, `{key}Poster`, `{key}Alt`. */
 export type MediaFieldDef = {
@@ -50,6 +58,8 @@ export type MediaFieldDef = {
   label: string;
   kind: "media";
   hint?: string;
+  /** Only shown (and rendered) for these hero templates. */
+  templates?: readonly string[];
 };
 
 export type ListField = {
@@ -61,6 +71,8 @@ export type ListField = {
   /** Keep the default count and any default `id` values. */
   fixed?: boolean;
   fields: ItemField[];
+  /** Only shown (and rendered) for these hero templates. */
+  templates?: readonly string[];
 };
 
 export type ItemField = ScalarField | MediaFieldDef;
@@ -145,6 +157,45 @@ export function mediaNames(key: string) {
 }
 
 const LINK_HINT = "One link per line: Label|/path";
+
+/* ---------- Hero templates ---------- */
+
+/** The hero's layout. "default" is the original centred hero (unchanged output). */
+export const HERO_TEMPLATE_KEY = "template";
+export const HERO_TEMPLATES = [
+  { value: "default", label: "Default", hint: "Centred headline over the background." },
+  { value: "split", label: "Split", hint: "Text left, media card right." },
+  { value: "mirror", label: "Split, mirrored", hint: "Media card left, text right." },
+  { value: "spotlight", label: "Spotlight", hint: "Headline bottom-left with a small looping video card." },
+  { value: "editorial", label: "Editorial", hint: "Oversized headline with a stats column." },
+  { value: "framed", label: "Framed", hint: "Centred minimal headline above a framed media card." },
+  { value: "cinema", label: "Cinema", hint: "Full-bleed video, text in a bar along the bottom." },
+] as const satisfies readonly FieldOption[];
+export type HeroTemplate = (typeof HERO_TEMPLATES)[number]["value"];
+
+export function heroTemplate(config: SectionConfig | undefined): HeroTemplate {
+  const raw = config?.[HERO_TEMPLATE_KEY];
+  return HERO_TEMPLATES.some((option) => option.value === raw) ? (raw as HeroTemplate) : "default";
+}
+
+/** Whether a field belongs to the active template (fields without `templates` always do). */
+export function fieldInTemplate(field: { templates?: readonly string[] }, template: string): boolean {
+  return !field.templates || field.templates.includes(template);
+}
+
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+/** Editable hero text colours; blank = as designed. */
+export function heroInk(config: SectionConfig | undefined): { headline: string; accent: string; body: string } {
+  const read = (key: string) => {
+    const raw = config?.[key];
+    return typeof raw === "string" && HEX_COLOR.test(raw.trim()) ? raw.trim() : "";
+  };
+  return { headline: read("headlineColor"), accent: read("accentColor"), body: read("bodyColor") };
+}
+
+const COLOR_HINT = "Hex, e.g. #f4fff2. Blank = as designed.";
+const only = <T extends object>(field: T, templates: readonly HeroTemplate[]): T => ({ ...field, templates });
 
 function faqDefaults(
   items: readonly { q: string; a: string }[]
@@ -1237,6 +1288,30 @@ const V2_SECTIONS: SectionDef[] = [
         fixed: true,
         fields: [text("label", "Text")],
       },
+      { ...text(HERO_TEMPLATE_KEY, "Template"), options: HERO_TEMPLATES },
+      { ...text("headlineColor", "Headline colour", COLOR_HINT), color: true },
+      { ...text("accentColor", "Accent colour", COLOR_HINT), color: true },
+      { ...text("bodyColor", "Body text colour", COLOR_HINT), color: true },
+      only(media("sideMedia", "Media card", "Image, or a muted looping video. Poster shows if motion is reduced."), ["split", "mirror"]),
+      only(text("sideCaption", "Media card caption"), ["split", "mirror"]),
+      only(media("clipMedia", "Small video card", "A short muted loop works best. Poster shows if motion is reduced."), ["spotlight"]),
+      only(text("clipLabel", "Video card label"), ["spotlight"]),
+      only<ListField>(
+        {
+          key: "stats",
+          label: "Stats column",
+          kind: "list",
+          itemLabel: "Stat",
+          max: 3,
+          fixed: true,
+          fields: [text("value", "Value"), text("label", "Label")],
+        },
+        ["editorial"]
+      ),
+      only(area("statsNote", "Stats note"), ["editorial"]),
+      only(media("frameMedia", "Framed media", "Image, or a muted looping video. Poster shows if motion is reduced."), ["framed"]),
+      only(text("frameCaption", "Frame caption"), ["framed"]),
+      only(text("barLabel", "Bar label", "Small line above the headline, e.g. A calm set, playing."), ["cinema"]),
     ],
     defaults: {
       kicker: "AI-guided EMDR, between sessions",
@@ -1253,6 +1328,35 @@ const V2_SECTIONS: SectionDef[] = [
         { id: "cancel", label: "Cancel anytime" },
         { id: "selfhelp", label: "Self-help, not therapy" },
       ],
+      [HERO_TEMPLATE_KEY]: "default",
+      headlineColor: "",
+      accentColor: "",
+      bodyColor: "",
+      sideMediaKind: "image",
+      sideMediaImage: "/marketing/landing/calm-rest.jpg",
+      sideMediaVideo: "",
+      sideMediaPoster: "",
+      sideMediaAlt: "Someone resting calmly at home",
+      sideCaption: "A calm set, at your own pace",
+      clipMediaKind: "image",
+      clipMediaImage: "/marketing/landing/calm-water.jpg",
+      clipMediaVideo: "",
+      clipMediaPoster: "",
+      clipMediaAlt: "Calm water",
+      clipLabel: "A guided set, playing",
+      stats: [
+        { id: "trial", value: `${TRIAL_DAYS} days`, label: "Free trial, cancel anytime" },
+        { id: "schedule", value: "24/7", label: "Sessions on your schedule" },
+        { id: "private", value: "Private", label: "Private by design" },
+      ],
+      statsNote: "Self-help support between sessions, not a licensed therapist.",
+      frameMediaKind: "image",
+      frameMediaImage: "/marketing/landing/soft-window.jpg",
+      frameMediaVideo: "",
+      frameMediaPoster: "",
+      frameMediaAlt: "Soft light through a window",
+      frameCaption: "Visual sets, optional voice, and short guides.",
+      barLabel: "Between sessions",
     },
   },
   {
@@ -2203,6 +2307,13 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
         source[field.key],
         typeof fallback === "string" ? fallback : ""
       );
+      if (field.options && !field.options.some((option) => option.value === out[field.key])) {
+        out[field.key] = typeof fallback === "string" ? fallback : field.options[0]?.value ?? "";
+      }
+      if (field.color) {
+        const value = String(out[field.key]).trim();
+        out[field.key] = HEX_COLOR.test(value) ? value : "";
+      }
       if (field.kind === "image") keepFramePos(out as SectionItem, source, field.key);
     }
   }
