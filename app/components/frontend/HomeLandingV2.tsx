@@ -7,8 +7,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Headphones,
   Leaf,
   Lock,
@@ -53,6 +51,7 @@ import { LanguagesSection } from "./LanguagesSection";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { useLandingMotion } from "./useLandingMotion";
 import { usePlanSpread } from "./usePlanSpread";
+import { useStoryTrack } from "./useStoryTrack";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./landing-v2.css";
@@ -316,44 +315,15 @@ export function HomeLandingV2({
   const SESSION_VIDEO_URL = sectionText(session, "videoUrl").trim();
   const planGridRef = useRef<HTMLDivElement | null>(null);
   usePlanSpread(planGridRef, PLANS.map((plan) => plan.id).join(","));
+  const storiesRef = useRef<HTMLElement | null>(null);
+  const storyTrackRef = useRef<HTMLDivElement | null>(null);
+  useStoryTrack(storiesRef, storyTrackRef, STORIES.map((story) => story.name).join("|"));
   const trustIcons = [Check, Check, ShieldCheck];
   const stripIcons: Record<string, typeof Check> = { trial: Check, cancel: Check, private: Lock, between: Sparkles };
   const featureIcons: Record<string, typeof Check> = { sets: Sun, voice: Headphones, ground: Leaf, notes: Lock };
 
-  const [activeStory, setActiveStory] = useState(0);
-  const [storiesPaused, setStoriesPaused] = useState(false);
   const [activeMode, setActiveMode] = useState<string>("guided");
   const activeModeData = MODES.find((mode) => mode.id === activeMode) ?? MODES[0];
-
-  useEffect(() => {
-    if (storiesPaused || STORIES.length < 2) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const id = window.setTimeout(() => {
-      setActiveStory((i) => (i + 1) % STORIES.length);
-    }, 5500);
-    return () => window.clearTimeout(id);
-  }, [activeStory, storiesPaused, STORIES.length]);
-
-  const goStory = (dir: -1 | 1) => {
-    if (!STORIES.length) return;
-    setActiveStory((i) => (i + dir + STORIES.length) % STORIES.length);
-  };
-
-  const storyAt = Math.min(activeStory, Math.max(0, STORIES.length - 1));
-  const visibleStories = !STORIES.length ? [] : [
-    {
-      story: STORIES[(storyAt - 1 + STORIES.length) % STORIES.length]!,
-      position: "prev" as const,
-    },
-    {
-      story: STORIES[storyAt]!,
-      position: "active" as const,
-    },
-    {
-      story: STORIES[(storyAt + 1) % STORIES.length]!,
-      position: "next" as const,
-    },
-  ];
 
   // One set of hero copy elements; every template arranges these (the load reveal targets their classes).
   const heroParts: HeroParts = {
@@ -748,41 +718,39 @@ export function HomeLandingV2({
 
       "home-stories": (
       <EditablePart id="home-stories" backdrop={false}>
-      <section className="v2-section v2-stories" id="stories" aria-labelledby="v2-stories-title">
-        <div className="v2-container">
-          <div className="v2-stories-head">
-            <SectionHead
-              kicker={sectionText(storiesCopy, "kicker")}
-              title={sectionText(storiesCopy, "title")}
-              accent={sectionText(storiesCopy, "accent")}
-              sub={sectionText(storiesCopy, "sub")}
-              id="v2-stories-title"
-            />
-            <div className="v2-stories-rating">
-              <StarRow />
-              <p><strong>{sectionText(storiesCopy, "rating")}</strong> {sectionText(storiesCopy, "ratingLine")}</p>
+      <section
+        ref={storiesRef}
+        className="v2-section v2-stories"
+        id="stories"
+        aria-labelledby="v2-stories-title"
+      >
+        <div className="v2-stories-stage">
+          <div className="v2-container">
+            <div className="v2-stories-head">
+              <SectionHead
+                kicker={sectionText(storiesCopy, "kicker")}
+                title={sectionText(storiesCopy, "title")}
+                accent={sectionText(storiesCopy, "accent")}
+                sub={sectionText(storiesCopy, "sub")}
+                id="v2-stories-title"
+              />
+              <div className="v2-stories-rating">
+                <StarRow />
+                <p><strong>{sectionText(storiesCopy, "rating")}</strong> {sectionText(storiesCopy, "ratingLine")}</p>
+              </div>
             </div>
           </div>
           <div
-            className="v2-story-slider"
+            className="v2-story-viewport"
             role="region"
-            aria-roledescription="carousel"
             aria-label="Stories from Nura members"
-            onMouseEnter={() => setStoriesPaused(true)}
-            onMouseLeave={() => setStoriesPaused(false)}
-            onFocusCapture={() => setStoriesPaused(true)}
-            onBlurCapture={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node)) {
-                setStoriesPaused(false);
-              }
-            }}
+            tabIndex={0}
           >
-            <div className="v2-story-focus" aria-live="polite">
-              {visibleStories.map(({ story, position }) => (
+            <div className="v2-story-track" ref={storyTrackRef}>
+              {STORIES.map((story, index) => (
                 <article
-                  key={`${position}-${story.name}`}
-                  className={`v2-glass v2-glass--strong v2-story v2-story-card is-${position}`}
-                  aria-hidden={position !== "active"}
+                  key={`${story.name}-${index}`}
+                  className="v2-glass v2-glass--strong v2-story v2-story-card"
                 >
                   <span className="v2-story-quote" aria-hidden>“</span>
                   <p>{story.quote}</p>
@@ -795,37 +763,6 @@ export function HomeLandingV2({
                   </footer>
                 </article>
               ))}
-            </div>
-
-            <div className="v2-story-controls">
-              <button
-                type="button"
-                className="v2-story-nav"
-                aria-label="Previous story"
-                onClick={() => goStory(-1)}
-              >
-                <ChevronLeft size={18} aria-hidden />
-              </button>
-              <div className="v2-story-dots">
-                {STORIES.map((story, index) => (
-                  <button
-                    key={story.name}
-                    type="button"
-                    className={`v2-story-dot${index === storyAt ? " is-active" : ""}`}
-                    aria-label={`Show story ${index + 1}`}
-                    aria-current={index === storyAt ? "true" : undefined}
-                    onClick={() => setActiveStory(index)}
-                  />
-                ))}
-              </div>
-              <button
-                type="button"
-                className="v2-story-nav"
-                aria-label="Next story"
-                onClick={() => goStory(1)}
-              >
-                <ChevronRight size={18} aria-hidden />
-              </button>
             </div>
           </div>
         </div>

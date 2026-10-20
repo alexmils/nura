@@ -140,7 +140,7 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       gsap.set(afterNext, { position: getComputedStyle(afterNext).position === "static" ? "relative" : undefined, zIndex: 3 });
     }
     pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
-    pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories > .v2-container") });
+    pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories .v2-container") });
     pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");
     pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "curtain");
   }
