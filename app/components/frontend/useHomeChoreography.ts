@@ -44,8 +44,8 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
 
   // Video -> How page slide (desktop). The How section overlaps two viewports
   // of the video in CSS, so over the first of them the video screen is still
-  // sticky. The video exits right while a full-screen pale sheet and the first
-  // stage's inner copy enter from the left and move right — a straight
+  // sticky. The video image exits left while a full-screen pale sheet and the
+  // first stage's inner copy enter from the right and move left — a straight
   // horizontal page slide, no vertical drift. The sticky nav/panels are never
   // transformed; only the inner copy and a zero-height background layer move.
   if (!mobile) {
@@ -58,9 +58,9 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       const nav = howSection.querySelector<HTMLElement>(".fe-spath-nav");
       const inner = howSection.querySelector<HTMLElement>(".fe-spath-panel .fe-spath-panel-inner");
       const vw = () => window.innerWidth;
-      if (screen) scrub(screen, { x: 0 }, { x: vw }, howSection, "top top", "+=100%");
-      if (sheet) scrub(sheet, { x: () => -vw() }, { x: 0 }, howSection, "top top", "+=100%");
-      if (inner) scrub(inner, { x: () => -vw() }, { x: 0 }, howSection, "top top", "+=100%");
+      if (screen) scrub(screen, { x: 0 }, { x: () => -vw() }, howSection, "top top", "+=100%");
+      if (sheet) scrub(sheet, { x: vw }, { x: 0 }, howSection, "top top", "+=100%");
+      if (inner) scrub(inner, { x: vw }, { x: 0 }, howSection, "top top", "+=100%");
       if (nav) scrub(nav, { opacity: 0 }, { opacity: 1 }, howSection, "top top", "+=100%");
       if (edge) scrub(edge, { opacity: 1 }, { opacity: 0 }, howSection, "top top", "+=100%");
     }

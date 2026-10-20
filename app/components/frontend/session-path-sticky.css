@@ -58,8 +58,8 @@
     width: 100vw;
     height: 100svh;
     background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
-    /* Enters from the left and moves right, like the reference's page slide. */
-    transform: translateX(-100%);
+    /* Enters from the right and moves left, like the reference's page slide. */
+    transform: translateX(100%);
     will-change: transform;
   }
 
@@ -67,7 +67,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    right: 0;
+    left: 0;
     width: 3px;
     background: var(--fe-pistachio, #c6d67e);
     will-change: opacity;
