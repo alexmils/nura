@@ -23,6 +23,7 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  * - zoom     outgoing image scales up into the screen and darkens while the next slides over (SectionHandoff "zoom")
  * - lift     the held block settles back a touch while the next rises over it as a soft sheet (no clip, no circle)
  * - halo     the next block rises over the held one and its own brand mark leads: the halo around the nura core grows, the core settles (no full-screen disc)
+ * - iris     the next block is revealed through a circle that grows out of its own nura mark; its copy and ring rise out of the circle as it opens
  * - morph    the outgoing backdrop morphs into the next section's colour, the next one's content rises out of it
  * - settle   calm sheet rise: the held block eases back under a soft wash in the next block's colour while that block rises over it, top corners flattening as it lands
  * - curtain  a straight edge with a lime rule rises and cuts the held section away, revealing the next one pinned underneath (CurtainPin)
@@ -33,7 +34,7 @@ import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "lift" | "halo" | "morph" | "settle" | "curtain" | "lens" | "tilt";
+export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -246,6 +247,63 @@ export function pinnedHandoff(
         { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: 0.75 },
         0
       );
+      break;
+    }
+    case "iris": {
+      // The guides section opens through a circle that grows out of its own
+      // nura mark. The held session stays put underneath, so the circle is
+      // the only movement; the head and the ring rise inside it as it opens.
+      holdPrev();
+      // The guides section owns a sticky frame, so `holdNext` would skip it.
+      // The counter-translation is still what keeps the section in place under
+      // the opening circle; the frame never sticks past the section top.
+      if (next.offsetHeight >= vh() * 0.95) {
+        tl.fromTo(next, { y: () => -vh() }, { y: 0 }, 0);
+      }
+      const core = next.querySelector<HTMLElement>(".fe-topics-core");
+      const head = next.querySelector<HTMLElement>(".fe-topics-head");
+      const stage = next.querySelector<HTMLElement>(".fe-topics-stage");
+      // Both rects share the same transform, so their difference is the mark's
+      // position inside the section's own box (what clip-path expects).
+      const mark = () => {
+        const box = next.getBoundingClientRect();
+        const r = core?.getBoundingClientRect();
+        return {
+          box,
+          r,
+          x: r ? r.left + r.width / 2 - box.left : box.width / 2,
+          y: r ? r.top + r.height / 2 - box.top : box.height * 0.62,
+        };
+      };
+      const circle = (open: boolean) => {
+        const m = mark();
+        // The section is taller than the viewport (sticky track); only the
+        // first viewport is on screen while it is held, so grow the circle to
+        // cover the viewport, never the whole section box.
+        const bottom = Math.max(0, vh() - m.y);
+        const radius = open
+          ? Math.hypot(Math.max(m.x, m.box.width - m.x), Math.max(m.y, bottom)) + 40
+          : Math.max(24, (m.r?.width ?? 80) / 2);
+        return `circle(${radius}px at ${m.x}px ${m.y}px)`;
+      };
+      tl.fromTo(
+        next,
+        { clipPath: () => circle(false) },
+        { clipPath: () => circle(true), duration: 0.92, ease: "none" },
+        0
+      );
+      // Only transform: whatever the circle reveals is already at full
+      // opacity, so the copy never reads washed out while it opens.
+      if (head) {
+        tl.fromTo(head, { y: 28 }, { y: 0, duration: 0.55 }, 0.15);
+      }
+      if (stage) {
+        tl.fromTo(stage, { scale: 0.96 }, { scale: 1, duration: 0.6 }, 0);
+      }
+      // The section is taller than the viewport (sticky ring track), so the
+      // circle only has to cover the held viewport. Drop the clip once the
+      // hand-off is done so the rest of the sticky track stays visible.
+      tl.set(next, { clipPath: "none" }, 1);
       break;
     }
     case "morph": {

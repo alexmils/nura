@@ -22,7 +22,7 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * languages -> modes       morph    the languages surface shifts into the modes colour while the modes board rises in (phones: stack)
  * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
  * modes -> session         lift     the held board settles back while session rises over it as a soft sheet (no circle)
- * session -> topics        halo     topics rises over the held session and its nura core leads: the halo around the logo grows, the core settles
+ * session -> topics        iris     a circle grows out of the topics nura mark and opens the guides; its copy and ring rise inside the circle
  * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
  * stories -> pricing       settle   calm sheet rise: stories eases back under a soft pricing-coloured wash while pricing rises over it, corners flattening
  * pricing -> faq           (none)   plain scroll; no hand-off on either breakpoint
@@ -142,8 +142,9 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories .v2-container") });
     pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");
   }
-  // Session -> topics on every screen: no overlay disc, the topics nura mark leads.
-  pinnedHandoff(one(".v2-session"), one(".fe-topics"), "halo");
+  // Session -> topics on every screen: the guides open through a circle that
+  // grows out of their own nura mark, copy and ring rising inside it.
+  pinnedHandoff(one(".v2-session"), one(".fe-topics"), "iris");
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),
