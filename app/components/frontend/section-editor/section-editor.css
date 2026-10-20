@@ -687,6 +687,24 @@ html[data-editor-open] .frontend-back-to-top {
   font-size: 11px;
 }
 
+.fe-editor-grad {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.fe-editor-grad code {
+  font-size: 0.78rem;
+}
+
+.fe-editor-grad-preview {
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--ink) 15%, transparent);
+}
+
 .fe-editor-check {
   display: inline-flex;
   align-items: center;
@@ -809,8 +827,19 @@ html[data-editor-open] .frontend-back-to-top {
   isolation: isolate;
 }
 
-.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay) {
+.fe-bgwrap > :not(.fe-bgwrap-media):not(.fe-bgwrap-overlay):not(.fe-bgwrap-grad) {
   background: transparent !important;
+}
+
+/* Optional section gradient ("Gradient" in the Background panel; off by default). */
+.fe-grad-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.fe-bgwrap-grad {
+  z-index: -1;
 }
 
 .fe-bgwrap-media,

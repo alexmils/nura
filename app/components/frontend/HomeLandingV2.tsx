@@ -33,8 +33,10 @@ import {
   sectionList,
   sectionText,
   type SectionBackground,
+  sectionGradient,
+  gradientIsOverlay,
 } from "@/lib/marketing-sections";
-import { EditablePart } from "./section-editor/EditablePart";
+import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
 import { PageSections } from "./section-editor/PageSections";
 import { AccentText } from "./AccentText";
@@ -46,196 +48,6 @@ import { usePlanSpread } from "./usePlanSpread";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./landing-v2.css";
-
-/* ------------------------------------------------------------------ */
-/*  Meadow flowers — decorative SVG foreground                         */
-/* ------------------------------------------------------------------ */
-
-function Daisy({
-  x,
-  y,
-  scale = 1,
-  rotate = 0,
-  delay = 0,
-}: {
-  x: number;
-  y: number;
-  scale?: number;
-  rotate?: number;
-  delay?: number;
-}) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale}) rotate(${rotate})`}>
-      <g
-        className="v2-flower-sway"
-        style={{ animationDelay: `${delay}s`, transformOrigin: "0 60px" }}
-      >
-        <path
-          d="M0 2 C-3 22 -4 40 -1 62"
-          fill="none"
-          stroke="#5f8f4d"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-        />
-        <path
-          d="M-1 28 C-10 24 -16 18 -19 10"
-          fill="none"
-          stroke="#5f8f4d"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
-          <ellipse
-            key={deg}
-            cx="0"
-            cy="-11"
-            rx="4.4"
-            ry="9"
-            fill="#fffdf5"
-            transform={`rotate(${deg})`}
-          />
-        ))}
-        <circle cx="0" cy="0" r="4.4" fill="#f2c94c" />
-        <circle cx="0" cy="0" r="1.8" fill="#d9a72b" />
-      </g>
-    </g>
-  );
-}
-
-function Lavender({
-  x,
-  y,
-  scale = 1,
-  rotate = 0,
-  delay = 0,
-}: {
-  x: number;
-  y: number;
-  scale?: number;
-  rotate?: number;
-  delay?: number;
-}) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale}) rotate(${rotate})`}>
-      <g
-        className="v2-flower-sway"
-        style={{ animationDelay: `${delay}s`, transformOrigin: "0 64px" }}
-      >
-        <path
-          d="M0 6 C-2 26 -1 46 1 66"
-          fill="none"
-          stroke="#6b9857"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-        />
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <ellipse
-            key={i}
-            cx={i % 2 === 0 ? -4 : 4}
-            cy={-2 + i * 7}
-            rx="3.2"
-            ry="5"
-            fill={i % 2 === 0 ? "#a78bc8" : "#8f74b5"}
-          />
-        ))}
-      </g>
-    </g>
-  );
-}
-
-function Poppy({
-  x,
-  y,
-  scale = 1,
-  rotate = 0,
-  delay = 0,
-}: {
-  x: number;
-  y: number;
-  scale?: number;
-  rotate?: number;
-  delay?: number;
-}) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale}) rotate(${rotate})`}>
-      <g
-        className="v2-flower-sway"
-        style={{ animationDelay: `${delay}s`, transformOrigin: "0 58px" }}
-      >
-        <path
-          d="M0 4 C-2 22 0 40 2 60"
-          fill="none"
-          stroke="#5f8f4d"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-        />
-        {[0, 90, 180, 270].map((deg) => (
-          <ellipse
-            key={deg}
-            cx="0"
-            cy="-8"
-            rx="7"
-            ry="10"
-            fill="#e97862"
-            transform={`rotate(${deg})`}
-          />
-        ))}
-        <circle cx="0" cy="0" r="3.2" fill="#3d4129" />
-      </g>
-    </g>
-  );
-}
-
-function GrassTuft({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale})`} className="v2-grass">
-      <path d="M0 0 C-2 -18 -8 -28 -12 -38" fill="none" stroke="#5c8d49" strokeWidth="2" strokeLinecap="round" />
-      <path d="M0 0 C1 -20 0 -34 -2 -44" fill="none" stroke="#76a35f" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M0 0 C4 -16 10 -26 15 -34" fill="none" stroke="#5c8d49" strokeWidth="2" strokeLinecap="round" />
-      <path d="M0 0 C-6 -12 -12 -20 -18 -26" fill="none" stroke="#6f9a55" strokeWidth="1.8" strokeLinecap="round" />
-    </g>
-  );
-}
-
-function MeadowFlowers({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 1440 420"
-      preserveAspectRatio="xMidYMax slice"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <GrassTuft x={60} y={420} scale={1.1} />
-      <GrassTuft x={180} y={420} scale={0.9} />
-      <GrassTuft x={320} y={420} scale={1.2} />
-      <GrassTuft x={480} y={420} scale={0.8} />
-      <GrassTuft x={640} y={420} scale={1.1} />
-      <GrassTuft x={820} y={420} scale={0.9} />
-      <GrassTuft x={990} y={420} scale={1.2} />
-      <GrassTuft x={1160} y={420} scale={0.85} />
-      <GrassTuft x={1320} y={420} scale={1.1} />
-      <GrassTuft x={1420} y={420} scale={0.9} />
-
-      <Poppy x={110} y={300} scale={0.9} rotate={-3} delay={0.3} />
-      <Daisy x={210} y={320} scale={1.05} rotate={2} delay={0.8} />
-      <Lavender x={280} y={330} scale={1} rotate={-2} delay={1.2} />
-      <Daisy x={360} y={292} scale={0.8} rotate={-4} delay={0.2} />
-      <Poppy x={430} y={338} scale={0.72} rotate={4} delay={1.5} />
-      <Lavender x={505} y={312} scale={0.9} rotate={3} delay={0.6} />
-      <Daisy x={590} y={342} scale={1.15} rotate={-2} delay={1.1} />
-      <Daisy x={700} y={300} scale={0.86} rotate={3} delay={0.4} />
-      <Poppy x={770} y={334} scale={0.8} rotate={-2} delay={1.8} />
-      <Lavender x={850} y={318} scale={1.1} rotate={-3} delay={0.9} />
-      <Daisy x={930} y={344} scale={1.02} rotate={2} delay={0.1} />
-      <Daisy x={1040} y={296} scale={0.78} rotate={-3} delay={1.4} />
-      <Poppy x={1110} y={336} scale={0.92} rotate={3} delay={0.7} />
-      <Lavender x={1190} y={322} scale={0.95} rotate={-2} delay={1.6} />
-      <Daisy x={1280} y={342} scale={1.1} rotate={-1} delay={0.5} />
-      <Daisy x={1380} y={298} scale={0.84} rotate={4} delay={1.3} />
-    </svg>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
@@ -421,6 +233,9 @@ export function HomeLandingV2({
   const pricing = useSectionConfig("home-pricing");
   const close = useSectionConfig("home-close");
   const heroBg = sectionBackground(hero);
+  // Optional gradient (off by default): over the photo, or replacing it as the background.
+  const heroGrad = sectionGradient(hero);
+  const heroGradOver = heroGrad ? gradientIsOverlay(heroGrad, heroBg, true) : false;
   const closeBg = sectionBackground(close);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
@@ -502,7 +317,8 @@ export function HomeLandingV2({
       <section className="v2-hero" id="home" aria-labelledby="v2-hero-title">
         <div className="v2-hero-sky" aria-hidden />
         <div className="v2-hero-sun" aria-hidden />
-        <div className="v2-hero-photo" aria-hidden>
+        {heroGrad && !heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad v2-hero-grad--bg" /> : null}
+        <div className="v2-hero-photo" aria-hidden hidden={Boolean(heroGrad && !heroGradOver)}>
           {heroBg ? (
             <BandBackground bg={heroBg} className="v2-hero-photo-img" />
           ) : (
@@ -515,10 +331,8 @@ export function HomeLandingV2({
               className="v2-hero-photo-img"
             />
           )}
+          {heroGrad && heroGradOver ? <GradientLayer gradient={heroGrad} className="v2-hero-grad" /> : null}
         </div>
-        <div className="v2-hero-tint" aria-hidden />
-        <MeadowFlowers className="v2-hero-flowers" />
-        <div className="v2-hero-scrim" aria-hidden />
 
         <div className="v2-hero-inner">
           <div className="v2-hero-copy">

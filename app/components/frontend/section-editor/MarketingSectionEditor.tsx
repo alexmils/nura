@@ -6,6 +6,7 @@ import { RotateCcw, Undo2, X } from "lucide-react";
 import {
   getSectionDef,
   BG_DEFAULT_OVERLAY,
+  GRADIENT_DEFAULTS,
   HIDDEN_ITEM_KEY,
   SECTION_OFF_KEY,
   mediaNames,
@@ -607,7 +608,98 @@ function BackgroundControls({
           </div>
         </>
       ) : null}
+      <GradientControls values={values} onChange={onChange} />
     </fieldset>
+  );
+}
+
+/** Optional linear gradient (off by default): over the image/video, or as the background itself. */
+function GradientControls({
+  values,
+  onChange,
+}: {
+  values: SectionConfig;
+  onChange: (patch: Record<string, string>, key: string) => void;
+}) {
+  const read = (key: string) => (typeof values[key] === "string" ? (values[key] as string) : "");
+  const on = read("gradOn") === "1";
+  const hex = (key: string, fallback: string) => (/^#[0-9a-f]{6}$/i.test(read(key)) ? read(key) : fallback);
+  const from = hex("gradFrom", GRADIENT_DEFAULTS.from);
+  const to = hex("gradTo", GRADIENT_DEFAULTS.to);
+  const angle = read("gradAngle") || String(GRADIENT_DEFAULTS.angle);
+  const opacity = read("gradOpacity") || String(GRADIENT_DEFAULTS.opacity);
+  const mode = read("gradMode") === "background" ? "background" : "overlay";
+  // Switching on writes every value, so what you see is what is stored.
+  const full = (patch: Record<string, string>) => ({
+    gradOn: "1",
+    gradMode: mode,
+    gradFrom: from,
+    gradTo: to,
+    gradAngle: angle,
+    gradOpacity: opacity,
+    ...patch,
+  });
+  return (
+    <div className="fe-editor-grad">
+      <label className="fe-editor-check">
+        <input
+          type="checkbox"
+          checked={on}
+          onChange={(event) => onChange(event.target.checked ? full({}) : { gradOn: "0" }, "grad-on")}
+        />
+        <span>Gradient</span>
+      </label>
+      {on ? (
+        <>
+          <div className="fe-editor-media-toggle" role="radiogroup" aria-label="Gradient placement">
+            {(
+              [
+                ["overlay", "Overlay on image/video"],
+                ["background", "As the background"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={mode === value}
+                className={mode === value ? "is-on" : ""}
+                onClick={() => onChange(full({ gradMode: value }), "grad-mode")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="fe-editor-field fe-editor-color">
+            <span>From</span>
+            <div>
+              <input type="color" aria-label="Gradient start colour" value={from} onChange={(e) => onChange(full({ gradFrom: e.target.value }), "grad-from")} />
+              <code>{from}</code>
+            </div>
+          </div>
+          <div className="fe-editor-field fe-editor-color">
+            <span>To</span>
+            <div>
+              <input type="color" aria-label="Gradient end colour" value={to} onChange={(e) => onChange(full({ gradTo: e.target.value }), "grad-to")} />
+              <code>{to}</code>
+            </div>
+          </div>
+          <label className="fe-editor-field">
+            <span>Direction: {angle}°</span>
+            <input type="range" min={0} max={360} step={15} value={angle} onChange={(e) => onChange(full({ gradAngle: e.target.value }), "grad-angle")} />
+          </label>
+          <label className="fe-editor-field">
+            <span>Opacity: {opacity}%</span>
+            <input type="range" min={0} max={100} step={5} value={opacity} onChange={(e) => onChange(full({ gradOpacity: e.target.value }), "grad-opacity")} />
+          </label>
+          <div
+            aria-hidden
+            className="fe-editor-grad-preview"
+            style={{ backgroundImage: `linear-gradient(${angle}deg, ${from}, ${to})`, opacity: Number(opacity) / 100 }}
+          />
+        </>
+      ) : null}
+    </div>
   );
 }
 
