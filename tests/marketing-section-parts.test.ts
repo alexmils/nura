@@ -12,6 +12,7 @@ import {
   articleSlotIds,
   getSectionDef,
   hasSectionParts,
+  isMarketingSectionId,
   isSectionOn,
   MARKETING_SECTIONS,
   normalizeSection,
@@ -86,6 +87,39 @@ describe("one panel per visual section", () => {
     assert.equal(isSectionOn(normalizeSection("home-faq", { _off: "1" })), false);
     assert.equal(isSectionOn(normalizeSection("home-faq", { _off: "yes" })), true);
     assert.equal(isSectionOn(normalizeSection("footer-links", { _off: "1" })), true);
+  });
+});
+
+describe("sign-in background", () => {
+  it("is an editable section with only the shared Background panel", () => {
+    const def = getSectionDef("auth-login");
+    assert.ok(def);
+    assert.equal(def.name, "Sign-in: background");
+    assert.deepEqual(def.fields, []);
+    assert.equal(def.noHide, true);
+    assert.equal(isMarketingSectionId("auth-login"), true);
+  });
+
+  it("keeps an image or video and rejects unsafe media", () => {
+    const image = normalizeSection("auth-login", {
+      bgKind: "image",
+      bgImage: "/icon.svg",
+      bgOverlay: "20",
+      bgTone: "dark",
+    });
+    const bg = sectionBackground(image);
+    assert.equal(bg?.kind, "image");
+    assert.equal(bg?.image, "/icon.svg");
+    assert.equal(bg?.overlay, 20);
+    assert.equal(bg?.tone, "dark");
+
+    const unsafe = sectionBackground(
+      normalizeSection("auth-login", {
+        bgKind: "video",
+        bgVideo: "javascript:alert(1)",
+      })
+    );
+    assert.equal(unsafe, null);
   });
 });
 

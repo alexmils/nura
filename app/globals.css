@@ -11592,6 +11592,17 @@ select.field option:disabled {
   display: none;
 }
 
+/* Admin-set image/video behind the sign-in mockup (shared Background panel). */
+.auth-shell-pane--visual > .fe-bgwrap {
+  position: absolute;
+  inset: 0;
+}
+
+.auth-shell-pane--visual .fe-bgwrap--image .auth-visual-atmosphere,
+.auth-shell-pane--visual .fe-bgwrap--video .auth-visual-atmosphere {
+  display: none;
+}
+
 .auth-visual {
   position: relative;
   display: flex;

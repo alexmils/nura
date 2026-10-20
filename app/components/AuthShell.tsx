@@ -1,12 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
 import { AuthSessionMockup } from "@/app/components/AuthSessionMockup";
 import { ConversionTags } from "@/app/components/ConversionTags";
 import { stampBrowserPlace } from "@/lib/browser-place-client";
+import type { SectionConfig } from "@/lib/marketing-sections";
+import { MarketingCopyProvider } from "./frontend/section-editor/MarketingCopy";
+import { SectionBackdrop } from "./frontend/section-editor/EditablePart";
+import {
+  SectionEdit,
+  SectionEditorHost,
+} from "./frontend/section-editor/SectionEdit";
+import "./frontend/section-editor/section-editor.css";
 
 type AuthShellProps = {
   title: string;
@@ -17,15 +25,32 @@ type AuthShellProps = {
   hideVisual?: boolean;
   /** Center title, body, and footer (method-picker screens). */
   align?: "start" | "center";
+  /** Saved background for the visual pane (`auth-login`). */
+  visual?: SectionConfig;
+  /** Admin-only Edit chip on the visual pane. */
+  editableVisual?: boolean;
 };
 
-export function AuthShell({
+export function AuthShell(props: AuthShellProps) {
+  const sections = useMemo(
+    () => ({ "auth-login": props.visual ?? {} }),
+    [props.visual]
+  );
+  return (
+    <MarketingCopyProvider sections={sections}>
+      <AuthShellInner {...props} />
+    </MarketingCopyProvider>
+  );
+}
+
+function AuthShellInner({
   title,
   subtitle,
   children,
   footer,
   hideVisual = false,
   align = "start",
+  editableVisual = false,
 }: AuthShellProps) {
   useEffect(() => {
     stampBrowserPlace();
@@ -75,10 +100,18 @@ export function AuthShell({
       </div>
 
       {!hideVisual ? (
-        <aside className="auth-shell-pane auth-shell-pane--visual">
-          <AuthSessionMockup />
+        <aside
+          className={`auth-shell-pane auth-shell-pane--visual${editableVisual ? " fe-has-edit" : ""}`}
+          data-section={editableVisual ? "auth-login" : undefined}
+        >
+          {editableVisual ? <SectionEdit id="auth-login" /> : null}
+          <SectionBackdrop id="auth-login">
+            <AuthSessionMockup />
+          </SectionBackdrop>
         </aside>
       ) : null}
+
+      {editableVisual ? <SectionEditorHost /> : null}
     </div>
   );
 }

@@ -235,6 +235,10 @@ function AdminSecurityPageInner() {
               Staff sign in at <code className="admin-code">/{slug || settings.slug}</code>
               {slug !== settings.slug ? " after saving." : "."}
             </p>
+            <p className="admin-panel-sub">
+              To change the sign-in background, open the sign-in page while
+              signed in and use the Edit chip on the right pane.
+            </p>
             <div className="admin-table-actions">
               <button type="button" className="btn-secondary" onClick={() => void copyPath()}>
                 {copied ? "Copied" : "Copy full address"}
@@ -247,6 +251,14 @@ function AdminSecurityPageInner() {
               >
                 Generate random
               </button>
+              <a
+                className="btn-secondary"
+                href="/app/login"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open sign-in
+              </a>
             </div>
             <button
               type="button"

@@ -1872,11 +1872,22 @@ function expandSections(base: readonly SectionDef[]): SectionDef[] {
   return out;
 }
 
-export const MARKETING_SECTIONS: readonly SectionDef[] = expandSections([
-  ...BASE_SECTIONS.filter((def) => !REPLACED_IDS.has(def.id)),
-  ...V2_SECTIONS,
-  ...PAGE_CTA_SECTIONS,
-]);
+export const MARKETING_SECTIONS: readonly SectionDef[] = [
+  ...expandSections([
+    ...BASE_SECTIONS.filter((def) => !REPLACED_IDS.has(def.id)),
+    ...V2_SECTIONS,
+    ...PAGE_CTA_SECTIONS,
+  ]),
+  // Not a marketing page section: the visual pane on the sign-in screen. It has
+  // no copy of its own — the editor only exposes the shared Background panel.
+  {
+    id: "auth-login",
+    name: "Sign-in: background",
+    fields: [],
+    defaults: {},
+    noHide: true,
+  },
+];
 
 /** Page-layout slot ids for a long article (one per "## " piece). */
 export function articleSlotIds(baseId: string): string[] {

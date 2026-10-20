@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { LoginForm } from "@/app/app/login/page";
+import { LoginForm } from "@/app/app/login/LoginForm";
 import { gateSlugMatches } from "@/lib/login-guard";
+import { loadMarketingSection } from "@/lib/marketing-sections-db";
 
 export const dynamic = "force-dynamic";
 
@@ -23,10 +24,11 @@ export default async function OperatorSignInPage({
 }) {
   const { slug } = await params;
   if (!(await gateSlugMatches(slug))) notFound();
+  const visual = await loadMarketingSection("auth-login");
 
   return (
     <Suspense>
-      <LoginForm adminGate={slug} />
+      <LoginForm adminGate={slug} visual={visual} editableVisual />
     </Suspense>
   );
 }

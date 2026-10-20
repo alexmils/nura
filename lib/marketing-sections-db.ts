@@ -50,6 +50,20 @@ export const loadMarketingCopy = cache(async (): Promise<Record<string, SectionC
   return out;
 });
 
+/** One saved section, defaults when the row is missing. */
+export const loadMarketingSection = cache(
+  async (id: string): Promise<SectionConfig> => {
+    const rows = await loadRows();
+    const row = rows?.find((entry) => entry.id === id);
+    try {
+      return normalizeSection(id, row?.config ?? null);
+    } catch (err) {
+      console.error("[marketing-sections] bad row", id, err);
+      return normalizeSection(id, null);
+    }
+  }
+);
+
 /** Saved page layouts. Pages without a row are absent (= default order, all shown). */
 export const loadPageLayouts = cache(async (): Promise<Partial<Record<MarketingPageId, PageLayout>>> => {
   const out: Partial<Record<MarketingPageId, PageLayout>> = {};
