@@ -194,13 +194,13 @@ function PricingCard({ plan, cta, featuresLabel }: { plan: PlanCard; cta: string
           <h3 className="v2-price-name">{plan.name}</h3>
           {plan.badge ? <span className="v2-price-badge">{plan.badge}</span> : null}
         </div>
-        <div className="v2-price-cost">
-          <span className="v2-price-amount">{meta.displayPrice}</span>
-          <span className="v2-price-period">per {meta.interval}</span>
-          {plan.note ? <span className="v2-price-note">{plan.note}</span> : null}
-        </div>
       </div>
       <p className="v2-price-details">{plan.details}</p>
+      <div className="v2-price-cost">
+        <span className="v2-price-amount">{meta.displayPrice}</span>
+        <span className="v2-price-period">per {meta.interval}</span>
+        {plan.note ? <span className="v2-price-note">{plan.note}</span> : null}
+      </div>
       <Link
         href={appPath("/create-account")}
         className={`v2-btn${plan.featured ? " v2-btn--primary" : " v2-btn--outline"}`}
@@ -306,6 +306,14 @@ export function HomeLandingV2({
       features: linesOf(plan.features ?? ""),
       featured: plan.id === "yearly",
     }));
+  // Keep the best-value plan (Yearly) centred in the row.
+  if (PLANS.length >= 3) {
+    const featuredIdx = PLANS.findIndex((plan) => plan.featured);
+    if (featuredIdx !== -1) {
+      const [featured] = PLANS.splice(featuredIdx, 1);
+      PLANS.splice(Math.floor(PLANS.length / 2), 0, featured);
+    }
+  }
   const SESSION_VIDEO_URL = sectionText(session, "videoUrl").trim();
   const planGridRef = useRef<HTMLDivElement | null>(null);
   usePlanSpread(planGridRef, PLANS.map((plan) => plan.id).join(","));

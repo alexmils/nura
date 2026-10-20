@@ -1952,15 +1952,25 @@
   .v2-price {
     min-height: 31rem;
   }
+
+  /* Reserve three lines so every card's price sits on the same baseline. */
+  .v2-price-details {
+    min-height: 5.1rem;
+  }
 }
 
 .v2-price.is-featured {
   --v2-glass-fill: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.82),
-    rgba(255, 255, 255, 0.58)
+    165deg,
+    #f4fbe9 0%,
+    #e4f3d1 55%,
+    #d6ecc0 100%
   );
-  border-color: rgba(74, 114, 52, 0.32);
+  --v2-glass-border: rgba(74, 114, 52, 0.4);
+  --v2-glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 30px 62px -30px rgba(29, 51, 35, 0.5);
+  border-color: rgba(74, 114, 52, 0.4);
   transform: translateY(-0.5rem);
 }
 
@@ -1970,7 +1980,7 @@
   height: 66%;
   background: radial-gradient(
     ellipse at center,
-    rgba(242, 201, 76, 0.32),
+    rgba(164, 237, 165, 0.5),
     transparent 66%
   );
   pointer-events: none;
@@ -1980,14 +1990,14 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
   gap: 1rem;
 }
 
 .fe-v2 .v2-price-name {
   font-family: var(--font-display);
-  font-size: 1.85rem;
-  font-weight: 400;
+  font-size: 1.9rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--v2-ink);
   font-optical-sizing: auto;
   font-variation-settings: "SOFT" 45, "WONK" 0.4;
@@ -1995,7 +2005,7 @@
 
 .v2-price-badge {
   display: inline-block;
-  margin-top: 0.35rem;
+  margin-top: 0.45rem;
   padding: 0.28rem 0.65rem;
   border-radius: 999px;
   background: rgba(74, 114, 52, 0.1);
@@ -2004,34 +2014,43 @@
   color: var(--v2-green-700);
 }
 
+.v2-price.is-featured .v2-price-badge {
+  background: rgba(74, 114, 52, 0.16);
+  color: #34521f;
+}
+
 .v2-price-cost {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.5rem;
+  margin-top: 0.15rem;
+  text-align: left;
 }
 
 .v2-price-amount {
   font-family: var(--font-display);
-  font-size: 2.6rem;
+  font-size: clamp(3rem, 4.2vw, 3.7rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
   line-height: 1;
   color: var(--v2-ink);
 }
 
 .v2-price-period {
-  margin-top: 0.1rem;
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   color: var(--v2-muted);
 }
 
 .v2-price-note {
-  margin-top: 0.25rem;
-  font-size: 0.85rem;
+  flex-basis: 100%;
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--v2-green-700);
 }
 
 .v2-price-details {
-  min-height: 4.3rem;
   font-size: 1.05rem;
   line-height: 1.55;
   color: var(--v2-body);
@@ -2043,13 +2062,46 @@
   font-size: 1.05rem;
 }
 
+/* Side plans — solid ink CTA so the row has three strong buttons. */
+.v2-price .v2-btn--outline {
+  background: var(--v2-ink);
+  border-color: var(--v2-ink);
+  color: #fff;
+  box-shadow: 0 16px 34px -20px rgba(29, 51, 35, 0.85);
+}
+
+.v2-price .v2-btn--outline:hover {
+  background: #2f4a35;
+  border-color: #2f4a35;
+}
+
+/* Featured plan — pistachio card with the bright lime CTA. */
+.v2-price.is-featured .v2-btn--primary {
+  background: #a4eda5;
+  border-color: #a4eda5;
+  color: #17301c;
+  box-shadow: 0 16px 34px -18px rgba(74, 114, 52, 0.55);
+}
+
+.v2-price.is-featured .v2-btn--primary:hover {
+  background: #b9f3b9;
+  border-color: #b9f3b9;
+}
+
 .v2-price-features-label {
-  margin-top: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 1.05rem;
+  border-top: 1px solid rgba(74, 114, 52, 0.14);
   font-family: var(--font-alt);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--v2-muted);
+  color: var(--v2-ink);
+}
+
+.v2-price.is-featured .v2-price-features-label {
+  border-top-color: rgba(52, 82, 31, 0.2);
 }
 
 .v2-price-features {
