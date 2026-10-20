@@ -4,6 +4,7 @@
  */
 import { DATA_HOSTING_REGION, LEGAL_DOC_VERSION } from "@/lib/legal-entity";
 import { PRIVACY_BODY_HTML } from "@/lib/legal/privacy-body.generated";
+import { balanceHtml } from "@/lib/legal/balance-html";
 import {
   demoteDocumentTitleH1,
   softSentenceCaseHeading,
@@ -357,6 +358,9 @@ export function preparePrivacyHtml(rawHtml: string): string {
 }
 
 /** Runtime: bundled prepared HTML (regenerate after Termly export changes). */
+/** Well-formed (see balanceHtml), so nothing leaks out of the legal body into the footer. */
+let balancedPrivacy: string | null = null;
 export function loadPreparedPrivacyHtml(): string {
-  return PRIVACY_BODY_HTML;
+  balancedPrivacy ??= balanceHtml(PRIVACY_BODY_HTML);
+  return balancedPrivacy;
 }
