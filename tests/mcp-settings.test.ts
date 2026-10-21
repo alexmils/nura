@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  DEFAULT_MCP_SCOPES,
   DEFAULT_PLATFORM_MCP,
   MCP_TOKEN_PREFIX,
+  normalizeMcpScopes,
   generateMcpToken,
   hashMcpToken,
   mcpClientSnippet,
@@ -181,6 +183,49 @@ describe("mcp config", () => {
     assert.equal(server.type, "streamableHttp");
     assert.equal(server.headers.Authorization, `Bearer ${token}`);
     assert.match(server.headers.Accept, /text\/event-stream/);
+  });
+});
+
+describe("mcp scopes", () => {
+  it("gives a legacy config the blog scopes", () => {
+    const config = normalizeMcpConfig({ tokenName: "blog-agent" });
+    assert.deepEqual(config.scopes, DEFAULT_MCP_SCOPES);
+  });
+
+  it("keeps known scopes and drops the rest", () => {
+    assert.deepEqual(
+      normalizeMcpScopes(["seo:write", "blog:read", "seo:write", "nope"]),
+      ["seo:write", "blog:read"]
+    );
+    assert.deepEqual(normalizeMcpScopes([]), []);
+  });
+
+  it("merge replaces scopes only when the patch carries them", () => {
+    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "blog-agent",
+    });
+    assert.deepEqual(
+      mergeMcpConfigPatch(config, { scopes: ["blog:read"] }).scopes,
+      ["blog:read"]
+    );
+    assert.deepEqual(
+      mergeMcpConfigPatch(config, { enabled: false }).scopes,
+      config.scopes
+    );
+  });
+
+  it("generate can grant SEO access, and revoke keeps the fields clean", () => {
+    const { config } = withGeneratedToken(DEFAULT_PLATFORM_MCP, {
+      name: "seo-agent",
+      scopes: ["seo:read", "seo:write"],
+    });
+    assert.deepEqual(config.scopes, ["seo:read", "seo:write"]);
+    const view = toMcpAdminView(config, {
+      envTokenSet: false,
+      localUrl: "http://localhost:3471",
+      publicUrl: "https://nurahelp.com",
+    });
+    assert.deepEqual(view.scopes, ["seo:read", "seo:write"]);
   });
 });
 

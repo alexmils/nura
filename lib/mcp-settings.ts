@@ -14,6 +14,14 @@
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
+import {
+  DEFAULT_MCP_SCOPES,
+  normalizeMcpScopes,
+  type McpScope,
+} from "@/lib/mcp-scopes";
+
+export * from "@/lib/mcp-scopes";
+
 export const MCP_TOKEN_PREFIX = "nura_mcp_";
 const MCP_TOKEN_BYTES = 20; // 40 hex chars
 const HASH_RE = /^[a-f0-9]{64}$/;
@@ -25,6 +33,8 @@ export type PlatformMcpConfig = {
   tokenHint: string;
   /** Operator label for the token (e.g. `blog-agent`). */
   tokenName: string;
+  /** What this token is allowed to call. */
+  scopes: McpScope[];
   /** ISO timestamp of the last authenticated call, or "". */
   lastUsedAt: string;
   /** Off makes every request unauthorized without losing the token. */
@@ -35,6 +45,7 @@ export const DEFAULT_PLATFORM_MCP: PlatformMcpConfig = {
   tokenHash: "",
   tokenHint: "",
   tokenName: "",
+  scopes: [...DEFAULT_MCP_SCOPES],
   lastUsedAt: "",
   enabled: true,
 };
@@ -82,6 +93,7 @@ export function normalizeMcpConfig(raw: unknown): PlatformMcpConfig {
         ? r.tokenHint.trim().slice(0, MCP_TOKEN_PREFIX.length + 8)
         : "",
     tokenName: normalizeMcpTokenName(r.tokenName),
+    scopes: normalizeMcpScopes(r.scopes),
     lastUsedAt: Number.isNaN(Date.parse(lastUsedAt)) ? "" : lastUsedAt,
     enabled: r.enabled !== false,
   };
@@ -93,6 +105,7 @@ export type McpAdminView = {
   hasToken: boolean;
   tokenHint: string;
   tokenName: string;
+  scopes: McpScope[];
   lastUsedAt: string;
   /** Where the working token comes from right now. */
   source: "database" | "env" | "none";
@@ -112,6 +125,7 @@ export function toMcpAdminView(
     hasToken,
     tokenHint: config.tokenHint,
     tokenName: config.tokenName,
+    scopes: [...config.scopes],
     lastUsedAt: config.lastUsedAt,
     source: hasToken ? "database" : opts.envTokenSet ? "env" : "none",
     envTokenIgnored: hasToken && opts.envTokenSet,
@@ -123,9 +137,10 @@ export function toMcpAdminView(
 export type McpConfigPatch = {
   enabled?: boolean;
   tokenName?: string;
+  scopes?: McpScope[];
 };
 
-/** Apply enable/disable and optional rename. Token secrets go through generate/revoke. */
+/** Apply enable/disable, optional rename, and scope changes. */
 export function mergeMcpConfigPatch(
   current: PlatformMcpConfig,
   patch: McpConfigPatch | undefined
@@ -139,13 +154,17 @@ export function mergeMcpConfigPatch(
     ...current,
     enabled: patch.enabled === undefined ? current.enabled : patch.enabled === true,
     tokenName: nextName || current.tokenName,
+    scopes:
+      patch.scopes === undefined
+        ? current.scopes
+        : normalizeMcpScopes(patch.scopes),
   };
 }
 
 /** Config with a freshly generated token: hash stored, plaintext returned once. */
 export function withGeneratedToken(
   current: PlatformMcpConfig,
-  opts?: { name?: string }
+  opts?: { name?: string; scopes?: McpScope[] }
 ): { config: PlatformMcpConfig; token: string } {
   const token = generateMcpToken();
   const tokenName =
@@ -157,6 +176,11 @@ export function withGeneratedToken(
       tokenHash: hashMcpToken(token),
       tokenHint: mcpTokenHint(token),
       tokenName,
+      // Rotating keeps the scopes in use; a fresh form sends its own choice.
+      scopes:
+        opts?.scopes !== undefined
+          ? normalizeMcpScopes(opts.scopes)
+          : current.scopes,
       lastUsedAt: "",
       // Generating a token implies you want it usable.
       enabled: true,

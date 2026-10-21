@@ -22,7 +22,8 @@ import {
   type McpAuthState,
 } from "@/lib/mcp-auth";
 import { getPlatformSettings } from "@/lib/platform-settings";
-import type { PlatformMcpConfig } from "@/lib/mcp-settings";
+import type { McpScope, PlatformMcpConfig } from "@/lib/mcp-settings";
+import { getSeoPage, listSeoPages, updateSeoPage } from "@/lib/mcp-seo";
 import {
   deleteBlogPost,
   getBlogPostBySlugOrId,
@@ -190,7 +191,59 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "list_seo_pages",
+    description:
+      "List the public pages that can carry their own search title and description.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "get_seo_page",
+    description:
+      "Read the search title, description and Open Graph override for one page. Empty fields mean the page falls back to its built-in copy.",
+    inputSchema: {
+      type: "object",
+      required: ["page"],
+      properties: {
+        page: { type: "string", description: "Page id from list_seo_pages." },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_seo_page",
+    description:
+      "Set the search title, description or Open Graph override for one page. Only the fields you pass change; an empty string clears a field. Saved immediately and the SEO cache is dropped.",
+    inputSchema: {
+      type: "object",
+      required: ["page"],
+      properties: {
+        page: { type: "string", description: "Page id from list_seo_pages." },
+        title: { type: "string", description: "Search title." },
+        description: { type: "string", description: "Meta description." },
+        ogTitle: { type: "string", description: "Title shown when shared." },
+        ogImageUrl: {
+          type: "string",
+          description: "Absolute https image URL for link previews.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ] as const;
+
+/** Which scope a tool needs. A tool missing here is not exposed. */
+const TOOL_SCOPES: Record<string, McpScope> = {
+  list_blog_categories: "blog:read",
+  list_blog_posts: "blog:read",
+  get_blog_post: "blog:read",
+  create_blog_post: "blog:write",
+  update_blog_post: "blog:write",
+  delete_blog_post: "blog:write",
+  list_seo_pages: "seo:read",
+  get_seo_page: "seo:read",
+  update_seo_page: "seo:write",
+};
 
 type JsonRpcId = string | number | null;
 
@@ -350,6 +403,48 @@ async function callTool(
       return text({ ok: true, deleted: slug });
     }
 
+    case "list_seo_pages": {
+      const pages = await listSeoPages();
+      return text({ count: pages.length, pages });
+    }
+
+    case "get_seo_page": {
+      const page = String(args.page ?? "").trim();
+      if (!page) return toolError("page is required.");
+      try {
+        return text(await getSeoPage(page));
+      } catch (err) {
+        return toolError(err instanceof Error ? err.message : "Could not read page.");
+      }
+    }
+
+    case "update_seo_page": {
+      const page = String(args.page ?? "").trim();
+      if (!page) return toolError("page is required.");
+      const patch = {
+        ...(typeof args.title === "string" ? { title: args.title } : {}),
+        ...(typeof args.description === "string"
+          ? { description: args.description }
+          : {}),
+        ...(typeof args.ogTitle === "string" ? { ogTitle: args.ogTitle } : {}),
+        ...(typeof args.ogImageUrl === "string"
+          ? { ogImageUrl: args.ogImageUrl }
+          : {}),
+      };
+      try {
+        const next = await updateSeoPage(page, patch);
+        await writeAuditEvent({
+          action: "settings.seo_updated",
+          detail: { source: "mcp", page, fields: Object.keys(patch) },
+        });
+        return text(next);
+      } catch (err) {
+        return toolError(
+          err instanceof Error ? err.message : "Could not update page."
+        );
+      }
+    }
+
     default:
       return toolError(`Unknown tool "${name}".`);
   }
@@ -411,7 +506,7 @@ export async function POST(request: Request) {
             capabilities: { tools: { listChanged: false } },
             serverInfo: SERVER_INFO,
             instructions:
-              "Editorial blog tools for nurahelp.com. Always call list_blog_categories and pass the matching slugs as categories when you write a post.",
+              "Editorial and page-SEO tools for nurahelp.com. Only the tools granted to this token are listed. For a guide, always call list_blog_categories and pass the matching slugs as categories.",
           })
         );
         break;
@@ -421,12 +516,31 @@ export async function POST(request: Request) {
         responses.push(rpcResult(id, {}));
         break;
 
-      case "tools/list":
-        responses.push(rpcResult(id, { tools: TOOLS }));
+      case "tools/list": {
+        // Only advertise what this token can actually call, so an editorial
+        // agent never plans around SEO tools it cannot use.
+        const tools = TOOLS.filter((tool) => {
+          const scope = TOOL_SCOPES[tool.name];
+          return scope ? auth.state.scopes.includes(scope) : false;
+        });
+        responses.push(rpcResult(id, { tools }));
         break;
+      }
 
       case "tools/call": {
         const name = String(message.params?.name ?? "");
+        const required = TOOL_SCOPES[name];
+        if (required && !auth.state.scopes.includes(required)) {
+          responses.push(
+            rpcResult(
+              id,
+              toolError(
+                `This token lacks the ${required} scope. Generate a token with that scope in Admin → MCP.`
+              )
+            )
+          );
+          break;
+        }
         const args =
           (message.params?.arguments as Record<string, unknown> | undefined) ??
           {};

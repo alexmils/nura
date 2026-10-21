@@ -8,8 +8,10 @@
 
 import { getPlatformSettings } from "@/lib/platform-settings";
 import {
+  DEFAULT_MCP_SCOPES,
   hashMcpToken,
   tokenMatchesHash,
+  type McpScope,
   type PlatformMcpConfig,
 } from "@/lib/mcp-settings";
 
@@ -19,6 +21,8 @@ export type McpAuthState = {
   tokenHash: string;
   /** False when an admin token exists but is switched off. */
   enabled: boolean;
+  /** What this token may call. Empty when nothing is configured. */
+  scopes: McpScope[];
 };
 
 /** How long between `lastUsedAt` writes, so MCP traffic is not a write storm. */
@@ -34,11 +38,25 @@ export async function getMcpAuthState(
 ): Promise<McpAuthState> {
   const database = Boolean(config.tokenHash);
   if (database) {
-    return { source: "database", tokenHash: config.tokenHash, enabled: config.enabled };
+    return {
+      source: "database",
+      tokenHash: config.tokenHash,
+      enabled: config.enabled,
+      scopes: config.scopes,
+    };
   }
   const env = envTokenHash();
-  if (env) return { source: "env", tokenHash: env, enabled: true };
-  return { source: "none", tokenHash: "", enabled: false };
+  if (env) {
+    // The env token predates scopes and only ever had blog access. New powers
+    // are granted through an admin-generated token, never implicitly here.
+    return {
+      source: "env",
+      tokenHash: env,
+      enabled: true,
+      scopes: [...DEFAULT_MCP_SCOPES],
+    };
+  }
+  return { source: "none", tokenHash: "", enabled: false, scopes: [] };
 }
 
 export function mcpRequestAuthorized(
