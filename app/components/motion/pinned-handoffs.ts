@@ -379,6 +379,16 @@ export function pinnedHandoff(
       holdPrev();
       const pinned = holdNext();
       wash(0.55);
+      // The copy fades with the scroll instead of being cut away by the
+      // growing card; the pictures stay until the lens covers them.
+      const blogCopy = [
+        ...prev.querySelectorAll<HTMLElement>(
+          ".fe-blog-head, .fe-blog-masonry-meta, .fe-blog-masonry-title, .fe-blog-more"
+        ),
+      ];
+      if (blogCopy.length) {
+        tl.fromTo(blogCopy, { opacity: 1 }, { opacity: 0, duration: 0.55, ease: "none" }, 0.1);
+      }
       if (pinned) {
         type Rect = { l: number; t: number; w: number; h: number; r: number; img: string };
         const state = { p: 0 };
