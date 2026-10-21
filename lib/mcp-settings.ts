@@ -201,22 +201,4 @@ export function withRevokedToken(
   };
 }
 
-/** `~/.cursor/mcp.json` entry, ready to paste. */
-export function mcpClientSnippet(url: string, token: string): string {
-  return JSON.stringify(
-    {
-      mcpServers: {
-        "nura-blog": {
-          url,
-          type: "streamableHttp",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json, text/event-stream",
-          },
-        },
-      },
-    },
-    null,
-    4
-  );
-}
+export { mcpClientSnippet } from "@/lib/mcp-snippet";

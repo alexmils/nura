@@ -6,7 +6,6 @@ import {
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 import {
   mergeMcpConfigPatch,
-  mcpClientSnippet,
   toMcpAdminView,
   withGeneratedToken,
   withRevokedToken,
@@ -115,10 +114,9 @@ export async function POST(request: Request) {
   const view = await adminPayload();
   return NextResponse.json({
     mcp: view,
-    // Plaintext is returned only here, only once.
+    // Plaintext is returned only here, only once. The client builds the
+    // mcp.json snippet from the URL it is actually browsing: the server only
+    // knows localhost, so a production admin used to copy the wrong endpoint.
     token: issuedToken,
-    snippet: issuedToken
-      ? mcpClientSnippet(view.localUrl, issuedToken)
-      : undefined,
   });
 }
