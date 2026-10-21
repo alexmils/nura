@@ -8,6 +8,8 @@ export const MCP_SCOPES = [
   "blog:write",
   "seo:read",
   "seo:write",
+  "resources:read",
+  "resources:write",
 ] as const;
 
 export type McpScope = (typeof MCP_SCOPES)[number];
@@ -17,6 +19,8 @@ export const MCP_SCOPE_LABELS: Record<McpScope, string> = {
   "blog:write": "Create, edit, and delete blog posts",
   "seo:read": "Read page SEO titles and descriptions",
   "seo:write": "Edit page SEO titles and descriptions",
+  "resources:read": "Read the in-app Resources library",
+  "resources:write": "Create and edit in-app Resources",
 };
 
 /** Scopes every token had before scopes existed. */

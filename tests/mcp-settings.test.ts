@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   DEFAULT_MCP_SCOPES,
   DEFAULT_PLATFORM_MCP,
+  MCP_SCOPES,
   MCP_TOKEN_PREFIX,
   normalizeMcpScopes,
   generateMcpToken,
@@ -198,6 +199,15 @@ describe("mcp scopes", () => {
       ["seo:write", "blog:read"]
     );
     assert.deepEqual(normalizeMcpScopes([]), []);
+  });
+
+  it("covers the in-app Resources library", () => {
+    assert.deepEqual(
+      normalizeMcpScopes(["resources:read", "resources:write"]),
+      ["resources:read", "resources:write"]
+    );
+    assert.ok(MCP_SCOPES.includes("resources:read"));
+    assert.ok(MCP_SCOPES.includes("resources:write"));
   });
 
   it("merge replaces scopes only when the patch carries them", () => {

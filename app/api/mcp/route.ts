@@ -35,6 +35,13 @@ import {
 } from "@/lib/blog-db";
 import { BLOG_CATEGORY_SLUGS } from "@/lib/blog-categories";
 import { CLUSTER_TOPICS } from "@/lib/content-cluster";
+import { hasBlsAcronym } from "@/lib/blog-post-input";
+import {
+  isResourceKind,
+  RESOURCE_KINDS,
+  type ResourcePost,
+} from "@/lib/resources";
+import { listResourcesAdmin, upsertResource } from "@/lib/resources-db";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -114,6 +121,42 @@ const POST_FIELDS = {
     type: "string",
     description: "ISO date. Defaults to now.",
   },
+} as const;
+
+const RESOURCE_FIELDS = {
+  slug: {
+    type: "string",
+    description: "URL slug. Defaults to the title when omitted on create.",
+  },
+  kind: {
+    type: "string",
+    enum: [...RESOURCE_KINDS],
+    description: "article, video, or safety.",
+  },
+  title: { type: "string" },
+  summary: {
+    type: "string",
+    description: "One-line summary shown on the card (max 500 characters).",
+  },
+  body: {
+    type: "string",
+    description: "Markdown body for articles. Images are allowed.",
+  },
+  coverUrl: {
+    type: "string",
+    description: "https image URL or a small data URL.",
+  },
+  videoUrl: {
+    type: "string",
+    description: "YouTube, Vimeo, or an https .mp4/.webm link.",
+  },
+  readMinutes: { type: "number", description: "Shown as the card's read time." },
+  featured: { type: "boolean" },
+  enabled: {
+    type: "boolean",
+    description: "false hides it from /app/resources (default on create).",
+  },
+  sortOrder: { type: "number", description: "Lower comes first." },
 } as const;
 
 const TOOLS = [
@@ -230,6 +273,58 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: "list_resources",
+    description:
+      "List the in-app Resources library shown at /app/resources. Optionally filter by kind or by whether each item is enabled.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        kind: { type: "string", enum: [...RESOURCE_KINDS] },
+        enabled: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "get_resource",
+    description:
+      "Read one in-app Resource by slug or id, including its markdown body.",
+    inputSchema: {
+      type: "object",
+      required: ["resource"],
+      properties: { resource: { type: "string" } },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_resource",
+    description:
+      "Create an in-app Resource. kind is article, video, or safety. Saves disabled unless enabled=true. Copy must not use an em dash or the acronym BLS.",
+    inputSchema: {
+      type: "object",
+      required: ["title", "kind"],
+      properties: RESOURCE_FIELDS,
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_resource",
+    description:
+      "Update an in-app Resource by slug or id. Only the fields you pass change; an empty coverUrl or videoUrl clears it. Set enabled=false to hide it without deleting.",
+    inputSchema: {
+      type: "object",
+      required: ["resource"],
+      properties: {
+        ...RESOURCE_FIELDS,
+        resource: {
+          type: "string",
+          description: "Current slug or id of the Resource.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
 ] as const;
 
 /** Which scope a tool needs. A tool missing here is not exposed. */
@@ -243,6 +338,10 @@ const TOOL_SCOPES: Record<string, McpScope> = {
   list_seo_pages: "seo:read",
   get_seo_page: "seo:read",
   update_seo_page: "seo:write",
+  list_resources: "resources:read",
+  get_resource: "resources:read",
+  create_resource: "resources:write",
+  update_resource: "resources:write",
 };
 
 type JsonRpcId = string | number | null;
@@ -288,6 +387,53 @@ function postSummary(post: BlogPostRecord) {
     related: post.related,
     sectionCount: post.sections.length,
   };
+}
+
+function resourceSummary(resource: ResourcePost) {
+  return {
+    id: resource.id,
+    slug: resource.slug,
+    kind: resource.kind,
+    title: resource.title,
+    summary: resource.summary,
+    enabled: resource.enabled,
+    featured: resource.featured,
+    readMinutes: resource.readMinutes,
+    hasBody: Boolean(resource.body),
+    videoUrl: resource.videoUrl,
+    coverUrl: resource.coverUrl,
+    sortOrder: resource.sortOrder,
+  };
+}
+
+function resourceArgs(args: Record<string, unknown>) {
+  const str = (value: unknown) =>
+    typeof value === "string" ? value : undefined;
+  return {
+    slug: str(args.slug),
+    kind: isResourceKind(args.kind) ? args.kind : undefined,
+    title: str(args.title),
+    summary: str(args.summary),
+    body: str(args.body),
+    coverUrl: str(args.coverUrl),
+    videoUrl: str(args.videoUrl),
+    readMinutes: typeof args.readMinutes === "number" ? args.readMinutes : undefined,
+    featured: typeof args.featured === "boolean" ? args.featured : undefined,
+    enabled: typeof args.enabled === "boolean" ? args.enabled : undefined,
+    sortOrder: typeof args.sortOrder === "number" ? args.sortOrder : undefined,
+  };
+}
+
+/** The same brand gate the blog uses: no em dash, no internal acronym. */
+function copyProblem(parts: (string | null | undefined)[]): string | null {
+  const copy = parts.filter((part): part is string => Boolean(part)).join("\n");
+  if (copy.includes("—")) {
+    return "Copy must not use an em dash. Replace it with a comma, a period, or a colon.";
+  }
+  if (hasBlsAcronym(copy)) {
+    return "Copy must not use the acronym BLS. Say self-guided set time or session set.";
+  }
+  return null;
 }
 
 async function authorized(
@@ -443,6 +589,96 @@ async function callTool(
           err instanceof Error ? err.message : "Could not update page."
         );
       }
+    }
+
+    case "list_resources": {
+      let items = await listResourcesAdmin();
+      if (isResourceKind(args.kind)) {
+        items = items.filter((item) => item.kind === args.kind);
+      }
+      if (typeof args.enabled === "boolean") {
+        items = items.filter((item) => item.enabled === args.enabled);
+      }
+      return text({ count: items.length, resources: items.map(resourceSummary) });
+    }
+
+    case "get_resource": {
+      const key = String(args.resource ?? "").trim();
+      const found = (await listResourcesAdmin()).find(
+        (item) => item.id === key || item.slug === key
+      );
+      if (!found) return toolError(`No resource with slug or id "${key}".`);
+      return text(found);
+    }
+
+    case "create_resource": {
+      const input = resourceArgs(args);
+      if (!input.title?.trim()) return toolError("title is required.");
+      if (!input.kind) {
+        return toolError(`kind is required: ${RESOURCE_KINDS.join(", ")}.`);
+      }
+      const problem = copyProblem([input.title, input.summary, input.body]);
+      if (problem) return toolError(problem);
+
+      const result = await upsertResource({
+        slug: input.slug ?? "",
+        kind: input.kind,
+        title: input.title,
+        summary: input.summary,
+        body: input.body,
+        coverUrl: input.coverUrl,
+        videoUrl: input.videoUrl,
+        readMinutes: input.readMinutes,
+        featured: input.featured,
+        // Editorial writes start hidden until someone reviews them on the page.
+        enabled: input.enabled === true,
+        sortOrder: input.sortOrder,
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "resource.created",
+        detail: { source: "mcp", slug: result.post.slug },
+      });
+      return text(resourceSummary(result.post));
+    }
+
+    case "update_resource": {
+      const key = String(args.resource ?? "").trim();
+      const existing = (await listResourcesAdmin()).find(
+        (item) => item.id === key || item.slug === key
+      );
+      if (!existing) return toolError(`No resource with slug or id "${key}".`);
+
+      const input = resourceArgs(args);
+      const title = input.title ?? existing.title;
+      const summary = input.summary ?? existing.summary;
+      const problem = copyProblem([title, summary, input.body]);
+      if (problem) return toolError(problem);
+
+      const result = await upsertResource({
+        id: existing.id,
+        slug: input.slug ?? existing.slug,
+        kind: input.kind ?? existing.kind,
+        title,
+        summary,
+        body: input.body,
+        coverUrl: input.coverUrl,
+        videoUrl: input.videoUrl,
+        readMinutes: input.readMinutes,
+        featured: input.featured,
+        enabled: input.enabled,
+        sortOrder: input.sortOrder,
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "resource.updated",
+        detail: {
+          source: "mcp",
+          slug: result.post.slug,
+          fields: Object.keys(args).filter((keyName) => keyName !== "resource"),
+        },
+      });
+      return text(resourceSummary(result.post));
     }
 
     default:
