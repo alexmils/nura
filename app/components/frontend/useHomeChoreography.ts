@@ -17,14 +17,14 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * each a port of an alexandermils mechanism (D:\Python\alexandermils):
  *
  * hero -> next section     zoom     hero photo pushes in to 145% and darkens while How rises over the held hero (SectionHandoff "zoom")
- * how stages -> between    wipe     "Between sessions" unfolds from its top edge while its copy lifts in (the sticky track above is never transformed). Phones: stack
+ * how stages -> between    (none)   plain entry; the section's top gradient blends the stage pale into the green. Phones: stack
  * between -> languages     morph    both blocks shift into the languages colour and the language content rises out of it (no panel over a panel)
  * languages -> modes       morph    the languages surface shifts into the modes colour while the modes board rises in (phones: stack)
- * One effect per boundary: the old finale zoom and modes' SectionRise clip do not run on top of these.
+ * One effect per boundary: modes' SectionRise clip does not run on top of these.
  * modes -> session         lift     the held board settles back while session rises over it as a soft sheet (no circle)
  * session -> topics        settle   the held session eases back under a soft guides-coloured veil while guides rises over it, top corners flattening
  * topics -> stories        morph    the backdrop morphs to the stories colour, its content rises out of it (colour hand-off)
- * stories -> pricing       settle   calm sheet rise: stories eases back under a soft pricing-coloured wash while pricing rises over it, corners flattening
+ * stories -> pricing       morph    the yellow surface blends into the pricing mint while its content rises in
  * pricing -> faq           (none)   plain scroll; no hand-off on either breakpoint
  * faq -> blog              (none)   plain hand-off; the old mint wave band was removed
  * blog -> close            lens     the closing CTA emerges out of the nearest visible blog card (its rect and aspect) and grows to full screen, copy fades in last (Aperture / lens)
@@ -86,35 +86,10 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   const kitSection = one(".fe-spath-kit-section");
   const kit = kitSection && kitSection.offsetHeight > window.innerHeight * 0.25 ? kitSection : null;
   const modesBox = one(".mo-section-rise");
-  const finaleZoom = finale?.querySelector<HTMLElement>(".fe-spath-finale-zoom");
   if (mobile) handoff(track, finale, "stack", true);
-  else if (track && finale) {
-    // Curtain drop: the finale unfolds from its top edge instead of shrinking
-    // into a rounded window. The sticky track above is never transformed.
-    finale.setAttribute("data-mo-handoff", "wipe");
-    scrub(
-      finale,
-      { "--finale-wipe": 100 } as gsap.TweenVars,
-      { "--finale-wipe": 0 } as gsap.TweenVars,
-      finale,
-      "top 92%",
-      "top 32%"
-    );
-    if (finaleZoom) {
-      scrub(
-        finaleZoom,
-        { y: 34, opacity: 0, scale: 0.97 },
-        { y: 0, opacity: 1, scale: 1 },
-        finale,
-        "top 92%",
-        "top 42%"
-      );
-    }
-    const finaleEdge = finale.querySelector<HTMLElement>(".fe-spath-finale-edge");
-    if (finaleEdge) {
-      scrub(finaleEdge, { opacity: 1 }, { opacity: 0 }, finale, "top 45%", "top 32%");
-    }
-  }
+  // Desktop: a plain entry; the section's own top gradient blends the stage
+  // colour into the green. The old clip wipe left a pale slit at the bottom
+  // edge whenever its scrub lagged behind fast scrolling.
   if (mobile) handoff(finale, kit, "curve", true);
   else
     pinnedHandoff(finale, kit, "morph", {
@@ -147,7 +122,11 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     }
     pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
     pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories .v2-container") });
-    pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "settle");
+    pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "morph", {
+      content: one(".v2-pricing .v2-container"),
+      morphY: 48,
+      fade: false,
+    });
   }
   // Session -> topics on every screen: a calm sheet rise, no circle.
   pinnedHandoff(one(".v2-session"), one(".fe-topics"), "settle");

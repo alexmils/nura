@@ -723,24 +723,18 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   min-height: 58svh;
   padding: clamp(4.5rem, 9vw, 7rem) 0;
   background: #e4edd4;
-  /* The scroll wipe animates this number (100 = closed slit at the middle,
-     0 = fully open). A GSAP clip-path string tween snaps in this browser, so
-     the variable is the safe property to scrub. Opening from the middle puts
-     the copy on screen before the section's empty air. */
-  clip-path: inset(calc(var(--finale-wipe, 0) * 0.5%) 0 calc(var(--finale-wipe, 0) * 0.5%) 0);
   overflow: hidden;
   perspective: 1600px;
 }
 
-/* Lime rules on both edges of the opening slit. They disappear once open. */
-.fe-spath-finale-edge {
+/* Same soft colour blend as the other sections: the stage's pale sheet fades
+   into the green instead of cutting at the boundary. */
+.fe-spath-finale::before {
+  content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  top: calc(var(--finale-wipe, 0) * 0.5%);
-  bottom: calc(var(--finale-wipe, 0) * 0.5%);
-  border-top: 3px solid var(--fe-pistachio, #c6d67e);
-  border-bottom: 3px solid var(--fe-pistachio, #c6d67e);
+  inset: 0 0 auto;
+  height: clamp(4.5rem, 9vw, 8rem);
+  background: linear-gradient(180deg, #f7fcf7 0%, transparent 100%);
   pointer-events: none;
 }
 
@@ -749,23 +743,6 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   transform-origin: 50% 42%;
   transform-style: preserve-3d;
   will-change: transform, opacity, filter;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .fe-spath-finale {
-    clip-path: none;
-  }
-  .fe-spath-finale-edge {
-    display: none;
-  }
-}
-
-html[data-a11y-motion="reduced"] .fe-spath-finale {
-  clip-path: none;
-}
-
-html[data-a11y-motion="reduced"] .fe-spath-finale-edge {
-  display: none;
 }
 
 .fe-spath-finale-inner {

@@ -1923,6 +1923,12 @@
   background: #dcefdc;
 }
 
+/* The stories morph already blends the two backgrounds; the fixed yellow
+   strip read as a separate band with a line on its top edge. */
+.v2-pricing::before {
+  content: none;
+}
+
 .v2-price-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
