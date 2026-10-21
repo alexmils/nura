@@ -305,8 +305,8 @@ export default function AdminMcpPage() {
             onClose={() => setInfo(null)}
           >
             <p>
-              Bearer token for the blog agent. Only a hash is stored, so the
-              secret cannot be read back here.
+              Bearer tokens for external agents that edit the blog and page SEO.
+              Only a hash is stored, so the secret cannot be read back here.
             </p>
             {mcp?.envTokenIgnored ? (
               <p>
@@ -320,56 +320,10 @@ export default function AdminMcpPage() {
       </header>
 
       <main className="admin-main admin-mcp-main">
-        <section className="admin-mcp-section">
-          <div className="admin-mcp-section-head-row">
-            <h2 className="admin-mcp-section-title">Nura Google Ads</h2>
-          </div>
-          <p className="admin-mcp-section-sub">Cherry Studio. No secrets in this file.</p>
-          <form className="admin-mcp-ads-form" onSubmit={generateAdsJson}>
-            <label className="admin-field-label" htmlFor="admin-mcp-ads-repo">
-              Repo folder
-              <input
-                id="admin-mcp-ads-repo"
-                type="text"
-                className="field"
-                value={repoDir}
-                autoComplete="off"
-                spellCheck={false}
-                onChange={(e) => {
-                  setRepoDir(e.target.value);
-                  if (adsJsonError) setAdsJsonError("");
-                }}
-              />
-            </label>
-            {adsJsonError ? (
-              <p className="admin-mcp-wizard-error" role="alert">
-                {adsJsonError}
-              </p>
-            ) : null}
-            <button type="submit" className="btn-primary">
-              Generate JSON
-            </button>
-          </form>
-          {adsJson ? (
-            <label className="admin-field-label">
-              JSON
-              <textarea
-                className="field admin-mcp-secret-json"
-                readOnly
-                rows={12}
-                value={adsJson}
-                onFocus={(e) => e.currentTarget.select()}
-              />
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={() => void copy(adsJson, "ads-json")}
-              >
-                {copied === "ads-json" ? "Copied" : "Copy JSON"}
-              </button>
-            </label>
-          ) : null}
-        </section>
+        <p className="admin-panel-sub">
+          Tokens for external agents that edit the blog and page SEO. The Google
+          Ads generator is a separate local tool at the bottom of this page.
+        </p>
 
         {(msg || err) && !wizard && (
           <div
@@ -580,6 +534,65 @@ export default function AdminMcpPage() {
                   </ul>
                 </InfoTip>
               </div>
+            </section>
+
+            <section className="admin-mcp-section">
+              <div className="admin-mcp-section-head-row">
+                <h2 className="admin-mcp-section-title">
+                  Google Ads MCP (local desktop)
+                </h2>
+              </div>
+              <p className="admin-mcp-section-sub">
+                A stdio server that runs on your machine for ad work. It is not
+                the Nura content endpoint above and uses no bearer token.
+              </p>
+              <form className="admin-mcp-ads-form" onSubmit={generateAdsJson}>
+                <label
+                  className="admin-field-label"
+                  htmlFor="admin-mcp-ads-repo"
+                >
+                  Repo folder
+                  <input
+                    id="admin-mcp-ads-repo"
+                    type="text"
+                    className="field"
+                    value={repoDir}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(e) => {
+                      setRepoDir(e.target.value);
+                      if (adsJsonError) setAdsJsonError("");
+                    }}
+                  />
+                </label>
+                {adsJsonError ? (
+                  <p className="admin-mcp-wizard-error" role="alert">
+                    {adsJsonError}
+                  </p>
+                ) : null}
+                <button type="submit" className="btn-primary">
+                  Generate JSON
+                </button>
+              </form>
+              {adsJson ? (
+                <label className="admin-field-label">
+                  JSON
+                  <textarea
+                    className="field admin-mcp-secret-json"
+                    readOnly
+                    rows={12}
+                    value={adsJson}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => void copy(adsJson, "ads-json")}
+                  >
+                    {copied === "ads-json" ? "Copied" : "Copy JSON"}
+                  </button>
+                </label>
+              ) : null}
             </section>
           </>
         )}
