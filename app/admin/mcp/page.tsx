@@ -19,6 +19,7 @@ import {
   MCP_SCOPE_LABELS,
   type McpScope,
 } from "@/lib/mcp-scopes";
+import { mcpClientSnippet } from "@/lib/mcp-snippet";
 
 type McpView = {
   enabled: boolean;
@@ -40,6 +41,15 @@ function sourceLabel(mcp: McpView): string {
   if (mcp.source === "database") return "Generated here";
   if (mcp.source === "env") return "From NURA_MCP_TOKEN";
   return "Not configured";
+}
+
+/**
+ * The endpoint the operator is actually browsing. The server only knows the
+ * local port, so a production admin used to copy `localhost` into Cursor.
+ */
+function mcpEndpointUrl(view: McpView): string {
+  if (typeof window !== "undefined") return `${window.location.origin}/api/mcp`;
+  return view.publicUrl || view.localUrl;
 }
 
 function whenLabel(iso: string): string {
@@ -206,8 +216,11 @@ export default function AdminMcpPage() {
       }
       setMcp(data.mcp);
       if (action === "generate") {
-        setIssuedToken(data.token ?? "");
-        setSnippet(data.snippet ?? "");
+        const token = String(data.token ?? "");
+        setIssuedToken(token);
+        setSnippet(
+          token ? mcpClientSnippet(mcpEndpointUrl(data.mcp as McpView), token) : ""
+        );
         setWizard("secret");
         setMsg("");
       } else if (action === "revoke") {
