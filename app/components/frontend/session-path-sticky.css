@@ -1092,8 +1092,9 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
      above it, and the 1px line read as a flickering break while scrolling. */
   border-top: 0;
   /* Plain rgb for the colour morph: a computed color(srgb …) value interpolates
-     through black in GSAP. Keep the same pale pistachio the accent mix gave. */
-  background: #f3f7f0;
+     through black in GSAP. A warm paper (not another pale pistachio) gives the
+     between -> languages blend an actual colour shift to glide through. */
+  background: #f7f0d9;
 }
 
 /* The colour morph joins the two sections; a seam would cut it in half. */
