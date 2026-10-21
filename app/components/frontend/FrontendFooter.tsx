@@ -250,7 +250,7 @@ export function FrontendFooter() {
                   >
                     {newsBusy ? sectionText(news, "newsSending") : sectionText(news, "newsSend")}
                   </button>
-                  <label className="fe-site-footer-newsletter-hint" style={{ display: "flex", gap: 8 }}>
+                  <label className="fe-site-footer-consent">
                     <input
                       type="checkbox"
                       checked={newsOptIn}
