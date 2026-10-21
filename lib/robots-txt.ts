@@ -51,7 +51,6 @@ export const ROBOTS_DISALLOW = [
   "/admin",
   "/api",
   "/health",
-  "/entry",
 ] as const;
 
 export function buildRobotsTxt(origin: string): string {

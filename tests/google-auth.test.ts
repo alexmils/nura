@@ -33,8 +33,8 @@ describe("googleAuthErrorPath", () => {
       "/app/create-account?error=google_cancelled"
     );
     assert.equal(
-      googleAuthErrorPath("login", "google_denied", "abcdefghijklmnop"),
-      "/entry/abcdefghijklmnop?error=google_denied"
+      googleAuthErrorPath("login", "google_denied", "dsadsa31"),
+      "/dsadsa31?error=google_denied"
     );
   });
 });
@@ -54,6 +54,17 @@ describe("googleAuthErrorMessage", () => {
       /already exists/i
     );
     assert.equal(googleAuthErrorMessage("other"), null);
+  });
+
+  it("names the right sign-in page after a wrong-surface Google sign-in", () => {
+    assert.match(
+      googleAuthErrorMessage("google_staff_gate") ?? "",
+      /admin sign-in page/
+    );
+    assert.match(
+      googleAuthErrorMessage("google_member_gate") ?? "",
+      /regular sign-in page/
+    );
   });
 });
 

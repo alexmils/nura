@@ -12,6 +12,7 @@ import {
 import {
   clampGuardNumber,
   LOGIN_GUARD_DEFAULTS,
+  normalizeGuardSlug,
   parseAddressList,
   slugError,
 } from "@/lib/login-guard-policy";
@@ -42,7 +43,7 @@ export async function PUT(request: Request) {
     blocklist?: string;
   };
 
-  const slug = (body.slug ?? "").trim();
+  const slug = normalizeGuardSlug(body.slug ?? "");
   const slugProblem = slugError(slug);
   if (slugProblem) {
     return NextResponse.json({ error: slugProblem }, { status: 400 });

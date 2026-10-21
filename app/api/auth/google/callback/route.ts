@@ -34,7 +34,7 @@ import {
   sessionAllowedForRole,
   staffGateAccepted,
 } from "@/lib/login-guard";
-import { isStaffRole } from "@/lib/login-guard-policy";
+import { isStaffRole, wrongSurfaceOutcome } from "@/lib/login-guard-policy";
 import {
   createUser,
   getUserByEmail,
@@ -248,10 +248,11 @@ export async function GET(request: Request) {
         ip: guard.ip,
         email: guard.email,
         surface,
-        outcome: isStaffRole(user.role) ? "staff_public" : "consumer_gate",
+        outcome: wrongSurfaceOutcome(user.role),
         whitelisted: guard.whitelisted,
       });
-      return fail("google_denied");
+      // Google proved the account, so naming the right page leaks nothing.
+      return fail(isStaffRole(user.role) ? "google_staff_gate" : "google_member_gate");
     }
 
     if (!isNew && user.role === "user") {

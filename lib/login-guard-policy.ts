@@ -1,24 +1,78 @@
 /** Pure sign-in guard rules. Persistence lives in `lib/login-guard.ts`. */
 
-export const ADMIN_GATE_PREFIX = "/entry";
-
 export const LOGIN_GUARD_DEFAULTS = {
   maxAttempts: 5,
   windowMinutes: 15,
   lockMinutes: 30,
 } as const;
 
-const SLUG_RE = /^[A-Za-z0-9_-]{16,64}$/;
+/**
+ * Root paths the site already owns. The private sign-in path is a single root
+ * segment, so it must never shadow a real page (or a reserved API/console one).
+ */
+export const RESERVED_GUARD_SLUGS = new Set([
+  "_next",
+  "about",
+  "admin",
+  "api",
+  "app",
+  "billing",
+  "blog",
+  "brand-assets",
+  "changelog",
+  "checkout",
+  "create-account",
+  "create-password",
+  "dev",
+  "editorial",
+  "emdr",
+  "entry",
+  "faq",
+  "forgot-password",
+  "health",
+  "knowledge",
+  "learn",
+  "limits",
+  "login",
+  "og",
+  "og-image",
+  "onboarding",
+  "pricing",
+  "privacy",
+  "reset-password",
+  "safety",
+  "settings",
+  "signup",
+  "support",
+  "terms",
+]);
 
-const FAILURE_OUTCOMES = [
+/** 6–64 chars, starts with a letter, letters/numbers/hyphens only. */
+const SLUG_RE = /^[A-Za-z][A-Za-z0-9-]{5,63}$/;
+
+/** Failures that spend the attempt budget: the credentials were not proven. */
+export const LOCKOUT_OUTCOMES = [
   "bad_password",
   "unknown_user",
-  "staff_public",
-  "consumer_gate",
   "disabled",
 ] as const;
 
+/**
+ * Proven credentials on the wrong sign-in page for the role. Recorded for the
+ * Security log, but never counted toward IP or email locks.
+ */
+export const WRONG_SURFACE_OUTCOMES = ["staff_public", "consumer_gate"] as const;
+
+const FAILURE_OUTCOMES = [...LOCKOUT_OUTCOMES, ...WRONG_SURFACE_OUTCOMES] as const;
+
 export type LoginFailureOutcome = (typeof FAILURE_OUTCOMES)[number];
+export type WrongSurfaceOutcome = (typeof WRONG_SURFACE_OUTCOMES)[number];
+
+/** Shown only after the password, Google account, or passkey is verified. */
+export const STAFF_ON_PUBLIC_MESSAGE =
+  "This account must sign in through the admin sign-in page.";
+export const MEMBER_ON_GATE_MESSAGE =
+  "This sign-in page is for staff only. Use the regular sign-in page.";
 
 export type LoginAttemptOutcome =
   | LoginFailureOutcome
@@ -30,6 +84,16 @@ export function isStaffRole(role: string | null | undefined): boolean {
   return role === "platform_admin" || role === "support";
 }
 
+export function wrongSurfaceOutcome(
+  role: string | null | undefined
+): WrongSurfaceOutcome {
+  return isStaffRole(role) ? "staff_public" : "consumer_gate";
+}
+
+export function wrongSurfaceMessage(role: string | null | undefined): string {
+  return isStaffRole(role) ? STAFF_ON_PUBLIC_MESSAGE : MEMBER_ON_GATE_MESSAGE;
+}
+
 /** Staff only on a matching operator gate. Everyone else only on public sign-in. */
 export function roleMayUseSurface(
   role: string | null | undefined,
@@ -39,14 +103,23 @@ export function roleMayUseSurface(
   return !gateAccepted;
 }
 
+export function normalizeGuardSlug(value: string): string {
+  return value.trim().toLowerCase();
+}
+
 export function isValidGuardSlug(value: string): boolean {
-  return SLUG_RE.test(value);
+  const slug = value.trim();
+  if (!SLUG_RE.test(slug)) return false;
+  return !RESERVED_GUARD_SLUGS.has(slug.toLowerCase());
 }
 
 export function slugError(value: string): string | null {
   const slug = value.trim();
   if (isValidGuardSlug(slug)) return null;
-  return "Use 16 to 64 letters, numbers, hyphens, or underscores.";
+  if (SLUG_RE.test(slug)) {
+    return "That address is already used by the site. Pick another.";
+  }
+  return "Use 6 to 64 letters, numbers, or hyphens, and start with a letter.";
 }
 
 export function normalizeGuardIp(ip: string | null | undefined): string {
@@ -104,6 +177,41 @@ export function ipMatchesEntry(ip: string, entry: string): boolean {
   }
   const mask = bits === 32 ? 0xffffffff : (0xffffffff << (32 - bits)) >>> 0;
   return (ipN & mask) === (baseN & mask);
+}
+
+const INTERNAL_V4_RANGES = [
+  "10.0.0.0/8",
+  "172.16.0.0/12",
+  "192.168.0.0/16",
+  "127.0.0.0/8",
+] as const;
+
+/**
+ * True for loopback, RFC 1918, and IPv6 ULA (fc00::/7) addresses. Seeing one as
+ * the client IP means the proxy chain dropped the real address.
+ */
+export function isPrivateOrInternalIp(ip: string | null | undefined): boolean {
+  let value = (ip ?? "").trim().toLowerCase();
+  if (value.startsWith("[") && value.endsWith("]")) value = value.slice(1, -1);
+  if (!value || value === "unknown") return false;
+  if (value.startsWith("::ffff:") && ipv4ToInt(value.slice(7)) != null) {
+    value = value.slice(7);
+  }
+  if (ipv4ToInt(value) != null) {
+    return INTERNAL_V4_RANGES.some((range) => ipMatchesEntry(value, range));
+  }
+  if (!value.includes(":") || !/^[0-9a-f:]+$/.test(value)) return false;
+  if (value === "::1" || value === "0:0:0:0:0:0:0:1") return true;
+  const first = value.split(":")[0];
+  if (!first) return false;
+  const hextet = parseInt(first, 16);
+  return Number.isFinite(hextet) && (hextet & 0xfe00) === 0xfc00;
+}
+
+/** IP-based counting and locks only apply to a real, public client address. */
+export function ipLockable(ip: string | null | undefined): boolean {
+  const value = (ip ?? "").trim().toLowerCase();
+  return Boolean(value) && value !== "unknown" && !isPrivateOrInternalIp(value);
 }
 
 export function ipListed(ip: string, list: readonly string[]): boolean {
@@ -170,7 +278,7 @@ export function decideGuard(input: {
     };
   }
   const ipHot =
-    input.ip !== "unknown" &&
+    ipLockable(input.ip) &&
     (input.ipLocked || input.ipFailures >= input.maxAttempts);
   if (ipHot || input.emailLocked || input.emailFailures >= input.maxAttempts) {
     return {
@@ -183,11 +291,18 @@ export function decideGuard(input: {
   return { allow: true };
 }
 
+/** Only failures with unproven credentials count toward IP or email locks. */
 export function countsAsFailure(outcome: string): boolean {
-  return (FAILURE_OUTCOMES as readonly string[]).includes(outcome);
+  return (LOCKOUT_OUTCOMES as readonly string[]).includes(outcome);
 }
 
 export function newGuardSlug(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  return Buffer.from(bytes).toString("base64url");
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  const letters = "abcdefghijklmnopqrstuvwxyz";
+  const rest = `${letters}0123456789`;
+  let slug = letters[bytes[0]! % letters.length]!;
+  for (let i = 1; i < bytes.length; i += 1) {
+    slug += rest[bytes[i]! % rest.length];
+  }
+  return slug;
 }

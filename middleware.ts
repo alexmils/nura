@@ -185,6 +185,11 @@ export async function middleware(request: NextRequest) {
       }
       const session = await getSessionFromRequest(request);
       if (session) {
+        // The sign-in screen stays reachable while signed in. Staff use it to
+        // edit the visual background, and anyone may switch accounts.
+        if (pathname === LOGIN_PATH) {
+          return applyCrawlHeaders(pathname, NextResponse.next());
+        }
         const { role, setCookies, synced } = await resolveRoleFromDb(request);
         // Do not call /api/auth/access here — under Cloudflare Access that
         // nested public-URL fetch causes ERR_TOO_MANY_REDIRECTS.

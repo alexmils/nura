@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  MEMBER_ON_GATE_MESSAGE,
+  STAFF_ON_PUBLIC_MESSAGE,
+  countsAsFailure,
   decideGuard,
+  ipLockable,
   ipMatchesEntry,
+  isPrivateOrInternalIp,
   isValidGuardAddress,
   newGuardSlug,
   parseAddressList,
   roleMayUseSurface,
   slugError,
+  wrongSurfaceMessage,
+  wrongSurfaceOutcome,
 } from "../lib/login-guard-policy.ts";
 
 describe("operator sign-in surface", () => {
@@ -19,9 +26,26 @@ describe("operator sign-in surface", () => {
     assert.equal(roleMayUseSurface("user", true), false);
   });
 
-  it("rejects short slugs", () => {
-    assert.ok(slugError("admin"));
+  it("names the right page for each role", () => {
+    assert.equal(wrongSurfaceMessage("platform_admin"), STAFF_ON_PUBLIC_MESSAGE);
+    assert.equal(wrongSurfaceMessage("support"), STAFF_ON_PUBLIC_MESSAGE);
+    assert.equal(wrongSurfaceMessage("user"), MEMBER_ON_GATE_MESSAGE);
+    assert.equal(wrongSurfaceOutcome("platform_admin"), "staff_public");
+    assert.equal(wrongSurfaceOutcome("user"), "consumer_gate");
+    assert.doesNotMatch(STAFF_ON_PUBLIC_MESSAGE, /\/entry/);
+    assert.doesNotMatch(STAFF_ON_PUBLIC_MESSAGE, /invalid email or password/i);
+  });
+
+  it("accepts a private root path the admin chooses", () => {
+    assert.equal(slugError("dsadsa31"), null);
+    assert.equal(slugError("abcdef"), null);
     assert.equal(slugError("abcdefghijklmnop"), null);
+    assert.ok(slugError("abcde")); // too short
+    assert.ok(slugError("admin")); // reserved console path
+    assert.ok(slugError("about")); // reserved site page
+    assert.ok(slugError("9dsadsa")); // must start with a letter
+    assert.ok(slugError("dsadsa_31")); // no underscores
+    assert.ok(slugError("dsadsa.31")); // no dots
   });
 });
 
@@ -74,6 +98,31 @@ describe("decideGuard", () => {
     if (!decision.allow) assert.equal(decision.status, 429);
   });
 
+  it("does not IP-lock an internal proxy address", () => {
+    const decision = decideGuard({
+      ...base,
+      ip: "10.0.1.1",
+      ipFailures: 50,
+      ipLocked: true,
+    });
+    assert.equal(decision.allow, true);
+  });
+
+  it("still applies the email lock behind an internal proxy address", () => {
+    const decision = decideGuard({
+      ...base,
+      ip: "10.0.1.1",
+      emailFailures: 5,
+    });
+    assert.equal(decision.allow, false);
+    if (!decision.allow) assert.equal(decision.outcome, "locked");
+  });
+
+  it("still IP-locks a public address", () => {
+    const decision = decideGuard({ ...base, ipFailures: 5 });
+    assert.equal(decision.allow, false);
+  });
+
   it("does not treat a missing proxy address as one shared IP lock", () => {
     const decision = decideGuard({
       ...base,
@@ -81,6 +130,57 @@ describe("decideGuard", () => {
       ipFailures: 20,
     });
     assert.equal(decision.allow, true);
+  });
+});
+
+describe("countsAsFailure", () => {
+  it("counts unproven credentials only", () => {
+    assert.equal(countsAsFailure("bad_password"), true);
+    assert.equal(countsAsFailure("unknown_user"), true);
+    assert.equal(countsAsFailure("disabled"), true);
+  });
+
+  it("never counts a wrong-surface refusal", () => {
+    assert.equal(countsAsFailure("staff_public"), false);
+    assert.equal(countsAsFailure("consumer_gate"), false);
+    assert.equal(countsAsFailure("locked"), false);
+    assert.equal(countsAsFailure("ok"), false);
+  });
+});
+
+describe("internal client addresses", () => {
+  it("flags loopback, RFC 1918, and ULA addresses", () => {
+    for (const ip of [
+      "10.0.1.1",
+      "172.16.0.1",
+      "172.31.255.254",
+      "192.168.1.10",
+      "127.0.0.1",
+      "::1",
+      "::ffff:10.0.1.1",
+      "fc00::1",
+      "fd12:3456::7",
+      "[::1]",
+    ]) {
+      assert.equal(isPrivateOrInternalIp(ip), true, ip);
+      assert.equal(ipLockable(ip), false, ip);
+    }
+  });
+
+  it("keeps public addresses lockable", () => {
+    for (const ip of [
+      "46.255.74.128",
+      "172.32.0.1",
+      "172.15.255.255",
+      "11.0.0.1",
+      "2606:4700::1",
+      "fe80::1",
+    ]) {
+      assert.equal(isPrivateOrInternalIp(ip), false, ip);
+    }
+    assert.equal(ipLockable("46.255.74.128"), true);
+    assert.equal(ipLockable("unknown"), false);
+    assert.equal(ipLockable(""), false);
   });
 });
 

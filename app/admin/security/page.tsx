@@ -6,8 +6,10 @@ import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import { fetchJson } from "@/lib/fetch-json";
 import type { LoginAttemptRow, LoginLockRow } from "@/lib/login-guard";
+import { slugError } from "@/lib/login-guard-policy";
 
 const TABS = [
+  { id: "settings", label: "Settings" },
   { id: "limits", label: "Limits" },
   { id: "addresses", label: "Addresses" },
   { id: "attempts", label: "Attempts" },
@@ -40,7 +42,7 @@ const OUTCOME_LABEL: Record<string, string> = {
 function AdminSecurityPageInner() {
   const [tab, setTab] = useAdminTab(
     TABS.map((item) => item.id),
-    "limits"
+    "settings"
   );
   const [settings, setSettings] = useState<Settings | null>(null);
   const [attempts, setAttempts] = useState<LoginAttemptRow[]>([]);
@@ -95,6 +97,12 @@ function AdminSecurityPageInner() {
   }, [load]);
 
   const save = async () => {
+    const slugProblem = slugError(slug);
+    if (slugProblem) {
+      setNotice("");
+      setError(slugProblem);
+      return;
+    }
     setSaving(true);
     setError("");
     setNotice("");
@@ -163,8 +171,14 @@ function AdminSecurityPageInner() {
 
   const copyPath = async () => {
     if (!settings) return;
+    const slugProblem = slugError(slug);
+    if (slugProblem) {
+      setError(slugProblem);
+      return;
+    }
+    setError("");
     const origin = window.location.origin;
-    await navigator.clipboard.writeText(`${origin}${settings.path}`);
+    await navigator.clipboard.writeText(`${origin}/${slug}`);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };
@@ -188,24 +202,38 @@ function AdminSecurityPageInner() {
         {error && <p className="text-[var(--destructive)]">{error}</p>}
         {notice && <p className="admin-panel-sub">{notice}</p>}
 
-        {tab === "limits" && settings && (
+        {tab === "settings" && settings && (
           <section className="admin-panel">
             <p className="admin-panel-sub">
-              Share this address only with people who run Nura. A wrong address
-              shows a normal missing page.
+              Staff sign in on this private address. Share it only with people
+              who run Nura. A wrong address shows a normal missing page.
             </p>
             <label className="admin-field-label">
               Private path
               <input
                 className="field"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.trim())}
+                placeholder="dsadsa31"
+                onChange={(e) =>
+                  setSlug(
+                    e.target.value
+                      .replace(/^\/+/, "")
+                      .trim()
+                      .toLowerCase()
+                  )
+                }
                 autoComplete="off"
                 spellCheck={false}
               />
             </label>
             <p className="admin-panel-sub">
-              <code className="admin-code">{settings.path}</code>
+              Type your own address. For example, <code className="admin-code">dsadsa31</code>{" "}
+              makes staff sign in at <code className="admin-code">/dsadsa31</code>. Use 6 to 64
+              letters, numbers, or hyphens, starting with a letter.
+            </p>
+            <p className="admin-panel-sub">
+              Staff sign in at <code className="admin-code">/{slug || settings.slug}</code>
+              {slug !== settings.slug ? " after saving." : "."}
             </p>
             <div className="admin-table-actions">
               <button type="button" className="btn-secondary" onClick={() => void copyPath()}>
@@ -217,9 +245,22 @@ function AdminSecurityPageInner() {
                 disabled={saving}
                 onClick={() => void regenerate()}
               >
-                New random address
+                Generate random
               </button>
             </div>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={saving}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving…" : "Save address"}
+            </button>
+          </section>
+        )}
+
+        {tab === "limits" && settings && (
+          <section className="admin-panel">
             <label className="admin-field-label">
               Attempts before lock
               <input

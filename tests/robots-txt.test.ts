@@ -23,7 +23,8 @@ describe("robots.txt", () => {
     assert.match(body, /^Disallow: \/admin$/m);
     assert.match(body, /^Disallow: \/api$/m);
     assert.match(body, /^Disallow: \/health$/m);
-    assert.match(body, /^Disallow: \/entry$/m);
+    // The private staff gate is deliberately absent: listing it would leak it.
+    assert.doesNotMatch(body, /entry/);
   });
 
   it("allows search and AI answers, forbids training", () => {

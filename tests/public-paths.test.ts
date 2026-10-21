@@ -51,8 +51,10 @@ describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
   it("allows auth screens under /app", () => {
     assert.equal(isAuthPublicPath("/app/login"), true);
     assert.equal(isUnauthenticatedPublicPath("/app/login"), true);
-    assert.equal(isUnauthenticatedPublicPath("/entry/abcdefghijklmnop"), true);
-    assert.equal(isAuthPublicPath("/entry/abcdefghijklmnop"), false);
+    // The private staff gate is a root slug, not a listed public path. Middleware
+    // still passes unknown root paths through, and the page 404s wrong slugs.
+    assert.equal(isUnauthenticatedPublicPath("/dsadsa31"), false);
+    assert.equal(isAuthPublicPath("/dsadsa31"), false);
     assert.equal(isUnauthenticatedPublicPath("/app/forgot-password"), true);
     assert.equal(isUnauthenticatedPublicPath("/app/reset-password"), true);
     assert.equal(isUnauthenticatedPublicPath("/app/create-password"), true);
