@@ -21,6 +21,7 @@ import { getPlatformSettings } from "@/lib/platform-settings";
 import { publicAdsConfig } from "@/lib/ads";
 import { syncSubscriptionDefaultPaymentMethod } from "@/lib/billing-manage-server";
 import { shouldApplyCheckoutSessionSync } from "@/lib/checkout-rules";
+import { trialValueFromCents } from "@/lib/conversions/payloads";
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -28,6 +29,11 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("session_id");
+
+  // What the trial converts to. The client's StartTrial event needs this: the
+  // plan label is not reliable (an unmatched Stripe price maps to "pro"), and
+  // without a value every StartTrial looks identical to Meta.
+  let trialValue: { value: number; currency: string } | null = null;
 
   // Verify Checkout success server-side when returning from Stripe.
   if (sessionId) {
@@ -61,6 +67,7 @@ export async function GET(request: Request) {
               subObj,
               resolved.livemode
             );
+            trialValue = trialValueFromCents(mapped.amountCents, mapped.currency);
             const created =
               typeof (subObj as { created?: number }).created === "number"
                 ? (subObj as { created: number }).created
@@ -105,6 +112,13 @@ export async function GET(request: Request) {
             }).catch((err) =>
               console.error("[billing/status] trial notify", err)
             );
+          } else if (existing) {
+            // Already synced by an earlier pass or the webhook — the stored row
+            // holds the same recurring price.
+            trialValue = trialValueFromCents(
+              existing.amount_cents,
+              existing.currency
+            );
           }
         }
       } catch (err) {
@@ -127,5 +141,6 @@ export async function GET(request: Request) {
     ads: publicAdsConfig(platform.ads, pub.isTrialLimited),
     stripeConfigured: await isStripeConfigured(),
     plans: resolveBillingPlans(stripeCfg),
+    trialValue,
   });
 }

@@ -5,6 +5,7 @@ import {
   buildGoogleAdsClickConversion,
   buildMetaCapiEvent,
   centsToUnits,
+  trialValueFromCents,
   clampGa4Timestamp,
   formatGoogleAdsDateTime,
   sha256Hex,
@@ -182,6 +183,25 @@ describe("centsToUnits", () => {
     assert.equal(centsToUnits(1499), 14.99);
     assert.equal(centsToUnits(0), 0);
     assert.equal(centsToUnits(9900), 99);
+  });
+});
+
+describe("trialValueFromCents", () => {
+  it("turns the recurring price into a StartTrial value", () => {
+    assert.deepEqual(trialValueFromCents(499, "usd"), {
+      value: 4.99,
+      currency: "USD",
+    });
+    assert.deepEqual(trialValueFromCents(9900, "eur"), {
+      value: 99,
+      currency: "EUR",
+    });
+  });
+
+  it("returns null when there is no price to report", () => {
+    assert.equal(trialValueFromCents(0, "usd"), null);
+    assert.equal(trialValueFromCents(null, "usd"), null);
+    assert.equal(trialValueFromCents(undefined, "usd"), null);
   });
 });
 

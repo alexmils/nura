@@ -14,6 +14,25 @@ export function centsToUnits(cents: number): number {
   return Math.round(cents) / 100;
 }
 
+/**
+ * Recurring price → the `{ value, currency }` a StartTrial event reports.
+ *
+ * Null for a zero or unknown amount, so the caller can fall back to the plan
+ * table instead of sending a price that tells Meta nothing.
+ */
+export function trialValueFromCents(
+  cents: number | null | undefined,
+  currency: string | null | undefined
+): { value: number; currency: string } | null {
+  if (typeof cents !== "number" || !Number.isFinite(cents) || cents <= 0) {
+    return null;
+  }
+  return {
+    value: centsToUnits(cents),
+    currency: (currency ?? "USD").toUpperCase(),
+  };
+}
+
 export type Ga4MpPayload = {
   client_id: string;
   user_id?: string;
