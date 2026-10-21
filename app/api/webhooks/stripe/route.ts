@@ -150,6 +150,7 @@ export async function POST(request: Request) {
       if (isTrial) {
         await runCheckoutTrialEffects({
           userId,
+          checkoutSessionId: session.id ?? event.id,
           dedupStripeEventId: event.id,
           mapped,
           sessionAmountCents: amountCents,

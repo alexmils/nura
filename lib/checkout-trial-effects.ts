@@ -1,4 +1,5 @@
 import { recordBillingEvent } from "@/lib/billing-events";
+import { dispatchConversion } from "@/lib/conversions/dispatch";
 import { notifyAdminsOfTrial } from "@/lib/email/admin-payment-notify";
 import { sendTrialStartedEmail } from "@/lib/email/billing-customer";
 import { ensureSchemaReady, getPool } from "@/lib/db";
@@ -26,6 +27,8 @@ export async function trialStartedBillingEventExists(
  */
 export async function runCheckoutTrialEffects(input: {
   userId: string;
+  /** Stripe Checkout session — also the shared event id for StartTrial. */
+  checkoutSessionId: string;
   dedupStripeEventId: string;
   mapped: Pick<
     MappedSubscription,
@@ -69,6 +72,29 @@ export async function runCheckoutTrialEffects(input: {
   if (!recorded) {
     return { ran: false, reason: "dedup race" };
   }
+
+  // The browser fires StartTrial on the Checkout return page, but a closed tab,
+  // a lost redirect, or the sessionStorage once-key silently drops it. Report
+  // it from here instead: the Stripe webhook always runs, and the shared
+  // `trial:<session>` id lets Meta dedupe the two copies when both arrive.
+  // GA4 is excluded — the browser already mirrors start_trial there, and GA4
+  // has no dedupe key for custom events.
+  const occurredAt =
+    typeof input.occurredAt === "number"
+      ? new Date(input.occurredAt * 1000)
+      : input.occurredAt
+        ? new Date(input.occurredAt)
+        : new Date();
+  await dispatchConversion({
+    kind: "start_trial",
+    userId: input.userId,
+    transactionId: `trial:${input.checkoutSessionId}`,
+    valueCents: input.mapped.amountCents,
+    currency: input.currency ?? input.mapped.currency,
+    plan: input.mapped.plan,
+    occurredAt,
+    channels: ["meta", "google_ads"],
+  });
 
   await notifyAdminsOfTrial({
     userId: input.userId,

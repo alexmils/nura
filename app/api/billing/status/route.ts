@@ -103,6 +103,7 @@ export async function GET(request: Request) {
                 : mapped.amountCents ?? 0;
             void runCheckoutTrialEffects({
               userId: auth.user.id,
+              checkoutSessionId: session.id,
               dedupStripeEventId: `checkout.sync:${session.id}`,
               mapped,
               sessionAmountCents: amountCents,

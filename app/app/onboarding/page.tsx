@@ -161,7 +161,12 @@ function OnboardingFlow() {
                   content_name: data.plan,
                   content_category: "subscription",
                 },
-                { onceKey: "start_trial" }
+                {
+                  onceKey: "start_trial",
+                  // Same event id the Stripe webhook sends through CAPI, so a
+                  // trial reported by both sides is counted once.
+                  transactionId: sessionId ? `trial:${sessionId}` : undefined,
+                }
               );
             }
           }
