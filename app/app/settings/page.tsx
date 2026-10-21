@@ -381,9 +381,8 @@ function SettingsPageContent() {
             <div className="settings-group">
               <div className="settings-row">
                 <p className="settings-lead">
-                  Notes here are account-wide. Every AI agent-guided session can
-                  use them. Closed sessions may add short notes automatically.
-                  Intake history is saved separately and is not listed here.
+                  These notes follow you into every AI agent-guided session.
+                  Closed sessions may add short notes automatically.
                 </p>
               </div>
 
@@ -579,7 +578,8 @@ function SettingsPageContent() {
               <div className="settings-row space-y-2">
                 <p className="settings-label">Clear all</p>
                 <p className="settings-help">
-                  Deletes every note in this list. Intake history stays.
+                  Deletes every note in this list. Other parts of your account
+                  are not affected.
                 </p>
                 <button
                   type="button"
@@ -588,7 +588,7 @@ function SettingsPageContent() {
                   onClick={async () => {
                     if (
                       !window.confirm(
-                        "Delete every memory note? Intake history stays."
+                        "Delete every note? Other parts of your account are not affected."
                       )
                     ) {
                       return;
