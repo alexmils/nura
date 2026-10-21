@@ -37,7 +37,35 @@ describe("meta-pixel", () => {
       value: 99,
       currency: "USD",
     });
+    assert.deepEqual(metaMoneyFromPlanPrice("$4.99"), {
+      value: 4.99,
+      currency: "USD",
+    });
     assert.equal(metaMoneyFromPlanPrice(undefined).currency, "USD");
+  });
+
+  it("handles thousands and localised separators", () => {
+    assert.deepEqual(metaMoneyFromPlanPrice("$1,299.00"), {
+      value: 1299,
+      currency: "USD",
+    });
+    assert.deepEqual(metaMoneyFromPlanPrice("€1.299,00"), {
+      value: 1299,
+      currency: "EUR",
+    });
+    assert.deepEqual(metaMoneyFromPlanPrice("14,99 €"), {
+      value: 14.99,
+      currency: "EUR",
+    });
+    assert.deepEqual(metaMoneyFromPlanPrice("£1.299"), {
+      value: 1299,
+      currency: "GBP",
+    });
+  });
+
+  it("falls back to currency only when no amount is readable", () => {
+    assert.deepEqual(metaMoneyFromPlanPrice("free"), { currency: "USD" });
+    assert.deepEqual(metaMoneyFromPlanPrice("$0"), { currency: "USD" });
   });
 
   it("pushes dataLayer and fbq when available", () => {

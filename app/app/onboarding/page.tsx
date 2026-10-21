@@ -34,6 +34,8 @@ type BillingStatus = {
   stripeConfigured: boolean;
   onboardingCompletedAt: string | null;
   plans?: Record<BillingPlanId, BillingPlanMeta>;
+  /** Recurring price Stripe will charge after the trial, in major units. */
+  trialValue?: { value: number; currency: string } | null;
 };
 
 type Step = "age" | "email" | "plan" | "tutorial";
@@ -142,9 +144,16 @@ function OnboardingFlow() {
             nextStep = "tutorial";
             if (checkout === "success") {
               setSuccess("Payment method saved. Your trial is ready.");
-              const money = metaMoneyFromPlanPrice(
-                data.plans?.[data.plan as BillingPlanId]?.displayPrice
-              );
+              // Prefer the amount Stripe will actually charge. The plan label is
+              // not enough: an unmatched price ID maps to "pro", which has no
+              // display price, and a missing `value` is what Meta reports as
+              // "all StartTrial events send the same price information".
+              const planMeta =
+                data.plans?.[data.plan as BillingPlanId] ??
+                BILLING_PLANS[data.plan as BillingPlanId];
+              const money =
+                data.trialValue ??
+                metaMoneyFromPlanPrice(planMeta?.displayPrice);
               trackMetaEvent(
                 "StartTrial",
                 {

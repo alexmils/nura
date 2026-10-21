@@ -146,17 +146,56 @@ export function trackMetaEvent(
   window.fbq("track", event, payload);
 }
 
-/** Plan display → Meta purchase/trial value helpers. */
+/**
+ * Plan display → Meta purchase/trial value helpers.
+ *
+ * Meta models a trial's worth from the plan the person picked, and its
+ * diagnostics report "all events send the same price" when `value` is missing
+ * or never varies between plans. Admin can type any display string, so read
+ * the usual shapes: "$14.99", "€1.299,00", "99 USD".
+ */
 export function metaMoneyFromPlanPrice(
   displayPrice: string | undefined
 ): { value?: number; currency: string } {
   if (!displayPrice) return { currency: "USD" };
-  const currency = /€|eur/i.test(displayPrice)
+  const currency = /€|\beur\b/i.test(displayPrice)
     ? "EUR"
-    : /£|gbp/i.test(displayPrice)
+    : /£|\bgbp\b/i.test(displayPrice)
       ? "GBP"
       : "USD";
-  const num = Number(displayPrice.replace(/[^0-9.,]/g, "").replace(",", "."));
-  if (!Number.isFinite(num) || num <= 0) return { currency };
+  const num = parseDisplayAmount(displayPrice);
+  if (num === null || num <= 0) return { currency };
   return { value: num, currency };
+}
+
+function parseDisplayAmount(displayPrice: string): number | null {
+  const digits = displayPrice.replace(/[^0-9.,]/g, "");
+  if (!digits) return null;
+
+  const lastComma = digits.lastIndexOf(",");
+  const lastDot = digits.lastIndexOf(".");
+  let normalized: string;
+
+  if (lastComma !== -1 && lastDot !== -1) {
+    // Both present: the later one is the decimal mark ("1.299,00" / "1,299.00").
+    const decimal = lastComma > lastDot ? "," : ".";
+    const thousands = decimal === "," ? "." : ",";
+    normalized = digits.split(thousands).join("").replace(decimal, ".");
+  } else if (lastComma !== -1) {
+    // A lone comma is decimal only when it closes the number with 1–2 digits.
+    normalized = /,\d{1,2}$/.test(digits)
+      ? digits.replace(",", ".")
+      : digits.split(",").join("");
+  } else if (lastDot !== -1) {
+    // A lone dot in groups of three is a thousands separator ("$1.299").
+    normalized =
+      /\.\d{3}$/.test(digits) && digits.split(".").join("").length > 3
+        ? digits.split(".").join("")
+        : digits;
+  } else {
+    normalized = digits;
+  }
+
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
 }
