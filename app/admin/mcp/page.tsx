@@ -69,6 +69,10 @@ const TOOLS = [
   ["list_seo_pages", "List pages that can carry their own search copy"],
   ["get_seo_page", "Read a page's search title and description"],
   ["update_seo_page", "Edit a page's search title and description"],
+  ["list_resources", "List the in-app Resources library"],
+  ["get_resource", "Read one in-app Resource, including its body"],
+  ["create_resource", "Add an in-app Resource (starts hidden)"],
+  ["update_resource", "Edit, hide, or rename an in-app Resource"],
 ] as const;
 
 const RULES = [
