@@ -46,6 +46,89 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
     lenis.on("scroll", ScrollTrigger.update);
 
+    /* —— Section-edge bump ——
+       Crossing into a new section catches the scroll for a beat (about
+       2.5 wheel notches / 0.38s) before it lets go, so each boundary reads
+       as an edge you push through. */
+    const viewport = () => window.innerHeight;
+    const layoutTop = (el: HTMLElement) => {
+      let y = 0;
+      let node: HTMLElement | null = el;
+      while (node) {
+        y += node.offsetTop;
+        node = node.offsetParent as HTMLElement | null;
+      }
+      return y;
+    };
+    let edges: number[] = [];
+    const measureEdges = () => {
+      edges = Array.from(
+        document.querySelectorAll<HTMLElement>(".frontend-main section")
+      )
+        .filter((el) => el.offsetHeight > viewport() * 0.45)
+        .map(layoutTop)
+        .filter((y) => y > 0)
+        .sort((a, b) => a - b)
+        .filter((y, i, arr) => i === 0 || Math.abs(y - arr[i - 1]!) > 24);
+    };
+    measureEdges();
+    let edgeTimer = 0;
+    const scheduleEdges = () => {
+      window.clearTimeout(edgeTimer);
+      edgeTimer = window.setTimeout(measureEdges, 600);
+    };
+    const edgeMutations = new MutationObserver(scheduleEdges);
+    edgeMutations.observe(root, { childList: true, subtree: true });
+    window.addEventListener("resize", scheduleEdges);
+
+    let previousScroll = lenis.scroll;
+    let lastEdge = -1;
+    let lastEdgeAt = 0;
+    let stoppedUntil = 0;
+    let wheelTicks = 0;
+    let resumeTimer = 0;
+    let lastWheelInput = 0;
+    const resume = () => {
+      if (!stoppedUntil) return;
+      stoppedUntil = 0;
+      window.clearTimeout(resumeTimer);
+      lenis?.start();
+    };
+    const onWheelBump = () => {
+      lastWheelInput = performance.now();
+      if (!stoppedUntil) return;
+      wheelTicks += 1;
+      if (wheelTicks >= 3) resume();
+    };
+    const onScrollBump = () => {
+      const y = lenis?.scroll ?? window.scrollY;
+      if (y === previousScroll || stoppedUntil) {
+        previousScroll = y;
+        return;
+      }
+      const down = y > previousScroll;
+      const lo = Math.min(previousScroll, y);
+      const hi = Math.max(previousScroll, y);
+      const edge = down
+        ? edges.find((value) => value > lo && value <= hi)
+        : [...edges].reverse().find((value) => value < hi && value >= lo);
+      if (
+        edge !== undefined &&
+        performance.now() - lastWheelInput < 700 &&
+        (edge !== lastEdge || performance.now() - lastEdgeAt > 900)
+      ) {
+        lastEdge = edge;
+        lastEdgeAt = performance.now();
+        wheelTicks = 0;
+        stoppedUntil = performance.now() + 380;
+        lenis?.stop();
+        resumeTimer = window.setTimeout(resume, 380);
+      }
+      previousScroll = y;
+    };
+    window.addEventListener("wheel", onWheelBump, { passive: true });
+    lenis.on("scroll", onScrollBump);
+
     const raf = (time: number) => {
       lenis?.raf(time);
       rafId = requestAnimationFrame(raf);
@@ -246,6 +329,11 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       cancelAnimationFrame(rafId);
       ctx.revert();
       setLandingLenis(null);
+      window.removeEventListener("wheel", onWheelBump);
+      window.removeEventListener("resize", scheduleEdges);
+      edgeMutations.disconnect();
+      window.clearTimeout(edgeTimer);
+      window.clearTimeout(resumeTimer);
       lenis?.destroy();
     };
   }, [rootRef]);

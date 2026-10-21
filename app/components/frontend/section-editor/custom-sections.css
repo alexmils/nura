@@ -391,8 +391,20 @@
 }
 
 .fe-poster.has-image .fe-poster-paper {
-  /* Hard, clean horizontal edge where the white block meets the photo. */
-  clip-path: inset(0 0 calc(100% - var(--poster-cut)) 0);
+  /* Soft edge: the paper melts into the photo instead of cutting a hard line. */
+  clip-path: none;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 calc(var(--poster-cut) - 7rem),
+    transparent var(--poster-cut)
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 calc(var(--poster-cut) - 7rem),
+    transparent var(--poster-cut)
+  );
 }
 
 .fe-poster-line,
