@@ -14,12 +14,18 @@ import {
   NURA_GOOGLE_ADS_REPO_DEFAULT,
   nuraGoogleAdsMcpJson,
 } from "@/lib/google-ads-agent";
+import {
+  MCP_SCOPES,
+  MCP_SCOPE_LABELS,
+  type McpScope,
+} from "@/lib/mcp-scopes";
 
 type McpView = {
   enabled: boolean;
   hasToken: boolean;
   tokenHint: string;
   tokenName: string;
+  scopes: McpScope[];
   lastUsedAt: string;
   source: "database" | "env" | "none";
   envTokenIgnored: boolean;
@@ -50,6 +56,9 @@ const TOOLS = [
   ["create_blog_post", "Publish a guide and choose its category"],
   ["update_blog_post", "Edit a guide, rename its slug, publish or unpublish"],
   ["delete_blog_post", "Delete a guide"],
+  ["list_seo_pages", "List pages that can carry their own search copy"],
+  ["get_seo_page", "Read a page's search title and description"],
+  ["update_seo_page", "Edit a page's search title and description"],
 ] as const;
 
 const RULES = [
@@ -455,6 +464,34 @@ export default function AdminMcpPage() {
                   </tbody>
                 </table>
               </div>
+
+              {mcp.hasToken ? (
+                <div className="admin-mcp-scopes">
+                  <p className="admin-mcp-section-sub">
+                    What this token may call. Only the granted tools are
+                    advertised to the client, and anything else returns a scope
+                    error.
+                  </p>
+                  {MCP_SCOPES.map((scope) => (
+                    <label key={scope} className="admin-mcp-scope">
+                      <input
+                        type="checkbox"
+                        checked={mcp.scopes.includes(scope)}
+                        disabled={busy}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...mcp.scopes, scope]
+                            : mcp.scopes.filter((item) => item !== scope);
+                          void act("save", { scopes: next });
+                        }}
+                      />
+                      <span>
+                        {MCP_SCOPE_LABELS[scope]} <code>{scope}</code>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              ) : null}
             </section>
 
             <section className="admin-mcp-section">

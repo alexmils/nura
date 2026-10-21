@@ -11,6 +11,7 @@ import {
   withGeneratedToken,
   withRevokedToken,
   type McpConfigPatch,
+  type McpScope,
   type PlatformMcpConfig,
 } from "@/lib/mcp-settings";
 import { getPublicAppUrl, getPlatformSettings, savePlatformSettings } from "@/lib/platform-settings";
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     action?: string;
     patch?: McpConfigPatch;
     name?: string;
+    scopes?: McpScope[];
   };
   const settings = await getPlatformSettings();
   let mcp: PlatformMcpConfig = settings.mcp;
@@ -71,7 +73,10 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const generated = withGeneratedToken(mcp, { name });
+      const generated = withGeneratedToken(mcp, {
+        name,
+        scopes: body.scopes ?? body.patch?.scopes,
+      });
       mcp = generated.config;
       issuedToken = generated.token;
       break;

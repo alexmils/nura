@@ -9055,6 +9055,27 @@ a.admin-panel-title-link:hover {
   font-weight: 600;
 }
 
+.admin-mcp-scopes {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-mcp-scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: var(--ui-body);
+}
+
+.admin-mcp-scope input {
+  margin-top: 0.2rem;
+}
+
+.admin-mcp-scope code {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
 .admin-mcp-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.8125rem;
