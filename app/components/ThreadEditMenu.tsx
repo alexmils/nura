@@ -59,7 +59,7 @@ export function ThreadEditMenu({
         </label>
         {memoryEnabled && (
           <p className="mb-5 settings-help">
-            Memory notes are account-wide.{" "}
+            These notes follow you into every session.{" "}
             <Link
               href="/app/settings?tab=memory"
               className="settings-muted font-medium text-[var(--accent)] hover:underline"

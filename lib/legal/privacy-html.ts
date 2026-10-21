@@ -154,8 +154,9 @@ const NURA_PRIVACY_ADDENDUM = `
     <li>Confirm. This cannot be undone.</li>
   </ol>
   <p>
-    This removes your account, sessions, intake notes, and memory notes. An
-    active subscription must cancel successfully before deletion finishes.
+    This removes your account and everything saved in it — sessions, notes,
+    and your intake answers. An active subscription must cancel successfully
+    before deletion finishes.
     Primary copies are removed within 30 days. Billing and tax records stay
     where the law requires them. Backups stay until they age out.
   </p>
