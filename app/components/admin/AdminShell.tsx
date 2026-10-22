@@ -51,7 +51,6 @@ import {
 import { AdminSearch } from "@/app/components/admin/AdminSearch";
 import { AdminActivityBell } from "@/app/components/admin/AdminActivityBell";
 import {
-  AdminFeedbackLink,
   AdminInboxLink,
   AdminNewMenu,
   AdminUserMenu,
@@ -470,7 +469,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div className="admin-topbar-tools">
             <AdminNewMenu />
             <AdminInboxLink unread={helpUnread} />
-            <AdminFeedbackLink unread={feedbackUnread} />
             <AdminActivityBell />
             <AdminUserMenu user={user} onLogout={() => void logout()} />
           </div>

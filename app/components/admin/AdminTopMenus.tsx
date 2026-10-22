@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Inbox,
   ListTodo,
-  MessageSquareQuote,
   Plus,
   Settings2,
   UserPlus,
@@ -111,23 +110,6 @@ export function AdminInboxLink({ unread }: { unread: number }) {
       aria-label={unread > 0 ? `Inbox, ${unread} new` : "Inbox"}
     >
       <Inbox size={18} strokeWidth={1.75} />
-      {unread > 0 ? (
-        <span className="admin-activity-bell-badge">
-          {unread > 9 ? "9+" : unread}
-        </span>
-      ) : null}
-    </Link>
-  );
-}
-
-export function AdminFeedbackLink({ unread }: { unread: number }) {
-  return (
-    <Link
-      href="/admin/feedback"
-      className="admin-icon-btn"
-      aria-label={unread > 0 ? `Feedback, ${unread} new` : "Feedback"}
-    >
-      <MessageSquareQuote size={18} strokeWidth={1.75} />
       {unread > 0 ? (
         <span className="admin-activity-bell-badge">
           {unread > 9 ? "9+" : unread}

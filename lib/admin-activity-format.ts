@@ -1,7 +1,8 @@
 import { receiptPlanLabel, formatReceiptAmount, formatReceiptDate } from "@/lib/email/purchase-receipt";
+import { feedbackSourceLabel } from "@/lib/feedback";
 import { parseBillingEventDescription } from "@/lib/subscription-cancel-feedback";
 
-export type AdminActivityKind = "signup" | "billing";
+export type AdminActivityKind = "signup" | "billing" | "feedback";
 
 export type AdminActivityItem = {
   id: string;
@@ -51,6 +52,21 @@ export function formatActivitySignup(input: {
     ? `${input.email}, ${via}, ${plan}`
     : `${input.email}, ${via}`;
   return { title, detail };
+}
+
+export function formatActivityFeedback(input: {
+  name: string | null;
+  email: string;
+  score: number;
+  kind: "feedback" | "review";
+  source: string;
+}): { title: string; detail: string } {
+  const title = activityPersonTitle(input.name, input.email);
+  const label = input.kind === "review" ? "Review" : "Feedback";
+  return {
+    title,
+    detail: `${label} ${input.score}/10, ${feedbackSourceLabel(input.source)}`,
+  };
 }
 
 function modeLabel(livemode: boolean | null): string | null {

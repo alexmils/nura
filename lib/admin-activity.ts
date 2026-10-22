@@ -1,7 +1,9 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import { sqlUserCountsInStats } from "@/lib/stats-scope";
+import { ensureFeedbackSchema } from "@/lib/feedback-db";
 import {
   formatActivityBilling,
+  formatActivityFeedback,
   formatActivitySignup,
   type AdminActivityItem,
 } from "@/lib/admin-activity-format";
@@ -10,10 +12,11 @@ const PER_SOURCE = 8;
 
 export async function listAdminActivity(limit = 12): Promise<AdminActivityItem[]> {
   await ensureSchemaReady();
+  await ensureFeedbackSchema();
   const pool = getPool();
   const capped = Math.min(40, Math.max(1, limit));
 
-  const [signups, billing] = await Promise.all([
+  const [signups, billing, feedback] = await Promise.all([
     pool.query<{
       id: string;
       created_at: string;
@@ -64,6 +67,24 @@ export async function listAdminActivity(limit = 12): Promise<AdminActivityItem[]
        LIMIT $1`,
       [PER_SOURCE]
     ),
+    pool.query<{
+      id: string;
+      created_at: string;
+      score: number;
+      kind: string;
+      source: string;
+      email: string;
+      name: string | null;
+    }>(
+      `SELECT f.id, f.created_at, f.score, f.kind, f.source,
+              u.email, u.name
+       FROM feedback_responses f
+       JOIN users u ON u.id = f.user_id
+       WHERE ${sqlUserCountsInStats("u")}
+       ORDER BY f.created_at DESC
+       LIMIT $1`,
+      [PER_SOURCE]
+    ),
   ]);
 
   const items: AdminActivityItem[] = [
@@ -103,6 +124,23 @@ export async function listAdminActivity(limit = 12): Promise<AdminActivityItem[]
         detail: copy.detail,
         href: `/admin/users/${row.user_id}`,
         at: new Date(row.occurred_at).toISOString(),
+      };
+    }),
+    ...feedback.rows.map((row) => {
+      const copy = formatActivityFeedback({
+        name: row.name,
+        email: row.email,
+        score: Number(row.score),
+        kind: row.kind === "review" ? "review" : "feedback",
+        source: row.source,
+      });
+      return {
+        id: `feedback:${row.id}`,
+        kind: "feedback" as const,
+        title: copy.title,
+        detail: copy.detail,
+        href: `/admin/feedback?id=${row.id}`,
+        at: new Date(row.created_at).toISOString(),
       };
     }),
   ];

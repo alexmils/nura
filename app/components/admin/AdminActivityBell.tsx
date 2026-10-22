@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Bell, CreditCard, UserRound, Volume2, VolumeX } from "lucide-react";
+import {
+  Bell,
+  CreditCard,
+  MessageSquareQuote,
+  UserRound,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { fetchJson } from "@/lib/fetch-json";
 import type { AdminActivityItem } from "@/lib/admin-activity-format";
 import {
@@ -157,6 +164,8 @@ export function AdminActivityBell() {
                       <span className="admin-activity-icon" aria-hidden>
                         {item.kind === "billing" ? (
                           <CreditCard size={14} strokeWidth={2} />
+                        ) : item.kind === "feedback" ? (
+                          <MessageSquareQuote size={14} strokeWidth={2} />
                         ) : (
                           <UserRound size={14} strokeWidth={2} />
                         )}
