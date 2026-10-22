@@ -146,33 +146,11 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         href: "/admin/blog",
         label: "Blog",
         icon: "blog",
-        children: [
-          { href: "/admin/blog", label: "Posts", tab: "posts" },
-          {
-            href: "/admin/blog?tab=editor",
-            label: "Editor",
-            tab: "editor",
-            adminOnly: true,
-          },
-        ],
       },
       {
         href: "/admin/resources",
         label: "Resources",
         icon: "resources",
-        children: [
-          {
-            href: "/admin/resources?tab=library",
-            label: "Library",
-            tab: "library",
-          },
-          {
-            href: "/admin/resources?tab=editor",
-            label: "Editor",
-            tab: "editor",
-            adminOnly: true,
-          },
-        ],
       },
       {
         href: "/admin/seo",
