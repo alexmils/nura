@@ -82,8 +82,13 @@ export function scrollToLandingSection(
   if (isLandingPreloaderActive()) return false;
 
   const header = document.querySelector<HTMLElement>(".frontend-header");
-  const offset =
-    (header ? -(header.offsetHeight + 12) : -88) + extraOffsetPx;
+  // Use the visible bottom of the floating header, not its box height: the
+  // pill sits inside a taller fixed wrapper with its own top margin.
+  const headerBox = header?.getBoundingClientRect();
+  const headerBottom =
+    headerBox && headerBox.bottom > 0 ? headerBox.bottom : header?.offsetHeight ?? 88;
+  // A little air between the header and the section's white top.
+  const offset = -(headerBottom + 16) + extraOffsetPx;
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (landingLenis && !reduced) {
