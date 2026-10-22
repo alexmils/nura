@@ -265,7 +265,7 @@ describe("clinical-team meta (F8 placeholder retired)", () => {
 });
 
 describe("cluster article JSON-LD (R5h)", () => {
-  it("emits MedicalWebPage, BlogPosting, and FAQPage without fake reviewedBy", () => {
+  it("emits MedicalWebPage and BlogPosting without fake reviewedBy", () => {
     const article = listClusterArticles()[0];
     assert.ok(article);
     const data = buildClusterArticleJsonLd("https://nurahelp.com", article);
@@ -273,18 +273,15 @@ describe("cluster article JSON-LD (R5h)", () => {
     assert.ok(types.includes("Organization"));
     assert.ok(types.includes("MedicalWebPage"));
     assert.ok(types.includes("BlogPosting"));
-    assert.ok(types.includes("FAQPage"));
     assert.ok(types.includes("BreadcrumbList"));
+    // The auto-generated FAQ block is gone; no FAQPage without visible Q&A.
+    assert.equal(types.includes("FAQPage"), false);
     const raw = JSON.stringify(data);
     assert.equal(raw.includes("reviewedBy"), hasClinicalAdvisorConfigured());
     if (!hasClinicalAdvisorConfigured()) {
       assert.equal(raw.includes("lastReviewed"), false);
     }
     assert.ok(raw.includes("EMDRIA") || raw.includes("emdria"));
-    const faq = data["@graph"].find(
-      (n: { "@type"?: string }) => n["@type"] === "FAQPage",
-    ) as { mainEntity?: unknown[] };
-    assert.ok((faq?.mainEntity?.length ?? 0) >= 2);
   });
 });
 

@@ -13,7 +13,6 @@ import {
   CLUSTER_TOPICS,
   CLUSTER_TOPIC_LABEL,
   articleModifiedAt,
-  clusterArticleFaqs,
   clusterArticlesByTopic,
   clusterTimeRequired,
   clusterWordCount,
@@ -287,7 +286,6 @@ export function buildClusterArticleJsonLd(
   const path = `/blog/${article.slug}`;
   const url = `${base}${path}`;
   const editorial = `${base}/editorial`;
-  const faqs = clusterArticleFaqs(article);
 
   return {
     "@context": "https://schema.org",
@@ -331,12 +329,6 @@ export function buildClusterArticleJsonLd(
           name: BRAND_SPOKEN,
           url: `${base}/`,
         },
-      },
-      {
-        ...faqPageJsonLd(faqs),
-        "@id": `${url}#faq`,
-        url,
-        mainEntityOfPage: url,
       },
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },

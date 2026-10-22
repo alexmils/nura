@@ -9,7 +9,6 @@ import { blogCategoryName } from "@/lib/blog-categories";
 import { BRAND_CIRCLE_AVATAR, BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import {
   CLUSTER_TOPIC_LABEL,
-  clusterArticleFaqs,
   learnTopicHref,
   relatedClusterArticles,
   type ClusterArticle,
@@ -27,7 +26,6 @@ export function ClusterArticleView({
   const related = relatedProp ?? relatedClusterArticles(article);
   const date = formatBlogDate(article.publishedAt);
   const learnHref = learnTopicHref(article.topic);
-  const faqs = clusterArticleFaqs(article);
 
   return (
     <article className="fe-cluster fe-cluster--post">
@@ -112,18 +110,6 @@ export function ClusterArticleView({
             </section>
           ))}
         </div>
-
-        {faqs.length ? (
-          <section className="fe-cluster-faq" aria-label="Common questions">
-            <h2>Common questions</h2>
-            {faqs.map((item) => (
-              <div key={item.q}>
-                <h3>{item.q}</h3>
-                <p>{item.a}</p>
-              </div>
-            ))}
-          </section>
-        ) : null}
 
         {article.emdrAnchor ? (
           <p className="fe-cluster-emdr">
