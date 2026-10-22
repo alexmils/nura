@@ -47,6 +47,10 @@ export default function AdminFeedbackPage() {
   const [unread, setUnread] = useState(0);
   const [msg, setMsg] = useState("");
   const [tab, setTab] = useState<Tab>("reviews");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "published" | "unpublished" | "featured"
+  >("all");
   const [selected, setSelected] = useState<Item | null>(null);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -109,6 +113,25 @@ export default function AdminFeedbackPage() {
   const reviews = items.filter((item) => item.kind === "review");
   const feedback = items.filter((item) => item.kind === "feedback");
   const shown = tab === "reviews" ? reviews : feedback;
+
+  const query = search.trim().toLowerCase();
+  const filtered = shown.filter((item) => {
+    if (tab === "reviews") {
+      if (statusFilter === "published" && !item.publishedAt) return false;
+      if (statusFilter === "unpublished" && item.publishedAt) return false;
+      if (statusFilter === "featured" && !item.featured) return false;
+    }
+    if (!query) return true;
+    return [
+      item.userName,
+      item.userEmail,
+      item.comment,
+      item.source,
+      sourceLabel(item.source),
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
 
   async function updateReview(
     item: Item,
@@ -221,7 +244,7 @@ export default function AdminFeedbackPage() {
   }
 
   return (
-    <div className="admin-page">
+    <div className="admin-page admin-feedback-page">
       <AdminPageHeader
         title="Feedback & reviews"
         subtitle="Private member notes, and the reviews you choose to publish. Click a row to read, edit, publish or delete it."
@@ -250,15 +273,49 @@ export default function AdminFeedbackPage() {
           ))}
         </div>
 
-        {shown.length === 0 ? (
+        <div className="admin-feedback-toolbar">
+          <input
+            type="search"
+            className="field admin-feedback-search"
+            placeholder="Search member, email or note"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label="Search feedback and reviews"
+          />
+          {tab === "reviews" ? (
+            <select
+              className="field admin-feedback-filter"
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value as
+                    | "all"
+                    | "published"
+                    | "unpublished"
+                    | "featured"
+                )
+              }
+              aria-label="Filter reviews by status"
+            >
+              <option value="all">All statuses</option>
+              <option value="published">Published</option>
+              <option value="unpublished">Not published</option>
+              <option value="featured">Featured</option>
+            </select>
+          ) : null}
+        </div>
+
+        {filtered.length === 0 ? (
           <p className="admin-muted">
-            {tab === "reviews"
-              ? "No reviews yet. They arrive from the review email a month after the trial."
-              : "No private feedback yet."}
+            {shown.length === 0
+              ? tab === "reviews"
+                ? "No reviews yet. They arrive from the review email a month after the trial."
+                : "No private feedback yet."
+              : "No items match your search or filter."}
           </p>
         ) : (
           <div className="admin-feedback-list">
-            {shown.map((item) => (
+            {filtered.map((item) => (
               <button
                 key={item.id}
                 type="button"
