@@ -35,6 +35,16 @@ describe("motion pass: scroll choreography", () => {
     assert.match(css, /data-a11y-motion="reduced"\] \.mo-curve::before/);
   });
 
+  it("pins the outgoing block for `hold` viewports before the effect", () => {
+    assert.match(lib, /MOBILE_PIN_SCALE = 0\.65/);
+    assert.match(lib, /DEFAULT_HANDOFF_HOLD = 0\.35/);
+    // hold is in viewport units, shortened on phones.
+    assert.match(lib, /Math\.max\(0, hold\) \* \(mobile \? MOBILE_PIN_SCALE : 1\)/);
+    // The hold is a counter-translation, not a sticky/pin spacer.
+    assert.match(lib, /y: holdPx, duration: held/);
+    assert.match(lib, /start, end: mobile \? "top 30%" : "top top", scrub: 0\.5/);
+  });
+
   it("is linear in scroll for scrubbed moves and uses the motion tokens for arrivals", () => {
     assert.match(lib, /ease: "none",\s*scrollTrigger: \{ trigger, start, end, scrub/);
     assert.match(lib, /MOTION_DURATION\.slow/);

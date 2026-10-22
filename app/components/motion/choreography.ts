@@ -135,9 +135,22 @@ function pinnedInside(el: Element): boolean {
 
 export type HandoffKind = "stack" | "curve";
 
+/** Narrow/portrait layouts: the still hold runs shorter so it never feels stuck. */
+export const MOBILE_PIN_SCALE = 0.65;
+
+/** Still viewports held before the effect (SectionHandoff's `hold={0.35}`). */
+export const DEFAULT_HANDOFF_HOLD = 0.35;
+
 /**
  * Section-level hand-off between two neighbouring blocks, scrubbed over the
  * next block's entry (its top from the viewport bottom to the top).
+ *
+ * `hold` is the pin: how many viewport heights the outgoing block stands still
+ * before the effect starts (`hold={0.3}` = 0.3 × viewport). On phones it is
+ * shortened to `hold × MOBILE_PIN_SCALE`. The hold is made by counter-
+ * translating the previous block by exactly the scroll it consumes, so it
+ * stays put without wrappers, spacers or `position: sticky` that would fight
+ * the section editor.
  *
  * - stack: adapted from alexandermils' SectionHandoff effect="rise". There the
  *   outgoing panel is pinned (sticky, bottom on the viewport bottom), the next
@@ -171,7 +184,13 @@ const zOf = (el: Element) => parseInt(getComputedStyle(el).zIndex, 10) || 0;
 export const siblingBoxesOf = siblingBoxes;
 export const pinnedInsideOf = pinnedInside;
 
-export function handoff(prevIn: HTMLElement | null, nextIn: HTMLElement | null, kind: HandoffKind, mobile = false): HandoffKind | null {
+export function handoff(
+  prevIn: HTMLElement | null,
+  nextIn: HTMLElement | null,
+  kind: HandoffKind,
+  mobile = false,
+  { hold = DEFAULT_HANDOFF_HOLD }: { hold?: number } = {}
+): HandoffKind | null {
   if (!nextIn) return null;
   const [prev, next] = prevIn ? siblingBoxes(prevIn, nextIn) : [null, nextIn];
   if (prev === next) return null;
@@ -186,39 +205,67 @@ export function handoff(prevIn: HTMLElement | null, nextIn: HTMLElement | null, 
   const prevZ = prev ? Math.max(1, zOf(prev)) : 1;
   gsap.set(next, { position: getComputedStyle(next).position === "static" ? "relative" : undefined, zIndex: Math.max(prevZ + 1, zOf(next)) });
   if (!ownsBg(next)) gsap.set(next, { backgroundColor: nextBg });
-  const range = { trigger: next, start: "top bottom", end: mobile ? "top 30%" : "top top", scrub: 0.5, invalidateOnRefresh: true };
   const movePrev = prev && !pinnedInside(prev);
   if (prev && !zOf(prev)) gsap.set(prev, { position: getComputedStyle(prev).position === "static" ? "relative" : undefined, zIndex: 1 });
 
+  // In timeline units one unit is one viewport, so the hold and the effect
+  // map 1:1 onto the scroll range (held × vh + effect × vh).
+  const held = Math.max(0, hold) * (mobile ? MOBILE_PIN_SCALE : 1);
+  const holdPx = () => held * window.innerHeight;
+  const start = () => (held > 0 ? `top bottom+=${Math.round(holdPx())}` : "top bottom");
+  const still = { y: () => holdPx(), scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" };
+
   if (use === "stack") {
     const r = mobile ? 28 : 56;
-    gsap.fromTo(
+    const tl = gsap.timeline({
+      defaults: { ease: "none" },
+      scrollTrigger: { trigger: next, start, end: mobile ? "top 30%" : "top top", scrub: 0.5, invalidateOnRefresh: true },
+    });
+    tl.fromTo(
       next,
       { borderTopLeftRadius: r, borderTopRightRadius: r, boxShadow: "0 -28px 60px -24px rgba(42, 48, 32, 0.35)" },
-      { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", ease: "none", scrollTrigger: range }
+      { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: mobile ? 0.7 : 1 },
+      held
     );
     if (movePrev) {
-      gsap.fromTo(
+      // The pin: as the page scrolls through the hold, translate the outgoing
+      // block by the same amount, so it holds perfectly still.
+      if (held > 0) tl.fromTo(prev, { y: 0 }, { y: holdPx, duration: held, ease: "none" }, 0);
+      tl.fromTo(
         prev,
-        { y: 0, scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" },
+        still,
         {
-          y: () => Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.5 : 0.85),
+          y: () => holdPx() + Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.5 : 0.85),
           scale: mobile ? 0.95 : 0.92,
           filter: "brightness(0.55)",
-          ease: "none",
-          scrollTrigger: range,
-        }
+          duration: mobile ? 0.7 : 1,
+          // The hold tween owns `y` until the effect actually starts.
+          immediateRender: false,
+        },
+        held
       );
     }
   } else {
     next.classList.add("mo-curve");
     gsap.set(next, { "--mo-curve-bg": nextBg });
-    gsap.fromTo(next, { "--mo-curve": 1 }, { "--mo-curve": 0, ease: "none", scrollTrigger: { ...range, end: "top 25%" } });
+    const tl = gsap.timeline({
+      defaults: { ease: "none" },
+      scrollTrigger: { trigger: next, start, end: "top 25%", scrub: 0.5, invalidateOnRefresh: true },
+    });
+    tl.fromTo(next, { "--mo-curve": 1 }, { "--mo-curve": 0, duration: 0.75 }, held);
     if (movePrev) {
-      gsap.fromTo(
+      if (held > 0) tl.fromTo(prev, { y: 0 }, { y: holdPx, duration: held, ease: "none" }, 0);
+      tl.fromTo(
         prev,
-        { y: 0, scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" },
-        { y: () => Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.35 : 0.6), filter: "brightness(0.7)", scale: 0.95, ease: "none", scrollTrigger: range }
+        still,
+        {
+          y: () => holdPx() + Math.min(window.innerHeight, next.offsetHeight) * (mobile ? 0.35 : 0.6),
+          filter: "brightness(0.7)",
+          scale: 0.95,
+          duration: 0.75,
+          immediateRender: false,
+        },
+        held
       );
     }
   }
