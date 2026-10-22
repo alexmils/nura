@@ -22,6 +22,7 @@ import {
   readGuideStepIndex,
   requestGuideNewChat,
   resetGuideState,
+  resolveGuideAutostart,
   writeGuideStepIndex,
   type GuideStorageLike,
 } from "../lib/guide-steps.ts";
@@ -288,6 +289,64 @@ describe("guide storage", () => {
     assert.equal(hasPendingGuideAutostart(local, "user-a"), true);
     assert.equal(hasGuideAutoStarted(session), false);
     assert.deepEqual(session.dump(), {});
+  });
+
+  it("never auto-starts after the tour was closed or skipped", () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    // What stop() writes: seen, and no queued autostart.
+    markGuideSeenForUser(local, "user-a");
+    requestGuideAutostart(local, "user-a");
+
+    // A stale onboarding flag must not resurrect a dismissed tour.
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-a"), {
+      start: false,
+    });
+    assert.equal(hasPendingGuideAutostart(local, "user-a"), false);
+    assert.equal(hasGuideAutoStarted(session), false);
+  });
+
+  it("auto-starts a new account once and consumes the pending flag", () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    requestGuideAutostart(local, "user-b");
+
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-b"), {
+      start: true,
+      resumeIndex: 0,
+    });
+    assert.equal(hasPendingGuideAutostart(local, "user-b"), false);
+    assert.equal(hasGuideAutoStarted(session), true);
+
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-b"), {
+      start: false,
+    });
+  });
+
+  it("starts once without onboarding and resumes the stored step", () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    writeGuideStepIndex(session, 3);
+
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-c"), {
+      start: true,
+      resumeIndex: 3,
+    });
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-c"), {
+      start: false,
+    });
+  });
+
+  it("resetGuideState makes a dismissed tour start again", () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    markGuideSeenForUser(local, "user-d");
+    resetGuideState(local, session, "user-d");
+
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-d"), {
+      start: true,
+      resumeIndex: 0,
+    });
   });
 
   it("survives storage that throws", () => {

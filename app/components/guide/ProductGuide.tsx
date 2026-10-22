@@ -19,14 +19,10 @@ import {
   GUIDE_STEPS,
   clearGuideStepIndex,
   consumeGuideAutostart,
-  hasPendingGuideAutostart,
   consumeGuideNewChat,
-  hasGuideAutoStarted,
-  hasSeenGuideForUser,
-  markGuideAutoStarted,
   markGuideSeenForUser,
-  readGuideStepIndex,
   requestGuideNewChat,
+  resolveGuideAutostart,
   writeGuideStepIndex,
   type GuideAction,
   type GuideGearSection,
@@ -212,7 +208,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     const session = sessionStore();
     if (session) clearGuideStepIndex(session);
     const local = localStore();
-    if (local) markGuideSeenForUser(local, userId);
+    if (local) {
+      markGuideSeenForUser(local, userId);
+      // Onboarding may have queued an autostart; dismissing must cancel it.
+      consumeGuideAutostart(local, userId);
+    }
   }, [userId]);
 
   const start = useCallback((from = 0) => {
@@ -623,17 +623,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     const local = localStore();
     if (!local) return;
-    const session = sessionStore();
-    const pendingAutostart = hasPendingGuideAutostart(local, userId);
-    if (!pendingAutostart && hasSeenGuideForUser(local, userId)) return;
-    if (!pendingAutostart && session && hasGuideAutoStarted(session)) return;
-    if (session) markGuideAutoStarted(session);
+    const decision = resolveGuideAutostart(local, sessionStore(), userId);
+    if (!decision.start) return;
     autoStartRef.current = true;
-    const resume = session ? readGuideStepIndex(session) : 0;
     const id = window.setTimeout(() => {
       if (!mountedRef.current) return;
-      if (pendingAutostart) consumeGuideAutostart(local, userId);
-      start(resume);
+      start(decision.resumeIndex);
     }, 1200);
     return () => window.clearTimeout(id);
   }, [active, held, pathname, start, userId]);

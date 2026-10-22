@@ -476,6 +476,38 @@ export function markGuideAutoStarted(storage: GuideStorageLike): void {
   safeSet(storage, GUIDE_AUTOSTART_KEY, "1");
 }
 
+export type GuideAutostartDecision =
+  | { start: false }
+  | { start: true; resumeIndex: number };
+
+/**
+ * Decide whether this mount should auto-start, and leave no stale flags behind.
+ *
+ * A dismissed tour (close, Skip, or finishing it) wins over anything queued by
+ * onboarding: "pending" used to override the seen flag, so one unconsumed
+ * onboarding flag brought the tour back on every visit. The only way to see it
+ * again is the Guide item in the sidebar, which calls `start()` directly.
+ */
+export function resolveGuideAutostart(
+  storage: GuideStorageLike,
+  session: GuideStorageLike | null,
+  userId: string | null | undefined
+): GuideAutostartDecision {
+  if (hasSeenGuideForUser(storage, userId)) {
+    consumeGuideAutostart(storage, userId);
+    return { start: false };
+  }
+
+  const pending = hasPendingGuideAutostart(storage, userId);
+  if (!pending && session && hasGuideAutoStarted(session)) {
+    return { start: false };
+  }
+
+  if (pending) consumeGuideAutostart(storage, userId);
+  if (session) markGuideAutoStarted(session);
+  return { start: true, resumeIndex: session ? readGuideStepIndex(session) : 0 };
+}
+
 /** Ask the app shell to open a session once the tour closes. */
 export function requestGuideNewChat(storage: GuideStorageLike): void {
   safeSet(storage, GUIDE_NEW_CHAT_KEY, "1");
