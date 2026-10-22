@@ -93,7 +93,8 @@ export default function AdminBlogEditorPage() {
   const [busy, setBusy] = useState(false);
   const sectionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const imageSectionRef = useRef<number | null>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  const mediaSectionRef = useRef<number | null>(null);
   const [ctaTarget, setCtaTarget] = useState<number | "end" | null>(null);
 
   function insertCta(data: BlogCtaData) {
@@ -138,8 +139,17 @@ export default function AdminBlogEditorPage() {
     });
   }
 
-  async function insertImage(file: File) {
-    const index = imageSectionRef.current;
+  /** Screenshot names are all digits; that alt text helps nobody. */
+  function altFromFilename(name: string): string {
+    const base = name
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_]+/g, " ")
+      .trim();
+    return base && !/^[\d\s]+$/.test(base) ? base : "";
+  }
+
+  async function insertMediaFile(file: File, kind: "image" | "video") {
+    const index = mediaSectionRef.current;
     if (index === null) return;
     setBusy(true);
     setMsg("");
@@ -155,16 +165,13 @@ export default function AdminBlogEditorPage() {
       if (!res.ok) throw new Error(data.error ?? "Upload failed.");
       const url = String(data.url ?? "");
       if (!url) throw new Error("Upload returned no URL.");
-      const alt = file.name
-        .replace(/\.[a-z0-9]+$/i, "")
-        .replace(/[-_]+/g, " ")
-        .trim();
-      insertAtSection(index, `\n\n![${alt || "image"}](${url})\n\n`);
+      const alt = altFromFilename(file.name) || kind;
+      insertAtSection(index, `\n\n![${alt}](${url})\n\n`);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Upload failed.");
     } finally {
       setBusy(false);
-      imageSectionRef.current = null;
+      mediaSectionRef.current = null;
     }
   }
 
@@ -343,8 +350,8 @@ export default function AdminBlogEditorPage() {
               <h3 className="admin-box-title">Sections</h3>
               <p className="admin-panel-sub">
                 One paragraph per blank line. An em dash is rewritten and the
-                acronym BLS is rejected. Insert image drops markdown at the
-                cursor.
+                acronym BLS is rejected. Insert media drops markdown at the
+                cursor. A bare YouTube or Vimeo link becomes an embed.
               </p>
               <input
                 ref={imageInputRef}
@@ -353,7 +360,18 @@ export default function AdminBlogEditorPage() {
                 accept="image/*"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file) void insertImage(file);
+                  if (file) void insertMediaFile(file, "image");
+                  e.target.value = "";
+                }}
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                hidden
+                accept="video/mp4,video/webm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void insertMediaFile(file, "video");
                   e.target.value = "";
                 }}
               />
@@ -369,11 +387,22 @@ export default function AdminBlogEditorPage() {
                         className="btn-ghost"
                         disabled={busy}
                         onClick={() => {
-                          imageSectionRef.current = index;
+                          mediaSectionRef.current = index;
                           imageInputRef.current?.click();
                         }}
                       >
                         Insert image
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={busy}
+                        onClick={() => {
+                          mediaSectionRef.current = index;
+                          videoInputRef.current?.click();
+                        }}
+                      >
+                        Insert video
                       </button>
                       <button
                         type="button"
