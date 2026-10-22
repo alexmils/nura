@@ -77,7 +77,7 @@ describe("rewriteRetiredBrandCopy", () => {
       rewriteRetiredBrandCopy(
         "overview of bilateral stimulation and how guided sessions are structured"
       ),
-      "overview of visual sets and how Guided sessions are structured"
+      "overview of visual sets and how AI agent-guided sessions are structured"
     );
     assert.equal(
       rewriteRetiredBrandCopy(

@@ -34,7 +34,7 @@ export const BRAND_TAGLINE = "Support for therapy. Starting with EMDR.";
  * that lives in `BRAND_LIMITS_LINE` (footer /limits / llms.txt).
  */
 export const BRAND_DESCRIPTION =
-  "Guided EMDR sessions you run yourself: visual sets, optional voice, grounding, and short guides for between sessions. Start with a 7-day trial.";
+  "AI agent-guided EMDR sessions: visual sets, optional voice, grounding, and short guides for between sessions. Start with a 7-day trial.";
 
 /**
  * User-facing session mode names. Internal ids stay `guided` | `free`.
@@ -125,7 +125,7 @@ export function rewriteRetiredBrandCopy(text: string): string {
     )
     .replaceAll(
       "overview of bilateral stimulation and how guided sessions",
-      "overview of visual sets and how Guided sessions"
+      "overview of visual sets and how AI agent-guided sessions"
     )
     .replaceAll(
       "many people use **bilateral stimulation** — rhythmically tracking something left and right",
