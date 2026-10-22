@@ -28,11 +28,13 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
     let lenis: Lenis | null = null;
     let rafId = 0;
+    /** Normal wheel speed. The edge catch drops it to zero, then restores it. */
+    const WHEEL_MULTIPLIER = 0.9;
 
     lenis = new Lenis({
       lerp: 0.1,
       smoothWheel: true,
-      wheelMultiplier: 0.9,
+      wheelMultiplier: WHEEL_MULTIPLIER,
       // Nested panels (Need help chat) must keep their own wheel scroll.
       prevent: (node) =>
         Boolean(
@@ -46,10 +48,12 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
     lenis.on("scroll", ScrollTrigger.update);
 
-    /* —— Section-edge bump ——
-       Crossing into a new section catches the scroll for a beat (about
-       2.5 wheel notches / 0.38s) before it lets go, so each boundary reads
-       as an edge you push through. */
+    /* —— Section-edge catch ——
+       Crossing into a new section stops taking wheel input for a beat
+       (about 0.3s) before it lets go, so each boundary reads as an edge you
+       push through. Freezing Lenis itself (stop/start) snapped the scroll
+       mid-gesture and made the page judder; letting the wheel multiplier
+       drop to zero lets the current glide settle smoothly instead. */
     const viewport = () => window.innerHeight;
     const layoutTop = (el: HTMLElement) => {
       let y = 0;
@@ -82,47 +86,38 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     window.addEventListener("resize", scheduleEdges);
 
     let previousScroll = lenis.scroll;
-    let lastEdge = -1;
     let lastEdgeAt = 0;
-    let stoppedUntil = 0;
-    let wheelTicks = 0;
-    let resumeTimer = 0;
+    let catchUntil = 0;
     let lastWheelInput = 0;
-    const resume = () => {
-      if (!stoppedUntil) return;
-      stoppedUntil = 0;
-      window.clearTimeout(resumeTimer);
-      lenis?.start();
+
+    const releaseEdge = () => {
+      if (!catchUntil) return;
+      catchUntil = 0;
+      if (lenis) lenis.options.wheelMultiplier = WHEEL_MULTIPLIER;
     };
     const onWheelBump = () => {
       lastWheelInput = performance.now();
-      if (!stoppedUntil) return;
-      wheelTicks += 1;
-      if (wheelTicks >= 3) resume();
     };
     const onScrollBump = () => {
       const y = lenis?.scroll ?? window.scrollY;
-      if (y === previousScroll || stoppedUntil) {
-        previousScroll = y;
-        return;
-      }
+      if (y === previousScroll) return;
       const down = y > previousScroll;
       const lo = Math.min(previousScroll, y);
       const hi = Math.max(previousScroll, y);
       const edge = down
         ? edges.find((value) => value > lo && value <= hi)
         : [...edges].reverse().find((value) => value < hi && value >= lo);
+      const now = performance.now();
+      // One catch per 0.9s: a fast fling must not machine-gun the brake
+      // through several sections in a row.
       if (
         edge !== undefined &&
-        performance.now() - lastWheelInput < 700 &&
-        (edge !== lastEdge || performance.now() - lastEdgeAt > 900)
+        now - lastWheelInput < 700 &&
+        now - lastEdgeAt > 900
       ) {
-        lastEdge = edge;
-        lastEdgeAt = performance.now();
-        wheelTicks = 0;
-        stoppedUntil = performance.now() + 380;
-        lenis?.stop();
-        resumeTimer = window.setTimeout(resume, 380);
+        lastEdgeAt = now;
+        catchUntil = now + 300;
+        if (lenis) lenis.options.wheelMultiplier = 0;
       }
       previousScroll = y;
     };
@@ -130,6 +125,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     lenis.on("scroll", onScrollBump);
 
     const raf = (time: number) => {
+      if (catchUntil && time >= catchUntil) releaseEdge();
       lenis?.raf(time);
       rafId = requestAnimationFrame(raf);
     };
@@ -333,7 +329,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       window.removeEventListener("resize", scheduleEdges);
       edgeMutations.disconnect();
       window.clearTimeout(edgeTimer);
-      window.clearTimeout(resumeTimer);
+      releaseEdge();
       lenis?.destroy();
     };
   }, [rootRef]);
