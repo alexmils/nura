@@ -14288,6 +14288,7 @@ a.help-drawer-signin.btn-primary {
 .og-library-thumb {
   position: relative;
   display: block;
+  flex-shrink: 0;
   aspect-ratio: 1200 / 630;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.05);
@@ -14388,6 +14389,7 @@ a.help-drawer-signin.btn-primary {
 }
 
 .og-library-preview-img {
+  flex-shrink: 0;
   width: 100%;
   aspect-ratio: 1200 / 630;
   overflow: hidden;
