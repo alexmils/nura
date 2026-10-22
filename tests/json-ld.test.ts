@@ -176,13 +176,13 @@ describe("blog index JSON-LD", () => {
     );
   });
 
-  it("breadcrumbs Home → Blog", () => {
+  it("breadcrumbs Home → Learn", () => {
     const items = crumbs?.itemListElement as { name: string; item: string }[];
     assert.deepEqual(
       items.map((item) => [item.name, item.item]),
       [
         ["Home", `${origin}/`],
-        ["Blog", `${origin}/learn`],
+        ["Learn", `${origin}/learn`],
       ],
     );
   });

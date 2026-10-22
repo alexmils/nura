@@ -65,7 +65,7 @@ export function AboutView() {
             <p>
               Public guides live in two places with different jobs:{" "}
               <Link href="/learn">Learn</Link> is a curated reading path
-              (understand, practice, safety). <Link href="/learn">Blog</Link> is
+              (understand, practice, safety). <Link href="/learn">Learn</Link> is
               the chronological archive — newest first. How those pages are
               written is on <Link href="/editorial">How we write</Link>.
             </p>
