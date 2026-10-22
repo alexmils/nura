@@ -8,7 +8,10 @@ import {
 } from "@/app/components/frontend/BlogIndex";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
-import { BLOG_CATEGORIES, blogCategoryBySlug } from "@/lib/blog-categories";
+import {
+  BLOG_CATEGORIES,
+  normalizeBlogCategorySlug,
+} from "@/lib/blog-categories";
 import {
   listBlogCategories,
   listPublishedBlogPosts,
@@ -36,19 +39,15 @@ async function loadCategory(slug: string): Promise<{
   posts: Awaited<ReturnType<typeof listPublishedBlogPosts>>;
   categories: BlogCategoryRecord[];
 } | null> {
-  const def = blogCategoryBySlug(slug);
-  if (!def) return null;
-  const [posts, categories] = await Promise.all([
-    listPublishedBlogPosts({ category: def.slug }),
+  // Categories are rows. A theme added through the admin UI or the MCP agent
+  // gets its own page without a deploy; the built-in list is only the seed.
+  const key = normalizeBlogCategorySlug(slug);
+  const [categories, posts] = await Promise.all([
     listBlogCategories(),
+    listPublishedBlogPosts({ category: key }),
   ]);
-  const category = categories.find((c) => c.slug === def.slug) ?? {
-    slug: def.slug,
-    name: def.name,
-    description: def.description,
-    sortOrder: def.sortOrder,
-    postCount: posts.length,
-  };
+  const category = categories.find((c) => c.slug === key);
+  if (!category) return null;
   return { category, posts, categories };
 }
 
@@ -58,22 +57,23 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const def = blogCategoryBySlug(slug);
-  if (!def) return { title: "Category not found" };
+  const loaded = await loadCategory(slug);
+  if (!loaded) return { title: "Category not found" };
 
-  const { posts } = (await loadCategory(def.slug)) ?? { posts: [] };
+  const { category, posts } = loaded;
 
-  // Registered in Admin → SEO, so the hub owns its title, description, share
-  // image, and canonical instead of inheriting the home Open Graph copy.
-  const seoPageId = blogCategorySeoPageId(def.slug);
+  // A built-in category is registered in Admin → SEO, so the hub owns its
+  // title, description, share image, and canonical. A category added at
+  // runtime has no SeoPageId yet and falls back to its own name and copy.
+  const seoPageId = blogCategorySeoPageId(category.slug);
   const meta = seoPageId ? await buildCachedPageMetadata(seoPageId) : null;
 
   return {
     ...(meta ?? {
-      title: `${def.name}: EMDR guides`,
-      description: def.description,
+      title: `${category.name}: EMDR guides`,
+      description: category.description,
       alternates: localeAlternates(
-        `${siteOrigin(undefined)}/blog/category/${def.slug}`
+        `${siteOrigin(undefined)}/blog/category/${category.slug}`
       ),
     }),
     // Thin until the first guide lands in this category.

@@ -25,15 +25,17 @@ import { getPlatformSettings } from "@/lib/platform-settings";
 import type { McpScope, PlatformMcpConfig } from "@/lib/mcp-settings";
 import { getSeoPage, listSeoPages, updateSeoPage } from "@/lib/mcp-seo";
 import {
+  deleteBlogCategory,
   deleteBlogPost,
   getBlogPostBySlugOrId,
   listAllBlogPosts,
   listBlogCategories,
+  updateBlogCategory,
+  upsertBlogCategory,
   upsertBlogPost,
   type BlogPostInput,
   type BlogPostRecord,
 } from "@/lib/blog-db";
-import { BLOG_CATEGORY_SLUGS } from "@/lib/blog-categories";
 import { CLUSTER_TOPICS } from "@/lib/content-cluster";
 import { hasBlsAcronym } from "@/lib/blog-post-input";
 import {
@@ -88,9 +90,9 @@ const POST_FIELDS = {
   categories: {
     type: "array",
     minItems: 1,
-    items: { type: "string", enum: [...BLOG_CATEGORY_SLUGS] },
+    items: { type: "string" },
     description:
-      "Clinical categories this guide belongs to. Required on create. Pick from list_blog_categories.",
+      "Clinical categories this guide belongs to. Required on create. Pick slugs from list_blog_categories, or add a new one with create_blog_category.",
   },
   sections: {
     type: "array",
@@ -173,9 +175,62 @@ const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
-        category: { type: "string", enum: [...BLOG_CATEGORY_SLUGS] },
+        category: { type: "string" },
         published: { type: "boolean" },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "create_blog_category",
+    description:
+      "Create or update a clinical blog category. Categories are rows, so a new one is usable immediately, no deploy. The category page exists as soon as the row does.",
+    inputSchema: {
+      type: "object",
+      required: ["name"],
+      properties: {
+        name: {
+          type: "string",
+          description: "Display name, for example Dissociation.",
+        },
+        slug: { type: "string", description: "Defaults to the name." },
+        description: {
+          type: "string",
+          description: "Hub and meta copy (≤400 characters).",
+        },
+        sortOrder: {
+          type: "number",
+          description: "Order on the blog; lower comes first (default 100).",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "update_blog_category",
+    description:
+      "Rename or retitle a category. Tagged posts stay attached because the join uses the id; changing the slug changes the hub URL.",
+    inputSchema: {
+      type: "object",
+      required: ["slug"],
+      properties: {
+        slug: { type: "string", description: "Current slug." },
+        newSlug: { type: "string", description: "Rename the slug (optional)." },
+        name: { type: "string" },
+        description: { type: "string" },
+        sortOrder: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "delete_blog_category",
+    description:
+      "Delete an empty category that was added at runtime. Built-in categories, and categories that still have posts, are refused.",
+    inputSchema: {
+      type: "object",
+      required: ["slug"],
+      properties: { slug: { type: "string" } },
       additionalProperties: false,
     },
   },
@@ -330,6 +385,9 @@ const TOOLS = [
 /** Which scope a tool needs. A tool missing here is not exposed. */
 const TOOL_SCOPES: Record<string, McpScope> = {
   list_blog_categories: "blog:read",
+  create_blog_category: "blog:write",
+  update_blog_category: "blog:write",
+  delete_blog_category: "blog:write",
   list_blog_posts: "blog:read",
   get_blog_post: "blog:read",
   create_blog_post: "blog:write",
@@ -454,8 +512,57 @@ async function callTool(
       const categories = await listBlogCategories();
       return text({
         categories,
-        hint: "Pass these slugs in create_blog_post.categories.",
+        hint: "Pass these slugs in create_blog_post.categories. Add a new one with create_blog_category.",
       });
+    }
+
+    case "create_blog_category": {
+      const result = await upsertBlogCategory({
+        name: typeof args.name === "string" ? args.name : "",
+        slug: typeof args.slug === "string" ? args.slug : undefined,
+        description:
+          typeof args.description === "string" ? args.description : undefined,
+        sortOrder:
+          typeof args.sortOrder === "number" ? args.sortOrder : undefined,
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.category_created",
+        detail: { source: "mcp", slug: result.category.slug },
+      });
+      return text(result.category);
+    }
+
+    case "update_blog_category": {
+      const slug = String(args.slug ?? "").trim();
+      if (!slug) return toolError("slug is required.");
+      const result = await updateBlogCategory({
+        slug,
+        newSlug: typeof args.newSlug === "string" ? args.newSlug : undefined,
+        name: typeof args.name === "string" ? args.name : undefined,
+        description:
+          typeof args.description === "string" ? args.description : undefined,
+        sortOrder:
+          typeof args.sortOrder === "number" ? args.sortOrder : undefined,
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.category_updated",
+        detail: { source: "mcp", slug: result.category.slug },
+      });
+      return text(result.category);
+    }
+
+    case "delete_blog_category": {
+      const slug = String(args.slug ?? "").trim();
+      if (!slug) return toolError("slug is required.");
+      const result = await deleteBlogCategory(slug);
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.category_deleted",
+        detail: { source: "mcp", slug: result.slug },
+      });
+      return text({ ok: true, deleted: result.slug });
     }
 
     case "list_blog_posts": {
@@ -482,7 +589,7 @@ async function callTool(
         input.categories.length === 0
       ) {
         return toolError(
-          `categories is required. Choose from: ${BLOG_CATEGORY_SLUGS.join(", ")}.`
+          "categories is required. Call list_blog_categories for the current slugs, or create a new one with create_blog_category."
         );
       }
       const result = await upsertBlogPost({
