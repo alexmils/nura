@@ -149,3 +149,24 @@ export function sanitizeBlogCategorySlugs(values: unknown): string[] {
   }
   return out;
 }
+
+/**
+ * Normalize and dedupe slugs without checking the built-in list.
+ *
+ * Categories live in `blog_categories`, so an editor or the MCP agent can add
+ * one without a deploy. Reads trust the join; writes check the table. Order is
+ * editorial and must survive.
+ */
+export function normalizeCategorySlugList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const slug = normalizeBlogCategorySlug(value);
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push(slug);
+  }
+  return out;
+}

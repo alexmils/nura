@@ -56,6 +56,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "blog.post_created": "Blog guide created",
   "blog.post_updated": "Blog guide updated",
   "blog.post_deleted": "Blog guide deleted",
+  "blog.category_created": "Blog category created",
   "resource.created": "Resource created",
   "resource.updated": "Resource updated",
   "mcp.token_generated": "MCP token generated",

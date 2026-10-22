@@ -23,6 +23,7 @@ export type AuditAction =
   | "blog.post_created"
   | "blog.post_updated"
   | "blog.post_deleted"
+  | "blog.category_created"
   | "resource.created"
   | "resource.updated"
   | "mcp.token_generated"
