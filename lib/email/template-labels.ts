@@ -67,6 +67,7 @@ export function isEmailTemplateId(value: unknown): value is EmailTemplateId {
 export const SCHEDULED_TEMPLATE_DELAY_HOURS: Partial<
   Record<EmailTemplateId, number>
 > = {
+  trial_feedback: 30 * 24,
   post_trial_checkin: 72,
 };
 

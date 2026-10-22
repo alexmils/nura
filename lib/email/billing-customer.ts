@@ -13,10 +13,14 @@ import {
   formatReceiptDate,
   receiptPlanLabel,
 } from "@/lib/email/purchase-receipt";
+import { getEmailTemplateAutomation } from "@/lib/email-templates-db";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { getUserById } from "@/lib/users";
 
 const MS_DAY = 24 * 60 * 60 * 1000;
+const MS_HOUR = 60 * 60 * 1000;
+/** If the cron was down, look this far back past the due date, not further. */
+const REVIEW_CATCHUP_DAYS = 7;
 
 /** Due once the trial ends within 2 days, until the end time. */
 export function isTrialReminderDue(
@@ -261,19 +265,30 @@ export async function sendDueTrialChargeReminders(
 }
 
 /**
- * One satisfaction ask when the 7-day trial ends. Skips members with no real
- * sessions and anyone who already submitted feedback.
+ * One review request after the trial. The delay is the template's, so Admin →
+ * Email can move it from the shipped month to something else without a deploy.
+ * Skips members with no real sessions and anyone who already submitted
+ * feedback.
  */
 export async function sendDueTrialFeedbackEmails(
   now: Date = new Date()
-): Promise<{ scanned: number; sent: number; skipped: number }> {
+): Promise<{ enabled: boolean; scanned: number; sent: number; skipped: number }> {
   await ensureSchemaReady();
+
+  const template = await getEmailTemplateAutomation("trial_feedback");
+  if (!template.enabled) {
+    return { enabled: false, scanned: 0, sent: 0, skipped: 0 };
+  }
+
   const { ensureFeedbackSchema, userHasSubmittedFeedback } = await import(
     "@/lib/feedback-db"
   );
   const { userHasQualifyingSession } = await import("@/lib/feedback-db");
   await ensureFeedbackSchema();
-  const windowStart = new Date(now.getTime() - 3 * MS_DAY);
+
+  const delayHours = Math.max(0, template.delayHours ?? 30 * 24);
+  const dueBefore = new Date(now.getTime() - delayHours * MS_HOUR);
+  const windowStart = new Date(dueBefore.getTime() - REVIEW_CATCHUP_DAYS * MS_DAY);
   const { rows } = await getPool().query<{
     user_id: string;
     stripe_subscription_id: string;
@@ -285,7 +300,7 @@ export async function sendDueTrialFeedbackEmails(
        AND trial_ends_at >= $2
        AND trial_feedback_sent_at IS NULL
        AND stripe_livemode IS TRUE`,
-    [now, windowStart]
+    [dueBefore, windowStart]
   );
 
   let sent = 0;
@@ -338,5 +353,5 @@ export async function sendDueTrialFeedbackEmails(
       console.error("[email] trial feedback failed", row.user_id, err);
     }
   }
-  return { scanned: rows.length, sent, skipped };
+  return { enabled: true, scanned: rows.length, sent, skipped };
 }

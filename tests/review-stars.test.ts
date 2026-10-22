@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { reviewStars } from "../lib/email/review-stars";
 import { renderEmailTemplate } from "../lib/email/templates";
+import { SCHEDULED_TEMPLATE_DELAY_HOURS } from "../lib/email/template-labels";
 import { parseFeedbackSubmitSource } from "../lib/feedback-eligibility";
 
 const URL = "https://nurahelp.com/app/feedback?source=review&x=1";
@@ -44,6 +45,28 @@ describe("review request email", () => {
     assert.match(html, /Leave a review/);
     assert.match(html, /Hi Ana/);
     assert.match(text, /How did we do\?/);
+  });
+});
+
+describe("review schedule", () => {
+  it("waits a month by default", () => {
+    assert.equal(SCHEDULED_TEMPLATE_DELAY_HOURS.trial_feedback, 30 * 24);
+  });
+
+  it("the post-trial check-in no longer claims a person reads replies", () => {
+    const { html, text } = renderEmailTemplate(
+      "post_trial_checkin",
+      {
+        name: "Ana",
+        trialEndedOn: "1 October 2026",
+        appUrl: "https://nurahelp.com/app",
+        preferencesUrl: "https://nurahelp.com/app/settings",
+      },
+      "Nura",
+      "https://nurahelp.com"
+    );
+    assert.doesNotMatch(html, /reaches a person, not a bot/);
+    assert.doesNotMatch(text, /reaches a person, not a bot/);
   });
 });
 

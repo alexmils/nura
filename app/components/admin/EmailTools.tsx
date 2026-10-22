@@ -9,6 +9,7 @@ import {
 import {
   EMAIL_TEMPLATE_DESCRIPTION,
   EMAIL_TEMPLATE_PLACEHOLDERS,
+  EMAIL_TEMPLATE_SCHEDULE_HINT,
 } from "@/lib/email/template-meta";
 import { fetchJson } from "@/lib/fetch-json";
 
@@ -159,8 +160,7 @@ export function TemplateEditor({
               />
             </label>
             <p className="admin-field-hint">
-              Counted from the first app use after the trial date. The default is
-              3 days.
+              {EMAIL_TEMPLATE_SCHEDULE_HINT[template.id]}
             </p>
           </div>
         ) : null}

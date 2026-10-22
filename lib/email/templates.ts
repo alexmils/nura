@@ -477,8 +477,6 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         "",
         `Your trial ended on ${d.trialEndedOn}, and you have been using Nura since. We would love to know how it is going — whether the guided sessions fit into your routine, and whether anything in the app feels awkward.`,
         "",
-        "Reply to this email and it reaches a person, not a bot.",
-        "",
         `Open Nura: ${d.appUrl}`,
         "",
         `Manage what Nura emails you about any time in Settings: ${d.preferencesUrl}`,
@@ -488,7 +486,6 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         "How are the sessions going?",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your trial ended on ${safeDate}, and you have been using Nura since. We would love to know how it is going — whether the guided sessions fit into your routine, and whether anything in the app feels awkward.</p>
-         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Reply to this email and it reaches a person, not a bot.</p>
          ${ctaButton(d.appUrl, "Open Nura")}
          <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Manage what Nura emails you about any time in <a href="${safePrefs}" style="color:${brandColor};">Settings</a>.</p>`,
         `Manage what Nura emails you about any time in Settings: ${d.preferencesUrl}`

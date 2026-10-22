@@ -65,7 +65,7 @@ export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
   trial_charge_reminder:
     "A reminder about two days before the trial's first charge.",
   trial_feedback:
-    "A five-row star prompt and a link to the feedback form, sent after the trial to members who had a real session. The stars are visual — every one opens the same form, where the score and note are stored.",
+    "A five-row star prompt and a link to the feedback form, sent one month after the trial so the member has had time to use Nura. The stars are visual — every one opens the same form, where the score and note are stored. Change the days in Scheduled send.",
   post_trial_checkin:
     "One check-in after the first app use following the trial. Sent by the post-trial cron after the delay below.",
   admin_signup:
@@ -83,6 +83,15 @@ export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
 export type EmailTemplatePlaceholder = {
   token: string;
   description: string;
+};
+
+/** What the scheduled delay counts from, in the admin's words. */
+export const EMAIL_TEMPLATE_SCHEDULE_HINT: Partial<
+  Record<EmailTemplateId, string>
+> = {
+  trial_feedback: "Counted from the day the trial ended. 30 is one month.",
+  post_trial_checkin:
+    "Counted from the first app use after the trial date. The default is 3 days.",
 };
 
 export const EMAIL_TEMPLATE_PLACEHOLDERS: Record<
