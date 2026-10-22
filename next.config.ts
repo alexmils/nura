@@ -44,6 +44,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
+      // Uploaded covers come back as res.cloudinary.com/<cloud>/image/upload/…
+      { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
     ],
   },
   // Non-empty turbopack block silences the warning (empty `{}` is ignored by Next's check).

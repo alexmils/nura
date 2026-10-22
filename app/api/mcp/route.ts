@@ -108,7 +108,7 @@ const POST_FIELDS = {
   coverUrl: {
     type: "string",
     description:
-      "Featured image shown on the card and at the top of the guide. Site path (/marketing/landing/calm-water.jpg) or an https URL on images.unsplash.com / images.pexels.com. Omit to use a fallback image.",
+      "Featured image shown on the card and at the top of the guide. Site path (/marketing/landing/calm-water.jpg) or an https URL on images.unsplash.com, images.pexels.com, or res.cloudinary.com. Omit to use a fallback image. Use update_blog_post after uploading in Admin → Blog if you need a different host.",
   },
   emdrAnchor: {
     type: "string",

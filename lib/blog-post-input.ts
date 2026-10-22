@@ -149,6 +149,8 @@ export function isValidCoverUrl(value: string): boolean {
 export const BLOG_REMOTE_IMAGE_HOSTS = [
   "images.unsplash.com",
   "images.pexels.com",
+  // Admin uploads (Admin → Blog → Featured image) land here.
+  "res.cloudinary.com",
 ] as const;
 
 /** Can this cover be rendered by `next/image`? */
