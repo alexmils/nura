@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { appPath } from "@/lib/app-base";
 import {
   getLandingLenis,
   scrollToLandingSection,
@@ -12,8 +10,19 @@ import {
   NoColdStartDemo,
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
+import {
+  HIDDEN_ITEM_KEY,
+  mediaNames,
+  sectionList,
+  sectionText,
+} from "@/lib/marketing-sections";
+import { frameKey, storedFrameStyle } from "@/lib/image-position";
+import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
-import { SessionLoopKit } from "./SessionLoopKit";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { EditablePart, HiddenSectionNote } from "./section-editor/EditablePart";
+import { useSectionConfig, useSectionOn } from "./section-editor/MarketingCopy";
+import { useIsPlatformAdmin } from "./section-editor/useIsPlatformAdmin";
 import "./session-path-sticky.css";
 
 type StageId = "ground" | "rhythm" | "checkin" | "close";
@@ -26,92 +35,50 @@ type Stage = {
   /** Continues on the same line after the lead. */
   line: string;
   mediaLabel: string;
+  mediaKind: string;
+  mediaImage: string;
+  mediaVideo: string;
+  mediaPoster: string;
+  mediaAlt: string;
 };
-
-const STAGES: Stage[] = [
-  {
-    id: "ground",
-    nav: "Ground first",
-    // Attio right ≠ left nav (“Your team, amplified.” vs “Build pipeline”)
-    lead: "From ground to close — one calm loop.",
-    line: "Intake, feet on the floor, a calm place — no set starts cold. You settle first, then the session opens at your pace, not the clock’s.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "rhythm",
-    nav: "Choose your rhythm",
-    lead: "Eyes, ears, or hands — same rhythm.",
-    line: "Pick how you feel the left–right pulse — visual sets, stereo cues, or a gamepad — one calm loop, three ways in.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "checkin",
-    nav: "Check in",
-    lead: "Pause after each set.",
-    line: "SUD and a body scan with the agent — name what shifted, then decide if another set belongs here or if you stop.",
-    mediaLabel: "Image or video",
-  },
-  {
-    id: "close",
-    nav: "Close gently",
-    lead: "End when you’re ready.",
-    line: "Closure and grounding out — you leave with both feet on the floor, not mid-set. Enough is enough when you say so.",
-    mediaLabel: "Image or video",
-  },
-];
-
-const RHYTHM_CARDS = [
-  { label: "Eyes", hint: "Visual sets" },
-  { label: "Ears", hint: "Audio cues" },
-  { label: "Hands", hint: "Gamepad" },
-] as const;
-
-const GROUND_PAIR = [
-  {
-    id: "safe" as const,
-    title: "Safe place first.",
-    line: "Feet on the floor before anything heavy.",
-  },
-  {
-    id: "cold" as const,
-    title: "No cold starts.",
-    line: "Intake and breath, then the set.",
-  },
-] as const;
 
 function MediaPlaceholder({
   label,
   compact,
+  kind,
+  image,
+  video,
+  poster,
+  alt,
 }: {
   label: string;
   compact?: boolean;
+  kind?: string;
+  image?: string;
+  video?: string;
+  poster?: string;
+  alt?: string;
 }) {
+  const hasMedia = Boolean(image || video);
   return (
     <div
       className={
         compact ? "fe-spath-media fe-spath-media--card" : "fe-spath-media"
       }
-      role="img"
-      aria-label={label}
+      role={hasMedia ? undefined : "img"}
+      aria-label={hasMedia ? undefined : label}
     >
-      <span className="fe-spath-media-label">{label}</span>
-    </div>
-  );
-}
-
-function ScreenPlaceholder() {
-  return (
-    <div
-      className="fe-spath-screen"
-      role="img"
-      aria-label="App screen placeholder"
-    >
-      <span className="fe-spath-screen-chrome" aria-hidden>
-        <span />
-        <span />
-        <span />
-      </span>
-      <span className="fe-spath-media-label">Add your screen image here</span>
+      {hasMedia ? (
+        <SectionMedia
+          kind={kind || "image"}
+          image={image || ""}
+          video={video || ""}
+          poster={poster || ""}
+          alt={alt || label}
+        />
+      ) : (
+        <span className="fe-spath-media-label">{label}</span>
+      )}
     </div>
   );
 }
@@ -132,6 +99,37 @@ function centerChipInNav(list: HTMLUListElement | null, id: StageId) {
 
 /** Attio-style sticky path: intro above, then sticky nav | scrolling stages. */
 export function SessionPathSticky() {
+  const stagesCopy = useSectionConfig("home-how-stages");
+  const rhythmCopy = useSectionConfig("home-how-rhythm");
+  const groundCopy = useSectionConfig("home-how-ground");
+  const rhythmOn = useSectionOn("home-how-rhythm");
+  const groundOn = useSectionOn("home-how-ground");
+  const admin = useIsPlatformAdmin();
+  const stages: Stage[] = sectionList(stagesCopy, "stages").map((stage) => ({
+    id: (stage.id || "ground") as StageId,
+    nav: stage.nav,
+    lead: stage.lead,
+    line: stage.line,
+    mediaLabel: "Image or video",
+    mediaKind: stage.mediaKind,
+    mediaImage: stage.mediaImage,
+    mediaVideo: stage.mediaVideo,
+    mediaPoster: stage.mediaPoster,
+    mediaAlt: stage.mediaAlt,
+  }));
+  // Keep each card's saved index so its icon frame key matches the editor.
+  const rhythmAll = Array.isArray(rhythmCopy.rhythm) ? rhythmCopy.rhythm : [];
+  const rhythm = rhythmAll
+    .map((card, at) => ({ card, at }))
+    .filter(({ card }) => card[HIDDEN_ITEM_KEY] !== "1");
+  const rhythmNames = mediaNames("rhythmMedia");
+  const rhythmKind = sectionText(rhythmCopy, rhythmNames.kind);
+  const rhythmImage = sectionText(rhythmCopy, rhythmNames.image);
+  const rhythmVideo = sectionText(rhythmCopy, rhythmNames.video);
+  const rhythmPoster = sectionText(rhythmCopy, rhythmNames.poster);
+  const rhythmAlt = sectionText(rhythmCopy, rhythmNames.alt);
+  const rhythmHasMedia = Boolean(rhythmImage || rhythmVideo);
+  const ground = sectionList(groundCopy, "ground");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
@@ -156,7 +154,7 @@ export function SessionPathSticky() {
     if (!sentinels.length) return;
 
     const marker = window.innerHeight * 0.5;
-    let next: StageId = STAGES[0]!.id;
+    let next: StageId = "ground";
     let best = Number.POSITIVE_INFINITY;
 
     sentinels.forEach((el) => {
@@ -246,10 +244,20 @@ export function SessionPathSticky() {
     setActive(id);
     lockUntilRef.current = Date.now() + 1400;
     const nav = rootRef.current?.querySelector<HTMLElement>(".fe-spath-nav");
-    const extra = nav
-      ? -Math.round(nav.getBoundingClientRect().height + 10)
-      : 0;
-    scrollToLandingSection(`session-path-${id}`, extra);
+    // On desktop the nav is a sticky side column as tall as the stage, so its
+    // box height must not be subtracted from the scroll target; only the mobile
+    // horizontal nav sits above the panels and needs the offset.
+    const extra =
+      nav && compactNav ? -Math.round(nav.getBoundingClientRect().height + 10) : 0;
+    // After the full-screen video, the first stage's sentinel also owns the
+    // hand-off viewport. Ground first's content starts one viewport lower, so
+    // its nav jump must not land back on the video.
+    const afterVideo = Boolean(
+      rootRef.current?.previousElementSibling?.classList.contains("fe-custom--video")
+    );
+    const handoff =
+      id === "ground" && !compactNav && afterVideo ? window.innerHeight : 0;
+    scrollToLandingSection(`session-path-${id}`, extra + handoff);
     window.setTimeout(() => {
       pinStageInView();
       centerChipInNav(navListRef.current, id);
@@ -264,30 +272,29 @@ export function SessionPathSticky() {
   return (
     <section
       ref={rootRef}
-      id="how-it-works"
-      className="fe-spath"
-      aria-labelledby={`${baseId}-heading`}
+      className="fe-spath fe-has-edit"
+      data-section="home-how"
+      aria-labelledby="fe-how-intro-title"
     >
-      <div className="fe-container fe-spath-intro">
-        <p className="fe-spath-badge">How it works</p>
-        <h2 id={`${baseId}-heading`} className="fe-spath-intro-title">
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--1">
-            Ground first. Choose your rhythm. Check in after each set.{" "}
-          </span>
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--2">
-            Close gently when it’s enough, then Self-guided between sessions.{" "}
-          </span>
-          <span className="fe-spath-intro-fade fe-spath-intro-fade--3">
-            One calm loop in the app. No rush. No cold starts.
-          </span>
-        </h2>
-      </div>
-
+      {/* Desktop hand-off after a full-screen video: a zero-height sticky hold
+          so the incoming pale sheet can slide over the video without adding
+          layout height or transforming the sticky stage. */}
+      <span className="fe-spath-slide-hold" aria-hidden>
+        <span className="fe-spath-slide-bg">
+          <span className="fe-spath-slide-edge" />
+        </span>
+      </span>
+      {/* White sweep bar: leads the incoming sheet like a curtain, then leaves
+          to the left so it never sits on the stage after the slide. */}
+      <span className="fe-spath-curtain-hold" aria-hidden>
+        <span className="fe-spath-slide-curtain" />
+      </span>
+      <EditablePart id="home-how-stages">
       <div className="fe-spath-track-wrap">
         <div className="fe-container fe-spath-track">
           <nav className="fe-spath-nav" aria-label="Session stages">
             <ul ref={navListRef} className="fe-spath-nav-list">
-              {STAGES.map((stage) => {
+              {stages.map((stage) => {
                 const isActive = active === stage.id;
                 return (
                   <li key={stage.id}>
@@ -312,7 +319,7 @@ export function SessionPathSticky() {
 
           <div className="fe-spath-stage-scroll">
             <div className="fe-spath-sentinels" aria-hidden>
-              {STAGES.map((stage) => (
+              {stages.map((stage) => (
                 <div
                   key={stage.id}
                   id={`session-path-${stage.id}`}
@@ -322,7 +329,7 @@ export function SessionPathSticky() {
               ))}
             </div>
           <div className="fe-spath-panels">
-            {STAGES.map((stage) => (
+            {stages.map((stage) => (
               <article
                 key={stage.id}
                 data-spath-panel={stage.id}
@@ -356,12 +363,35 @@ export function SessionPathSticky() {
                     </p>
                   </div>
 
-                  {stage.id === "rhythm" ? (
-                    <div className="fe-spath-rhythm">
+                  {stage.id === "rhythm" && !rhythmOn ? (
+                    admin ? <HiddenSectionNote id="home-how-rhythm" /> : null
+                  ) : stage.id === "ground" && !groundOn ? (
+                    admin ? <HiddenSectionNote id="home-how-ground" /> : null
+                  ) : stage.id === "rhythm" ? (
+                    <div
+                      className={admin ? "fe-spath-rhythm fe-has-edit" : "fe-spath-rhythm"}
+                      data-section={admin ? "home-how-rhythm" : undefined}
+                    >
+                      <SectionEdit id="home-how-rhythm" />
                       <ul className="fe-spath-rhythm-grid">
-                        {RHYTHM_CARDS.map((card) => (
-                          <li key={card.label} className="fe-spath-rhythm-card">
-                            <span className="fe-spath-rhythm-icon" aria-hidden />
+                        {rhythm.map(({ card, at }) => (
+                          <li key={card.label || at} className="fe-spath-rhythm-card">
+                            <span
+                              className={`fe-spath-rhythm-icon${card.icon ? " has-image" : ""}`}
+                              aria-hidden
+                            >
+                              {card.icon ? (
+                                // eslint-disable-next-line @next/next/no-img-element -- admin icons can be any Cloudinary or site URL
+                                <img
+                                  src={card.icon}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  data-frame-key={frameKey("home-how-rhythm", `rhythm.${at}.icon`)}
+                                  style={storedFrameStyle(card.iconPos)}
+                                />
+                              ) : null}
+                            </span>
                             {active === "rhythm" ? (
                               <LetterRevealHeading
                                 as="span"
@@ -381,10 +411,21 @@ export function SessionPathSticky() {
                           </li>
                         ))}
                       </ul>
-                      <MediaPlaceholder label={stage.mediaLabel} />
+                      <MediaPlaceholder
+                        label={stage.mediaLabel}
+                        kind={rhythmHasMedia ? rhythmKind : stage.mediaKind}
+                        image={rhythmHasMedia ? rhythmImage : stage.mediaImage}
+                        video={rhythmHasMedia ? rhythmVideo : stage.mediaVideo}
+                        poster={rhythmHasMedia ? rhythmPoster : stage.mediaPoster}
+                        alt={rhythmHasMedia ? rhythmAlt : stage.mediaAlt}
+                      />
                     </div>
                   ) : stage.id === "ground" ? (
-                    <div className="fe-spath-ground">
+                    <div
+                      className={admin ? "fe-spath-ground fe-has-edit" : "fe-spath-ground"}
+                      data-section={admin ? "home-how-ground" : undefined}
+                    >
+                      <SectionEdit id="home-how-ground" />
                       <div
                         className="fe-spath-media fe-spath-media--live"
                         role="img"
@@ -393,7 +434,7 @@ export function SessionPathSticky() {
                         {active === "ground" ? <ModePickDemo /> : null}
                       </div>
                       <ul className="fe-spath-pair" data-spath-pair>
-                        {GROUND_PAIR.map((card) => (
+                        {ground.map((card) => (
                           <li
                             key={card.id}
                             className={
@@ -434,7 +475,17 @@ export function SessionPathSticky() {
                       </ul>
                     </div>
                   ) : (
-                    <MediaPlaceholder label={stage.mediaLabel} />
+                    <div className="fe-spath-stage-media fe-has-edit">
+                      <SectionEdit id="home-how-stages" lift />
+                      <MediaPlaceholder
+                        label={stage.mediaLabel}
+                        kind={stage.mediaKind}
+                        image={stage.mediaImage}
+                        video={stage.mediaVideo}
+                        poster={stage.mediaPoster}
+                        alt={stage.mediaAlt}
+                      />
+                    </div>
                   )}
                 </div>
               </article>
@@ -443,29 +494,8 @@ export function SessionPathSticky() {
           </div>
         </div>
       </div>
+      </EditablePart>
 
-      <div className="fe-spath-finale">
-        <div className="fe-spath-finale-zoom">
-        <div className="fe-container fe-spath-finale-inner">
-          <p className="fe-spath-finale-kicker">Between sessions</p>
-          <LetterRevealHeading as="h3" className="fe-spath-finale-title">
-            Self-guided session — sets without an agent
-          </LetterRevealHeading>
-          <p className="fe-spath-finale-line">
-            Practice in the gap, on your schedule.
-          </p>
-          <Link
-            href={appPath("/create-account")}
-            className="fe-spath-cta frontend-btn-ghost"
-          >
-            Start for free
-          </Link>
-          <ScreenPlaceholder />
-        </div>
-        </div>
-      </div>
-
-      <SessionLoopKit />
     </section>
   );
 }
