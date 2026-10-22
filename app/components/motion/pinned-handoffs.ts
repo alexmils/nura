@@ -34,7 +34,7 @@ import { DEFAULT_HANDOFF_HOLD, paintedBg, siblingBoxesOf, pinnedInsideOf } from 
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "focus" | "curtain" | "lens" | "tilt";
+export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "focus" | "hold" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -378,6 +378,17 @@ export function pinnedHandoff(
           0.1
         );
       }
+      break;
+    }
+    case "hold": {
+      // Pin only: the block stands still for the hold runway, then the next
+      // section scrolls in normally. Used where no visual transition is wanted
+      // (pricing -> FAQ, FAQ -> blog) but the edge should still catch.
+      // No end snap: resetting y at the window end made the section jump back.
+      // The spacer keeps the track one effect-unit long, so the hold tween is
+      // not stretched across the whole window (that made the pin drift). It is
+      // added at 0 because every effect child is shifted by `hold` afterwards.
+      tl.to({}, { duration: 1 }, 0);
       break;
     }
     case "focus": {

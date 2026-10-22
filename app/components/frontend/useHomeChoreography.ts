@@ -154,6 +154,10 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   pinnedHandoff(one(".v2-session"), one(".fe-topics"), "focus", {
     content: one(".fe-topics-head"),
   });
+  // These boundaries stay plain cuts, but the outgoing section still holds
+  // (stands still) for its pin runway before scrolling away.
+  pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "hold");
+  pinnedHandoff(one(".fe-faq"), one(".fe-blog"), "hold");
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),

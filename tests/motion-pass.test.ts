@@ -27,7 +27,16 @@ describe("motion pass: scroll choreography", () => {
     ]) {
       assert.ok(home.includes(`handoff(one("${pair[0]}"), one("${pair[1]}")`), pair.join(" -> "));
     }
-    assert.ok(!home.includes('pinnedHandoff(one(".v2-pricing")'), "pricing -> FAQ has no transition");
+    // Pricing -> FAQ keeps a plain cut (no visual effect) but still pins.
+    for (const pair of [
+      [".v2-pricing", ".fe-faq"],
+      [".fe-faq", ".fe-blog"],
+    ]) {
+      assert.ok(
+        home.includes(`pinnedHandoff(one("${pair[0]}"), one("${pair[1]}"), "hold"`),
+        `${pair.join(" -> ")} pin only`
+      );
+    }
     // Hero hands off to whatever follows it (an inserted section is fine).
     assert.ok(home.includes('handoff(one(".v2-hero"), following(one(".v2-hero")), "stack", true)'));
     const css = src("app/components/motion/handoffs.css");
