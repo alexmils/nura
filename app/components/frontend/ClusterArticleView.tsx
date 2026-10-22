@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BlogCover } from "@/app/components/frontend/BlogCover";
+import { BlogCta } from "@/app/components/frontend/BlogCta";
+import { parseBlogCta } from "@/lib/blog-cta";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
 import { renderInlineMarkdown } from "@/app/components/frontend/InlineMarkdown";
 import { blogCategoryName } from "@/lib/blog-categories";
@@ -100,9 +102,13 @@ export function ClusterArticleView({
           {article.sections.map((section) => (
             <section key={section.heading}>
               <h2>{section.heading}</h2>
-              {section.paragraphs.map((p) => (
-                <p key={p.slice(0, 48)}>{renderInlineMarkdown(p)}</p>
-              ))}
+              {section.paragraphs.map((p, i) => {
+                const cta = parseBlogCta(p);
+                if (cta) return <BlogCta key={`cta-${i}`} data={cta} />;
+                return (
+                  <p key={p.slice(0, 48)}>{renderInlineMarkdown(p)}</p>
+                );
+              })}
             </section>
           ))}
         </div>

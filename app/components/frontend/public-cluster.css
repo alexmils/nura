@@ -831,3 +831,93 @@ a.fe-post-pill:hover {
     flex: 0 0 auto;
   }
 }
+
+/* ---- CTA blocks inside a guide (lib/blog-cta.ts) ---- */
+
+.blog-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 2rem 0;
+  padding: 1.6rem 1.8rem;
+  border-radius: 18px;
+  background: #eaf4e2;
+  color: #2a3020;
+}
+
+.blog-cta-copy {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.blog-cta-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.blog-cta-body {
+  margin: 0;
+  opacity: 0.82;
+  line-height: 1.55;
+}
+
+.blog-cta-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0 1.4rem;
+  border-radius: 999px;
+  background: #4a7234;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.blog-cta-button:hover {
+  background: #3d5f2b;
+}
+
+.blog-cta--split {
+  flex-wrap: wrap;
+}
+
+.blog-cta--band {
+  background: #141a12;
+  color: #fff;
+  border-radius: 0;
+  padding: 2.2rem 1.8rem;
+}
+
+.blog-cta--band .blog-cta-button {
+  background: #f2c94c;
+  color: #141a12;
+}
+
+.blog-cta--band .blog-cta-button:hover {
+  background: #e0b83c;
+}
+
+.blog-cta--minimal {
+  background: transparent;
+  border-top: 1px solid rgba(42, 48, 32, 0.16);
+  border-bottom: 1px solid rgba(42, 48, 32, 0.16);
+  border-radius: 0;
+  padding: 1.8rem 0;
+}
+
+@media (max-width: 640px) {
+  .blog-cta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .blog-cta-button {
+    width: 100%;
+  }
+}

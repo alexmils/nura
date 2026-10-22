@@ -14542,6 +14542,41 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   border-radius: 6px;
 }
 
+.admin-cta-builder {
+  width: min(720px, 100%);
+  display: grid;
+  gap: 0.9rem;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.admin-cta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.admin-cta-colour {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-cta-colour input[type="color"] {
+  width: 44px;
+  height: 38px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+
+@media (max-width: 640px) {
+  .admin-cta-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-body-textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.85rem;

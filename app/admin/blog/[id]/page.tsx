@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { AdminCtaBuilder } from "@/app/components/admin/AdminCtaBuilder";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
+import { serializeBlogCta, type BlogCtaData } from "@/lib/blog-cta";
 import {
   CLUSTER_TOPICS,
   CLUSTER_TOPIC_LABEL,
@@ -92,6 +94,29 @@ export default function AdminBlogEditorPage() {
   const sectionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const imageSectionRef = useRef<number | null>(null);
+  const [ctaTarget, setCtaTarget] = useState<number | "end" | null>(null);
+
+  function insertCta(data: BlogCtaData) {
+    const block = serializeBlogCta(data);
+    const target = ctaTarget;
+    setCtaTarget(null);
+    if (target === null) return;
+    if (target === "end") {
+      setForm((f) => {
+        const last = f.sections.length - 1;
+        if (last < 0) return f;
+        const next = [...f.sections];
+        const current = next[last].paragraphs.trim();
+        next[last] = {
+          ...next[last],
+          paragraphs: current ? `${current}\n\n${block}` : block,
+        };
+        return { ...f, sections: next };
+      });
+      return;
+    }
+    insertAtSection(target, `\n\n${block}\n\n`);
+  }
 
   function insertAtSection(index: number, snippet: string) {
     const el = sectionRefs.current[index];
@@ -353,6 +378,14 @@ export default function AdminBlogEditorPage() {
                       <button
                         type="button"
                         className="btn-ghost"
+                        disabled={busy}
+                        onClick={() => setCtaTarget(index)}
+                      >
+                        Insert CTA
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
                         disabled={busy || index === 0}
                         onClick={() =>
                           setForm((f) => {
@@ -439,19 +472,29 @@ export default function AdminBlogEditorPage() {
                   </label>
                 </div>
               ))}
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={busy}
-                onClick={() =>
-                  setForm((f) => ({
-                    ...f,
-                    sections: [...f.sections, { heading: "", paragraphs: "" }],
-                  }))
-                }
-              >
-                Add section
-              </button>
+              <div className="admin-content-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      sections: [...f.sections, { heading: "", paragraphs: "" }],
+                    }))
+                  }
+                >
+                  Add section
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() => setCtaTarget("end")}
+                >
+                  Add closing CTA
+                </button>
+              </div>
             </div>
           </section>
 
@@ -625,6 +668,12 @@ export default function AdminBlogEditorPage() {
           </aside>
         </div>
       </main>
+
+      <AdminCtaBuilder
+        open={ctaTarget !== null}
+        onClose={() => setCtaTarget(null)}
+        onInsert={insertCta}
+      />
     </div>
   );
 }
