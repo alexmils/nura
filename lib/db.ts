@@ -132,6 +132,11 @@ async function runSchemaMigrations(db: PoolClient) {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       json JSONB NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS marketing_sections (
+      id TEXT PRIMARY KEY,
+      config JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
     CREATE TABLE IF NOT EXISTS user_settings (
       user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       json JSONB NOT NULL

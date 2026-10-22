@@ -17,7 +17,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       isA11yReduceMotionPreferred();
     if (reduced) {
-      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-orbit, .fe-topics-more").forEach((el) => {
+      root.querySelectorAll(".fe-split-word, .fe-animate, .fe-display-word, .fe-about-word, .fe-spath-pair-card, .fe-topics-orbit, .v2-hero-kicker, .v2-hero-title-line, .v2-hero-sub, .v2-hero-actions, .v2-hero-trust").forEach((el) => {
         gsap.set(el, { clearProps: "all", opacity: 1, y: 0, x: 0, color: "" });
         el.classList.add("is-in");
       });
@@ -45,6 +45,89 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     setLandingLenis(lenis);
 
     lenis.on("scroll", ScrollTrigger.update);
+
+    /* —— Section-edge bump ——
+       Crossing into a new section catches the scroll for a beat (about
+       2.5 wheel notches / 0.38s) before it lets go, so each boundary reads
+       as an edge you push through. */
+    const viewport = () => window.innerHeight;
+    const layoutTop = (el: HTMLElement) => {
+      let y = 0;
+      let node: HTMLElement | null = el;
+      while (node) {
+        y += node.offsetTop;
+        node = node.offsetParent as HTMLElement | null;
+      }
+      return y;
+    };
+    let edges: number[] = [];
+    const measureEdges = () => {
+      edges = Array.from(
+        document.querySelectorAll<HTMLElement>(".frontend-main section")
+      )
+        .filter((el) => el.offsetHeight > viewport() * 0.45)
+        .map(layoutTop)
+        .filter((y) => y > 0)
+        .sort((a, b) => a - b)
+        .filter((y, i, arr) => i === 0 || Math.abs(y - arr[i - 1]!) > 24);
+    };
+    measureEdges();
+    let edgeTimer = 0;
+    const scheduleEdges = () => {
+      window.clearTimeout(edgeTimer);
+      edgeTimer = window.setTimeout(measureEdges, 600);
+    };
+    const edgeMutations = new MutationObserver(scheduleEdges);
+    edgeMutations.observe(root, { childList: true, subtree: true });
+    window.addEventListener("resize", scheduleEdges);
+
+    let previousScroll = lenis.scroll;
+    let lastEdge = -1;
+    let lastEdgeAt = 0;
+    let stoppedUntil = 0;
+    let wheelTicks = 0;
+    let resumeTimer = 0;
+    let lastWheelInput = 0;
+    const resume = () => {
+      if (!stoppedUntil) return;
+      stoppedUntil = 0;
+      window.clearTimeout(resumeTimer);
+      lenis?.start();
+    };
+    const onWheelBump = () => {
+      lastWheelInput = performance.now();
+      if (!stoppedUntil) return;
+      wheelTicks += 1;
+      if (wheelTicks >= 3) resume();
+    };
+    const onScrollBump = () => {
+      const y = lenis?.scroll ?? window.scrollY;
+      if (y === previousScroll || stoppedUntil) {
+        previousScroll = y;
+        return;
+      }
+      const down = y > previousScroll;
+      const lo = Math.min(previousScroll, y);
+      const hi = Math.max(previousScroll, y);
+      const edge = down
+        ? edges.find((value) => value > lo && value <= hi)
+        : [...edges].reverse().find((value) => value < hi && value >= lo);
+      if (
+        edge !== undefined &&
+        performance.now() - lastWheelInput < 700 &&
+        (edge !== lastEdge || performance.now() - lastEdgeAt > 900)
+      ) {
+        lastEdge = edge;
+        lastEdgeAt = performance.now();
+        wheelTicks = 0;
+        stoppedUntil = performance.now() + 380;
+        lenis?.stop();
+        resumeTimer = window.setTimeout(resume, 380);
+      }
+      previousScroll = y;
+    };
+    window.addEventListener("wheel", onWheelBump, { passive: true });
+    lenis.on("scroll", onScrollBump);
 
     const raf = (time: number) => {
       lenis?.raf(time);
@@ -80,14 +163,61 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         },
       });
 
+      /* —— Landing v2 hero: centered load + scroll parallax —— */
+      const v2Hero = root.querySelector<HTMLElement>(".v2-hero");
+      if (v2Hero) {
+        const v2Tl = gsap.timeline({ defaults: { ease: "power4.out" } });
+        v2Tl
+          .from(".v2-hero-kicker", { y: 20, opacity: 0, duration: 0.7 })
+          .from(
+            ".v2-hero-title-line",
+            { y: 38, opacity: 0, stagger: 0.14, duration: 1.05 },
+            "-=0.35"
+          )
+          .from(".v2-hero-sub", { y: 28, opacity: 0, duration: 0.85 }, "-=0.55")
+          .from(".v2-hero-actions", { y: 22, opacity: 0, duration: 0.7 }, "-=0.45")
+          .from(".v2-hero-trust", { y: 18, opacity: 0, duration: 0.6 }, "-=0.4");
+
+        gsap.fromTo(
+          ".v2-hero-photo-img",
+          { yPercent: -4, scale: 1.08 },
+          {
+            yPercent: 4,
+            scale: 1.08,
+            ease: "none",
+            scrollTrigger: {
+              trigger: v2Hero,
+              start: "top top",
+              end: "bottom top",
+              scrub: 1.2,
+            },
+          }
+        );
+
+        // The sun is a Default-background decoration only (absent with a custom background).
+        const sun = v2Hero.querySelector(".v2-hero-sun");
+        if (sun) gsap.to(sun, {
+          yPercent: 16,
+          ease: "none",
+          scrollTrigger: {
+            trigger: v2Hero,
+            start: "top top",
+            end: "bottom top",
+            scrub: 1.6,
+          },
+        });
+      }
+
       /* Keep overlay pinned to hero — do not translate (that strips the bottom filter). */
       /* —— Section stagger reveals —— */
       root.querySelectorAll<HTMLElement>(
-        ".fe-section-block, .fe-pricing-section, .fe-spath, .fe-spath-kit, .fe-topics, .fe-pause, .fe-modes, .fe-memory, .fe-faq, .fe-blog"
+        ".fe-section-block, .fe-pricing-section, .fe-spath, .fe-spath-kit, .fe-topics, .fe-pause, .fe-modes, .fe-memory, .fe-faq, .fe-blog, .v2-section, .v2-close"
       ).forEach((section) => {
         const items = [
           ...section.querySelectorAll<HTMLElement>(":scope .fe-animate"),
         ].filter((el) => {
+          /* Plan cards are owned by usePlanSpread (Mindix stack -> spread). */
+          if (el.closest(".v2-price-grid")) return false;
           /* Kit sits inside .fe-spath — do not play its copy at How it works start. */
           if (section.classList.contains("fe-spath") && el.closest(".fe-spath-kit")) {
             return false;
@@ -171,7 +301,6 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       });
 
       const topicsOrbit = root.querySelector<HTMLElement>(".fe-topics-orbit");
-      const topicsMore = root.querySelectorAll<HTMLElement>(".fe-topics-more");
       if (topicsOrbit) {
         gsap.from(topicsOrbit, {
           y: 32,
@@ -189,52 +318,10 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
           },
         });
       }
-      if (topicsMore.length) {
-        gsap.from(topicsMore, {
-          y: 20,
-          opacity: 0,
-          duration: 0.7,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: ".fe-topics-stage",
-            start: "top 78%",
-            toggleActions: "play none none none",
-          },
-        });
-      }
 
       /* Session path duo is driven in SessionPathSticky (stage-local flip). */
 
-      /* —— Self-guided finale: far → zoom in on scroll —— */
-      const finaleZoom = root.querySelector<HTMLElement>(".fe-spath-finale-zoom");
-      const finale = root.querySelector<HTMLElement>(".fe-spath-finale");
-      if (finale && finaleZoom) {
-        gsap.fromTo(
-          finaleZoom,
-          {
-            scale: 0.62,
-            y: 96,
-            rotateX: 9,
-            opacity: 0.38,
-            filter: "blur(10px)",
-          },
-          {
-            scale: 1,
-            y: 0,
-            rotateX: 0,
-            opacity: 1,
-            filter: "blur(0px)",
-            ease: "none",
-            scrollTrigger: {
-              trigger: finale,
-              start: "top 92%",
-              end: "top 28%",
-              scrub: 0.85,
-              invalidateOnRefresh: true,
-            },
-          }
-        );
-      }
+      /* The finale's entrance now belongs to the stages -> "Between sessions" hand-off in useHomeChoreography (rounded rise on desktop, stack on phones). */
 
     }, root);
 
@@ -242,6 +329,11 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       cancelAnimationFrame(rafId);
       ctx.revert();
       setLandingLenis(null);
+      window.removeEventListener("wheel", onWheelBump);
+      window.removeEventListener("resize", scheduleEdges);
+      edgeMutations.disconnect();
+      window.clearTimeout(edgeTimer);
+      window.clearTimeout(resumeTimer);
       lenis?.destroy();
     };
   }, [rootRef]);

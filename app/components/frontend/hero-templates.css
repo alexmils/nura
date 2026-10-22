@@ -1,0 +1,483 @@
+/* ---------------------------------------------------------------- */
+/* Hero templates (Default is the original .v2-hero layout above)   */
+/* ---------------------------------------------------------------- */
+
+/* Editable text colours (unset = as designed). */
+.fe-v2 .v2-hero[style] .v2-hero-title {
+  color: var(--hero-ink, #f4fff2);
+}
+
+.v2-hero[style] .v2-hero-em {
+  color: var(--hero-accent, var(--v2-green-300));
+}
+
+.v2-hero[style] .v2-hero-sub {
+  color: var(--hero-body, rgba(244, 255, 242, 0.8));
+}
+
+.v2-hero[style] .v2-hero-trust li,
+.v2-hero[style] .v2-tpl-stat dd,
+.v2-hero[style] .v2-tpl-stats-note,
+.v2-hero[style] .v2-tpl-frame figcaption {
+  color: var(--hero-body, rgba(244, 255, 242, 0.78));
+}
+
+.v2-hero[style] .v2-tpl-stat dt {
+  color: var(--hero-ink, #f4fff2);
+}
+
+/* Default background under a template: a quiet scrim for legible copy. */
+.v2-tpl-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(10, 22, 14, 0.42) 0%, rgba(10, 22, 14, 0.18) 42%, rgba(10, 22, 14, 0.5) 100%);
+  pointer-events: none;
+}
+
+.v2-hero--tpl {
+  flex-direction: column;
+  align-items: stretch;
+  min-height: 100svh;
+}
+
+.v2-hero .v2-tpl {
+  display: grid;
+  flex: 1 0 auto;
+  place-items: initial;
+  align-content: center;
+  min-height: 100svh;
+  padding: clamp(7.5rem, 15vh, 10rem) clamp(1.25rem, 4vw, 2.5rem) clamp(2.5rem, 7vh, 5rem);
+}
+
+.v2-hero--trust .v2-tpl {
+  min-height: 0;
+  padding-bottom: clamp(1.5rem, 4vh, 3rem);
+}
+
+.v2-tpl .v2-tpl-copy {
+  justify-items: start;
+  max-width: none;
+  text-align: left;
+}
+
+.fe-v2 .v2-tpl .v2-hero-title {
+  text-align: left;
+}
+
+.v2-tpl .v2-hero-sub {
+  margin-right: 0;
+  margin-left: 0;
+}
+
+.v2-tpl .v2-hero-actions,
+.v2-tpl .v2-hero-trust {
+  justify-content: flex-start;
+}
+
+.v2-tpl .v2-hero-kicker {
+  margin-bottom: 1.6rem;
+}
+
+.v2-tpl-media-fill,
+.v2-tpl-card-media,
+.v2-tpl-clip-media,
+.v2-tpl-frame-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.v2-tpl-chip,
+.v2-tpl-clip-label {
+  position: absolute;
+  left: 0.85rem;
+  bottom: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: calc(100% - 1.7rem);
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(15, 35, 24, 0.42);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  font-size: 0.78rem;
+  line-height: 1.3;
+  color: #eef8ea;
+}
+
+.v2-tpl-live {
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--v2-green-300);
+  box-shadow: 0 0 0 4px rgba(198, 214, 126, 0.18);
+}
+
+/* Split: text left, media card right (mirror swaps them). */
+.v2-hero .v2-tpl--split {
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  max-width: 80rem;
+}
+
+.fe-v2 .v2-tpl--split .v2-hero-title {
+  font-size: clamp(2.8rem, 5.6vw, 5.4rem);
+}
+
+.v2-tpl-card {
+  position: relative;
+  aspect-ratio: 4 / 5;
+  max-height: 72svh;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 2rem;
+  background: rgba(15, 35, 24, 0.25);
+  box-shadow: 0 40px 80px -40px rgba(0, 0, 0, 0.55);
+}
+
+.v2-tpl--mirror .v2-tpl-card {
+  order: -1;
+}
+
+/* Spotlight: headline bottom-left, a small looping clip card. */
+.v2-hero .v2-tpl--spotlight {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: end;
+  align-items: end;
+  gap: 2rem;
+  max-width: 86rem;
+}
+
+.v2-tpl--spotlight .v2-tpl-copy {
+  max-width: 50rem;
+}
+
+.fe-v2 .v2-tpl--spotlight .v2-hero-title {
+  font-size: clamp(3.2rem, 7.4vw, 7.2rem);
+  line-height: 0.98;
+}
+
+.v2-tpl-clip {
+  position: relative;
+  width: clamp(14rem, 22vw, 20rem);
+  aspect-ratio: 16 / 10;
+  margin: 0 0 0.4rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 1.25rem;
+  background: rgba(15, 35, 24, 0.35);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+}
+
+.v2-tpl-clip-label {
+  left: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+}
+
+/* Editorial: oversized headline, then lead copy beside a stats column. */
+.v2-hero .v2-tpl--editorial {
+  max-width: 86rem;
+}
+
+.fe-v2 .v2-tpl--editorial .v2-hero-title {
+  font-size: clamp(3.2rem, min(7.6vw, 11svh), 8.6rem);
+  line-height: 0.92;
+  letter-spacing: -0.06em;
+}
+
+.v2-tpl-ed-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(16rem, 1fr);
+  gap: clamp(2rem, 5vw, 5rem);
+  align-items: start;
+  width: 100%;
+  margin-top: clamp(1.5rem, 4vh, 2.75rem);
+}
+
+.v2-tpl--editorial .v2-hero-sub {
+  margin-top: 0;
+}
+
+.v2-tpl-stats {
+  padding-left: clamp(1.25rem, 2.5vw, 2rem);
+  border-left: 1px solid rgba(255, 255, 255, 0.32);
+}
+
+.v2-tpl-stats dl {
+  display: grid;
+  gap: 1.1rem;
+  margin: 0;
+}
+
+.v2-tpl-stat dt {
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #f4fff2;
+}
+
+.v2-tpl-stat dd {
+  margin: 0.3rem 0 0;
+  font-size: 0.86rem;
+  color: rgba(244, 255, 242, 0.78);
+}
+
+.v2-tpl-stats-note {
+  margin-top: 1.25rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgba(244, 255, 242, 0.7);
+}
+
+/* Framed: centred minimal headline above a framed media card. */
+.v2-hero .v2-tpl--framed {
+  justify-items: center;
+  gap: clamp(1.25rem, 3.5vh, 2.5rem);
+  max-width: 68rem;
+}
+
+.v2-tpl--framed .v2-tpl-copy {
+  justify-items: center;
+  text-align: center;
+}
+
+.fe-v2 .v2-tpl--framed .v2-hero-title {
+  font-size: clamp(2.5rem, 5.2vw, 4.8rem);
+  text-align: center;
+}
+
+.v2-tpl--framed .v2-hero-sub {
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.v2-tpl--framed .v2-hero-actions,
+.v2-tpl--framed .v2-hero-trust {
+  justify-content: center;
+}
+
+.v2-tpl--framed .v2-hero-trust {
+  display: none;
+}
+
+.v2-tpl-frame {
+  width: min(60rem, 100%);
+  margin: 0;
+}
+
+.v2-tpl-frame-box {
+  height: clamp(11rem, 30svh, 22rem);
+  overflow: hidden;
+  padding: 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 1.75rem;
+  background: rgba(255, 255, 255, 0.16);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 40px 80px -45px rgba(0, 0, 0, 0.6);
+}
+
+.v2-tpl-frame-media {
+  border-radius: 1.25rem;
+}
+
+.v2-tpl-frame figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  text-align: center;
+  color: rgba(244, 255, 242, 0.78);
+}
+
+/* Cinema: full-bleed background, copy in a bar along the bottom. */
+.v2-hero .v2-tpl--cinema {
+  align-content: end;
+  max-width: 86rem;
+}
+
+.v2-tpl-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: end;
+  gap: clamp(1.5rem, 4vw, 4rem);
+  width: 100%;
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(1.25rem, 3vw, 2.5rem);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 1.75rem;
+  background: rgba(10, 22, 14, 0.42);
+  -webkit-backdrop-filter: blur(18px) saturate(130%);
+  backdrop-filter: blur(18px) saturate(130%);
+}
+
+.v2-tpl-bar-head {
+  display: grid;
+  justify-items: start;
+}
+
+.v2-tpl-bar-side {
+  display: grid;
+  justify-items: start;
+}
+
+.v2-tpl-bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-family: var(--font-alt);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #d9f5d4;
+}
+
+.v2-tpl--cinema .v2-hero-kicker {
+  display: none;
+}
+
+.fe-v2 .v2-tpl--cinema .v2-hero-title {
+  font-size: clamp(2.3rem, 4.4vw, 4.2rem);
+  line-height: 1.02;
+}
+
+.v2-tpl--cinema .v2-hero-sub {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.v2-tpl--cinema .v2-hero-actions {
+  margin-top: 1.4rem;
+}
+
+.v2-tpl--cinema .v2-hero-trust {
+  margin-top: 1.2rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .v2-tpl-rise {
+    animation: v2-tpl-rise 1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+  }
+}
+
+@keyframes v2-tpl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.98);
+  }
+}
+
+@media (max-width: 900px) {
+  .v2-hero .v2-tpl--split,
+  .v2-hero .v2-tpl--spotlight {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Mirrored on phones: a short media banner above the copy. */
+  .v2-tpl--mirror .v2-tpl-card {
+    aspect-ratio: 16 / 8;
+  }
+
+  .v2-tpl-card {
+    aspect-ratio: 16 / 11;
+    max-height: none;
+  }
+
+  .v2-tpl--spotlight .v2-tpl-clip {
+    order: -1;
+    justify-self: end;
+  }
+
+  .v2-tpl-ed-row,
+  .v2-tpl-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v2-tpl-stats {
+    padding: 1.1rem 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.32);
+    border-left: 0;
+  }
+
+  .v2-tpl-stats dl {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .v2-hero .v2-tpl {
+    padding-top: clamp(6.5rem, 13vh, 8rem);
+  }
+
+  .fe-v2 .v2-tpl--split .v2-hero-title,
+  .fe-v2 .v2-tpl--framed .v2-hero-title,
+  .fe-v2 .v2-tpl--cinema .v2-hero-title {
+    font-size: clamp(2.3rem, 10vw, 3.1rem);
+  }
+
+  .fe-v2 .v2-tpl--spotlight .v2-hero-title,
+  .fe-v2 .v2-tpl--editorial .v2-hero-title {
+    font-size: clamp(2.6rem, 13vw, 3.8rem);
+  }
+
+  .v2-tpl .v2-hero-trust {
+    align-items: flex-start;
+  }
+
+  .v2-tpl--framed .v2-hero-actions {
+    align-items: stretch;
+  }
+
+  .v2-tpl-clip {
+    width: 11rem;
+  }
+
+  .v2-tpl-frame-box {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .v2-tpl-stat dt {
+    font-size: 1.5rem;
+  }
+
+  .v2-tpl-stat dd {
+    font-size: 0.74rem;
+  }
+
+  .v2-tpl-bar {
+    padding: 1.1rem;
+    border-radius: 1.25rem;
+  }
+}
+
+/* Framed and editorial keep the hero inside the first viewport. */
+.v2-tpl--framed .v2-hero-kicker,
+.v2-tpl--editorial .v2-hero-kicker {
+  margin-bottom: 1.1rem;
+}
+
+.v2-tpl--framed .v2-hero-sub {
+  margin-top: 1.1rem;
+}
+
+.v2-tpl--framed .v2-hero-actions {
+  margin-top: 1.4rem;
+}
+
+.v2-tpl--editorial .v2-hero-actions,
+.v2-tpl--editorial .v2-hero-trust {
+  margin-top: 1.4rem;
+}

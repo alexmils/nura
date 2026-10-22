@@ -193,7 +193,7 @@
   padding: 0.35rem 0;
   font-size: 1.05rem;
   line-height: 1.4;
-  color: color-mix(in srgb, #2a3020 42%, #948f4e);
+  color: color-mix(in srgb, #2a3020 42%, #5a5c2b);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -209,7 +209,7 @@
   width: 2.85rem;
   height: 2.85rem;
   border-radius: 999px;
-  background: #84b067;
+  background: #4a7234;
   color: #fff;
   flex-shrink: 0;
 }

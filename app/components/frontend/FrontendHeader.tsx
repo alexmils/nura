@@ -7,9 +7,11 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type MouseEvent,
 } from "react";
-import { ArrowRight, Menu, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { ArrowRight, Menu, UserRound, X } from "lucide-react";
 import { APP_BASE, LOGIN_PATH, appPath } from "@/lib/app-base";
 import { Avatar } from "@/app/components/Avatar";
 import { BrandLockup } from "@/app/components/BrandLockup";
@@ -74,6 +76,7 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void fetch("/api/auth/me")
@@ -91,7 +94,7 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
 
   useEffect(() => {
     const onScroll = () => {
-      const hero = document.querySelector<HTMLElement>(".fe-hero");
+      const hero = document.querySelector<HTMLElement>(".fe-hero, .v2-hero");
       if (overlay && hero) {
         const bottom = hero.getBoundingClientRect().bottom;
         // Hysteresis around the hero edge so fixed overlay does not flicker.
@@ -117,6 +120,51 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
     document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
+    };
+  }, [menuOpen]);
+
+  // The sheet is mobile-only; closing it on desktop also releases the scroll lock.
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 992px)");
+    const apply = () => {
+      if (mq.matches) setMenuOpen(false);
+    };
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // Full-screen menu: Escape closes it, Tab stays inside, focus returns to the trigger.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const menu = mobileMenuRef.current;
+    const trigger = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => menu?.querySelector<HTMLElement>("[data-autofocus]")?.focus());
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+      if (e.key !== "Tab" || !menu) return;
+      const items = Array.from(
+        menu.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter((el) => el.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      trigger?.focus?.();
     };
   }, [menuOpen]);
 
@@ -242,7 +290,7 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
                 key={id}
                 href={href}
                 className="frontend-header-link"
-                aria-current={isNavCurrent(id) ? "true" : undefined}
+                aria-current={isNavCurrent(id) ? "page" : undefined}
                 onClick={(e) => onSectionNav(e, id)}
               >
                 {linkLabel}
@@ -339,97 +387,116 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
           </div>
         </div>
 
-        {menuOpen ? (
-          <nav
-            id="frontend-mobile-nav"
-            className="frontend-header-mobile"
-            aria-label="Mobile site"
-          >
-            {user ? (
-              <div className="frontend-header-mobile-user">
-                <Avatar
-                  src={user.avatarUrl}
-                  alt={label}
-                  fallback={label}
-                  className="avatar-sm"
-                />
-                <div className="frontend-header-mobile-user-text">
-                  <p className="frontend-header-mobile-user-name">{label}</p>
-                  <p className="frontend-header-mobile-user-email">
-                    {user.email}
-                  </p>
-                </div>
-              </div>
-            ) : null}
-
-            {NAV_LINKS.map(({ href, label: linkLabel, id }) => (
-              <Link
-                key={id}
-                href={href}
-                className="frontend-header-mobile-link"
-                aria-current={isNavCurrent(id) ? "true" : undefined}
-                onClick={(e) => onSectionNav(e, id)}
+        {menuOpen && typeof document !== "undefined"
+          ? createPortal(
+              <div
+                ref={mobileMenuRef}
+                id="frontend-mobile-nav"
+                className="frontend-header-mobile"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Site menu"
+                data-lenis-prevent
               >
-                {linkLabel}
-              </Link>
-            ))}
-
-            <div className="frontend-header-mobile-actions">
-              {user === undefined ? (
-                <span className="frontend-nav-muted">…</span>
-              ) : user ? (
-                <>
+                <div className="frontend-header-mobile-top">
                   <Link
-                    href={dashboardHref}
-                    className="frontend-btn-ghost"
+                    href="/"
+                    className="frontend-header-mobile-brand"
+                    aria-label="Nura home"
                     onClick={closeMenu}
                   >
-                    Dashboard
+                    <BrandLockup tone="color" />
                   </Link>
-                  {!isAdmin ? (
-                    <>
-                      <Link
-                        href={appPath("/settings?tab=profile")}
-                        className="frontend-btn-ghost"
-                        onClick={closeMenu}
-                      >
-                        Settings
-                      </Link>
-                      <Link
-                        href={appPath("/billing")}
-                        className="frontend-btn-ghost"
-                        onClick={closeMenu}
-                      >
-                        Billing
-                      </Link>
-                    </>
-                  ) : null}
                   <button
                     type="button"
-                    className="frontend-btn-ghost frontend-header-mobile-signout"
-                    onClick={() => void logout()}
-                  >
-                    Sign out
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href={LOGIN_PATH}
-                    className="frontend-btn-ghost"
+                    data-autofocus
+                    className="frontend-header-mobile-close"
+                    aria-label="Close menu"
                     onClick={closeMenu}
                   >
-                    Sign in
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="frontend-header-mobile-scroll">
+                  <nav className="frontend-header-mobile-nav" aria-label="Mobile site">
+                    {NAV_LINKS.map(({ href, label: linkLabel, id }, index) => (
+                      <Link
+                        key={id}
+                        href={href}
+                        className="frontend-header-mobile-link"
+                        style={{ "--i": index } as CSSProperties}
+                        aria-current={isNavCurrent(id) ? "page" : undefined}
+                        onClick={(e) => onSectionNav(e, id)}
+                      >
+                        {linkLabel}
+                      </Link>
+                    ))}
+                  </nav>
+
+                  <Link
+                    href={user ? dashboardHref : appPath("/create-account")}
+                    className="frontend-header-mobile-cta"
+                    style={{ "--i": NAV_LINKS.length } as CSSProperties}
+                    onClick={closeMenu}
+                  >
+                    <span>{user ? "Open Nura" : "Get started"}</span>
+                    <ArrowRight size={18} aria-hidden />
                   </Link>
-                  <HeaderCta
-                    href={appPath("/create-account")}
-                    label="Get started"
-                  />
-                </>
-              )}
-            </div>
-          </nav>
-        ) : null}
+                </div>
+
+                <div className="frontend-header-mobile-foot">
+                  {user === undefined ? (
+                    <span className="frontend-header-mobile-foot-muted" aria-hidden>
+                      …
+                    </span>
+                  ) : user ? (
+                    <>
+                      <Link
+                        href={dashboardHref}
+                        className="frontend-header-mobile-foot-link"
+                        onClick={closeMenu}
+                      >
+                        <Avatar
+                          src={user.avatarUrl}
+                          alt={label}
+                          fallback={label}
+                          className="avatar-sm frontend-header-mobile-avatar"
+                        />
+                        <span>{label}</span>
+                      </Link>
+                      <button
+                        type="button"
+                        className="frontend-header-mobile-foot-link"
+                        onClick={() => void logout()}
+                      >
+                        Sign out
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={LOGIN_PATH}
+                        className="frontend-header-mobile-foot-link"
+                        onClick={closeMenu}
+                      >
+                        <UserRound size={18} aria-hidden />
+                        Sign in
+                      </Link>
+                      <Link
+                        href="/support"
+                        className="frontend-header-mobile-foot-link"
+                        onClick={closeMenu}
+                      >
+                        Support
+                      </Link>
+                    </>
+                  )}
+                </div>
+              </div>,
+              document.body
+            )
+          : null}
       </div>
     </header>
   );

@@ -1,15 +1,31 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { closeAllEditors, SectionEditorHost } from "@/app/components/frontend/section-editor/SectionEdit";
 import { AccessibilityWidget } from "@/app/components/AccessibilityWidget";
 import { HelpChatWidget } from "@/app/components/HelpChatWidget";
 import { FrontendBackToTop } from "@/app/components/frontend/FrontendBackToTop";
 import { FrontendFooter } from "@/app/components/frontend/FrontendFooter";
 import { FrontendHeader } from "@/app/components/frontend/FrontendHeader";
 import { FrontendPreloader } from "@/app/components/frontend/FrontendPreloader";
+import { PageChoreography } from "@/app/components/motion/PageChoreography";
 import "./frontend-fonts.css";
 import "./frontend-buttons.css";
 import "./frontend-help.css";
+import "../motion/interactions.css";
+import "./section-editor/section-editor.css";
+
+function EditorRouteReset() {
+  const pathname = usePathname();
+  const last = useRef(pathname);
+  useEffect(() => {
+    if (last.current === pathname) return;
+    last.current = pathname;
+    closeAllEditors();
+  }, [pathname]);
+  return null;
+}
 
 export function FrontendShellClient({
   children,
@@ -22,6 +38,8 @@ export function FrontendShellClient({
 }) {
   return (
     <div className={`frontend-home${wide ? " frontend-home-landing" : ""}`}>
+      <EditorRouteReset />
+      <SectionEditorHost />
       <FrontendPreloader />
       <FrontendHeader overlay={wide} />
       <main
@@ -29,6 +47,7 @@ export function FrontendShellClient({
       >
         {children}
       </main>
+      <PageChoreography />
       <FrontendFooter />
       <FrontendBackToTop />
       <HelpChatWidget showFab />
