@@ -4,6 +4,7 @@ import {
   ReviewInviteView,
   type ReviewInviteState,
 } from "@/app/components/ReviewInviteView";
+import { userHasSubmittedFeedback } from "@/lib/feedback-db";
 import { reviewInviteByToken } from "@/lib/review-invite";
 
 export const dynamic = "force-dynamic";
@@ -23,14 +24,22 @@ export default async function ReviewPage({
   const raw = Array.isArray(params.t) ? params.t[0] : params.t;
   const token = raw?.trim() ?? "";
   const invite = await reviewInviteByToken(token).catch(() => null);
+  // A fresh link can be minted after a review was already sent (the admin
+  // test send, or a re-send). The form must not appear again in that case.
+  const alreadySubmitted =
+    invite && !invite.usedAt
+      ? await userHasSubmittedFeedback(invite.userId).catch(() => false)
+      : false;
 
   const state: ReviewInviteState = !invite
     ? "invalid"
     : invite.usedAt
       ? "used"
-      : new Date(invite.expiresAt).getTime() <= Date.now()
-        ? "expired"
-        : "valid";
+      : alreadySubmitted
+        ? "submitted"
+        : new Date(invite.expiresAt).getTime() <= Date.now()
+          ? "expired"
+          : "valid";
 
   return (
     <div className="feedback-page">

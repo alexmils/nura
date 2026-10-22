@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { FeedbackSurvey } from "@/app/components/FeedbackSurvey";
 
-export type ReviewInviteState = "valid" | "used" | "expired" | "invalid";
+export type ReviewInviteState =
+  | "valid"
+  | "used"
+  | "submitted"
+  | "expired"
+  | "invalid";
 
 const CLOSED: Record<
   Exclude<ReviewInviteState, "valid">,
@@ -12,6 +17,10 @@ const CLOSED: Record<
   used: {
     title: "Thank you",
     body: "This review has already been sent. We have it, and we are grateful you took the time.",
+  },
+  submitted: {
+    title: "You already left a review",
+    body: "We have your rating on file. Thank you — one review per account is enough.",
   },
   expired: {
     title: "This link has expired",
@@ -61,6 +70,9 @@ export function ReviewInviteView({
         if (!res.ok) {
           return { ok: false, error: data.error ?? "Could not send. Try again." };
         }
+        // A review is a one-time act: take the member back to the site rather
+        // than leaving them on a form they can no longer submit.
+        window.location.assign("/");
         return { ok: true };
       }}
     />

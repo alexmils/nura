@@ -67,7 +67,8 @@ function FeedbackPageInner() {
       if (!res.ok) {
         return { ok: false, error: data.error };
       }
-      await load();
+      // Done is done: send them back to the app home instead of a dead form.
+      window.location.assign(APP_BASE);
       return { ok: true };
     },
     [fromEmail, fromReview, load]
