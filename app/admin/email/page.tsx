@@ -6,6 +6,10 @@ import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import type { EmailEvent } from "@/lib/email-events";
 import { EMAIL_TEMPLATE_AUDIENCE, EMAIL_TEMPLATE_IDS, emailTemplateLabel, keepEmailTemplateId, type EmailTemplateId } from "@/lib/email/template-labels";
+import {
+  EMAIL_TEMPLATE_GROUP,
+  EMAIL_TEMPLATE_GROUP_ORDER,
+} from "@/lib/email/template-meta";
 import type { EmailAdminView } from "@/lib/email-admin-settings";
 import type { EmailAdminStatus } from "@/lib/email-admin-settings";
 import { fetchJson } from "@/lib/fetch-json";
@@ -16,7 +20,7 @@ type Tab = (typeof TABS)[number];
 const TAB_ITEMS = [
   { id: "delivery", label: "Delivery" },
   { id: "send", label: "Send" },
-  { id: "templates", label: "Templates" },
+  { id: "templates", label: "Automation" },
   { id: "admin", label: "Admin" },
   { id: "log", label: "Log" },
 ] as const;
@@ -579,9 +583,7 @@ function AdminEmailPageInner() {
           <section className="admin-panel admin-templates-panel">
             <div className="admin-panel-head-row">
               <h2 className="admin-panel-title">
-                {tab === "admin"
-                  ? "Mail to the platform admin"
-                  : "Template preview & editor"}
+                {tab === "admin" ? "Mail to the platform admin" : "Automation"}
               </h2>
               {tab === "admin" ? (
                 <button
@@ -594,31 +596,71 @@ function AdminEmailPageInner() {
                 </button>
               ) : null}
             </div>
-            {tab === "admin" ? (
-              <p className="admin-panel-sub">
-                Sends the open mail to {ADMIN_TEST_TO}.
-              </p>
-            ) : null}
+            <p className="admin-panel-sub">
+              {tab === "admin"
+                ? `Sends the open mail to ${ADMIN_TEST_TO}.`
+                : "Every email Nura sends on its own, and what each one says. The preview is the actual email, rendered by the same code that sends it."}
+            </p>
             <div className="admin-templates-layout">
               <nav
                 className="admin-templates-nav"
                 aria-label={tab === "admin" ? "Admin emails" : "Customer emails"}
               >
-                {(tab === "admin" ? ADMIN_TEMPLATE_IDS : CUSTOMER_TEMPLATE_IDS).map(
-                  (id) => (
-                    <button
-                      key={id}
-                      type="button"
-                      className={`admin-templates-nav-item${
-                        selectedTemplate === id ? " is-active" : ""
-                      }`}
-                      aria-current={selectedTemplate === id ? "true" : undefined}
-                      onClick={() => setSelectedTemplate(id)}
-                    >
-                      {emailTemplateLabel(id)}
-                    </button>
-                  )
-                )}
+                {EMAIL_TEMPLATE_GROUP_ORDER.map((group) => {
+                  const items = (
+                    tab === "admin" ? ADMIN_TEMPLATE_IDS : CUSTOMER_TEMPLATE_IDS
+                  ).filter((id) => EMAIL_TEMPLATE_GROUP[id] === group);
+                  if (items.length === 0) return null;
+
+                  return (
+                    <div className="admin-templates-nav-group" key={group}>
+                      <p className="admin-templates-nav-heading">{group}</p>
+                      {items.map((id) => {
+                        const template = templates.find((t) => t.id === id);
+                        const off = template ? !template.enabled : false;
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            className={`admin-templates-nav-item${
+                              selectedTemplate === id ? " is-active" : ""
+                            }`}
+                            aria-current={
+                              selectedTemplate === id ? "true" : undefined
+                            }
+                            onClick={() => setSelectedTemplate(id)}
+                          >
+                            <span
+                              aria-hidden
+                              className={`admin-templates-dot${
+                                off ? " is-off" : ""
+                              }`}
+                            />
+                            <span className="admin-templates-name">
+                              {emailTemplateLabel(id)}
+                            </span>
+                            {template?.scheduled ? (
+                              <span
+                                className="admin-templates-tag"
+                                title="Sent by cron after this delay"
+                              >
+                                {template.delayHours ?? 0}h
+                              </span>
+                            ) : null}
+                            {template?.isCustom ? (
+                              <span
+                                className="admin-templates-tag"
+                                title="Has saved changes"
+                              >
+                                Edited
+                              </span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </nav>
               <div className="admin-templates-main">
                 {templates.find((t) => t.id === selectedTemplate) && (

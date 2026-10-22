@@ -2,6 +2,14 @@
 
 import { useEffect, useState } from "react";
 import type { EmailTemplateId } from "@/lib/email/templates";
+import {
+  EMAIL_TEMPLATE_AUDIENCE,
+  emailTemplateLabel,
+} from "@/lib/email/template-labels";
+import {
+  EMAIL_TEMPLATE_DESCRIPTION,
+  EMAIL_TEMPLATE_PLACEHOLDERS,
+} from "@/lib/email/template-meta";
 import { fetchJson } from "@/lib/fetch-json";
 
 const PREVIEW_DEBOUNCE_MS = 120;
@@ -42,6 +50,7 @@ export function TemplateEditor({
   );
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [previewMode, setPreviewMode] = useState<"desktop" | "phone">("desktop");
 
   useEffect(() => {
     setSubject(template.subject);
@@ -94,6 +103,33 @@ export function TemplateEditor({
   return (
     <div className="admin-template-editor-wrap">
       <form className="admin-template-editor" onSubmit={(e) => void save(e)}>
+        <div className="admin-template-head">
+          <div className="admin-template-head-copy">
+            <h3 className="admin-template-title">
+              {emailTemplateLabel(template.id)}
+            </h3>
+            <p className="admin-template-audience">
+              Goes to{" "}
+              {EMAIL_TEMPLATE_AUDIENCE[template.id] === "admin"
+                ? "the platform admin"
+                : "the member"}
+            </p>
+            <p className="admin-template-desc">
+              {EMAIL_TEMPLATE_DESCRIPTION[template.id]}
+            </p>
+          </div>
+          <span
+            className={`admin-template-state${template.enabled ? "" : " is-off"}`}
+          >
+            {template.scheduled
+              ? template.enabled
+                ? "Scheduled"
+                : "Paused"
+              : template.isCustom
+                ? "Edited"
+                : "Default"}
+          </span>
+        </div>
         {template.scheduled ? (
           <div className="admin-field-label">
             <span>Scheduled send</span>
@@ -150,6 +186,17 @@ export function TemplateEditor({
             rows={3}
           />
         </label>
+        <div className="admin-template-tokens">
+          <p className="admin-template-tokens-title">Placeholders</p>
+          <ul>
+            {EMAIL_TEMPLATE_PLACEHOLDERS[template.id].map((token) => (
+              <li key={token.token}>
+                <code>{`{{${token.token}}}`}</code>
+                <span>{token.description}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
         <button type="submit" disabled={busy} className="btn-primary w-fit">
           {busy ? "Saving…" : template.isCustom ? "Update template" : "Save custom version"}
         </button>
@@ -160,14 +207,37 @@ export function TemplateEditor({
         role="region"
         aria-label="Email preview"
       >
-        <p className="admin-email-preview-subject">
-          <span className="admin-email-preview-label">Subject</span>
-          {subject || "(empty)"}
-        </p>
+        <div className="admin-preview-bar">
+          <p className="admin-email-preview-subject">
+            <span className="admin-email-preview-label">Subject</span>
+            {subject || "(empty)"}
+          </p>
+          <div
+            className="admin-preview-modes"
+            role="group"
+            aria-label="Preview width"
+          >
+            {(["desktop", "phone"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`admin-preview-mode${
+                  previewMode === mode ? " is-active" : ""
+                }`}
+                aria-pressed={previewMode === mode}
+                onClick={() => setPreviewMode(mode)}
+              >
+                {mode === "desktop" ? "Desktop" : "Phone"}
+              </button>
+            ))}
+          </div>
+        </div>
         {/* sandbox="" blocks scripts — bare srcDoc is same-origin XSS */}
         <iframe
           title="Email preview"
-          className="admin-email-preview"
+          className={`admin-email-preview${
+            previewMode === "phone" ? " is-phone" : ""
+          }`}
           srcDoc={previewHtml}
           sandbox=""
           referrerPolicy="no-referrer"
