@@ -105,6 +105,21 @@ export function TemplateEditor({
 
   const plainPreview = (text || html.replace(/<[^>]+>/g, " ")).trim();
 
+  /**
+   * The iframe must receive wheel events or its own scrollbar is dead, so
+   * `pointer-events` cannot be off. Same-origin (without scripts) lets us
+   * cancel link clicks instead, which keeps the preview from navigating away
+   * to the real site when someone clicks the button to see how it looks.
+   */
+  const onPreviewLoad = (event: React.SyntheticEvent<HTMLIFrameElement>) => {
+    const doc = event.currentTarget.contentDocument;
+    if (!doc) return;
+    doc.addEventListener("click", (click) => {
+      const target = click.target as Element | null;
+      if (target?.closest("a")) click.preventDefault();
+    });
+  };
+
   return (
     <>
       <form
@@ -251,15 +266,17 @@ export function TemplateEditor({
             ))}
           </div>
         </div>
-        {/* sandbox="" blocks scripts — bare srcDoc is same-origin XSS */}
+        {/* No allow-scripts; same-origin only so the parent can cancel link
+            clicks. Scripts in the HTML still cannot run. */}
         <iframe
           title="Email preview"
           className={`admin-email-preview${
             previewMode === "phone" ? " is-phone" : ""
           }`}
           srcDoc={previewHtml}
-          sandbox=""
+          sandbox="allow-same-origin"
           referrerPolicy="no-referrer"
+          onLoad={onPreviewLoad}
         />
         {plainPreview ? (
           <pre className="admin-email-preview-plain">{plainPreview}</pre>

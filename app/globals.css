@@ -10248,6 +10248,8 @@ a.admin-panel-title-link:hover {
   flex: 1 1 auto;
   height: auto;
   min-height: 24rem;
+  /* The iframe owns its scrollbar; pointer-events:none would freeze it. */
+  pointer-events: auto;
 }
 
 .automation-preview-head {
