@@ -42,8 +42,8 @@ export function TemplateEditor({
   const [html, setHtml] = useState(template.html);
   const [text, setText] = useState(template.text);
   const [enabled, setEnabled] = useState(template.enabled);
-  const [delayHours, setDelayHours] = useState<number | "">(
-    template.delayHours ?? ""
+  const [delayDays, setDelayDays] = useState<number | "">(
+    template.delayHours == null ? "" : Math.round(template.delayHours / 24)
   );
   const [previewHtml, setPreviewHtml] = useState(() =>
     previewLogoHtml(template.html)
@@ -57,7 +57,9 @@ export function TemplateEditor({
     setHtml(template.html);
     setText(template.text);
     setEnabled(template.enabled);
-    setDelayHours(template.delayHours ?? "");
+    setDelayDays(
+      template.delayHours == null ? "" : Math.round(template.delayHours / 24)
+    );
     setPreviewHtml(previewLogoHtml(template.html));
   }, [template]);
 
@@ -85,7 +87,8 @@ export function TemplateEditor({
           ...(template.scheduled
             ? {
                 enabled,
-                delayHours: delayHours === "" ? null : Number(delayHours),
+                delayHours:
+                  delayDays === "" ? null : Math.round(Number(delayDays) * 24),
               }
             : {}),
         }),
@@ -101,8 +104,8 @@ export function TemplateEditor({
   const plainPreview = (text || html.replace(/<[^>]+>/g, " ")).trim();
 
   return (
-    <div className="admin-template-editor-wrap">
-      <form className="admin-template-editor" onSubmit={(e) => void save(e)}>
+    <>
+      <form className="automation-editor" onSubmit={(e) => void save(e)}>
         <div className="admin-template-head">
           <div className="admin-template-head-copy">
             <h3 className="admin-template-title">
@@ -142,20 +145,22 @@ export function TemplateEditor({
               Sending is on
             </label>
             <label>
-              Send after (hours)
+              Send after (days)
               <input
                 type="number"
                 min={0}
-                max={8760}
-                value={delayHours}
+                max={365}
+                step={1}
+                value={delayDays}
                 onChange={(e) =>
-                  setDelayHours(e.target.value === "" ? "" : Number(e.target.value))
+                  setDelayDays(e.target.value === "" ? "" : Number(e.target.value))
                 }
                 className="field"
               />
             </label>
             <p className="admin-field-hint">
-              Counted from the first app use after the trial date. 72 is three days.
+              Counted from the first app use after the trial date. The default is
+              3 days.
             </p>
           </div>
         ) : null}
@@ -202,16 +207,14 @@ export function TemplateEditor({
         </button>
         {err && <p className="admin-invite-msg">{err}</p>}
       </form>
-      <div
-        className="admin-email-preview-chrome"
-        role="region"
-        aria-label="Email preview"
-      >
-        <div className="admin-preview-bar">
-          <p className="admin-email-preview-subject">
-            <span className="admin-email-preview-label">Subject</span>
-            {subject || "(empty)"}
-          </p>
+      <aside className="automation-preview" aria-label="Email preview">
+        <div className="automation-preview-head">
+          <div className="automation-preview-copy">
+            <p className="automation-preview-label">Preview</p>
+            <p className="automation-preview-subject">
+              {subject || "(empty subject)"}
+            </p>
+          </div>
           <div
             className="admin-preview-modes"
             role="group"
@@ -245,8 +248,8 @@ export function TemplateEditor({
         {plainPreview ? (
           <pre className="admin-email-preview-plain">{plainPreview}</pre>
         ) : null}
-      </div>
-    </div>
+      </aside>
+    </>
   );
 }
 

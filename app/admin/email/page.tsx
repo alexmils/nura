@@ -601,9 +601,9 @@ function AdminEmailPageInner() {
                 ? `Sends the open mail to ${ADMIN_TEST_TO}.`
                 : "Every email Nura sends on its own, and what each one says. The preview is the actual email, rendered by the same code that sends it."}
             </p>
-            <div className="admin-templates-layout">
+            <div className="automation-grid">
               <nav
-                className="admin-templates-nav"
+                className="automation-nav"
                 aria-label={tab === "admin" ? "Admin emails" : "Customer emails"}
               >
                 {EMAIL_TEMPLATE_GROUP_ORDER.map((group) => {
@@ -644,7 +644,7 @@ function AdminEmailPageInner() {
                                 className="admin-templates-tag"
                                 title="Sent by cron after this delay"
                               >
-                                {template.delayHours ?? 0}h
+                                {Math.round((template.delayHours ?? 0) / 24)}d
                               </span>
                             ) : null}
                             {template?.isCustom ? (
@@ -662,20 +662,18 @@ function AdminEmailPageInner() {
                   );
                 })}
               </nav>
-              <div className="admin-templates-main">
-                {templates.find((t) => t.id === selectedTemplate) && (
-                  <TemplateEditor
-                    key={selectedTemplate}
-                    template={
-                      templates.find((t) => t.id === selectedTemplate)!
-                    }
-                    onSaved={async () => {
-                      await load();
-                      setMsg("Template saved.");
-                    }}
-                  />
-                )}
-              </div>
+              {templates.find((t) => t.id === selectedTemplate) ? (
+                <TemplateEditor
+                  key={selectedTemplate}
+                  template={templates.find((t) => t.id === selectedTemplate)!}
+                  onSaved={async () => {
+                    await load();
+                    setMsg("Template saved.");
+                  }}
+                />
+              ) : (
+                <p className="automation-empty">Loading templates…</p>
+              )}
             </div>
           </section>
         )}

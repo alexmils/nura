@@ -10145,6 +10145,121 @@ a.admin-panel-title-link:hover {
   color: var(--text-muted);
 }
 
+.automation-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 13rem) minmax(18rem, 26rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.automation-nav,
+.automation-editor,
+.automation-preview {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+}
+
+.automation-nav {
+  padding: 0.4rem;
+  overflow-y: auto;
+}
+
+.automation-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.automation-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.automation-preview .admin-email-preview {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 24rem;
+}
+
+.automation-preview-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.automation-preview-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.automation-preview-label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.automation-preview-subject {
+  margin: 0.15rem 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.automation-empty {
+  grid-column: 2 / -1;
+  margin: 0;
+  padding: 2rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 1200px) {
+  .automation-grid {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+
+  .automation-preview {
+    grid-column: 1 / -1;
+    max-height: 42rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .automation-grid {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+
+  .automation-nav {
+    max-height: 18rem;
+  }
+
+  .automation-empty {
+    grid-column: 1;
+  }
+}
+
 .admin-templates-nav-item:hover {
   background: var(--bg-muted);
   color: var(--text);
