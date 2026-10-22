@@ -115,54 +115,81 @@ function NavItemLink({
   search: string;
 }) {
   const children = filterChildren(item.children, isPlatformAdmin);
+  const hasChildren = children.length > 0;
   const parentActive = adminPathMatches(pathname, item.href, item.exact);
   const defaultTab = ADMIN_DEFAULT_TAB_BY_PATH[item.href] ?? "";
   const childActive = children.some((child) =>
     adminChildIsActive(pathname, search, item.href, child, defaultTab)
   );
-  const showChildren = children.length > 0 && (parentActive || childActive);
-  const groupActive = parentActive || childActive;
+  const routeOpen = parentActive || childActive;
+  const [manualOpen, setManualOpen] = useState<boolean | null>(null);
+
+  // A navigation (including a child link) hands control back to the route.
+  useEffect(() => {
+    setManualOpen(null);
+  }, [pathname, search]);
+
+  const open = manualOpen ?? routeOpen;
   const Icon = NAV_ICONS[item.icon];
-  const leafActive = parentActive && children.length === 0;
+  const leafActive = parentActive && !hasChildren;
   const badges = item.badges ?? (item.badge ? [item.badge] : []);
+  const submenuId = `admin-nav-sub-${item.href.replace(/[^a-z0-9]+/gi, "-")}`;
+
+  const content = (
+    <>
+      <span className="admin-nav-item-main">
+        <Icon size={20} strokeWidth={1.75} className="admin-nav-icon" />
+        <span className="admin-nav-label">{item.label}</span>
+        {badges.map((kind) => {
+          const count = kind === "help" ? helpUnread : feedbackUnread;
+          if (count <= 0) return null;
+          return (
+            <span
+              className={`admin-nav-badge${
+                kind === "feedback" ? " admin-nav-badge-feedback" : ""
+              }`}
+              key={kind}
+            >
+              {count}
+            </span>
+          );
+        })}
+      </span>
+      {hasChildren && (
+        <ChevronDown
+          size={16}
+          strokeWidth={2}
+          className={`admin-nav-chevron ${open ? "admin-nav-chevron-open" : ""}`}
+          aria-hidden
+        />
+      )}
+    </>
+  );
 
   return (
     <div className="admin-nav-group">
-      <Link
-        href={item.href}
-        className={`admin-nav-item ${
-          leafActive ? "admin-nav-item-active" : ""
-        } ${groupActive && children.length > 0 ? "admin-nav-item-open" : ""}`}
-      >
-        <span className="admin-nav-item-main">
-          <Icon size={20} strokeWidth={1.75} className="admin-nav-icon" />
-          <span className="admin-nav-label">{item.label}</span>
-          {badges.map((kind) => {
-            const count = kind === "help" ? helpUnread : feedbackUnread;
-            if (count <= 0) return null;
-            return (
-              <span
-                className={`admin-nav-badge${
-                  kind === "feedback" ? " admin-nav-badge-feedback" : ""
-                }`}
-                key={kind}
-              >
-                {count}
-              </span>
-            );
-          })}
-        </span>
-        {children.length > 0 && (
-          <ChevronDown
-            size={16}
-            strokeWidth={2}
-            className={`admin-nav-chevron ${showChildren ? "admin-nav-chevron-open" : ""}`}
-            aria-hidden
-          />
-        )}
-      </Link>
-      {showChildren && (
-        <div className="admin-nav-sub">
+      {hasChildren ? (
+        <button
+          type="button"
+          className={`admin-nav-item ${open ? "admin-nav-item-open" : ""}`}
+          aria-expanded={open}
+          aria-controls={submenuId}
+          onClick={() => setManualOpen(!open)}
+        >
+          {content}
+        </button>
+      ) : (
+        <Link
+          href={item.href}
+          className={`admin-nav-item${
+            leafActive ? " admin-nav-item-active" : ""
+          }`}
+        >
+          {content}
+        </Link>
+      )}
+      {hasChildren && open && (
+        <div className="admin-nav-sub" id={submenuId}>
           {children.map((child) => {
             const active = adminChildIsActive(
               pathname,
