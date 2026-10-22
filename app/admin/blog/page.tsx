@@ -15,6 +15,9 @@ export default function AdminBlogPage() {
   const [posts, setPosts] = useState<BlogPostRecord[]>([]);
   const [categories, setCategories] = useState<BlogCategoryRecord[]>([]);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<
+    "all" | "published" | "draft" | "uncategorised"
+  >("all");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
@@ -77,19 +80,25 @@ export default function AdminBlogPage() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return posts;
-    return posts.filter((post) =>
-      [post.title, post.slug, ...(post.categories ?? [])]
+    return posts.filter((post) => {
+      if (filter === "published" && !post.published) return false;
+      if (filter === "draft" && post.published) return false;
+      if (filter === "uncategorised" && (post.categories ?? []).length > 0) {
+        return false;
+      }
+      if (!q) return true;
+      return [post.title, post.slug, ...(post.categories ?? [])]
         .join(" ")
         .toLowerCase()
-        .includes(q)
-    );
-  }, [posts, query]);
+        .includes(q);
+    });
+  }, [posts, query, filter]);
 
   const uncategorised = posts.filter(
     (post) => (post.categories ?? []).length === 0
   ).length;
   const publishedCount = posts.filter((post) => post.published).length;
+  const draftCount = posts.length - publishedCount;
 
   return (
     <div className="admin-page">
@@ -126,21 +135,27 @@ export default function AdminBlogPage() {
             )}
           </div>
 
-          <div className="admin-content-stats">
-            <span>
-              <strong>{posts.length}</strong> posts
-            </span>
-            <span>
-              <strong>{publishedCount}</strong> published
-            </span>
-            <span>
-              <strong>{posts.length - publishedCount}</strong> drafts
-            </span>
-            {uncategorised > 0 ? (
-              <span className="admin-content-warn">
-                <strong>{uncategorised}</strong> with no category
-              </span>
-            ) : null}
+          <div className="admin-filter-pills">
+            {(
+              [
+                ["all", "All", posts.length],
+                ["published", "Published", publishedCount],
+                ["draft", "Drafts", draftCount],
+                ["uncategorised", "No category", uncategorised],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`admin-filter-pill ${
+                  filter === key ? "is-active" : ""
+                } ${key === "uncategorised" && count > 0 ? "is-warn" : ""}`}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {label} <strong>{count}</strong>
+              </button>
+            ))}
           </div>
 
           <ul className="admin-content-list">

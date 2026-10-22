@@ -11,6 +11,7 @@ export default function AdminResourcesPage() {
   const router = useRouter();
   const [items, setItems] = useState<ResourcePost[]>([]);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "visible" | "draft">("all");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
@@ -51,11 +52,16 @@ export default function AdminResourcesPage() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) =>
-      [item.title, item.slug, item.kind].join(" ").toLowerCase().includes(q)
-    );
-  }, [items, query]);
+    return items.filter((item) => {
+      if (filter === "visible" && !item.enabled) return false;
+      if (filter === "draft" && item.enabled) return false;
+      if (!q) return true;
+      return [item.title, item.slug, item.kind]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [items, query, filter]);
 
   const drafts = items.filter((item) => !item.enabled).length;
 
@@ -94,16 +100,26 @@ export default function AdminResourcesPage() {
             )}
           </div>
 
-          <div className="admin-content-stats">
-            <span>
-              <strong>{items.length}</strong> resources
-            </span>
-            <span>
-              <strong>{items.length - drafts}</strong> visible
-            </span>
-            <span>
-              <strong>{drafts}</strong> drafts
-            </span>
+          <div className="admin-filter-pills">
+            {(
+              [
+                ["all", "All", items.length],
+                ["visible", "Visible", items.length - drafts],
+                ["draft", "Drafts", drafts],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`admin-filter-pill ${
+                  filter === key ? "is-active" : ""
+                }`}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {label} <strong>{count}</strong>
+              </button>
+            ))}
           </div>
 
           <ul className="admin-content-list">

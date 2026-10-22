@@ -14160,6 +14160,48 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   color: var(--destructive);
 }
 
+.admin-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.admin-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.admin-filter-pill strong {
+  color: var(--text);
+}
+
+.admin-filter-pill:hover {
+  border-color: var(--accent);
+}
+
+.admin-filter-pill.is-active {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-filter-pill.is-active strong {
+  color: var(--accent);
+}
+
+.admin-filter-pill.is-warn strong {
+  color: var(--destructive);
+}
+
 .admin-content-list {
   display: grid;
   gap: 0.5rem;
