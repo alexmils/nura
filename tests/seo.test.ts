@@ -405,7 +405,10 @@ describe("public page titles and descriptions", () => {
       byId.emdr?.title,
       "AI EMDR App — Guided Bilateral Stimulation Online"
     );
-    assert.equal(byId.learn?.title, "Learn EMDR — Guides by Topic, Safety & Practice");
+    assert.equal(
+      byId.learn?.title,
+      "EMDR Guides: Understand, Practice, Stay Safe"
+    );
     assert.equal(byId.blog?.title, "EMDR Articles — Guides, Visual Sets & Safety");
     assert.equal(byId.terms?.title, "Terms of service");
     assert.notEqual(byId.about?.description, BRAND_DESCRIPTION);

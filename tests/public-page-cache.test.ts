@@ -20,7 +20,7 @@ const PUBLIC_PAGE_FILES = [
   "app/emdr/page.tsx",
   "app/learn/page.tsx",
   "app/knowledge/page.tsx",
-  "app/blog/page.tsx",
+  // /blog redirects to /learn, so it no longer exports an ISR window.
   "app/pricing/page.tsx",
   "app/faq/page.tsx",
   "app/support/page.tsx",

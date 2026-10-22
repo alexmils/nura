@@ -157,6 +157,8 @@ async function runBlogSchema(): Promise<void> {
     );
   }
 
+  await migrateGuidedVsFreeSlug(db);
+
   // Per-row and idempotent: a crashed or concurrent seed repairs itself on the
   // next request instead of freezing a truncated corpus forever.
   for (const article of CLUSTER_ARTICLES) {
@@ -168,6 +170,39 @@ async function runBlogSchema(): Promise<void> {
   }
 
   await backfillSeedCategoryOrder(db);
+}
+
+/**
+ * The guide used to ship as `guided-vs-free-mode`. Rename the existing row in
+ * place so its id, categories, and edit history survive, and so the renamed
+ * seed does not insert a second copy. Related links in other posts move too.
+ */
+async function migrateGuidedVsFreeSlug(
+  db: ReturnType<typeof getPool>
+): Promise<void> {
+  const { rows: applied } = await db.query<{ id: string }>(
+    `SELECT id FROM schema_migrations WHERE id = 'blog_slug_ai_agent_guided_v1'`
+  );
+  if (applied.length) return;
+
+  await db.query(
+    `UPDATE blog_posts
+        SET slug = 'ai-agent-guided-vs-self-guided',
+            updated_at = NOW()
+      WHERE slug = 'guided-vs-free-mode'
+        AND NOT EXISTS (
+          SELECT 1 FROM blog_posts WHERE slug = 'ai-agent-guided-vs-self-guided'
+        )`
+  );
+  await db.query(
+    `UPDATE blog_posts
+        SET related = replace(related::text, '"guided-vs-free-mode"', '"ai-agent-guided-vs-self-guided"')::jsonb
+      WHERE related::text LIKE '%guided-vs-free-mode%'`
+  );
+  await db.query(
+    `INSERT INTO schema_migrations (id) VALUES ('blog_slug_ai_agent_guided_v1')
+     ON CONFLICT DO NOTHING`
+  );
 }
 
 async function findPostIdBySlug(

@@ -20,6 +20,7 @@ const EXPECTED = [
   "ptsd",
   "anxiety",
   "panic",
+  "dissociation",
   "grief",
   "phobias",
   "childhood-memories",
@@ -27,15 +28,16 @@ const EXPECTED = [
 ] as const;
 
 describe("blog categories", () => {
-  it("ships the eight clinical themes with unique slugs", () => {
+  it("ships the nine clinical themes with unique slugs", () => {
     assert.deepEqual([...BLOG_CATEGORY_SLUGS], [...EXPECTED]);
-    assert.equal(BLOG_CATEGORIES.length, 8);
+    assert.equal(BLOG_CATEGORIES.length, 9);
     const names = BLOG_CATEGORIES.map((c) => c.name);
     assert.deepEqual(names, [
       "Trauma",
       "PTSD",
       "Anxiety",
       "Panic",
+      "Dissociation",
       "Grief",
       "Phobias",
       "Childhood memories",
@@ -86,10 +88,10 @@ describe("blog categories", () => {
     }));
     const visible = categoriesWithPosts(fromSeed);
     assert.ok(visible.every((c) => c.postCount > 0));
-    assert.equal(visible.length, 4);
+    assert.equal(visible.length, 5);
     assert.deepEqual(
       visible.map((c) => c.slug),
-      ["trauma", "ptsd", "anxiety", "panic"]
+      ["trauma", "ptsd", "anxiety", "panic", "dissociation"]
     );
     // Empty themes stay available to admin/MCP, just not on the public page.
     assert.ok(fromSeed.some((c) => c.slug === "grief" && c.postCount === 0));

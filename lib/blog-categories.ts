@@ -44,6 +44,13 @@ export const BLOG_CATEGORIES = [
     sortOrder: 40,
   },
   {
+    slug: "dissociation",
+    name: "Dissociation",
+    description:
+      "Feeling unreal, far away, or outside your body, and how to pace a set when that happens.",
+    sortOrder: 45,
+  },
+  {
     slug: "grief",
     name: "Grief",
     description:
