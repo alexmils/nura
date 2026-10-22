@@ -30,7 +30,8 @@ export function SupportPageView() {
       <h2>Also useful</h2>
       <ul>
         <li>
-          <Link href="/faq">FAQ</Link> — sessions, Free sets, trial, privacy
+          <Link href="/faq">FAQ</Link> — sessions, Self-guided sets, trial,
+          privacy
         </li>
         <li>
           <Link href="/pricing">Pricing</Link> — weekly, monthly, and yearly

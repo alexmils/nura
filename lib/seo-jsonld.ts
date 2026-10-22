@@ -73,7 +73,7 @@ export function organizationJsonLd(origin: string) {
     url: `${base}/`,
     email: BRAND_SUPPORT_EMAIL,
     description:
-      "Guided EMDR practice and visual sets in a calm online app.",
+      "AI agent-guided EMDR practice and visual sets in a calm online app.",
   };
 }
 

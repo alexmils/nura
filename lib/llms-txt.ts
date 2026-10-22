@@ -35,7 +35,7 @@ Do not fetch /app, /admin, /api, or /health — those are the signed-in product 
 ## Public pages
 
 - [Home](${base}/): What ${BRAND_SPOKEN} is and how a session works
-- [EMDR therapy online](${base}/emdr): How guided EMDR looks in the app
+- [EMDR therapy online](${base}/emdr): How AI agent-guided EMDR looks in the app
 - [About](${base}/about): Who builds ${BRAND_SPOKEN} (${legalEntityDisplayName()})
 - [How we write](${base}/editorial): How public EMDR guides are written
 - [Learn](${base}/learn): Help hub — search guides; paths for understand, practice, and safety

@@ -123,7 +123,7 @@ export const RETIRED_SEO_DESCRIPTIONS = new Set([
 ]);
 
 /** Bump when default title/description copy changes so `unstable_cache` cannot keep the last resolve. */
-export const SEO_COPY_REVISION = "p0-seo-round4-learn-blog-1";
+export const SEO_COPY_REVISION = "p0-seo-round5-agent-guided-copy-1";
 
 export function documentTitle(pageTitle: string): string {
   const suffix = ` — ${BRAND_SPOKEN}`;
@@ -222,7 +222,7 @@ const BASE_SITE_SEO_DEFAULTS: PageDefault[] = [
     label: "FAQ",
     title: "EMDR App FAQ — Common Questions",
     description:
-      "Answers to the questions people ask before starting: is guided EMDR safe, how long a session takes, what happens if you feel worse, and how billing works.",
+      "Answers to the questions people ask before starting: is AI agent-guided EMDR safe, how long a session takes, what happens if you feel worse, and how billing works.",
   },
   {
     id: "support",

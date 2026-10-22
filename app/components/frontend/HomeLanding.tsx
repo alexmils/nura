@@ -506,9 +506,9 @@ export function HomeLanding({
                   </div>
                   <div className="fe-hero-right">
                     <p className="fe-hero-description">
-                      Visual sets, optional voice, and readable resources —
-                      structured support on your schedule. Self-help, not a
-                      licensed therapist.
+                      AI agent-guided sessions with visual sets, optional voice,
+                      grounding, and short guides for the moments between
+                      sessions.
                     </p>
                     <div className="fe-hero-card-row">
                       <div className="fe-hero-inner-card">

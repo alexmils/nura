@@ -6,9 +6,9 @@ export function FaqPageView() {
     <article className="frontend-legal frontend-legal--long">
       <h1>EMDR App FAQ</h1>
       <p>
-        Short answers about sessions, Free sets, the trial, and when to get
-        help. For plans, see <Link href="/pricing">Pricing</Link>. For how to
-        reach us, see <Link href="/support">Support</Link>.
+        Short answers about sessions, Self-guided sets, the trial, and when to
+        get help. For plans, see <Link href="/pricing">Pricing</Link>. For how
+        to reach us, see <Link href="/support">Support</Link>.
       </p>
 
       <dl className="frontend-legal-faq">

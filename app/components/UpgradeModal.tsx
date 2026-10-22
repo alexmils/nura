@@ -281,7 +281,7 @@ export function UpgradeModal({
                 aria-hidden
                 strokeWidth={2.25}
               />
-              <span>Unlimited Free sets (no agent)</span>
+              <span>Unlimited Self-guided sets (no agent)</span>
             </li>
             <li>
               <Check
