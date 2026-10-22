@@ -6,7 +6,10 @@ import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { formatDateTime } from "@/lib/admin-format";
 import { fetchJson } from "@/lib/fetch-json";
 import type { LoginAttemptRow, LoginLockRow } from "@/lib/login-guard";
-import { slugError } from "@/lib/login-guard-policy";
+import {
+  GUARD_SLUG_MIN_LENGTH,
+  slugError,
+} from "@/lib/login-guard-policy";
 
 const TABS = [
   { id: "settings", label: "Settings" },
@@ -228,8 +231,9 @@ function AdminSecurityPageInner() {
             </label>
             <p className="admin-panel-sub">
               Type your own address. For example, <code className="admin-code">dsadsa31</code>{" "}
-              makes staff sign in at <code className="admin-code">/dsadsa31</code>. Use 6 to 64
-              letters, numbers, or hyphens, starting with a letter.
+              makes staff sign in at <code className="admin-code">/dsadsa31</code>. Use{" "}
+              {GUARD_SLUG_MIN_LENGTH} to 64 letters, numbers, or hyphens, starting
+              with a letter.
             </p>
             <p className="admin-panel-sub">
               Staff sign in at <code className="admin-code">/{slug || settings.slug}</code>
