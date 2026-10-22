@@ -266,8 +266,6 @@ export function AdminMarkdownEditor({
 
   return (
     <div className="admin-md">
-      <span className="admin-field-label">{label}</span>
-
       <div className="admin-md-tools">
         <button
           type="button"
@@ -312,7 +310,6 @@ export function AdminMarkdownEditor({
         >
           B
         </button>
-        <span className="admin-panel-sub">Inserted where the cursor is.</span>
       </div>
 
       <div

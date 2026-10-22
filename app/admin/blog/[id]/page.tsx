@@ -332,11 +332,6 @@ export default function AdminBlogEditorPage() {
             </div>
 
             <div className="admin-box">
-              <h3 className="admin-box-title">Article</h3>
-              <p className="admin-panel-sub">
-                One editor for the whole post. Use H2 for a section heading;
-                Image and Video place media at the cursor.
-              </p>
               <AdminMarkdownEditor
                 label="Content"
                 value={sectionsToContent(form.sections)}
