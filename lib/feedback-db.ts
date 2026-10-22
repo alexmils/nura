@@ -427,6 +427,28 @@ export async function setFeedbackPublished(
   return getFeedbackResponseById(id);
 }
 
+export async function updateFeedbackResponse(
+  id: string,
+  input: { score: number; comment: string | null }
+): Promise<FeedbackResponse | null> {
+  await ensureFeedbackSchema();
+  const { rowCount } = await getPool().query(
+    `UPDATE feedback_responses SET score = $2, comment = $3 WHERE id = $1`,
+    [id, input.score, input.comment]
+  );
+  if (!rowCount) return null;
+  return getFeedbackResponseById(id);
+}
+
+export async function deleteFeedbackResponse(id: string): Promise<boolean> {
+  await ensureFeedbackSchema();
+  const { rowCount } = await getPool().query(
+    `DELETE FROM feedback_responses WHERE id = $1`,
+    [id]
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function setFeedbackFeatured(
   id: string,
   featured: boolean

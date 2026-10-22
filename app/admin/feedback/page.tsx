@@ -49,6 +49,10 @@ export default function AdminFeedbackPage() {
   const [tab, setTab] = useState<Tab>("reviews");
   const [selected, setSelected] = useState<Item | null>(null);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editScore, setEditScore] = useState<number | "">("");
+  const [editComment, setEditComment] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const openedFromQuery = useRef(false);
 
   const load = useCallback(async () => {
@@ -91,8 +95,16 @@ export default function AdminFeedbackPage() {
     const id = new URLSearchParams(window.location.search).get("id");
     if (!id) return;
     const match = items.find((item) => item.id === id);
-    if (match) setSelected(match);
+    if (match) openItem(match);
   }, [items]);
+
+  function openItem(item: Item) {
+    setSelected(item);
+    setEditing(false);
+    setConfirmDelete(false);
+    setEditScore(item.score);
+    setEditComment(item.comment ?? "");
+  }
 
   const reviews = items.filter((item) => item.kind === "review");
   const feedback = items.filter((item) => item.kind === "feedback");
@@ -139,11 +151,80 @@ export default function AdminFeedbackPage() {
     }
   }
 
+  async function saveEdit() {
+    if (!selected) return;
+    const score = Number(editScore);
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      setMsg("Score must be between 1 and 10.");
+      return;
+    }
+    setSaving(true);
+    setMsg("");
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "update",
+          id: selected.id,
+          score,
+          comment: editComment,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        item?: Item;
+        error?: string;
+      };
+      if (!res.ok || !data.item) {
+        setMsg(data.error ?? "Could not save the changes");
+        return;
+      }
+      setItems((prev) =>
+        prev.map((row) => (row.id === data.item!.id ? data.item! : row))
+      );
+      setSelected(data.item);
+      setEditing(false);
+      setMsg("Saved.");
+    } catch {
+      setMsg("Could not reach the server");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteItem() {
+    if (!selected) return;
+    setSaving(true);
+    setMsg("");
+    try {
+      const res = await fetch("/api/admin/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", id: selected.id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      if (!res.ok) {
+        setMsg(data.error ?? "Could not delete the item");
+        return;
+      }
+      setItems((prev) => prev.filter((row) => row.id !== selected.id));
+      setSelected(null);
+      setConfirmDelete(false);
+      setMsg("Deleted.");
+    } catch {
+      setMsg("Could not reach the server");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="admin-page">
       <AdminPageHeader
         title="Feedback & reviews"
-        subtitle="Private member notes, and the reviews you choose to publish. Click a card to read it in full."
+        subtitle="Private member notes, and the reviews you choose to publish. Click a row to read, edit, publish or delete it."
       />
       <main className="admin-main">
         {msg ? <p className="admin-inline-msg">{msg}</p> : null}
@@ -184,7 +265,7 @@ export default function AdminFeedbackPage() {
                 className={`admin-feedback-row${
                   item.publishedAt ? " is-published" : ""
                 }`}
-                onClick={() => setSelected(item)}
+                onClick={() => openItem(item)}
               >
                 <span className="admin-feedback-row-score">
                   {item.score}
@@ -264,9 +345,59 @@ export default function AdminFeedbackPage() {
                 </button>
               </div>
 
-              <p className="admin-feedback-full">
-                {selected.comment?.trim() || "No written note."}
-              </p>
+              {editing ? (
+                <>
+                  <label className="admin-feedback-edit-field">
+                    Score (1–10)
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={editScore}
+                      onChange={(event) =>
+                        setEditScore(
+                          event.target.value === ""
+                            ? ""
+                            : Number(event.target.value)
+                        )
+                      }
+                      className="field"
+                    />
+                  </label>
+                  <label className="admin-feedback-edit-field">
+                    Note
+                    <textarea
+                      rows={6}
+                      maxLength={2000}
+                      value={editComment}
+                      onChange={(event) => setEditComment(event.target.value)}
+                      className="field admin-textarea"
+                    />
+                  </label>
+                  <div className="admin-feedback-edit-actions">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      disabled={saving}
+                      onClick={() => void saveEdit()}
+                    >
+                      {saving ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={saving}
+                      onClick={() => setEditing(false)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="admin-feedback-full">
+                  {selected.comment?.trim() || "No written note."}
+                </p>
+              )}
 
               <dl className="admin-feedback-facts">
                 <div>
@@ -338,14 +469,55 @@ export default function AdminFeedbackPage() {
                 </p>
               )}
 
-              <div className="admin-feedback-dialog-actions">
-                <Link
-                  href={`/admin/users/${selected.userId}`}
-                  className="btn-secondary"
-                >
-                  Open member
-                </Link>
-              </div>
+              {confirmDelete ? (
+                <div className="admin-feedback-confirm" role="alert">
+                  <p>
+                    Delete this {selected.kind === "review" ? "review" : "feedback"}?
+                    This cannot be undone.
+                  </p>
+                  <div>
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      disabled={saving}
+                      onClick={() => setConfirmDelete(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-feedback-delete"
+                      disabled={saving}
+                      onClick={() => void deleteItem()}
+                    >
+                      {saving ? "Deleting…" : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              ) : editing ? null : (
+                <div className="admin-feedback-dialog-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-feedback-delete"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    Delete
+                  </button>
+                  <Link
+                    href={`/admin/users/${selected.userId}`}
+                    className="btn-secondary"
+                  >
+                    Open member
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         ) : null}

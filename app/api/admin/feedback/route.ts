@@ -5,10 +5,12 @@ import {
 } from "@/lib/api-auth";
 import {
   countUnreadFeedback,
+  deleteFeedbackResponse,
   listFeedbackResponses,
   markAllFeedbackSeen,
   setFeedbackFeatured,
   setFeedbackPublished,
+  updateFeedbackResponse,
 } from "@/lib/feedback-db";
 
 export async function GET(request: Request) {
@@ -34,10 +36,42 @@ export async function POST(request: Request) {
     id?: string;
     published?: boolean;
     featured?: boolean;
+    score?: number;
+    comment?: string | null;
   };
 
   if (body.action === "mark_seen") {
     await markAllFeedbackSeen();
+    return NextResponse.json({ ok: true });
+  }
+
+  if (body.action === "update") {
+    if (!body.id?.trim()) {
+      return NextResponse.json({ error: "Missing review id" }, { status: 400 });
+    }
+    const score = Number(body.score);
+    if (!Number.isInteger(score) || score < 1 || score > 10) {
+      return NextResponse.json({ error: "Score must be 1–10" }, { status: 400 });
+    }
+    const comment =
+      typeof body.comment === "string"
+        ? body.comment.trim().slice(0, 2000) || null
+        : null;
+    const item = await updateFeedbackResponse(body.id, { score, comment });
+    if (!item) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, item });
+  }
+
+  if (body.action === "delete") {
+    if (!body.id?.trim()) {
+      return NextResponse.json({ error: "Missing review id" }, { status: 400 });
+    }
+    const removed = await deleteFeedbackResponse(body.id);
+    if (!removed) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     return NextResponse.json({ ok: true });
   }
 
