@@ -1,5 +1,6 @@
 import {
   learnReadingPath,
+  type ClusterArticle,
   type ClusterTopic,
 } from "@/lib/content-cluster";
 import { listPublishedBlogPosts } from "@/lib/blog-db";
@@ -68,8 +69,12 @@ function toHelpArticle(article: {
  * added in admin shows up here; the curated reading order still comes first
  * in each topic group, with anything new appended after it.
  */
-export async function LearnHub() {
-  const posts = await listPublishedBlogPosts();
+export async function LearnHub({
+  posts: postsProp,
+}: {
+  posts?: ClusterArticle[];
+} = {}) {
+  const posts = postsProp ?? (await listPublishedBlogPosts());
   const published = new Set(posts.map((post) => post.slug));
   const articles = posts.map(toHelpArticle);
 

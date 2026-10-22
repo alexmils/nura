@@ -1,6 +1,7 @@
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { LearnHub } from "@/app/components/frontend/LearnHub";
+import { listPublishedBlogPosts } from "@/lib/blog-db";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { buildLearnJsonLd } from "@/lib/seo-jsonld";
 import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
@@ -33,10 +34,12 @@ export default async function LearnPage() {
     publicUrl = undefined;
   }
 
+  const posts = await listPublishedBlogPosts();
+
   return (
     <FrontendShell>
-      <JsonLd data={buildLearnJsonLd(siteOrigin(publicUrl))} />
-      <LearnHub />
+      <JsonLd data={buildLearnJsonLd(siteOrigin(publicUrl), posts)} />
+      <LearnHub posts={posts} />
     </FrontendShell>
   );
 }
