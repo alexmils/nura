@@ -97,6 +97,7 @@ export function CloudinaryPicker({
   initialFiles,
   current,
   defaultFolder,
+  embedded = false,
 }: {
   used: string[];
   onClose: () => void;
@@ -119,6 +120,8 @@ export function CloudinaryPicker({
   current?: string;
   /** Folder uploads go to when "All" is selected. Defaults to `unsorted`. */
   defaultFolder?: string;
+  /** Render in the page flow (Media page) instead of as a modal. */
+  embedded?: boolean;
 }) {
   const single = mediaType === "video" || singleProp;
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -1086,18 +1089,16 @@ export function CloudinaryPicker({
     ? isVideo ? "Choose a video from Cloudinary" : "Choose an image from Cloudinary"
     : isVideo ? "Add videos from Cloudinary" : "Add images from Cloudinary";
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div
-      className={`fixed inset-0 ${CLOUDINARY_PICKER_Z} flex items-center justify-center bg-[#1B2F0C]/70 p-2 text-left sm:p-4`}
-      onClick={onClose}
-      data-lenis-prevent
-    >
+  const panel = (
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={embedded ? undefined : true}
         aria-label={dialogTitle}
-        className="relative flex h-[94vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-card text-foreground shadow-2xl sm:h-[92vh] sm:w-[90vw]"
+        className={
+          embedded
+            ? "relative flex h-[76vh] min-h-[520px] w-full flex-col overflow-hidden rounded-2xl border border-border bg-card text-foreground shadow-sm"
+            : "relative flex h-[94vh] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl bg-card text-foreground shadow-2xl sm:h-[92vh] sm:w-[90vw]"
+        }
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
@@ -1113,14 +1114,16 @@ export function CloudinaryPicker({
             aria-label="Filter by name"
             className="order-last w-full rounded-lg border-2 border-[#8FB3C9] bg-[#F1F6F9] px-3 py-1.5 text-[13px] text-[#1B2F0C] outline-none focus:border-[#4E86A8] sm:order-none sm:ml-auto sm:w-64"
           />
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="ml-auto rounded-full bg-[#F3E1DC] p-1.5 text-[#8C2F1B] hover:bg-[#EBC9C0] sm:ml-0"
-          >
-            <X size={16} />
-          </button>
+          {embedded ? null : (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="ml-auto rounded-full bg-[#F3E1DC] p-1.5 text-[#8C2F1B] hover:bg-[#EBC9C0] sm:ml-0"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
 
         {/* Mobile: folders as a dropdown. */}
@@ -1381,6 +1384,17 @@ export function CloudinaryPicker({
           )}
         </div>
       </div>
+  );
+
+  if (embedded) return <div className="admin-picker-embedded">{panel}</div>;
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className={`fixed inset-0 ${CLOUDINARY_PICKER_Z} flex items-center justify-center bg-[#1B2F0C]/70 p-2 text-left sm:p-4`}
+      onClick={onClose}
+      data-lenis-prevent
+    >
+      {panel}
     </div>,
     document.body,
   );

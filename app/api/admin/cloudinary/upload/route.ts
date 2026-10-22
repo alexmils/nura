@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!sniffed) return NextResponse.json({ error: "Only JPEG, PNG, WebP, GIF, MP4, or WebM files are allowed." }, { status: 400 });
   try {
     const saved = await uploadToCloudinary({ bytes, filename: file.name || "upload", resource: sniffed.resource, type: sniffed.type, folder });
-    clearCloudinaryCache({ folders: true }); // an upload can create a folder
+    await clearCloudinaryCache({ folders: true }); // an upload can create a folder
     return NextResponse.json({ ok: true, ...saved });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Upload failed." }, { status: 502 });

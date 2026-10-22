@@ -3,17 +3,10 @@
 import { Suspense, useEffect, useState } from "react";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
+import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 import "./media.css";
 
 const TABS = ["library", "settings"] as const;
-
-type Asset = {
-  url: string;
-  publicId: string;
-  resource: "image" | "video";
-};
-
-type SiteFile = { path: string; kind: "image" | "video" };
 
 type Status = {
   cloudName: string;
@@ -48,84 +41,35 @@ function MediaPageInner() {
 }
 
 function MediaLibrary() {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [site, setSite] = useState<SiteFile[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  async function load() {
-    const res = await fetch("/api/admin/cloudinary/assets");
-    const body = (await res.json().catch(() => null)) as {
-      assets?: Asset[];
-      site?: SiteFile[];
-      error?: string;
-    } | null;
-    if (!res.ok) {
-      setError(body?.error || "Could not load media.");
-      return;
-    }
-    setError(null);
-    setAssets(body?.assets ?? []);
-    setSite(body?.site ?? []);
-  }
-
-  useEffect(() => {
-    void load();
-  }, []);
-
-  async function importFile(filePath: string) {
-    setBusy(filePath);
-    setError(null);
-    try {
-      const form = new FormData();
-      form.set("source", filePath);
-      const res = await fetch("/api/admin/marketing-media", { method: "POST", body: form });
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(body?.error || "Import failed.");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Import failed.");
-    } finally {
-      setBusy(null);
-    }
-  }
+  const [kind, setKind] = useState<"image" | "video">("image");
 
   return (
     <div className="admin-media">
-      {error ? <p className="admin-media-error">{error}</p> : null}
-      <h2>Cloudinary</h2>
-      {assets.length === 0 ? <p>No Cloudinary files yet.</p> : null}
-      <div className="admin-media-grid">
-        {assets.map((asset) => (
-          <figure key={asset.publicId}>
-            {asset.resource === "video" ? (
-              <video src={asset.url} muted playsInline />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={asset.url} alt="" />
-            )}
-            <figcaption>{asset.publicId}</figcaption>
-          </figure>
+      <div className="admin-media-kind" role="tablist" aria-label="Media type">
+        {(["image", "video"] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={kind === value}
+            className={kind === value ? "is-active" : ""}
+            onClick={() => setKind(value)}
+          >
+            {value === "image" ? "Images" : "Videos"}
+          </button>
         ))}
       </div>
-      <h2>Still on the site</h2>
-      {site.length === 0 ? <p>Every referenced picture and clip is on Cloudinary.</p> : null}
-      <ul className="admin-media-site">
-        {site.map((file) => (
-          <li key={file.path}>
-            {file.kind === "video" ? (
-              <video src={file.path} muted playsInline />
-            ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={file.path} alt="" />
-            )}
-            <span>{file.path}</span>
-            <button type="button" disabled={busy === file.path} onClick={() => void importFile(file.path)}>
-              {busy === file.path ? "Importing…" : "Import to Cloudinary"}
-            </button>
-          </li>
-        ))}
-      </ul>
+
+      {/* The same picker the editors use, in manage mode: folders, labels,
+          drag to move, and upload. No "Use image" button. */}
+      <CloudinaryPicker
+        manage
+        embedded
+        mediaType={kind}
+        used={[]}
+        defaultFolder="nura/admin"
+        onClose={() => undefined}
+      />
     </div>
   );
 }

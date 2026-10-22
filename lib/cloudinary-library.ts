@@ -51,7 +51,13 @@ async function fail(res: Response, creds: CloudinaryCredentials): Promise<never>
   throw new Error(cloudinaryErrorMessage(res.status, body?.error?.message, creds.cloudName));
 }
 
-/* ---------------- cache (memory; the picker has a Refresh button) ---------------- */
+/* ---------------- cache (memory + Postgres; the picker has a Refresh button) ---------------- */
+
+/*
+ * Cloudinary's Admin API has an hourly call budget, so a listing is fetched
+ * once and then served from cache. Memory is the fast path; Postgres keeps it
+ * across restarts and deploys. Uploads and moves clear the affected keys.
+ */
 
 type CacheEntry = { at: number; ttl: number; value: unknown };
 const g = globalThis as unknown as { __nuraCld?: Map<string, CacheEntry>; __nuraCldInflight?: Map<string, Promise<unknown>> };
@@ -59,17 +65,93 @@ const cache = (g.__nuraCld ??= new Map());
 const inflight = (g.__nuraCldInflight ??= new Map());
 
 export const FOLDER_TTL = 6 * 3600_000;
-export const ASSET_TTL = 30 * 60_000;
+export const ASSET_TTL = 2 * 3600_000;
+
+let cacheTable: Promise<void> | null = null;
+
+function ensureCacheTable(): Promise<void> {
+  cacheTable ??= getPool()
+    .query(
+      `CREATE TABLE IF NOT EXISTS cloudinary_cache (
+         key TEXT PRIMARY KEY,
+         value JSONB NOT NULL,
+         expires_at TIMESTAMPTZ NOT NULL
+       )`
+    )
+    .then(async () => {
+      // One sweep per process keeps expired pages from piling up.
+      await getPool().query(`DELETE FROM cloudinary_cache WHERE expires_at < NOW()`).catch(() => undefined);
+    })
+    .catch((error) => {
+      cacheTable = null;
+      throw error;
+    });
+  return cacheTable;
+}
+
+async function readPersisted(key: string): Promise<CacheEntry | null> {
+  try {
+    await ensureCacheTable();
+    const { rows } = await getPool().query<{ value: unknown; ttl_ms: string | number }>(
+      `SELECT value, EXTRACT(EPOCH FROM (expires_at - NOW())) * 1000 AS ttl_ms
+         FROM cloudinary_cache
+        WHERE key = $1 AND expires_at > NOW()`,
+      [key]
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const ttl = Number(row.ttl_ms);
+    return { at: Date.now(), ttl: Number.isFinite(ttl) ? Math.max(0, ttl) : 0, value: row.value };
+  } catch {
+    return null; // the cache is best effort; never fail a listing because of it
+  }
+}
+
+async function writePersisted(key: string, entry: CacheEntry): Promise<void> {
+  try {
+    await ensureCacheTable();
+    await getPool().query(
+      `INSERT INTO cloudinary_cache (key, value, expires_at)
+       VALUES ($1, $2::jsonb, NOW() + ($3::bigint * INTERVAL '1 millisecond'))
+       ON CONFLICT (key) DO UPDATE
+         SET value = EXCLUDED.value, expires_at = EXCLUDED.expires_at`,
+      [key, JSON.stringify(entry.value), Math.max(0, entry.ttl)]
+    );
+  } catch {
+    /* memory still holds it for this process */
+  }
+}
+
+async function dropPersisted(key: string): Promise<void> {
+  try {
+    await ensureCacheTable();
+    await getPool().query(`DELETE FROM cloudinary_cache WHERE key = $1`, [key]);
+  } catch {
+    /* ignore */
+  }
+}
 
 export async function cachedCloudinary<T>(key: string, ttl: number, load: () => Promise<T>, opts: { refresh?: boolean } = {}): Promise<T> {
-  const hit = cache.get(key);
-  if (!opts.refresh && hit && Date.now() - hit.at < hit.ttl) return hit.value as T;
+  if (opts.refresh) {
+    cache.delete(key);
+    await dropPersisted(key);
+  } else {
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.at < hit.ttl) return hit.value as T;
+    const stored = await readPersisted(key);
+    if (stored) {
+      cache.set(key, stored);
+      return stored.value as T;
+    }
+  }
   const running = inflight.get(key);
   if (running) return running as Promise<T>;
   const p = load()
-    .then((value) => {
-      cache.set(key, { at: Date.now(), ttl, value });
+    .then(async (value) => {
+      const entry = { at: Date.now(), ttl, value };
+      cache.set(key, entry);
       if (cache.size > 300) cache.delete(cache.keys().next().value as string);
+      await writePersisted(key, entry);
       return value;
     })
     .finally(() => inflight.delete(key));
@@ -77,10 +159,17 @@ export async function cachedCloudinary<T>(key: string, ttl: number, load: () => 
   return p;
 }
 
-export function clearCloudinaryCache(opts: { folders?: boolean } = {}): void {
+export async function clearCloudinaryCache(opts: { folders?: boolean } = {}): Promise<void> {
   for (const key of [...cache.keys()]) {
     if (key.startsWith("folders|") && !opts.folders) continue;
     cache.delete(key);
+  }
+  try {
+    await ensureCacheTable();
+    if (opts.folders) await getPool().query(`DELETE FROM cloudinary_cache`);
+    else await getPool().query(`DELETE FROM cloudinary_cache WHERE key NOT LIKE 'folders|%'`);
+  } catch {
+    /* ignore */
   }
 }
 

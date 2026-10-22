@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (!folder || folder.includes("..")) return NextResponse.json({ error: "Choose a folder to move into." }, { status: 400 });
   try {
     const result = await moveCloudinaryAssets(creds, { publicIds, folder, resourceType: body?.type === "video" ? "video" : "image" });
-    clearCloudinaryCache();
+    await clearCloudinaryCache();
     await renameLabelledAssets(result.moved).catch(() => undefined);
     if (result.moved.some((m) => m.from !== m.to)) revalidatePath("/", "layout");
     return NextResponse.json(result, { status: result.moved.length === 0 ? 502 : 200 });

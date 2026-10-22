@@ -1,3 +1,32 @@
+.admin-media-kind {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 0.9rem;
+  padding: 0.25rem;
+  border-radius: 999px;
+  background: var(--bg-muted);
+}
+
+.admin-media-kind button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.35rem 1.1rem;
+  cursor: pointer;
+}
+
+.admin-media-kind button.is-active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.admin-picker-embedded {
+  width: 100%;
+}
+
 .admin-media h2,
 .admin-media-settings p {
   margin: 1.25rem 0 0.6rem;
