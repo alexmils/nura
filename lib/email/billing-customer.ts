@@ -322,7 +322,7 @@ export async function sendDueTrialFeedbackEmails(
     }
 
     try {
-      const feedbackUrl = await getAppUrl("/app/feedback?source=trial");
+      const feedbackUrl = await getAppUrl("/app/feedback?source=review");
       await sendTemplateEmail(
         who.email,
         "trial_feedback",

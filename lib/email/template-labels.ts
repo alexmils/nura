@@ -85,7 +85,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   trial_started: "Trial confirmation",
   payment_failed: "Payment failed",
   trial_charge_reminder: "Charge reminder",
-  trial_feedback: "Trial feedback",
+  trial_feedback: "Review request",
   post_trial_checkin: "Post-trial check-in",
   subscription_canceled: "Subscription canceled",
   admin_signup: "New account",

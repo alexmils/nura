@@ -14,6 +14,7 @@ export type FeedbackSource =
   | "days_elapsed"
   | "forced"
   | "trial_end_email"
+  | "review_email"
   | "page";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

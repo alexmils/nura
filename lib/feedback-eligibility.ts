@@ -76,10 +76,12 @@ export function parseFeedbackSubmitSource(
     value === "days_elapsed" ||
     value === "forced" ||
     value === "trial_end_email" ||
+    value === "review_email" ||
     value === "page"
   ) {
     return value;
   }
   if (value === "trial") return "trial_end_email";
+  if (value === "review") return "review_email";
   return null;
 }

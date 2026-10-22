@@ -122,7 +122,7 @@ function sampleData(id: EmailTemplateId) {
     case "trial_feedback":
       return {
         name: base.name,
-        feedbackUrl: "https://example.com/app/feedback?source=trial",
+        feedbackUrl: "https://example.com/app/feedback?source=review",
       };
     case "post_trial_checkin":
       return {

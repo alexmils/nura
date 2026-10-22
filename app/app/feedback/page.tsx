@@ -17,12 +17,20 @@ type PageState = {
 
 function FeedbackPageInner() {
   const params = useSearchParams();
-  const fromTrial = params.get("source") === "trial";
+  const rawSource = params.get("source");
+  const fromReview = rawSource === "review" || rawSource === "review_email";
+  // Both email links may open the form before the usual account-age gate; the
+  // session check still applies, so someone with no real session sees the
+  // "run a session first" note instead of an empty survey.
+  const fromEmail =
+    rawSource === "trial" || fromReview;
   const [state, setState] = useState<PageState | null>(null);
   const [loadError, setLoadError] = useState("");
 
   const load = useCallback(async () => {
-    const qs = fromTrial ? "?source=trial" : "";
+    const qs = fromEmail
+      ? `?source=${rawSource === "trial" ? "trial" : "review"}`
+      : "";
     const res = await fetch(`/api/feedback${qs}`);
     const data = (await res.json()) as PageState & { error?: string };
     if (!res.ok) {
@@ -30,7 +38,7 @@ function FeedbackPageInner() {
       return;
     }
     setState(data);
-  }, [fromTrial]);
+  }, [fromEmail, rawSource]);
 
   useEffect(() => {
     void load();
@@ -39,7 +47,9 @@ function FeedbackPageInner() {
   const onSubmit = useCallback(
     async (input: { score: number; comment: string | null }) => {
       const source =
-        parseFeedbackSubmitSource(fromTrial ? "trial" : "page") ?? "page";
+        parseFeedbackSubmitSource(
+          fromReview ? "review_email" : fromEmail ? "trial" : "page"
+        ) ?? "page";
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -57,7 +67,7 @@ function FeedbackPageInner() {
       await load();
       return { ok: true };
     },
-    [fromTrial, load]
+    [fromEmail, fromReview, load]
   );
 
   return (

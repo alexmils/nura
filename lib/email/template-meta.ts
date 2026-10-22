@@ -8,11 +8,17 @@
 
 import type { EmailTemplateId } from "./template-labels";
 
-export type EmailTemplateGroup = "Account" | "Trial" | "Billing" | "Admin";
+export type EmailTemplateGroup =
+  | "Account"
+  | "Trial"
+  | "Feedback"
+  | "Billing"
+  | "Admin";
 
 export const EMAIL_TEMPLATE_GROUP_ORDER: readonly EmailTemplateGroup[] = [
   "Account",
   "Trial",
+  "Feedback",
   "Billing",
   "Admin",
 ];
@@ -28,7 +34,7 @@ export const EMAIL_TEMPLATE_GROUP: Record<EmailTemplateId, EmailTemplateGroup> =
   subscription_canceled: "Billing",
   trial_started: "Trial",
   trial_charge_reminder: "Trial",
-  trial_feedback: "Trial",
+  trial_feedback: "Feedback",
   post_trial_checkin: "Trial",
   admin_signup: "Admin",
   admin_trial: "Admin",
@@ -59,7 +65,7 @@ export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
   trial_charge_reminder:
     "A reminder about two days before the trial's first charge.",
   trial_feedback:
-    "One satisfaction ask after the trial ends, for members who had a real session.",
+    "A five-row star prompt and a link to the feedback form, sent after the trial to members who had a real session. The stars are visual — every one opens the same form, where the score and note are stored.",
   post_trial_checkin:
     "One check-in after the first app use following the trial. Sent by the post-trial cron after the delay below.",
   admin_signup:

@@ -18,6 +18,7 @@ type Item = {
 
 function sourceLabel(source: string): string {
   if (source === "trial_end_email") return "Trial end email";
+  if (source === "review_email") return "Review request email";
   if (source === "page") return "Feedback page";
   if (source === "session_end") return "After session";
   if (source === "forced") return "Forced";

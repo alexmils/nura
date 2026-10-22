@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     } else if (id === "trial_feedback") {
       await sendTemplateEmail(to.trim(), id, {
         name: sample.name,
-        feedbackUrl: await getAppUrl("/app/feedback?source=trial"),
+        feedbackUrl: await getAppUrl("/app/feedback?source=review"),
       });
     } else if (id === "subscription_canceled") {
       await sendTemplateEmail(to.trim(), id, {

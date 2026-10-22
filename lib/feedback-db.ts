@@ -58,6 +58,7 @@ function parseSource(value: unknown): FeedbackSource | null {
     value === "days_elapsed" ||
     value === "forced" ||
     value === "trial_end_email" ||
+    value === "review_email" ||
     value === "page"
   ) {
     return value;

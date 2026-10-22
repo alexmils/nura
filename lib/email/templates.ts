@@ -1,5 +1,6 @@
 import { BRAND_COLORS, BRAND_SPOKEN, chromeBrandName } from "@/lib/brand";
 import { EMAIL_LOGO_WIDTH, emailLogoSrcForOrigin } from "@/lib/brand-assets";
+import { reviewStars } from "@/lib/email/review-stars";
 import type { EmailTemplateId } from "@/lib/email/template-labels";
 
 export type { EmailTemplateId } from "@/lib/email/template-labels";
@@ -436,22 +437,32 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
     case "trial_feedback": {
       const d = data as EmailTemplateData["trial_feedback"];
       const safeName = escapeEmailHtml(d.name);
-      const safeUrl = escapeEmailHtml(d.feedbackUrl);
-      const subject = "How was your first week with Nura?";
+      const stars = reviewStars(d.feedbackUrl);
+      const subject = "How did we do?";
       const text = [
         `Hi ${d.name},`,
         "",
-        "Your 7-day trial just wrapped. We would love a quick rating and any notes on what worked or what we should fix.",
+        "Thank you again for trying Nura. I would love to hear how the sessions felt for you — what worked, what surprised you, anything you would tell a friend.",
         "",
-        `Share feedback: ${d.feedbackUrl}`,
+        "How did we do?",
+        "",
+        stars.text,
+        "",
+        `Leave a review: ${d.feedbackUrl}`,
+        "",
+        "Thank you,",
+        "The Nura team",
       ].join("\n");
       const html = layout(
         brand,
-        "How was your first week?",
+        "I would love to hear how it felt",
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
-         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your trial week is over. A 1–10 score and a short note on suggestions or bugs helps us improve Nura.</p>
-         ${ctaButton(d.feedbackUrl, "Share feedback")}`,
-        `Or open this link: <a href="${safeUrl}" style="color:${brandColor};">${safeUrl}</a>`
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Thank you again for trying Nura. I would love to hear how the sessions felt for you — what worked, what surprised you, anything you would tell a friend.</p>
+         <p style="margin:0 0 4px;font-size:15px;line-height:1.5;color:${inkColor};">How did we do?</p>
+         ${stars.html}
+         ${ctaButton(d.feedbackUrl, "Leave a review")}
+         <p style="margin:0;font-size:15px;line-height:1.6;color:${inkColor};">Thank you,<br />The Nura team</p>`,
+        "Questions? Reply to this email."
       );
       return { subject, html, text };
     }

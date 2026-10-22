@@ -16,12 +16,14 @@ export async function GET(request: Request) {
   if (!isAuthContext(auth)) return auth;
 
   const { searchParams } = new URL(request.url);
-  const fromTrial = searchParams.get("source") === "trial";
+  const source = searchParams.get("source");
+  const fromEmail =
+    source === "trial" || source === "review" || source === "review_email";
 
   const page = await getFeedbackPageState({
     userId: auth.user.id,
     userCreatedAt: auth.user.createdAt,
-    allowTrialLink: fromTrial,
+    allowTrialLink: fromEmail,
   });
 
   const prompt = await getFeedbackPromptForUser({
@@ -63,7 +65,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid score" }, { status: 400 });
     }
     const sourceOverride = parseFeedbackSubmitSource(body.source);
-    const allowTrialLink = sourceOverride === "trial_end_email";
+    const allowTrialLink =
+      sourceOverride === "trial_end_email" ||
+      sourceOverride === "review_email";
     const result = await submitFeedbackResponse({
       userId: auth.user.id,
       userCreatedAt: auth.user.createdAt,
