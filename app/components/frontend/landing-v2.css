@@ -1923,11 +1923,9 @@
   background: #dcefdc;
 }
 
-/* The stories morph already blends the two backgrounds; the fixed yellow
-   strip read as a separate band with a line on its top edge. */
-.v2-pricing::before {
-  content: none;
-}
+/* The stories hand-off keeps the yellow section yellow and lets this band do
+   the blend; --v2-from is set from the stories' actual colour on the page. */
+
 
 .v2-price-grid {
   display: grid;

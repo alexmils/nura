@@ -121,6 +121,11 @@ export function pinnedHandoff(
     /** morph: visible incoming block, when `next` is an admin wrapper around it. */
     nextTint?: HTMLElement | null;
     /**
+     * morph: set false to keep both backgrounds and let a CSS gradient at the
+     * join do the blend (used where a full-section colour flip is too loud).
+     */
+    blendColor?: boolean;
+    /**
      * Still viewports the outgoing block is pinned before the effect starts
      * (SectionHandoff's `hold`). Adds that much scroll runway below `prev`; a
      * section shorter than the viewport cannot cover it, so it is skipped.
@@ -338,7 +343,7 @@ export function pinnedHandoff(
       // When the incoming block paints a photo/video, there is no solid colour
       // to blend to; tweening would pull `paintedBg` up to the page canvas and
       // smear it (a cream band on a photo). The content still rises.
-      if (!next.querySelector(".fe-bgwrap-media")) {
+      if (opts.blendColor !== false && !next.querySelector(".fe-bgwrap-media")) {
         // A wrapper shell can hold the layout while the visible section lives
         // inside it; `tint` keeps the colour blend on that visible section.
         const from = paintedBg(opts.tint ?? prev);

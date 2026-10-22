@@ -43,8 +43,14 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   // painted in pricing's actual colour (which the editor can change).
   const faqBox = one(".fe-faq");
   const pricingBox = one(".v2-pricing");
+  const storiesBox = one(".v2-stories");
   if (faqBox && pricingBox) {
     gsap.set(faqBox, { "--fe-join-top": paintedBg(pricingBox) });
+  }
+  // Stories -> pricing keeps both colours and blends through the section's
+  // top band, so the yellow strip never flips green as a whole.
+  if (pricingBox && storiesBox) {
+    gsap.set(pricingBox, { "--v2-from": paintedBg(storiesBox) });
   }
   const trustWrap = one(".v2-trust-wrap");
   if (trustWrap) gsap.set(trustWrap, { position: "relative", zIndex: 3 });
@@ -139,8 +145,8 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       content: one(".v2-pricing .v2-container"),
       morphY: 48,
       fade: false,
-      tint: one(".v2-stories"),
-      nextTint: one(".v2-pricing"),
+      // Colour is handled by the pricing top gradient, not a full flip.
+      blendColor: false,
     });
   }
   // Session -> topics on every screen: a calm sheet rise, no circle.
