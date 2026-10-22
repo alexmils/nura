@@ -52,6 +52,7 @@ export function TemplateEditor({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [previewMode, setPreviewMode] = useState<"desktop" | "phone">("desktop");
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setSubject(template.subject);
@@ -106,7 +107,10 @@ export function TemplateEditor({
 
   return (
     <>
-      <form className="automation-editor" onSubmit={(e) => void save(e)}>
+      <form
+        className={`automation-editor${expanded ? " is-expanded" : ""}`}
+        onSubmit={(e) => void save(e)}
+      >
         <div className="admin-template-head">
           <div className="admin-template-head-copy">
             <h3 className="admin-template-title">
@@ -173,15 +177,27 @@ export function TemplateEditor({
             className="field"
           />
         </label>
-        <label className="admin-field-label admin-field-grow">
-          HTML body
+        <div className="admin-field-label">
+          <span className="admin-field-row">
+            <span>HTML body</span>
+            <button
+              type="button"
+              className="admin-text-expand"
+              aria-expanded={expanded}
+              aria-controls="tpl-html-body"
+              onClick={() => setExpanded((value) => !value)}
+            >
+              {expanded ? "Collapse" : "Expand"}
+            </button>
+          </span>
           <textarea
+            id="tpl-html-body"
             value={html}
             onChange={(e) => setHtml(e.target.value)}
             className="field admin-textarea admin-textarea-html"
             rows={16}
           />
-        </label>
+        </div>
         <label className="admin-field-label">
           Plain text (optional)
           <textarea
