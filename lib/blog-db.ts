@@ -169,6 +169,7 @@ async function runBlogSchema(): Promise<void> {
     await ensurePostCategories(db, id, article.categories);
   }
 
+  await refreshSeedCopy(db);
   await backfillSeedCategoryOrder(db);
 }
 
@@ -198,6 +199,15 @@ async function migrateGuidedVsFreeSlug(
     `UPDATE blog_posts
         SET related = replace(related::text, '"guided-vs-free-mode"', '"ai-agent-guided-vs-self-guided"')::jsonb
       WHERE related::text LIKE '%guided-vs-free-mode%'`
+  );
+  // Deployments that ran the renamed seed before this migration can hold both
+  // rows. Drop the old one only when it is the same guide (same title).
+  await db.query(
+    `DELETE FROM blog_posts old
+      WHERE old.slug = 'guided-vs-free-mode'
+        AND old.title = (
+          SELECT title FROM blog_posts WHERE slug = 'ai-agent-guided-vs-self-guided'
+        )`
   );
   await db.query(
     `INSERT INTO schema_migrations (id) VALUES ('blog_slug_ai_agent_guided_v1')
@@ -265,6 +275,52 @@ async function ensurePostCategories(
       [postId, slugs[i], i]
     );
   }
+}
+
+/**
+ * One-time copy refresh for built-in guides that nobody edited. An admin save
+ * moves `updated_at`; unedited rows still carry their publish/creation stamp,
+ * so a renamed mode or retagged guide reaches existing deployments without
+ * overwriting editorial work.
+ */
+async function refreshSeedCopy(
+  db: ReturnType<typeof getPool>
+): Promise<void> {
+  const { rows: applied } = await db.query<{ id: string }>(
+    `SELECT id FROM schema_migrations WHERE id = 'blog_seed_copy_refresh_v1'`
+  );
+  if (applied.length) return;
+
+  for (const article of CLUSTER_ARTICLES) {
+    await db.query(
+      `UPDATE blog_posts
+          SET title = $2,
+              description = $3,
+              kicker = $4,
+              dek = $5,
+              emdr_anchor = $6,
+              sections = $7::jsonb,
+              related = $8::jsonb,
+              updated_at = NOW()
+        WHERE slug = $1
+          AND (updated_at = created_at OR updated_at = published_at)`,
+      [
+        article.slug,
+        article.title,
+        article.description,
+        article.kicker,
+        article.dek,
+        article.emdrAnchor,
+        JSON.stringify(article.sections),
+        JSON.stringify(article.related),
+      ]
+    );
+  }
+
+  await db.query(
+    `INSERT INTO schema_migrations (id) VALUES ('blog_seed_copy_refresh_v1')
+     ON CONFLICT DO NOTHING`
+  );
 }
 
 /**
