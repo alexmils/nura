@@ -176,51 +176,57 @@ export default function AdminFeedbackPage() {
               : "No private feedback yet."}
           </p>
         ) : (
-          <div className="admin-feedback-grid">
+          <div className="admin-feedback-list">
             {shown.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`admin-feedback-card${
+                className={`admin-feedback-row${
                   item.publishedAt ? " is-published" : ""
                 }`}
                 onClick={() => setSelected(item)}
               >
-                <div className="admin-feedback-card-top">
-                  <span className="admin-feedback-score">
-                    {item.score}
-                    <small>/10</small>
+                <span className="admin-feedback-row-score">
+                  {item.score}
+                  <small>/10</small>
+                </span>
+                <span className="admin-feedback-row-body">
+                  <span className="admin-feedback-row-top">
+                    <span className="admin-feedback-row-member">
+                      {memberName(item)}
+                    </span>
+                    <time dateTime={item.createdAt}>
+                      {formatDate(item.createdAt)}
+                    </time>
                   </span>
+                  <span
+                    className={`admin-feedback-snippet${
+                      item.comment?.trim() ? "" : " is-empty"
+                    }`}
+                  >
+                    {item.comment?.trim() || "No written note"}
+                  </span>
+                </span>
+                <span className="admin-feedback-row-side">
                   <span className="admin-feedback-source">
                     {sourceLabel(item.source)}
                   </span>
-                </div>
-                <p
-                  className={`admin-feedback-snippet${
-                    item.comment?.trim() ? "" : " is-empty"
-                  }`}
-                >
-                  {item.comment?.trim() || "No written note"}
-                </p>
-                <div className="admin-feedback-card-meta">
-                  <span>{memberName(item)}</span>
-                  <time dateTime={item.createdAt}>
-                    {formatDate(item.createdAt)}
-                  </time>
-                </div>
-                <div className="admin-feedback-badges">
-                  <span className="admin-feedback-badge">
-                    {item.kind === "review" ? "Review" : "Feedback"}
-                  </span>
-                  {item.publishedAt ? (
-                    <span className="admin-feedback-badge is-live">Published</span>
-                  ) : null}
-                  {item.featured ? (
-                    <span className="admin-feedback-badge is-featured">
-                      Featured
+                  <span className="admin-feedback-badges">
+                    <span className="admin-feedback-badge">
+                      {item.kind === "review" ? "Review" : "Feedback"}
                     </span>
-                  ) : null}
-                </div>
+                    {item.publishedAt ? (
+                      <span className="admin-feedback-badge is-live">
+                        Published
+                      </span>
+                    ) : null}
+                    {item.featured ? (
+                      <span className="admin-feedback-badge is-featured">
+                        Featured
+                      </span>
+                    ) : null}
+                  </span>
+                </span>
               </button>
             ))}
           </div>
