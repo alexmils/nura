@@ -14470,6 +14470,32 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   gap: 0.35rem;
 }
 
+.admin-md-video-menu {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+
+.admin-md-video-menu .btn-secondary {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.admin-md-video-link {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.admin-md-video-link .field {
+  flex: 1;
+}
+
 /* One WordPress-like editing surface; media renders as itself inline. */
 .admin-md-rich {
   min-height: 14rem;

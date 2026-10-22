@@ -119,6 +119,14 @@ const VIDEO_HOSTS = new Set([
   "vimeo.com",
   "www.vimeo.com",
   "player.vimeo.com",
+  "dailymotion.com",
+  "www.dailymotion.com",
+  "dai.ly",
+  "www.dai.ly",
+  "loom.com",
+  "www.loom.com",
+  "streamable.com",
+  "www.streamable.com",
 ]);
 
 export function isValidResourceVideoUrl(value: string): boolean {
@@ -167,6 +175,28 @@ export function resourceVideoEmbedUrl(raw: string): string | null {
       return id && /^\d+$/.test(id)
         ? `https://player.vimeo.com/video/${encodeURIComponent(id)}`
         : null;
+    }
+    if (host === "dai.ly" || host === "www.dai.ly") {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      return id
+        ? `https://www.dailymotion.com/embed/video/${encodeURIComponent(id)}`
+        : null;
+    }
+    if (host.endsWith("dailymotion.com")) {
+      const parts = u.pathname.split("/").filter(Boolean);
+      const index = parts.indexOf("video");
+      const id = index >= 0 ? parts[index + 1] : parts[0];
+      return id
+        ? `https://www.dailymotion.com/embed/video/${encodeURIComponent(id)}`
+        : null;
+    }
+    if (host.endsWith("loom.com")) {
+      const id = u.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://www.loom.com/embed/${encodeURIComponent(id)}` : null;
+    }
+    if (host.endsWith("streamable.com")) {
+      const id = u.pathname.split("/").filter(Boolean).pop();
+      return id ? `https://streamable.com/e/${encodeURIComponent(id)}` : null;
     }
     return null;
   } catch {

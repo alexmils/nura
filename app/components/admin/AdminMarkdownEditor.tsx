@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Film, Image as ImageIcon } from "lucide-react";
 import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
-import { resourceVideoEmbedUrl } from "@/lib/resources";
+import {
+  isValidResourceVideoUrl,
+  resourceVideoEmbedUrl,
+} from "@/lib/resources";
 
 /**
  * One editable area, like WordPress's visual editor: text flows as usual and
@@ -161,6 +164,9 @@ export function AdminMarkdownEditor({
   const savedRange = useRef<Range | null>(null);
   const replaceBlock = useRef<HTMLElement | null>(null);
   const [picker, setPicker] = useState<MediaKind | null>(null);
+  const [videoMenu, setVideoMenu] = useState(false);
+  const [videoLink, setVideoLink] = useState("");
+  const [videoError, setVideoError] = useState("");
 
   /*
    * The editable DOM is owned by the browser, not React. Never pass
@@ -214,13 +220,42 @@ export function AdminMarkdownEditor({
     emit();
   }
 
-  function openPicker(kind: MediaKind) {
+  function captureCaret() {
     const selection = window.getSelection();
     savedRange.current =
-      selection && selection.rangeCount > 0 && ref.current?.contains(selection.anchorNode)
+      selection &&
+      selection.rangeCount > 0 &&
+      ref.current?.contains(selection.anchorNode)
         ? selection.getRangeAt(0).cloneRange()
         : null;
+  }
+
+  function openPicker(kind: MediaKind) {
+    captureCaret();
     setPicker(kind);
+  }
+
+  function openVideoMenu() {
+    captureCaret();
+    setVideoError("");
+    setVideoMenu((open) => !open);
+  }
+
+  function insertFromLink() {
+    let raw = videoLink.trim();
+    // Accept a full iframe snippet as well as a bare link.
+    const iframe = raw.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+    if (iframe) raw = iframe[1];
+    if (!isValidResourceVideoUrl(raw)) {
+      setVideoError(
+        "Use YouTube, Vimeo, Dailymotion, Loom, Streamable, or a direct .mp4/.webm link."
+      );
+      return;
+    }
+    insertMedia(raw);
+    setVideoMenu(false);
+    setVideoLink("");
+    setVideoError("");
   }
 
   function insertMedia(url: string) {
@@ -295,7 +330,7 @@ export function AdminMarkdownEditor({
           className="btn-secondary"
           disabled={disabled}
           onMouseDown={(event) => event.preventDefault()}
-          onClick={() => openPicker("video")}
+          onClick={openVideoMenu}
         >
           <Film size={14} /> Video
         </button>
@@ -325,6 +360,55 @@ export function AdminMarkdownEditor({
           B
         </button>
       </div>
+
+      {videoMenu ? (
+        <div className="admin-md-video-menu">
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              setVideoMenu(false);
+              setPicker("video");
+            }}
+          >
+            <Film size={14} /> Choose from Cloudinary
+          </button>
+          <div className="admin-md-video-link">
+            <input
+              className="field"
+              autoFocus
+              value={videoLink}
+              placeholder="Paste a YouTube, Vimeo, Dailymotion, Loom, or Streamable link"
+              onChange={(event) => {
+                setVideoLink(event.target.value);
+                setVideoError("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  insertFromLink();
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!videoLink.trim()}
+              onClick={insertFromLink}
+            >
+              Insert
+            </button>
+          </div>
+          <p className="admin-panel-sub">
+            An embed code works too. Direct .mp4 and .webm links play inline.
+          </p>
+          {videoError ? (
+            <p className="admin-mcp-wizard-error" role="alert">
+              {videoError}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div
         ref={ref}
