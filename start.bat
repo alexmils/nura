@@ -42,8 +42,8 @@ echo        npm run dev:fast  (no cache clear)
 echo  Stop: Ctrl+C
 echo  Tip:  do not delete .next while dev is running
 echo.
+echo  (The browser is not opened automatically.)
 
-start "" "http://localhost:3471"
 call npm run dev
 
 pause
