@@ -121,6 +121,12 @@ export type PlatformSettings = {
   seo: PlatformSeoConfig;
   /** Blog MCP access token — Admin → MCP. */
   mcp: PlatformMcpConfig;
+  /** Cloudinary media library. The secret stays server-side. */
+  cloudinary: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
   /** Meta Ads overview card — account, token, and app secret for refresh. */
   metaAds: MetaAdsSettings;
   /**
@@ -188,6 +194,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   email: { ...DEFAULT_PLATFORM_EMAIL },
   seo: { ...DEFAULT_PLATFORM_SEO, pages: {} },
   mcp: { ...DEFAULT_PLATFORM_MCP },
+  cloudinary: { cloudName: "", apiKey: "", apiSecret: "" },
   metaAds: { ...DEFAULT_META_ADS_SETTINGS },
   faviconUrl: "",
   appLogoUrl: "",
@@ -278,6 +285,20 @@ function normalizeAi(raw: unknown): PlatformAiConfig {
   };
 }
 
+function normalizeCloudinary(
+  raw: unknown
+): PlatformSettings["cloudinary"] {
+  if (!raw || typeof raw !== "object") {
+    return { cloudName: "", apiKey: "", apiSecret: "" };
+  }
+  const r = raw as Partial<PlatformSettings["cloudinary"]>;
+  return {
+    cloudName: typeof r.cloudName === "string" ? r.cloudName.trim() : "",
+    apiKey: typeof r.apiKey === "string" ? r.apiKey.trim() : "",
+    apiSecret: typeof r.apiSecret === "string" ? r.apiSecret.trim() : "",
+  };
+}
+
 function normalizeSettings(raw: unknown): PlatformSettings {
   if (!raw || typeof raw !== "object" || isLegacyUserSettings(raw)) {
     return {
@@ -331,6 +352,7 @@ function normalizeSettings(raw: unknown): PlatformSettings {
     email: normalizeEmailConfig((r as Partial<PlatformSettings>).email),
     seo: normalizeSeoConfig((r as Partial<PlatformSettings>).seo),
     mcp: normalizeMcpConfig((r as Partial<PlatformSettings>).mcp),
+    cloudinary: normalizeCloudinary((r as Partial<PlatformSettings>).cloudinary),
     metaAds: normalizeMetaAdsSettings((r as Partial<PlatformSettings>).metaAds),
     faviconUrl: normalizeBrandAssetUrl(r.faviconUrl),
     appLogoUrl: normalizeBrandAssetUrl(r.appLogoUrl),

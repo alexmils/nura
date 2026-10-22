@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
+import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
 import {
   RESOURCE_KINDS,
   slugifyTitle,
@@ -71,6 +72,7 @@ export default function AdminResourceEditorPage() {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const [pickerKind, setPickerKind] = useState<"image" | "video" | null>(null);
 
   function insertAtCursor(snippet: string) {
     const el = bodyRef.current;
@@ -88,6 +90,14 @@ export default function AdminResourceEditorPage() {
     });
   }
 
+  function insertMediaUrl(url: string, kind: "image" | "video", name = "") {
+    const alt = name
+      .replace(/\.[a-z0-9]+$/i, "")
+      .replace(/[-_]+/g, " ")
+      .trim();
+    insertAtCursor(`\n![${alt || kind}](${url})\n`);
+  }
+
   async function insertMedia(file: File, kind: "image" | "video") {
     setBusy(true);
     setMsg("");
@@ -103,11 +113,7 @@ export default function AdminResourceEditorPage() {
       if (!res.ok) throw new Error(data.error ?? "Upload failed.");
       const url = String(data.url ?? "");
       if (!url) throw new Error("Upload returned no URL.");
-      const alt = file.name
-        .replace(/\.[a-z0-9]+$/i, "")
-        .replace(/[-_]+/g, " ")
-        .trim();
-      insertAtCursor(`\n![${alt || kind}](${url})\n`);
+      insertMediaUrl(url, kind, file.name);
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Upload failed.");
     } finally {
@@ -288,6 +294,14 @@ export default function AdminResourceEditorPage() {
                 >
                   Insert video
                 </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() => setPickerKind("image")}
+                >
+                  Image from Cloudinary
+                </button>
               </div>
               <input
                 ref={imageInputRef}
@@ -446,6 +460,13 @@ export default function AdminResourceEditorPage() {
           </aside>
         </div>
       </main>
+
+      <AdminMediaPicker
+        kind={pickerKind ?? "image"}
+        open={pickerKind !== null}
+        onClose={() => setPickerKind(null)}
+        onPick={(url) => insertMediaUrl(url, pickerKind ?? "image")}
+      />
     </div>
   );
 }

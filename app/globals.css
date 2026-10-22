@@ -1545,6 +1545,27 @@ body:has(.app-shell.session-immersive) .help-fab {
   margin: 0.5rem 0;
 }
 
+/* Inline embed inside body copy: a span so it stays valid inside <p>. */
+.resource-article-embed {
+  display: block;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0.75rem 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.resource-article-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
 .resource-article-video {
   position: relative;
   width: 100%;
@@ -14472,6 +14493,53 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   font-size: 0.8125rem;
   color: var(--accent);
   text-decoration: underline;
+}
+
+.admin-media-picker {
+  width: min(860px, 100%);
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-media-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.admin-media-tile {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-media-tile:hover {
+  border-color: var(--accent);
+}
+
+.admin-media-tile img,
+.admin-media-tile video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 .admin-body-textarea {

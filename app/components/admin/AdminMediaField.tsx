@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
 
 type Props = {
   label: string;
@@ -33,6 +34,7 @@ export function AdminMediaField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   async function upload(file: File) {
     setBusy(true);
@@ -86,6 +88,14 @@ export function AdminMediaField({
         >
           {busy ? "Uploading…" : value ? "Replace" : "Upload"}
         </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={disabled || busy}
+          onClick={() => setPickerOpen(true)}
+        >
+          Cloudinary
+        </button>
         {value ? (
           <button
             type="button"
@@ -123,6 +133,13 @@ export function AdminMediaField({
           {error}
         </p>
       ) : null}
+
+      <AdminMediaPicker
+        kind={kind}
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onPick={onChange}
+      />
     </div>
   );
 }
