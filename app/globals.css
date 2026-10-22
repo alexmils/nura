@@ -13628,6 +13628,13 @@ a.help-drawer-signin.btn-primary {
   gap: 1rem;
 }
 
+.admin-seo-page-head-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .admin-seo-page-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
@@ -14390,6 +14397,7 @@ a.help-drawer-signin.btn-primary {
 }
 
 .og-library-preview-img {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
@@ -14410,6 +14418,19 @@ a.help-drawer-signin.btn-primary {
   object-fit: contain;
 }
 
+.og-library-img-error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.04);
+}
+
 .og-library-used {
   margin: 0;
   font-size: 0.72rem;
@@ -14426,9 +14447,12 @@ a.help-drawer-signin.btn-primary {
 .og-library-preview-actions .btn-primary,
 .og-library-preview-actions .btn-secondary,
 .og-library-preview-actions .og-library-delete {
-  min-height: 2rem;
-  padding: 0.3rem 0.7rem;
+  box-sizing: border-box;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
   font-size: 0.75rem;
+  line-height: 1;
 }
 
 .og-library-preview .field {

@@ -29,6 +29,24 @@ import type { SeoPageId } from "@/lib/seo-config";
 import { OgImageLibrary } from "@/app/components/admin/OgImageLibrary";
 import { parseAnalyticsIgnoreIps } from "@/lib/analytics-ignore";
 
+/**
+ * Library images keep the same URL when replaced, so a browser that cached
+ * the old bytes (or an old immutable response) keeps showing them. Append a
+ * per-page-load version for admin previews; the stored URL stays clean.
+ */
+function useOgPreviewVersion(): string {
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    setVersion(String(Date.now()));
+  }, []);
+  return version;
+}
+
+function ogPreviewUrl(url: string, version: string): string {
+  if (!version || !url.startsWith("/api/og-library/")) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}v=${version}`;
+}
+
 function ignoreIpRowsFromRaw(raw: string): string[] {
   const list = parseAnalyticsIgnoreIps(raw);
   return list.length > 0 ? list : [""];
@@ -1006,6 +1024,7 @@ function SeoSnippetPreview({
   /** Return the two cards as siblings, for a parent that lays them out. */
   bare?: boolean;
 }) {
+  const previewVersion = useOgPreviewVersion();
   const cards = (
     <>
       <section className="admin-panel">
@@ -1021,7 +1040,7 @@ function SeoSnippetPreview({
         <div className="admin-seo-share">
           <div className="admin-seo-share-img">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={ogImageUrl} alt="" />
+            <img src={ogPreviewUrl(ogImageUrl, previewVersion)} alt="" />
           </div>
           <div className="admin-seo-share-meta">
             <p className="admin-seo-share-host">{hostLabel(canonical)}</p>
@@ -1054,6 +1073,7 @@ function SeoOgImageField({
   onChange: (next: string) => void;
 }) {
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const previewVersion = useOgPreviewVersion();
 
   return (
     <div className="admin-seo-og-field">
@@ -1064,7 +1084,7 @@ function SeoOgImageField({
       <div className="admin-seo-og-row">
         <div className="admin-seo-og-preview">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewUrl} alt="" />
+          <img src={ogPreviewUrl(previewUrl, previewVersion)} alt="" />
         </div>
         <div className="admin-seo-og-actions">
           <button
@@ -1641,18 +1661,31 @@ function AdminSeoPageInner() {
                     <h2 className="admin-panel-title">{activePage.label}</h2>
                     <p className="admin-panel-sub">{activePage.path}</p>
                   </div>
-                  <Link
-                    href={activePage.path}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="btn-secondary"
-                  >
-                    Open page
-                  </Link>
+                  <div className="admin-seo-page-head-actions">
+                    <Link
+                      href={activePage.path}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-secondary"
+                    >
+                      Open page
+                    </Link>
+                    {canEdit ? (
+                      <button
+                        type="submit"
+                        form="seo-page-form"
+                        className="btn-primary"
+                        disabled={busy}
+                      >
+                        {busy ? "Saving…" : "Save page"}
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
 
                 <div className="admin-seo-page-body">
                 <form
+                  id="seo-page-form"
                   className="admin-form-stack admin-panel"
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1745,17 +1778,6 @@ function AdminSeoPageInner() {
                     }
                   />
 
-                  {canEdit ? (
-                    <div className="admin-form-actions">
-                      <button
-                        type="submit"
-                        className="admin-btn-edit"
-                        disabled={busy}
-                      >
-                        {busy ? "Saving…" : "Save page"}
-                      </button>
-                    </div>
-                  ) : null}
                 </form>
 
                 <SeoSnippetPreview

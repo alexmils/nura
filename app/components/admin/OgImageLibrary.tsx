@@ -30,6 +30,18 @@ function formatDate(value: string): string {
 }
 
 /**
+ * Cache-busting matters here: "Replace image" keeps the same id, and a
+ * browser that cached the old bytes (or an earlier failed load) would keep
+ * showing them. The timestamp changes on every replace.
+ */
+function imageSrc(image: OgLibraryImage): string {
+  const base = image.url || `/api/og-library/${encodeURIComponent(image.id)}`;
+  return image.updatedAt
+    ? `${base}?v=${encodeURIComponent(image.updatedAt)}`
+    : base;
+}
+
+/**
  * The internal OG library: every image uploaded from Admin → SEO, with the
  * same browse → preview → use flow as the Cloudinary picker, plus rename,
  * replace and delete. Delete is refused while a page still points at the
@@ -49,6 +61,7 @@ export function OgImageLibrary({
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<OgLibraryImage | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -106,6 +119,7 @@ export function OgImageLibrary({
     setPreview(image);
     setRename(image.name);
     setConfirmDelete(false);
+    setImageFailed(false);
     setError("");
   }
 
@@ -341,7 +355,7 @@ export function OgImageLibrary({
                 >
                   <span className="og-library-thumb">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image.url} alt="" loading="lazy" />
+                    <img src={imageSrc(image)} alt="" loading="lazy" />
                     {image.url === current ? (
                       <span
                         className="og-library-check"
@@ -398,7 +412,17 @@ export function OgImageLibrary({
 
               <div className="og-library-preview-img">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={preview.url} alt={preview.name} />
+                <img
+                  src={imageSrc(preview)}
+                  alt={preview.name}
+                  onLoad={() => setImageFailed(false)}
+                  onError={() => setImageFailed(true)}
+                />
+                {imageFailed ? (
+                  <p className="og-library-img-error">
+                    Could not load this image. Try Replace image.
+                  </p>
+                ) : null}
               </div>
 
               <label className="admin-field-label">
