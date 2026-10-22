@@ -303,8 +303,8 @@ export default function AdminBlogEditorPage() {
             <div className="admin-box">
               <h3 className="admin-box-title">Sections</h3>
               <p className="admin-panel-sub">
-                Write in Markdown and separate paragraphs with a blank line.
-                Insert image, video, or CTA to add it where the cursor is.
+                Type as usual. Image and Video place media at the cursor; CTA
+                adds a prebuilt block to the end of the section.
               </p>
               {form.sections.map((section, index) => (
                 <div key={index} className="admin-section-card">

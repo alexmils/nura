@@ -1,68 +1,130 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Film, Image as ImageIcon, Repeat, Trash2 } from "lucide-react";
+import { Film, Image as ImageIcon } from "lucide-react";
 import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
+import { resourceVideoEmbedUrl } from "@/lib/resources";
 
 /**
- * Paragraph editor for the product's tiny markdown: text blocks you type in,
- * and media blocks shown as a small card instead of `![image](...)`.
+ * One editable area, like WordPress's visual editor: text flows as usual and
+ * an inserted image or video appears as the media itself, not `![...](...)`.
  *
- * The stored value stays plain markdown (`\n\n` between blocks), so the site
- * renders it with `renderInlineMarkdown` unchanged.
+ * The stored value is still the product's tiny markdown (`\n\n` between
+ * blocks), so the public page renders it with `renderInlineMarkdown`.
  */
 
 type MediaKind = "image" | "video";
 
-type TextBlock = { id: string; kind: "text"; value: string };
-type MediaBlock = { id: string; kind: "media"; media: MediaKind; alt: string; url: string };
-type Block = TextBlock | MediaBlock;
-
-const MEDIA_BLOCK = /^!\[([^\]]*)\]\(([^)\s]+)\)$/;
 const VIDEO_FILE = /\.(mp4|webm)(?:[?#]|$)/i;
-const VIDEO_HOST = /^https:\/\/(?:www\.)?(?:youtube\.com|youtu\.be|vimeo\.com)\//i;
 
-let seq = 0;
-function nextId(): string {
-  seq += 1;
-  return `md-${seq}`;
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function kindOf(url: string): MediaKind {
-  return VIDEO_FILE.test(url) || VIDEO_HOST.test(url) ? "video" : "image";
-}
-
-function altFromUrl(url: string): string {
-  const name = url.split("/").pop()?.split("?")[0] ?? "";
-  return name.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").slice(0, 80);
-}
-
-function parse(value: string): Block[] {
-  const parts = value
-    .split(/\n\s*\n/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const blocks: Block[] = parts.map((part) => {
-    const match = part.match(MEDIA_BLOCK);
-    if (match) {
-      return { id: nextId(), kind: "media", media: kindOf(match[2]), alt: match[1], url: match[2] };
-    }
-    return { id: nextId(), kind: "text", value: part };
-  });
-  // Always leave a text block to type into.
-  if (blocks.length === 0 || blocks[blocks.length - 1]?.kind !== "text") {
-    blocks.push({ id: nextId(), kind: "text", value: "" });
+function mediaHtml(url: string, alt = ""): string {
+  const embed = resourceVideoEmbedUrl(url);
+  if (embed) {
+    return `<span class="admin-md-embed" data-embed-url="${escapeHtml(url)}"><iframe src="${escapeHtml(embed)}" title="${escapeHtml(alt || "Video")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></span>`;
   }
-  return blocks;
+  if (VIDEO_FILE.test(url)) {
+    return `<video src="${escapeHtml(url)}" controls preload="metadata"></video>`;
+  }
+  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`;
 }
 
-function serialize(blocks: Block[]): string {
-  return blocks
-    .map((block) =>
-      block.kind === "media" ? `![${block.alt}](${block.url})` : block.value.trim()
-    )
+function inlineHtml(text: string): string {
+  return text
+    .split(/(!\[[^\]]*\]\([^)\s]+\)|\*\*[^*]+\*\*)/g)
+    .map((part) => {
+      const image = part.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+      if (image) return mediaHtml(image[2], image[1]);
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return `<strong>${escapeHtml(part.slice(2, -2))}</strong>`;
+      }
+      return escapeHtml(part).replace(/\n/g, "<br>");
+    })
+    .join("");
+}
+
+function markdownToHtml(markdown: string): string {
+  return markdown
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
     .filter(Boolean)
-    .join("\n\n");
+    .map((block) => {
+      const media = block.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
+      if (media) {
+        return `<p class="admin-md-media" contenteditable="false">${mediaHtml(media[2], media[1])}</p>`;
+      }
+      return `<p>${inlineHtml(block)}</p>`;
+    })
+    .join("");
+}
+
+function inlineMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+  if (!(node instanceof HTMLElement)) return "";
+  if (node.matches("img")) {
+    return `![${node.getAttribute("alt") ?? ""}](${node.getAttribute("src") ?? ""})`;
+  }
+  if (node.matches("video")) return `![](${node.getAttribute("src") ?? ""})`;
+  if (node.matches("[data-embed-url]")) {
+    return `![](${node.getAttribute("data-embed-url") ?? ""})`;
+  }
+  if (node.matches("strong,b")) return `**${node.textContent ?? ""}**`;
+  if (node.matches("br")) return "\n";
+  return Array.from(node.childNodes).map(inlineMarkdown).join("");
+}
+
+function htmlToMarkdown(root: HTMLElement): string {
+  const blocks: string[] = [];
+
+  for (const node of Array.from(root.childNodes)) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = (node.textContent ?? "").trim();
+      if (text) blocks.push(text);
+      continue;
+    }
+    if (!(node instanceof HTMLElement)) continue;
+
+    if (node.matches(".admin-md-media")) {
+      const media = inlineMarkdown(node).trim();
+      if (media) blocks.push(media);
+      continue;
+    }
+
+    if (node.matches("img,video,[data-embed-url]")) {
+      const media = inlineMarkdown(node).trim();
+      if (media) blocks.push(media);
+      continue;
+    }
+
+    // A paragraph can mix text and media; split around the media.
+    const segments: string[] = [];
+    let text = "";
+    for (const child of Array.from(node.childNodes)) {
+      const isMedia =
+        child instanceof HTMLElement &&
+        (child.matches("img,video,[data-embed-url],.admin-md-media") ||
+          Boolean(child.querySelector("img,video,[data-embed-url]")));
+      if (isMedia) {
+        if (text.trim()) segments.push(text.trim());
+        text = "";
+        const media = inlineMarkdown(child).trim();
+        if (media) segments.push(media);
+      } else {
+        text += inlineMarkdown(child);
+      }
+    }
+    if (text.trim()) segments.push(text.trim());
+    if (segments.length) blocks.push(...segments);
+  }
+
+  return blocks.join("\n\n");
 }
 
 export function AdminMarkdownEditor({
@@ -79,100 +141,89 @@ export function AdminMarkdownEditor({
   disabled?: boolean;
   label?: string;
 }) {
-  const [blocks, setBlocks] = useState<Block[]>(() => parse(value));
-  const [picker, setPicker] = useState<{ kind: MediaKind; replaceId?: string } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef(value);
-  const activeId = useRef<string | null>(null);
-  const caret = useRef<{ id: string; pos: number } | null>(null);
-  const textRefs = useRef(new Map<string, HTMLTextAreaElement>());
+  const initialHtml = useRef(markdownToHtml(value));
+  const savedRange = useRef<Range | null>(null);
+  const [picker, setPicker] = useState<MediaKind | null>(null);
 
-  // External changes (loading a post, router refresh) replace the blocks.
+  // External changes (loading a post, a CTA appended by the parent).
   useEffect(() => {
     if (value === lastEmitted.current) return;
     lastEmitted.current = value;
-    setBlocks(parse(value));
+    if (ref.current) ref.current.innerHTML = markdownToHtml(value);
   }, [value]);
 
-  function commit(next: Block[], focusId?: string) {
-    setBlocks(next);
-    const markdown = serialize(next);
+  function emit() {
+    const root = ref.current;
+    if (!root) return;
+    const markdown = htmlToMarkdown(root);
     lastEmitted.current = markdown;
     onChange(markdown);
-    if (focusId) {
-      requestAnimationFrame(() => {
-        const el = textRefs.current.get(focusId);
-        if (!el) return;
-        el.focus();
-        const end = el.value.length;
-        el.setSelectionRange(end, end);
-      });
+  }
+
+  function openPicker(kind: MediaKind) {
+    const selection = window.getSelection();
+    savedRange.current =
+      selection && selection.rangeCount > 0 && ref.current?.contains(selection.anchorNode)
+        ? selection.getRangeAt(0).cloneRange()
+        : null;
+    setPicker(kind);
+  }
+
+  function insertMedia(url: string) {
+    const root = ref.current;
+    if (!root) return;
+
+    const media = document.createElement("p");
+    media.className = "admin-md-media";
+    media.contentEditable = "false";
+    media.innerHTML = mediaHtml(url);
+
+    const after = document.createElement("p");
+    after.appendChild(document.createElement("br"));
+
+    const range = savedRange.current;
+    let block: HTMLElement | null = null;
+    if (range && root.contains(range.startContainer)) {
+      const start = range.startContainer;
+      const element =
+        start.nodeType === Node.ELEMENT_NODE
+          ? (start as HTMLElement)
+          : start.parentElement;
+      block = element?.closest("p,div,li,blockquote") ?? null;
+      if (block && !root.contains(block)) block = null;
     }
-  }
 
-  function setText(id: string, next: string) {
-    commit(
-      blocks.map((block) =>
-        block.id === id && block.kind === "text" ? { ...block, value: next } : block
-      )
-    );
-  }
-
-  function insertMedia(url: string, kind: MediaKind) {
-    const media: MediaBlock = {
-      id: nextId(),
-      kind: "media",
-      media: kind,
-      alt: altFromUrl(url),
-      url,
-    };
-
-    // Insert at the caret when the last focus was in a text block.
-    const spot = caret.current;
-    const index = spot ? blocks.findIndex((block) => block.id === spot.id) : -1;
-    if (index >= 0) {
-      const block = blocks[index];
-      if (block?.kind === "text") {
-        const pos = Math.min(spot?.pos ?? block.value.length, block.value.length);
-        const before = block.value.slice(0, pos).trim();
-        const after = block.value.slice(pos).trim();
-        const next: Block[] = [...blocks.slice(0, index)];
-        if (before) next.push({ id: block.id, kind: "text", value: before });
-        next.push(media);
-        const afterId = nextId();
-        next.push({ id: afterId, kind: "text", value: after });
-        next.push(...blocks.slice(index + 1));
-        commit(next, afterId);
-        return;
+    if (range && block) {
+      // Split the paragraph at the caret: text before stays, text after moves
+      // below the media, exactly where the image lands in WordPress.
+      const tail = document.createRange();
+      tail.setStart(range.endContainer, range.endOffset);
+      tail.setEnd(block, block.childNodes.length);
+      after.textContent = "";
+      after.appendChild(tail.extractContents());
+      if (
+        !after.textContent?.trim() &&
+        !after.querySelector("img,video,[data-embed-url]")
+      ) {
+        after.innerHTML = "<br>";
       }
+      block.after(media);
+      media.after(after);
+    } else {
+      root.append(media, after);
     }
 
-    // Otherwise after the active block, or at the end.
-    const activeIndex = blocks.findIndex((block) => block.id === activeId.current);
-    const at = activeIndex >= 0 ? activeIndex + 1 : blocks.length;
-    const next = [...blocks.slice(0, at), media, ...blocks.slice(at)];
-    if (next[next.length - 1]?.kind !== "text") {
-      next.push({ id: nextId(), kind: "text", value: "" });
-    }
-    commit(next);
-  }
-
-  function replaceMedia(id: string, url: string) {
-    commit(
-      blocks.map((block) =>
-        block.id === id && block.kind === "media"
-          ? { ...block, url, media: kindOf(url), alt: altFromUrl(url) }
-          : block
-      )
-    );
-  }
-
-  function removeBlock(id: string) {
-    const next = blocks.filter((block) => block.id !== id);
-    if (next.length === 0) next.push({ id: nextId(), kind: "text", value: "" });
-    if (next[next.length - 1]?.kind !== "text") {
-      next.push({ id: nextId(), kind: "text", value: "" });
-    }
-    commit(next);
+    root.focus();
+    const caret = document.createRange();
+    caret.selectNodeContents(after);
+    caret.collapse(true);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(caret);
+    savedRange.current = null;
+    emit();
   }
 
   return (
@@ -184,7 +235,8 @@ export function AdminMarkdownEditor({
           type="button"
           className="btn-secondary"
           disabled={disabled}
-          onClick={() => setPicker({ kind: "image" })}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => openPicker("image")}
         >
           <ImageIcon size={14} /> Image
         </button>
@@ -192,88 +244,40 @@ export function AdminMarkdownEditor({
           type="button"
           className="btn-secondary"
           disabled={disabled}
-          onClick={() => setPicker({ kind: "video" })}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => openPicker("video")}
         >
           <Film size={14} /> Video
         </button>
         <span className="admin-panel-sub">Inserted where the cursor is.</span>
       </div>
 
-      <div className="admin-md-blocks">
-        {blocks.map((block, blockIndex) =>
-          block.kind === "text" ? (
-            <textarea
-              key={block.id}
-              ref={(el) => {
-                if (el) textRefs.current.set(block.id, el);
-                else textRefs.current.delete(block.id);
-              }}
-              className="field admin-md-text"
-              rows={Math.min(10, Math.max(2, block.value.split("\n").length + 1))}
-              value={block.value}
-              disabled={disabled}
-              aria-label={`${label} block ${blockIndex + 1}`}
-              placeholder="Write a paragraph"
-              onFocus={() => {
-                activeId.current = block.id;
-                caret.current = { id: block.id, pos: block.value.length };
-              }}
-              onSelect={(event) => {
-                const el = event.currentTarget;
-                caret.current = { id: block.id, pos: el.selectionStart };
-              }}
-              onChange={(event) => setText(block.id, event.target.value)}
-            />
-          ) : (
-            <div key={block.id} className="admin-md-media">
-              <span className="admin-md-thumb" aria-hidden>
-                {block.media === "video" ? (
-                  VIDEO_FILE.test(block.url) ? (
-                    <video src={block.url} muted preload="metadata" />
-                  ) : (
-                    <Film size={22} />
-                  )
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={block.url} alt="" loading="lazy" />
-                )}
-              </span>
-              <span className="admin-md-meta">
-                <span className="admin-md-name">{block.alt || "media"}</span>
-                <span className="admin-md-kind">{block.media}</span>
-              </span>
-              <span className="admin-md-actions">
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  disabled={disabled}
-                  onClick={() => setPicker({ kind: block.media, replaceId: block.id })}
-                >
-                  <Repeat size={14} /> Replace
-                </button>
-                <button
-                  type="button"
-                  className="btn-ghost is-danger"
-                  disabled={disabled}
-                  onClick={() => removeBlock(block.id)}
-                >
-                  <Trash2 size={14} /> Remove
-                </button>
-              </span>
-            </div>
-          )
-        )}
-      </div>
+      <div
+        ref={ref}
+        className="admin-md-rich"
+        contentEditable={!disabled}
+        suppressContentEditableWarning
+        role="textbox"
+        aria-multiline="true"
+        aria-label={label}
+        data-placeholder="Write a paragraph"
+        dangerouslySetInnerHTML={{ __html: initialHtml.current }}
+        onInput={emit}
+        onBlur={emit}
+        onPaste={(event) => {
+          event.preventDefault();
+          const text = event.clipboardData.getData("text/plain");
+          document.execCommand("insertText", false, text);
+        }}
+      />
 
       <AdminMediaPicker
-        kind={picker?.kind ?? "image"}
+        kind={picker ?? "image"}
         open={picker !== null}
         folder={folder}
         onClose={() => setPicker(null)}
         onPick={(url) => {
-          if (!picker) return;
-          if (picker.replaceId) replaceMedia(picker.replaceId, url);
-          else insertMedia(url, picker.kind);
+          insertMedia(url);
           setPicker(null);
         }}
       />
