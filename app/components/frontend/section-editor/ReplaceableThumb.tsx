@@ -54,7 +54,7 @@ export function ReplaceableThumb({
 
   return (
     <div ref={boxRef} className="fe-replace">
-      <button type="button" className="fe-replace-thumb" aria-haspopup="menu" aria-expanded={menu} aria-label={src ? "Change media" : "Upload media"} onClick={() => setMenu((open) => !open)}>
+      <button type="button" className={`fe-replace-thumb fe-replace-thumb--${mediaType}`} aria-haspopup="menu" aria-expanded={menu} aria-label={src ? "Change media" : "Upload media"} onClick={() => setMenu((open) => !open)}>
         {src && mediaType === "video" ? (
           <video src={src} muted playsInline />
         ) : src ? (

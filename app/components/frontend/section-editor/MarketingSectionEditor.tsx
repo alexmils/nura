@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { FrameDragPad } from "@/app/components/admin/FrameDragPad";
 import { FrameEdit } from "@/app/components/admin/FrameEdit";
 import { flushActiveFrameDrag, parseFrameKey, patchFramePath, readFramePath } from "@/app/components/admin/frame-drag";
@@ -71,6 +71,9 @@ export function MarketingSectionEditor({
   const template = String(config?.[HERO_TEMPLATE_KEY] || "default");
   const pickerFields = def ? def.fields.filter(isPicker) : [];
   const colorFields = def ? def.fields.filter(isColor) : [];
+  const contentFields = def
+    ? def.fields.filter((field) => !isPicker(field) && !isColor(field) && fieldInTemplate(field, template))
+    : [];
 
   /** Applies an edit and records an undo step (typing in one field within 1s is one step). */
   function change(key: string, apply: (current: SectionConfig) => SectionConfig) {
@@ -226,63 +229,72 @@ export function MarketingSectionEditor({
                   <span>Show this section</span>
                 </label>
               )}
-              {pickerFields.map((field) => (
-                <TemplatePicker
-                  key={field.key}
-                  field={field}
-                  value={String(config[field.key] ?? "")}
-                  onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+              {pickerFields.length ? (
+                <EditorAccordion title="Layout" hint="Template and its own media." open>
+                  {pickerFields.map((field) => (
+                    <TemplatePicker
+                      key={field.key}
+                      field={field}
+                      value={String(config[field.key] ?? "")}
+                      onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+                    />
+                  ))}
+                </EditorAccordion>
+              ) : null}
+              {contentFields.length ? (
+                <EditorAccordion title="Content" hint="Text, media and lists." open>
+                  {contentFields.map((field) => {
+                    if (field.kind === "list") {
+                      return (
+                        <fieldset key={field.key} className="fe-editor-group">
+                          <legend>{field.label}</legend>
+                          <ListEditor
+                            field={field}
+                            items={(config[field.key] as SectionItem[]) ?? []}
+                            onChange={(items, key) =>
+                              change(`${field.key}:${key}`, (current) => ({ ...current, [field.key]: items }))
+                            }
+                          />
+                        </fieldset>
+                      );
+                    }
+                    if (field.kind === "media") {
+                      return (
+                        <fieldset key={field.key} className="fe-editor-group">
+                          <legend>{field.label}</legend>
+                          <MediaControls
+                            field={field}
+                            values={config}
+                            onChange={(patch) =>
+                              change(`${field.key}:${Object.keys(patch).join(",")}`, (current) => ({
+                                ...current,
+                                ...patch,
+                              }))
+                            }
+                          />
+                        </fieldset>
+                      );
+                    }
+                    return (
+                      <ScalarControl
+                        key={field.key}
+                        field={field}
+                        value={String(config[field.key] ?? "")}
+                        onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
+                      />
+                    );
+                  })}
+                </EditorAccordion>
+              ) : null}
+              <EditorAccordion title="Background" hint="Colour, image, video or gradient.">
+                <BackgroundControls
+                  decorations={id === "home-hero" && template === "default"}
+                  values={config}
+                  onChange={(patch, key) => change(`bg:${key}`, (current) => ({ ...current, ...patch }))}
                 />
-              ))}
-              <BackgroundControls
-                decorations={id === "home-hero" && template === "default"}
-                values={config}
-                onChange={(patch, key) => change(`bg:${key}`, (current) => ({ ...current, ...patch }))}
-              />
-              {def.fields.filter((field) => !isPicker(field) && !isColor(field) && fieldInTemplate(field, template)).map((field) => {
-                if (field.kind === "list") {
-                  return (
-                    <fieldset key={field.key} className="fe-editor-group">
-                      <legend>{field.label}</legend>
-                      <ListEditor
-                        field={field}
-                        items={(config[field.key] as SectionItem[]) ?? []}
-                        onChange={(items, key) =>
-                          change(`${field.key}:${key}`, (current) => ({ ...current, [field.key]: items }))
-                        }
-                      />
-                    </fieldset>
-                  );
-                }
-                if (field.kind === "media") {
-                  return (
-                    <fieldset key={field.key} className="fe-editor-group">
-                      <legend>{field.label}</legend>
-                      <MediaControls
-                        field={field}
-                        values={config}
-                        onChange={(patch) =>
-                          change(`${field.key}:${Object.keys(patch).join(",")}`, (current) => ({
-                            ...current,
-                            ...patch,
-                          }))
-                        }
-                      />
-                    </fieldset>
-                  );
-                }
-                return (
-                  <ScalarControl
-                    key={field.key}
-                    field={field}
-                    value={String(config[field.key] ?? "")}
-                    onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
-                  />
-                );
-              })}
+              </EditorAccordion>
               {colorFields.length ? (
-                <fieldset className="fe-editor-group">
-                  <legend>Text colours</legend>
+                <EditorAccordion title="Text colours" hint="Blank keeps the design.">
                   {colorFields.map((field) => (
                     <ColorControl
                       key={field.key}
@@ -291,7 +303,7 @@ export function MarketingSectionEditor({
                       onChange={(value) => change(field.key, (current) => ({ ...current, [field.key]: value }))}
                     />
                   ))}
-                </fieldset>
+                </EditorAccordion>
               ) : null}
             </>
           )}
@@ -328,6 +340,29 @@ function isPicker(field: Field): field is ScalarField {
 
 function isColor(field: Field): field is ScalarField {
   return field.kind !== "list" && field.kind !== "media" && Boolean(field.color);
+}
+
+/** One folded group in the drawer: a summary row and its controls. */
+function EditorAccordion({
+  title,
+  hint,
+  open = false,
+  children,
+}: {
+  title: string;
+  hint?: string;
+  open?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details className="fe-editor-acc" open={open}>
+      <summary>
+        <span>{title}</span>
+        {hint ? <small>{hint}</small> : null}
+      </summary>
+      <div className="fe-editor-acc-body">{children}</div>
+    </details>
+  );
 }
 
 /** Compact layout picker: a dropdown plus a schematic preview of the selection. */
@@ -574,11 +609,23 @@ function MediaControls({
             />
           </div>
           <ImageSlot
-            label="Poster"
-            hint={field.hint}
+            label="Poster image"
+            hint="Shown before the video starts and when motion is reduced."
             value={read(names.poster)}
             onChange={(url) => onChange({ [names.poster]: url })}
           />
+          {field.playback ? (
+            <label className="fe-editor-check">
+              <input
+                type="checkbox"
+                checked={read(`${field.key}Autoplay`) === "1"}
+                onChange={(event) =>
+                  onChange({ [`${field.key}Autoplay`]: event.target.checked ? "1" : "0" })
+                }
+              />
+              <span>Autoplay</span>
+            </label>
+          ) : null}
         </>
       )}
       <label className="fe-editor-field">

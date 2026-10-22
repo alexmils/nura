@@ -1,20 +1,68 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Pause, Play } from "lucide-react";
 import { storedFrameStyle } from "@/lib/image-position";
 
-function embedSrc(url: string): string | null {
+function embedSrc(url: string, autoplay: boolean): string | null {
+  const flag = autoplay ? 1 : 0;
   const yt = url.match(
     /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/i
   );
   if (yt?.[1]) {
-    return `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=1&mute=1&loop=1&playlist=${yt[1]}&playsinline=1`;
+    return `https://www.youtube-nocookie.com/embed/${yt[1]}?autoplay=${flag}&mute=1&loop=1&playlist=${yt[1]}&playsinline=1`;
   }
   const vimeo = url.match(/vimeo\.com\/(\d+)/i);
   if (vimeo?.[1]) {
-    return `https://player.vimeo.com/video/${vimeo[1]}?autoplay=1&muted=1&loop=1&background=1`;
+    return `https://player.vimeo.com/video/${vimeo[1]}?autoplay=${flag}&muted=1&loop=1`;
   }
   return null;
+}
+
+/** File video with a play/pause control that appears over the picture. */
+export function MediaVideo({
+  src,
+  poster,
+  autoplay = false,
+  className,
+}: {
+  src: string;
+  poster?: string;
+  autoplay?: boolean;
+  className?: string;
+}) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  const [paused, setPaused] = useState(!autoplay);
+  return (
+    <div className={`fe-media-video${paused ? " is-paused" : ""}`}>
+      <video
+        ref={ref}
+        className={className}
+        src={src}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        autoPlay={autoplay}
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+      />
+      <button
+        type="button"
+        className="fe-media-video-toggle"
+        aria-label={paused ? "Play video" : "Pause video"}
+        onClick={(event) => {
+          event.preventDefault();
+          const video = ref.current;
+          if (!video) return;
+          if (video.paused) void video.play().catch(() => undefined);
+          else video.pause();
+        }}
+      >
+        {paused ? <Play size={20} aria-hidden /> : <Pause size={18} aria-hidden />}
+      </button>
+    </div>
+  );
 }
 
 export function SectionMedia({
@@ -26,6 +74,8 @@ export function SectionMedia({
   className,
   frameKey,
   framePos,
+  autoplay = true,
+  controls = false,
 }: {
   /** Shared with the editor's Edit button (drag to move, scroll to zoom). */
   frameKey?: string;
@@ -37,6 +87,10 @@ export function SectionMedia({
   poster: string;
   alt: string;
   className?: string;
+  /** File videos only; embeds follow their own provider. */
+  autoplay?: boolean;
+  /** Show a play/pause overlay (file videos only). */
+  controls?: boolean;
 }) {
   const [reduce, setReduce] = useState(false);
   useEffect(() => {
@@ -49,7 +103,7 @@ export function SectionMedia({
 
   const showVideo = kind === "video" && Boolean(video) && !reduce;
   if (showVideo) {
-    const embed = embedSrc(video);
+    const embed = embedSrc(video, autoplay);
     if (embed) {
       return (
         <iframe
@@ -61,6 +115,16 @@ export function SectionMedia({
         />
       );
     }
+    if (controls) {
+      return (
+        <MediaVideo
+          src={video}
+          poster={poster || image || undefined}
+          autoplay={autoplay}
+          className={className}
+        />
+      );
+    }
     return (
       <video
         className={className}
@@ -69,7 +133,7 @@ export function SectionMedia({
         muted
         loop
         playsInline
-        autoPlay
+        autoPlay={autoplay}
       />
     );
   }

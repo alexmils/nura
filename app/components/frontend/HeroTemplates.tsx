@@ -25,6 +25,9 @@ function SlotMedia({ hero, slot, className }: { hero: SectionConfig | undefined;
   const names = mediaNames(slot);
   const read = (key: string) => sectionText(hero, key);
   if (!read(names.image) && !read(names.video) && !read(names.poster)) return null;
+  // Slots with an Autoplay switch (stage, billboard) get the custom player.
+  const flag = read(`${slot}Autoplay`);
+  const controls = flag !== "";
   return (
     <SectionMedia
       className={className}
@@ -35,6 +38,8 @@ function SlotMedia({ hero, slot, className }: { hero: SectionConfig | undefined;
       alt={read(names.alt)}
       frameKey={frameKey("home-hero", names.image)}
       framePos={read(framePosKey(names.image))}
+      autoplay={controls ? flag === "1" : true}
+      controls={controls}
     />
   );
 }

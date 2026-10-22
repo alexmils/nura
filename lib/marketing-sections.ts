@@ -60,6 +60,8 @@ export type MediaFieldDef = {
   label: string;
   kind: "media";
   hint?: string;
+  /** Show an Autoplay switch for videos (stored as {key}Autoplay). */
+  playback?: boolean;
   /** Only shown (and rendered) for these hero templates. */
   templates?: readonly string[];
 };
@@ -1385,9 +1387,9 @@ const V2_SECTIONS: SectionDef[] = [
       only(media("frameMedia", "Framed media", "Image, or a muted looping video. Poster shows if motion is reduced."), ["framed"]),
       only(text("frameCaption", "Frame caption"), ["framed"]),
       only(text("barLabel", "Bar label", "Small line above the headline, e.g. A calm set, playing."), ["cinema"]),
-      only(media("billboardMedia", "Top video", "Image, or a muted looping video. Sits above the copy bar."), ["billboard"]),
+      only({ ...media("billboardMedia", "Top video", "Image, or a muted looping video. Sits above the copy bar."), playback: true }, ["billboard"]),
       only(text("billboardLabel", "Top video label"), ["billboard"]),
-      only(media("stageMedia", "Centre video", "Image, or a muted looping video. Poster shows if motion is reduced."), ["stage"]),
+      only({ ...media("stageMedia", "Centre video", "Image, or a muted looping video. Poster shows if motion is reduced."), playback: true }, ["stage"]),
       only(text("stageCaption", "Centre video caption"), ["stage"]),
       only(media("posterMedia", "Poster media", "Image, or a muted looping video."), ["poster"]),
       only(text("posterCaption", "Poster caption"), ["poster"]),
@@ -1441,12 +1443,14 @@ const V2_SECTIONS: SectionDef[] = [
       billboardMediaVideo: "",
       billboardMediaPoster: "",
       billboardMediaAlt: "A calm session, playing",
+      billboardMediaAutoplay: "0",
       billboardLabel: "A calm set, playing",
       stageMediaKind: "image",
       stageMediaImage: "/marketing/landing/calm-water.jpg",
       stageMediaVideo: "",
       stageMediaPoster: "",
       stageMediaAlt: "A calm guided set",
+      stageMediaAutoplay: "0",
       stageCaption: "A guided set, playing",
       posterMediaKind: "image",
       posterMediaImage: "/marketing/landing/calm-rest.jpg",
@@ -2433,6 +2437,11 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
         out,
         normalizeMediaSlot(field.key, source, def.defaults as SectionItem)
       );
+      if (field.playback) {
+        // Stored beside the slot; the editor's Autoplay switch writes it.
+        const auto = source[`${field.key}Autoplay`] ?? def.defaults[`${field.key}Autoplay`];
+        out[`${field.key}Autoplay`] = auto === "1" ? "1" : "0";
+      }
       keepFramePos(out as SectionItem, source, mediaNames(field.key).image);
     } else {
       out[field.key] = normalizeScalar(

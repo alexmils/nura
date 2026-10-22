@@ -340,6 +340,20 @@ html[data-editor-open] .frontend-back-to-top {
   object-fit: cover;
 }
 
+/* Video slots: a small preview, not a full-width takeover of the panel. */
+.fe-replace-thumb--video {
+  max-width: 12rem;
+  min-height: 0;
+}
+
+.fe-replace-thumb--video video {
+  height: 6.75rem;
+}
+
+.fe-replace-thumb--video .fe-replace-hover {
+  font-size: 0;
+}
+
 /* Image/video fields fill the panel; icon fields are a small square. The
    wrapper used to shrink to the "Add" label, making a tall narrow pill. */
 .fe-editor-field > .fe-replace {
@@ -966,4 +980,58 @@ html[data-editor-open] .frontend-back-to-top {
 
 html[data-frame-drag] [data-frame-key] {
   transition: none !important;
+}
+
+/* Editor accordion: one clear group per job, not a wall of fields. */
+.fe-editor-acc {
+  margin: 0 0 0.7rem;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.fe-editor-acc > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.fe-editor-acc > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fe-editor-acc > summary small {
+  margin-left: auto;
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  text-align: right;
+}
+
+.fe-editor-acc > summary::after {
+  content: "\25BE";
+  flex: none;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--ink) 50%, transparent);
+  transition: transform 0.18s ease;
+}
+
+.fe-editor-acc[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.fe-editor-acc[open] > summary {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.fe-editor-acc-body {
+  display: grid;
+  gap: 0.9rem;
+  padding: 0.95rem 1rem 1.05rem;
 }

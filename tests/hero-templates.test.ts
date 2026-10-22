@@ -52,3 +52,10 @@ test("template-only fields are scoped to their templates", () => {
   assert.ok(keys("billboard").includes("billboardMedia"));
   assert.ok(!keys("minimal").includes("stageMedia"));
 });
+
+test("video playback choice survives normalization", () => {
+  const on = normalizeSection("home-hero", { template: "billboard", billboardMediaAutoplay: "1" });
+  assert.equal(on.billboardMediaAutoplay, "1");
+  const off = normalizeSection("home-hero", { template: "billboard" });
+  assert.equal(off.billboardMediaAutoplay, "0");
+});
