@@ -245,3 +245,9 @@
 .fe-tpl-thumb--minimal .t-line--2 { top: 48%; left: 28%; width: 44%; height: 10%; }
 .fe-tpl-thumb--minimal .t-line--3 { top: 64%; left: 34%; width: 32%; height: 4%; opacity: 0.6; }
 .fe-tpl-thumb--minimal .t-btn { bottom: 8%; left: 41%; }
+
+.fe-tpl-thumb--billboard .t-media { display: block; top: 8%; left: 8%; width: 84%; height: 46%; border-radius: 6px; }
+.fe-tpl-thumb--billboard .t-line--1 { bottom: 30%; left: 8%; width: 46%; height: 8%; }
+.fe-tpl-thumb--billboard .t-line--2 { bottom: 20%; left: 8%; width: 34%; height: 8%; }
+.fe-tpl-thumb--billboard .t-line--3 { bottom: 12%; left: 8%; width: 26%; height: 3%; opacity: 0.6; }
+.fe-tpl-thumb--billboard .t-btn { bottom: 9%; right: 8%; left: auto; }

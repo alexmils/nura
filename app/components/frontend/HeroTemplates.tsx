@@ -188,6 +188,34 @@ export function HeroTemplateBody({
     );
   }
 
+  if (template === "billboard") {
+    const label = text("billboardLabel");
+    return (
+      <div className="v2-hero-inner v2-tpl v2-tpl--billboard" data-hero-template={template}>
+        <figure className="v2-tpl-billboard v2-tpl-rise">
+          <SlotMedia hero={hero} slot="billboardMedia" className="v2-tpl-billboard-media" />
+          {label ? (
+            <figcaption className="v2-tpl-chip">
+              <span className="v2-tpl-live" aria-hidden />
+              {label}
+            </figcaption>
+          ) : null}
+        </figure>
+        <div className="v2-hero-copy v2-tpl-copy v2-tpl-bar">
+          <div className="v2-tpl-bar-head">
+            {parts.kicker}
+            {parts.title}
+          </div>
+          <div className="v2-tpl-bar-side">
+            {parts.sub}
+            {parts.actions}
+            {parts.checks}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // cinema: the background fills the hero, the copy sits in a bar along the bottom.
   const bar = text("barLabel");
   return (

@@ -13,7 +13,7 @@ test("hero template defaults to Default and only accepts known values", () => {
   assert.equal(heroTemplate(normalizeSection("home-hero", {})), "default");
   assert.equal(heroTemplate(normalizeSection("home-hero", { template: "split" })), "split");
   assert.equal(normalizeSection("home-hero", { template: "nope" }).template, "default");
-  assert.equal(HERO_TEMPLATES.length, 10);
+  assert.equal(HERO_TEMPLATES.length, 11);
 });
 
 test("each template keeps its own data when switching back and forth", () => {
@@ -49,5 +49,6 @@ test("template-only fields are scoped to their templates", () => {
   assert.ok(keys("default").includes("title1"));
   assert.ok(keys("stage").includes("stageMedia"));
   assert.ok(keys("poster").includes("posterMedia"));
+  assert.ok(keys("billboard").includes("billboardMedia"));
   assert.ok(!keys("minimal").includes("stageMedia"));
 });
