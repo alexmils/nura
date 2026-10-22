@@ -16,16 +16,30 @@ export type FeedbackPromptState = {
   updatedAt: string;
 };
 
+export type FeedbackKind = "feedback" | "review";
+
 export type FeedbackResponse = {
   id: string;
   userId: string;
   score: number;
   comment: string | null;
   source: FeedbackSource;
+  kind: FeedbackKind;
+  publishedAt: string | null;
+  featured: boolean;
   adminSeenAt: string | null;
   createdAt: string;
   userEmail?: string;
   userName?: string | null;
+};
+
+export type PublicReview = {
+  id: string;
+  score: number;
+  comment: string;
+  author: string;
+  featured: boolean;
+  publishedAt: string;
 };
 
 let feedbackSchemaDone = false;
@@ -86,6 +100,12 @@ export async function ensureFeedbackSchema(): Promise<void> {
       ON feedback_responses(user_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_feedback_responses_unread
       ON feedback_responses(admin_seen_at, created_at DESC);
+    ALTER TABLE feedback_responses ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'feedback';
+    ALTER TABLE feedback_responses ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+    ALTER TABLE feedback_responses ADD COLUMN IF NOT EXISTS featured BOOLEAN NOT NULL DEFAULT FALSE;
+    CREATE INDEX IF NOT EXISTS idx_feedback_responses_published
+      ON feedback_responses(published_at DESC)
+      WHERE published_at IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS feedback_prompt_state (
       user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -279,9 +299,16 @@ export async function submitFeedbackResponse(input: {
     ? input.comment.trim().slice(0, 2000)
     : null;
   await getPool().query(
-    `INSERT INTO feedback_responses (id, user_id, score, comment, source, created_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())`,
-    [id, input.userId, input.score, comment, source]
+    `INSERT INTO feedback_responses (id, user_id, score, comment, source, kind, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
+    [
+      id,
+      input.userId,
+      input.score,
+      comment,
+      source,
+      source === "review_email" ? "review" : "feedback",
+    ]
   );
   await upsertPromptState(input.userId, {
     forceShow: false,
@@ -289,7 +316,8 @@ export async function submitFeedbackResponse(input: {
     snoozeUntil: null,
   });
   const { rows } = await getPool().query(
-    `SELECT id, user_id, score, comment, source, admin_seen_at, created_at
+    `SELECT id, user_id, score, comment, source, kind, published_at, featured,
+            admin_seen_at, created_at
      FROM feedback_responses WHERE id = $1`,
     [id]
   );
@@ -302,6 +330,11 @@ export async function submitFeedbackResponse(input: {
       score: Number(row.score),
       comment: (row.comment as string) ?? null,
       source: parseSource(row.source) ?? source,
+      kind: row.kind === "review" ? "review" : "feedback",
+      publishedAt: row.published_at
+        ? new Date(row.published_at as string).toISOString()
+        : null,
+      featured: Boolean(row.featured),
       adminSeenAt: row.admin_seen_at
         ? new Date(row.admin_seen_at as string).toISOString()
         : null,
@@ -328,31 +361,117 @@ export async function forceFeedbackPromptForEmail(
   return { ok: true, userId };
 }
 
+function mapFeedbackRow(row: Record<string, unknown>): FeedbackResponse {
+  return {
+    id: row.id as string,
+    userId: row.user_id as string,
+    score: Number(row.score),
+    comment: (row.comment as string) ?? null,
+    source: parseSource(row.source) ?? "days_elapsed",
+    kind: row.kind === "review" ? "review" : "feedback",
+    publishedAt: row.published_at
+      ? new Date(row.published_at as string).toISOString()
+      : null,
+    featured: Boolean(row.featured),
+    adminSeenAt: row.admin_seen_at
+      ? new Date(row.admin_seen_at as string).toISOString()
+      : null,
+    createdAt: new Date(row.created_at as string).toISOString(),
+    userEmail: row.user_email as string,
+    userName: (row.user_name as string) ?? null,
+  };
+}
+
+const FEEDBACK_SELECT = `SELECT f.id, f.user_id, f.score, f.comment, f.source, f.kind,
+         f.published_at, f.featured, f.admin_seen_at, f.created_at,
+         u.email AS user_email, u.name AS user_name
+  FROM feedback_responses f
+  JOIN users u ON u.id = f.user_id`;
+
 export async function listFeedbackResponses(limit = 100): Promise<FeedbackResponse[]> {
   await ensureFeedbackSchema();
   const { rows } = await getPool().query(
-    `SELECT f.id, f.user_id, f.score, f.comment, f.source, f.admin_seen_at, f.created_at,
-            u.email AS user_email, u.name AS user_name
-     FROM feedback_responses f
-     JOIN users u ON u.id = f.user_id
+    `${FEEDBACK_SELECT}
      ORDER BY f.created_at DESC
      LIMIT $1`,
     [Math.min(500, Math.max(1, limit))]
+  );
+  return rows.map((row) => mapFeedbackRow(row as Record<string, unknown>));
+}
+
+export async function getFeedbackResponseById(
+  id: string
+): Promise<FeedbackResponse | null> {
+  await ensureFeedbackSchema();
+  const { rows } = await getPool().query(
+    `${FEEDBACK_SELECT} WHERE f.id = $1`,
+    [id]
+  );
+  return rows[0] ? mapFeedbackRow(rows[0] as Record<string, unknown>) : null;
+}
+
+/** Publish or unpublish a review. Feedback rows are never public. */
+export async function setFeedbackPublished(
+  id: string,
+  published: boolean
+): Promise<FeedbackResponse | null> {
+  await ensureFeedbackSchema();
+  const { rowCount } = await getPool().query(
+    `UPDATE feedback_responses
+     SET published_at = CASE WHEN $2 THEN NOW() ELSE NULL END,
+         featured = CASE WHEN $2 THEN featured ELSE FALSE END
+     WHERE id = $1 AND kind = 'review'`,
+    [id, published]
+  );
+  if (!rowCount) return null;
+  return getFeedbackResponseById(id);
+}
+
+export async function setFeedbackFeatured(
+  id: string,
+  featured: boolean
+): Promise<FeedbackResponse | null> {
+  await ensureFeedbackSchema();
+  const { rowCount } = await getPool().query(
+    `UPDATE feedback_responses
+     SET featured = $2
+     WHERE id = $1 AND kind = 'review' AND published_at IS NOT NULL`,
+    [id, featured]
+  );
+  if (!rowCount) return null;
+  return getFeedbackResponseById(id);
+}
+
+function publicReviewName(name: unknown): string {
+  if (typeof name !== "string") return "Nura member";
+  const first = name.trim().split(/\s+/)[0];
+  return first || "Nura member";
+}
+
+/** What the public /reviews page shows: published reviews only, featured first. */
+export async function listPublishedReviews(limit = 50): Promise<PublicReview[]> {
+  await ensureFeedbackSchema();
+  const { rows } = await getPool().query(
+    `SELECT f.id, f.score, f.comment, f.featured, f.published_at, u.name AS user_name
+     FROM feedback_responses f
+     JOIN users u ON u.id = f.user_id
+     WHERE f.published_at IS NOT NULL
+       AND f.kind = 'review'
+       AND f.comment IS NOT NULL
+       AND TRIM(f.comment) <> ''
+     ORDER BY f.featured DESC, f.published_at DESC
+     LIMIT $1`,
+    [Math.min(100, Math.max(1, limit))]
   );
   return rows.map((row) => {
     const r = row as Record<string, unknown>;
     return {
       id: r.id as string,
-      userId: r.user_id as string,
       score: Number(r.score),
-      comment: (r.comment as string) ?? null,
-      source: parseSource(r.source) ?? "days_elapsed",
-      adminSeenAt: r.admin_seen_at
-        ? new Date(r.admin_seen_at as string).toISOString()
-        : null,
-      createdAt: new Date(r.created_at as string).toISOString(),
-      userEmail: r.user_email as string,
-      userName: (r.user_name as string) ?? null,
+      comment: r.comment as string,
+      author: publicReviewName(r.user_name),
+      featured: Boolean(r.featured),
+      publishedAt: new Date(r.published_at as string).toISOString(),
     };
   });
 }

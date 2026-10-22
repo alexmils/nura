@@ -11,6 +11,7 @@ const FRONTEND_PREFIXES = [
   "/learn",
   "/knowledge",
   "/blog",
+  "/reviews",
   "/pricing",
   "/faq",
   "/support",

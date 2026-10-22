@@ -10,6 +10,7 @@ import {
   submitFeedbackResponse,
 } from "@/lib/feedback-db";
 import { isValidFeedbackScore } from "@/lib/feedback";
+import { notifyAdminsOfFeedback } from "@/lib/feedback-notify";
 
 export async function GET(request: Request) {
   const auth = await requireAuth();
@@ -99,6 +100,10 @@ export async function POST(request: Request) {
             : 400;
       return NextResponse.json({ error: result.error }, { status });
     }
+    await notifyAdminsOfFeedback({
+      feedback: result.feedback,
+      user: { name: auth.user.name, email: auth.user.email },
+    }).catch((err) => console.error("[feedback/notify]", err));
     return NextResponse.json({ ok: true, feedback: result.feedback });
   }
 

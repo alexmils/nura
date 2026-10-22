@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { ensureFeedbackSchema } from "@/lib/feedback-db";
 import { isValidFeedbackScore } from "@/lib/feedback";
+import { notifyAdminsOfFeedback } from "@/lib/feedback-notify";
+import { getUserById } from "@/lib/users";
 import {
   ensureReviewInviteSchema,
   hashReviewToken,
@@ -110,8 +112,8 @@ export async function POST(request: Request) {
 
     const id = crypto.randomUUID();
     await client.query(
-      `INSERT INTO feedback_responses (id, user_id, score, comment, source, created_at)
-       VALUES ($1, $2, $3, $4, 'review_email', NOW())`,
+      `INSERT INTO feedback_responses (id, user_id, score, comment, source, kind, created_at)
+       VALUES ($1, $2, $3, $4, 'review_email', 'review', NOW())`,
       [id, invite.user_id, score, comment]
     );
     await client.query(
@@ -119,6 +121,20 @@ export async function POST(request: Request) {
       [hashReviewToken(token)]
     );
     await client.query("COMMIT");
+
+    const member = await getUserById(invite.user_id).catch(() => null);
+    await notifyAdminsOfFeedback({
+      feedback: {
+        id,
+        score,
+        comment,
+        source: "review_email",
+        kind: "review",
+        userEmail: member?.email ?? null,
+        userName: member?.name ?? null,
+      },
+      user: member,
+    }).catch((err) => console.error("[review/notify]", err));
 
     return NextResponse.json({ ok: true, feedback: { id } });
   } catch (err) {

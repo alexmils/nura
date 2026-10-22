@@ -122,6 +122,15 @@ export type EmailTemplateData = {
     mode: string;
     adminUserUrl: string;
   };
+  admin_feedback: {
+    customerName: string;
+    customerEmail: string;
+    score: string;
+    kindLabel: string;
+    source: string;
+    comment: string;
+    adminFeedbackUrl: string;
+  };
 };
 
 const brandColor = BRAND_COLORS.action;
@@ -648,6 +657,38 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
         `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) kept <strong>${plan}</strong> (${mode}).</p>
          ${renewLine}
          ${ctaButton(d.adminUserUrl, "Open user in admin")}`,
+        "This note is for the platform admin."
+      );
+      return { subject, html, text };
+    }
+    case "admin_feedback": {
+      const d = data as EmailTemplateData["admin_feedback"];
+      const name = escapeEmailHtml(d.customerName);
+      const email = escapeEmailHtml(d.customerEmail);
+      const score = escapeEmailHtml(d.score);
+      const kind = escapeEmailHtml(d.kindLabel);
+      const source = escapeEmailHtml(d.source);
+      const comment = escapeEmailHtml(d.comment);
+      const subject = `New ${d.kindLabel}: ${d.score} — ${d.customerName}`;
+      const text = [
+        `${d.customerName} <${d.customerEmail}> left a ${d.kindLabel} (${d.score}).`,
+        `Source: ${d.source}`,
+        "",
+        d.comment || "No written note.",
+        "",
+        `Open in admin: ${d.adminFeedbackUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        `New ${kind}`,
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};"><strong>${name}</strong> (${email}) left a <strong>${kind}</strong> with <strong>${score}</strong>.</p>
+         <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:${mutedColor};">Source: ${source}</p>
+         ${
+           d.comment.trim()
+             ? `<blockquote style="margin:16px 0;padding:12px 16px;border-left:3px solid ${brandColor};background:${pageBg};color:${inkColor};font-size:15px;line-height:1.6;">${comment.replace(/\n/g, "<br />")}</blockquote>`
+             : `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${mutedColor};">No written note.</p>`
+         }
+         ${ctaButton(d.adminFeedbackUrl, "Open in admin")}`,
         "This note is for the platform admin."
       );
       return { subject, html, text };

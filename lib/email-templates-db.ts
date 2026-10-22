@@ -186,6 +186,16 @@ function sampleData(id: EmailTemplateId) {
         mode: "Live",
         adminUserUrl: "https://example.com/admin/users/u1",
       };
+    case "admin_feedback":
+      return {
+        customerName: "Ana",
+        customerEmail: "ana@example.com",
+        score: "9/10",
+        kindLabel: "review",
+        source: "Review request email",
+        comment: "The sessions helped me sleep, and the ball is calming.",
+        adminFeedbackUrl: "https://example.com/admin/feedback?id=feedback-1",
+      };
   }
 }
 

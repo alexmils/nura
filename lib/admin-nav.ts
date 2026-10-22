@@ -133,7 +133,7 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
       },
       {
         href: "/admin/feedback",
-        label: "Feedback",
+        label: "Feedback & reviews",
         icon: "feedback",
         badge: "feedback",
       },

@@ -159,6 +159,16 @@ export async function POST(request: Request) {
         mode: "Live",
         adminUserUrl: await getAppUrl("/admin/users/u1"),
       });
+    } else if (id === "admin_feedback") {
+      await sendTemplateEmail(to.trim(), id, {
+        customerName: sample.name,
+        customerEmail: "ana@example.com",
+        score: "9/10",
+        kindLabel: "review",
+        source: "Review request email",
+        comment: "The sessions helped me sleep, and the ball is calming.",
+        adminFeedbackUrl: await getAppUrl("/admin/feedback?id=test"),
+      });
     } else {
       await sendTemplateEmail(to.trim(), "welcome", {
         name: sample.name,

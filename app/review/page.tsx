@@ -40,7 +40,8 @@ export default async function ReviewPage({
         </div>
         <ReviewInviteView token={token} state={state} />
         <p className="feedback-page-foot">
-          Your feedback stays private and helps shape Nura.
+          Reviews may be published on Nura to help other people. We show your
+          first name and your note, never your email.
         </p>
       </div>
     </div>

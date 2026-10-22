@@ -41,6 +41,7 @@ export const EMAIL_TEMPLATE_GROUP: Record<EmailTemplateId, EmailTemplateGroup> =
   admin_payment: "Admin",
   admin_subscription_canceled: "Admin",
   admin_subscription_resumed: "Admin",
+  admin_feedback: "Admin",
 };
 
 export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
@@ -78,6 +79,8 @@ export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
     "Tells the platform admin that a subscription was canceled or scheduled to cancel.",
   admin_subscription_resumed:
     "Tells the platform admin that a cancellation was undone.",
+  admin_feedback:
+    "Tells the platform admin that a member left feedback or a review, with the score and the full note.",
 };
 
 export type EmailTemplatePlaceholder = {
@@ -209,5 +212,14 @@ export const EMAIL_TEMPLATE_PLACEHOLDERS: Record<
     { token: "renewsAt", description: "Next renewal date" },
     { token: "mode", description: "Demo or live" },
     { token: "adminUserUrl", description: "The member in admin" },
+  ],
+  admin_feedback: [
+    { token: "customerName", description: "Member's name" },
+    { token: "customerEmail", description: "Member's email" },
+    { token: "score", description: "Score, e.g. 9/10" },
+    { token: "kindLabel", description: "review or feedback" },
+    { token: "source", description: "Where it came from" },
+    { token: "comment", description: "The full note" },
+    { token: "adminFeedbackUrl", description: "The item in Admin → Feedback" },
   ],
 };

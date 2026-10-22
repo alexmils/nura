@@ -17,6 +17,17 @@ export type FeedbackSource =
   | "review_email"
   | "page";
 
+/** Human wording for the admin inbox and its mail. */
+export function feedbackSourceLabel(source: string): string {
+  if (source === "trial_end_email") return "Trial end email";
+  if (source === "review_email") return "Review request email";
+  if (source === "page") return "Feedback page";
+  if (source === "session_end") return "After session";
+  if (source === "forced") return "Forced";
+  if (source === "days_elapsed") return "Days elapsed";
+  return source;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function isValidFeedbackScore(value: unknown): value is number {

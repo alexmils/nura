@@ -39,6 +39,7 @@ describe("emailLogTemplateIds", () => {
       "admin_payment",
       "admin_subscription_canceled",
       "admin_subscription_resumed",
+      "admin_feedback",
     ]);
     assert.equal(user.includes("welcome"), true);
     assert.equal(user.includes("broadcast"), true);
@@ -155,6 +156,15 @@ const FIXTURES: Record<string, Record<string, string | boolean>> = {
     renewsAt: "October 22, 2026",
     mode: "Live",
     adminUserUrl: "https://nurahelp.com/admin/users/u1",
+  },
+  admin_feedback: {
+    customerName: "Ana",
+    customerEmail: "ana@example.com",
+    score: "9/10",
+    kindLabel: "review",
+    source: "Review request email",
+    comment: "The sessions helped me sleep.",
+    adminFeedbackUrl: "https://nurahelp.com/admin/feedback?id=f1",
   },
 };
 

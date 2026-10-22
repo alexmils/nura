@@ -129,6 +129,7 @@ describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
     );
     assert.equal(isUnauthenticatedPublicPath("/api/review"), true);
     assert.equal(isUnauthenticatedPublicPath("/review"), true);
+    assert.equal(isUnauthenticatedPublicPath("/reviews"), true);
     assert.equal(isUnauthenticatedPublicPath("/api/newsletter/subscribe"), true);
     assert.equal(isUnauthenticatedPublicPath("/api/webhooks/brevo"), true);
   });
