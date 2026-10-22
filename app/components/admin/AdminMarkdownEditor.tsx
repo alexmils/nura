@@ -157,16 +157,28 @@ export function AdminMarkdownEditor({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef(value);
-  const initialHtml = useRef(markdownToHtml(value));
+  const mounted = useRef(false);
   const savedRange = useRef<Range | null>(null);
   const replaceBlock = useRef<HTMLElement | null>(null);
   const [picker, setPicker] = useState<MediaKind | null>(null);
 
-  // External changes (loading a post, a CTA appended by the parent).
+  /*
+   * The editable DOM is owned by the browser, not React. Never pass
+   * `dangerouslySetInnerHTML` here: a parent re-render would re-set it on
+   * every keystroke and wipe the caret. Set it once on mount and only when
+   * the parent changes the value from outside.
+   */
   useEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    if (!mounted.current) {
+      mounted.current = true;
+      root.innerHTML = markdownToHtml(value);
+      return;
+    }
     if (value === lastEmitted.current) return;
     lastEmitted.current = value;
-    if (ref.current) ref.current.innerHTML = markdownToHtml(value);
+    root.innerHTML = markdownToHtml(value);
   }, [value]);
 
   function emit() {
@@ -323,7 +335,6 @@ export function AdminMarkdownEditor({
         aria-multiline="true"
         aria-label={label}
         data-placeholder="Write a paragraph"
-        dangerouslySetInnerHTML={{ __html: initialHtml.current }}
         onInput={emit}
         onBlur={emit}
         onClick={(event) => {

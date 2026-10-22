@@ -132,23 +132,34 @@ export default function AdminBlogEditorPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [ctaOpen, setCtaOpen] = useState(false);
+  /**
+   * The editor's own value. Sections are derived for saving, but the text is
+   * not round-tripped back through them on every keystroke: that would reset
+   * the contenteditable and swallow typing.
+   */
+  const [article, setArticle] = useState("");
+
+  function setSections(next: SectionForm[]) {
+    setForm((f) => ({ ...f, sections: next }));
+    setArticle(sectionsToContent(next));
+  }
 
   function insertCta(data: BlogCtaData) {
     const block = serializeBlogCta(data);
     setCtaOpen(false);
-    setForm((f) => {
-      const last = f.sections.length - 1;
-      if (last < 0) {
-        return { ...f, sections: [{ heading: "", paragraphs: block }] };
-      }
-      const next = [...f.sections];
-      const current = next[last].paragraphs.trim();
-      next[last] = {
-        ...next[last],
-        paragraphs: current ? `${current}\n\n${block}` : block,
-      };
-      return { ...f, sections: next };
-    });
+    const last = form.sections.length - 1;
+    const next =
+      last < 0
+        ? [{ heading: "", paragraphs: block }]
+        : form.sections.map((section, index) => {
+            if (index !== last) return section;
+            const current = section.paragraphs.trim();
+            return {
+              ...section,
+              paragraphs: current ? `${current}\n\n${block}` : block,
+            };
+          });
+    setSections(next);
   }
 
 
@@ -164,11 +175,14 @@ export default function AdminBlogEditorPage() {
     const posts = (data.posts ?? []) as BlogPostRecord[];
     if (id === "new") {
       setForm(EMPTY);
+      setArticle("");
       setMissing(false);
     } else {
       const post = posts.find((p) => p.id === id || p.slug === id);
       if (post) {
-        setForm(postToForm(post));
+        const next = postToForm(post);
+        setForm(next);
+        setArticle(sectionsToContent(next.sections));
         setMissing(false);
       } else {
         setMissing(true);
@@ -241,7 +255,9 @@ export default function AdminBlogEditorPage() {
       if (!res.ok) throw new Error(data.error ?? "Could not save post");
       const saved = data.post as BlogPostRecord | undefined;
       if (saved) {
-        setForm(postToForm(saved));
+        const next = postToForm(saved);
+        setForm(next);
+        setArticle(sectionsToContent(next.sections));
         setMissing(false);
         if (id === "new") router.replace(`/admin/blog/${saved.id}`);
       }
@@ -334,15 +350,16 @@ export default function AdminBlogEditorPage() {
             <div className="admin-box">
               <AdminMarkdownEditor
                 label="Content"
-                value={sectionsToContent(form.sections)}
+                value={article}
                 disabled={busy}
                 folder="nura/blog"
-                onChange={(content) =>
+                onChange={(content) => {
+                  setArticle(content);
                   setForm((f) => ({
                     ...f,
                     sections: contentToSections(content),
-                  }))
-                }
+                  }));
+                }}
               />
               <div className="admin-content-actions">
                 <button
