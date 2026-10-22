@@ -13323,6 +13323,84 @@ a.help-drawer-signin.btn-primary {
   gap: 1rem;
 }
 
+.admin-seo-layout {
+  display: grid;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (min-width: 1100px) {
+  .admin-seo-layout {
+    grid-template-columns: 12rem minmax(0, 1fr);
+  }
+}
+
+.admin-seo-nav {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.admin-seo-nav-item {
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.admin-seo-nav-item:hover {
+  background: var(--bg-muted);
+  color: var(--text);
+}
+
+.admin-seo-nav-item.is-active {
+  background: var(--accent-subtle);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.admin-seo-content {
+  min-width: 0;
+  max-width: 100rem;
+  margin-inline: auto;
+}
+
+@media (max-width: 1099px) {
+  .admin-seo-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+  }
+
+  .admin-seo-nav-item {
+    white-space: nowrap;
+  }
+}
+
+.admin-seo-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .admin-seo-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-seo-default-og {
   margin-top: 0;
 }

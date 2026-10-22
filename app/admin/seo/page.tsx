@@ -996,15 +996,18 @@ function SeoSnippetPreview({
   description,
   ogTitle,
   ogImageUrl,
+  bare = false,
 }: {
   canonical: string;
   title: string;
   description: string;
   ogTitle: string;
   ogImageUrl: string;
+  /** Return the two cards as siblings, for a parent that lays them out. */
+  bare?: boolean;
 }) {
-  return (
-    <div className="admin-seo-previews">
+  const cards = (
+    <>
       <section className="admin-panel">
         <h3 className="admin-panel-title">Search preview</h3>
         <div className="admin-seo-serp">
@@ -1027,8 +1030,10 @@ function SeoSnippetPreview({
           </div>
         </div>
       </section>
-    </div>
+    </>
   );
+
+  return bare ? cards : <div className="admin-seo-previews">{cards}</div>;
 }
 
 function SeoOgImageField({
@@ -1501,6 +1506,7 @@ function AdminSeoPageInner() {
 
         {tab === "overview" && home ? (
           <div className="admin-seo-section">
+            <div className="admin-seo-overview-grid">
             <form
               className="admin-form-stack admin-panel admin-seo-default-og"
               onSubmit={(e) => {
@@ -1561,7 +1567,9 @@ function AdminSeoPageInner() {
                   undefined,
                 home.ogImageUrl
               )}
+              bare
             />
+            </div>
             <dl className="admin-seo-stat-grid">
               <div className="admin-panel">
                 <dt className="admin-seo-kicker">Page address</dt>
