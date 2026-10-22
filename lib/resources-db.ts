@@ -310,12 +310,18 @@ export async function upsertResource(
     }
   }
 
+  // Reading time is derived from the body, never entered by hand. A video
+  // resource has no reading time at all.
+  const effectiveBody = body === undefined ? (existing?.body ?? "") : (body ?? "");
+  const words = effectiveBody
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/[#*>`]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean).length;
   const readMinutes =
-    input.readMinutes === undefined
-      ? undefined
-      : input.readMinutes === null || Number.isNaN(Number(input.readMinutes))
-        ? null
-        : Math.max(0, Math.min(120, Math.round(Number(input.readMinutes))));
+    input.kind === "video"
+      ? null
+      : Math.max(1, Math.min(120, Math.round(words / 200) || 1));
 
   const id = input.id?.trim() || crypto.randomUUID();
   const featured =

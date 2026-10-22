@@ -21,7 +21,6 @@ type FormState = {
   body: string;
   coverUrl: string;
   videoUrl: string;
-  readMinutes: string;
   featured: boolean;
   enabled: boolean;
   sortOrder: string;
@@ -36,7 +35,6 @@ const EMPTY: FormState = {
   body: "",
   coverUrl: "",
   videoUrl: "",
-  readMinutes: "",
   featured: false,
   enabled: true,
   sortOrder: "0",
@@ -52,7 +50,6 @@ function postToForm(p: ResourcePost): FormState {
     body: p.body ?? "",
     coverUrl: p.coverUrl ?? "",
     videoUrl: p.videoUrl ?? "",
-    readMinutes: p.readMinutes != null ? String(p.readMinutes) : "",
     featured: p.featured,
     enabled: p.enabled,
     sortOrder: String(p.sortOrder ?? 0),
@@ -116,7 +113,6 @@ export default function AdminResourceEditorPage() {
             body: form.body,
             coverUrl: form.coverUrl || null,
             videoUrl: form.videoUrl || null,
-            readMinutes: form.readMinutes ? Number(form.readMinutes) : null,
             featured: form.featured,
             enabled: form.enabled,
             sortOrder: Number(form.sortOrder) || 0,
@@ -291,6 +287,30 @@ export default function AdminResourceEditorPage() {
             </div>
 
             <div className="admin-box">
+              <h3 className="admin-box-title">Details</h3>
+              <label className="admin-field-label">
+                Kind
+                <select
+                  className="field"
+                  value={form.kind}
+                  disabled={busy}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      kind: e.target.value as ResourceKind,
+                    }))
+                  }
+                >
+                  {RESOURCE_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kind}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="admin-box">
               <h3 className="admin-box-title">Cover image</h3>
               <AdminMediaField
                 label="Cover"
@@ -315,44 +335,6 @@ export default function AdminResourceEditorPage() {
               />
             </div>
 
-            <div className="admin-box">
-              <h3 className="admin-box-title">Details</h3>
-              <label className="admin-field-label">
-                Kind
-                <select
-                  className="field"
-                  value={form.kind}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      kind: e.target.value as ResourceKind,
-                    }))
-                  }
-                >
-                  {RESOURCE_KINDS.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {kind}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="admin-field-label">
-                Read minutes
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  max={120}
-                  value={form.readMinutes}
-                  disabled={busy}
-                  placeholder="auto"
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, readMinutes: e.target.value }))
-                  }
-                />
-              </label>
-            </div>
           </aside>
         </div>
       </main>
