@@ -146,6 +146,48 @@ export function HeroTemplateBody({
     );
   }
 
+  if (template === "stage") {
+    const caption = text("stageCaption");
+    return (
+      <div className="v2-hero-inner v2-tpl v2-tpl--stage" data-hero-template={template}>
+        <div className="v2-hero-copy v2-tpl-stage-copy">
+          {parts.kicker}
+          {parts.title}
+          {parts.sub}
+        </div>
+        <figure className="v2-tpl-stage v2-tpl-rise">
+          <SlotMedia hero={hero} slot="stageMedia" className="v2-tpl-stage-media" />
+          {caption ? <figcaption className="v2-tpl-chip">{caption}</figcaption> : null}
+        </figure>
+        <div className="v2-tpl-stage-actions">
+          {parts.actions}
+          {parts.checks}
+        </div>
+      </div>
+    );
+  }
+
+  if (template === "poster") {
+    const caption = text("posterCaption");
+    return (
+      <div className="v2-hero-inner v2-tpl v2-tpl--poster" data-hero-template={template}>
+        {copy}
+        <figure className="v2-tpl-poster v2-tpl-rise">
+          <SlotMedia hero={hero} slot="posterMedia" className="v2-tpl-poster-media" />
+          {caption ? <figcaption className="v2-tpl-chip">{caption}</figcaption> : null}
+        </figure>
+      </div>
+    );
+  }
+
+  if (template === "minimal") {
+    return (
+      <div className="v2-hero-inner v2-tpl v2-tpl--minimal" data-hero-template={template}>
+        {copy}
+      </div>
+    );
+  }
+
   // cinema: the background fills the hero, the copy sits in a bar along the bottom.
   const bar = text("barLabel");
   return (

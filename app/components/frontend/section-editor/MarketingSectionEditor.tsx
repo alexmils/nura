@@ -330,7 +330,7 @@ function isColor(field: Field): field is ScalarField {
   return field.kind !== "list" && field.kind !== "media" && Boolean(field.color);
 }
 
-/** Layout picker with a schematic preview per option; picking updates the page at once (Save keeps it). */
+/** Compact layout picker: a dropdown plus a schematic preview of the selection. */
 function TemplatePicker({
   field,
   value,
@@ -342,32 +342,33 @@ function TemplatePicker({
 }) {
   const options = field.options ?? [];
   const current = options.some((option) => option.value === value) ? value : options[0]?.value;
+  const active = options.find((option: FieldOption) => option.value === current);
   return (
-    <fieldset className="fe-editor-group fe-editor-tpl">
+    <fieldset className="fe-editor-group fe-editor-tpl fe-editor-tpl--compact">
       <legend>{field.label}</legend>
-      <div className="fe-editor-tpl-grid" role="radiogroup" aria-label={field.label}>
-        {options.map((option: FieldOption) => (
-          <button
-            key={option.value}
-            type="button"
-            role="radio"
-            aria-checked={current === option.value}
-            className={`fe-editor-tpl-option${current === option.value ? " is-on" : ""}`}
-            onClick={() => onChange(option.value)}
-            title={option.hint}
+      <div className="fe-editor-tpl-pick">
+        <span className={`fe-tpl-thumb fe-tpl-thumb--${current}`} aria-hidden>
+          <i className="t-media" />
+          <i className="t-line t-line--1" />
+          <i className="t-line t-line--2" />
+          <i className="t-line t-line--3" />
+          <i className="t-btn" />
+          <i className="t-extra" />
+        </span>
+        <div className="fe-editor-tpl-pick-copy">
+          <select
+            aria-label={field.label}
+            value={current}
+            onChange={(event) => onChange(event.target.value)}
           >
-            <span className={`fe-tpl-thumb fe-tpl-thumb--${option.value}`} aria-hidden>
-              <i className="t-media" />
-              <i className="t-line t-line--1" />
-              <i className="t-line t-line--2" />
-              <i className="t-line t-line--3" />
-              <i className="t-btn" />
-              <i className="t-extra" />
-            </span>
-            <strong>{option.label}</strong>
-            {option.hint ? <small>{option.hint}</small> : null}
-          </button>
-        ))}
+            {options.map((option: FieldOption) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          {active?.hint ? <small>{active.hint}</small> : null}
+        </div>
       </div>
       <small className="fe-editor-tpl-note">The page shows the picked template right away. Save keeps it; Cancel goes back. Each template keeps its own media and extras.</small>
     </fieldset>

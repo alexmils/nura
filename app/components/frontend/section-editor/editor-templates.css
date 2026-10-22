@@ -191,3 +191,57 @@
 .fe-tpl-thumb--magazine .t-line--2 { top: 43%; left: 56%; width: 28%; height: 9%; }
 .fe-tpl-thumb--magazine .t-line--3 { top: 58%; left: 56%; width: 24%; height: 3%; opacity: 0.55; }
 .fe-tpl-thumb--magazine .t-btn { top: 70%; left: 56%; }
+
+/* Compact template picker: dropdown + selected preview */
+.fe-editor-tpl--compact .fe-editor-tpl-pick {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.fe-editor-tpl--compact .fe-tpl-thumb {
+  flex: none;
+  width: 7.5rem;
+  border-radius: 0.5rem;
+}
+
+.fe-editor-tpl-pick-copy {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.fe-editor-tpl-pick-copy select {
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.18));
+  border-radius: 0.5rem;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.fe-editor-tpl-pick-copy small {
+  color: var(--text-muted, rgba(0, 0, 0, 0.55));
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+/* New hero presets */
+.fe-tpl-thumb--stage .t-line--1 { top: 18%; left: 22%; width: 56%; height: 8%; }
+.fe-tpl-thumb--stage .t-line--2 { top: 30%; left: 30%; width: 40%; height: 8%; }
+.fe-tpl-thumb--stage .t-line--3 { top: 41%; left: 36%; width: 28%; height: 3%; opacity: 0.6; }
+.fe-tpl-thumb--stage .t-media { display: block; top: 50%; left: 14%; width: 72%; height: 32%; border-radius: 6px; }
+.fe-tpl-thumb--stage .t-btn { bottom: 7%; left: 41%; }
+
+.fe-tpl-thumb--poster .t-line--1 { top: 30%; left: 8%; width: 42%; height: 12%; }
+.fe-tpl-thumb--poster .t-line--2 { top: 46%; left: 8%; width: 34%; height: 12%; }
+.fe-tpl-thumb--poster .t-line--3 { top: 63%; left: 8%; width: 28%; height: 4%; opacity: 0.6; }
+.fe-tpl-thumb--poster .t-btn { bottom: 9%; left: 8%; }
+.fe-tpl-thumb--poster .t-media { display: block; top: 14%; right: 8%; width: 34%; height: 72%; border-radius: 8px; }
+
+.fe-tpl-thumb--minimal .t-line--1 { top: 32%; left: 22%; width: 56%; height: 10%; }
+.fe-tpl-thumb--minimal .t-line--2 { top: 48%; left: 28%; width: 44%; height: 10%; }
+.fe-tpl-thumb--minimal .t-line--3 { top: 64%; left: 34%; width: 32%; height: 4%; opacity: 0.6; }
+.fe-tpl-thumb--minimal .t-btn { bottom: 8%; left: 41%; }

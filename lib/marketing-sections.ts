@@ -172,6 +172,9 @@ export const HERO_TEMPLATES = [
   { value: "editorial", label: "Editorial", hint: "Oversized headline with a stats column." },
   { value: "framed", label: "Framed", hint: "Centred minimal headline above a framed media card." },
   { value: "cinema", label: "Cinema", hint: "Full-bleed video, text in a bar along the bottom." },
+  { value: "stage", label: "Stage", hint: "Copy above and below a centred video card." },
+  { value: "poster", label: "Poster", hint: "Big type left, a tall media card right." },
+  { value: "minimal", label: "Minimal", hint: "Centred copy with lots of air, no media." },
 ] as const satisfies readonly FieldOption[];
 export type HeroTemplate = (typeof HERO_TEMPLATES)[number]["value"];
 
@@ -1381,6 +1384,10 @@ const V2_SECTIONS: SectionDef[] = [
       only(media("frameMedia", "Framed media", "Image, or a muted looping video. Poster shows if motion is reduced."), ["framed"]),
       only(text("frameCaption", "Frame caption"), ["framed"]),
       only(text("barLabel", "Bar label", "Small line above the headline, e.g. A calm set, playing."), ["cinema"]),
+      only(media("stageMedia", "Centre video", "Image, or a muted looping video. Poster shows if motion is reduced."), ["stage"]),
+      only(text("stageCaption", "Centre video caption"), ["stage"]),
+      only(media("posterMedia", "Poster media", "Image, or a muted looping video."), ["poster"]),
+      only(text("posterCaption", "Poster caption"), ["poster"]),
     ],
     defaults: {
       kicker: "AI-guided EMDR, between sessions",
@@ -1426,6 +1433,18 @@ const V2_SECTIONS: SectionDef[] = [
       frameMediaAlt: "Soft light through a window",
       frameCaption: "Visual sets, optional voice, and short guides.",
       barLabel: "Between sessions",
+      stageMediaKind: "image",
+      stageMediaImage: "/marketing/landing/calm-water.jpg",
+      stageMediaVideo: "",
+      stageMediaPoster: "",
+      stageMediaAlt: "A calm guided set",
+      stageCaption: "A guided set, playing",
+      posterMediaKind: "image",
+      posterMediaImage: "/marketing/landing/calm-rest.jpg",
+      posterMediaVideo: "",
+      posterMediaPoster: "",
+      posterMediaAlt: "Someone resting calmly at home",
+      posterCaption: "Calm enough to stay with the work",
     },
   },
   {
