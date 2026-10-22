@@ -156,8 +156,10 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   });
   // These boundaries stay plain cuts, but the outgoing section still holds
   // (stands still) for its pin runway before scrolling away.
-  pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "hold");
-  pinnedHandoff(one(".fe-faq"), one(".fe-blog"), "hold");
+  // A fixed z ladder keeps pricing above FAQ above blog while each hold
+  // reveals the next block from underneath.
+  pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "hold", { z: 40 });
+  pinnedHandoff(one(".fe-faq"), one(".fe-blog"), "hold", { z: 30 });
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),

@@ -131,6 +131,12 @@ export function pinnedHandoff(
      * section shorter than the viewport cannot cover it, so it is skipped.
      */
     hold?: number;
+    /**
+     * hold: explicit stacking order for the reveal. Sections that are pinned
+     * in sequence each raise their own z-index, so without a fixed ladder the
+     * next one can tie with the previous and cover it.
+     */
+    z?: number;
   } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
@@ -153,8 +159,16 @@ export function pinnedHandoff(
   const base = Math.max(1, zOf(prev));
   // curtain and hold reveal the next block from underneath.
   const nextOnTop = effect !== "curtain" && effect !== "hold";
-  gsap.set(prev, { position: relative(prev), zIndex: nextOnTop ? base : base + 1 });
-  gsap.set(next, { position: relative(next), zIndex: nextOnTop ? base + 1 : base });
+  if (effect === "hold" && opts.z) {
+    // Fixed ladder: an earlier section must stay above the ones below it even
+    // after a later hold raises its own block (otherwise the next one ties
+    // and covers the outgoing section).
+    gsap.set(prev, { position: relative(prev), zIndex: opts.z });
+    gsap.set(next, { position: relative(next), zIndex: Math.max(1, opts.z - 1) });
+  } else {
+    gsap.set(prev, { position: relative(prev), zIndex: nextOnTop ? base : base + 1 });
+    gsap.set(next, { position: relative(next), zIndex: nextOnTop ? base + 1 : base });
+  }
   if (getComputedStyle(next).backgroundColor.match(/rgba\(0, 0, 0, 0\)|transparent/) && getComputedStyle(next).backgroundImage === "none") {
     gsap.set(next, { backgroundColor: nextBg });
   }
