@@ -8671,7 +8671,7 @@ a.admin-panel-title-link:hover {
   }
 
   .admin-page-header {
-    padding: 1rem 1.15rem;
+    padding: 1rem max(1.15rem, calc((100% - 1120px) / 2 + 1.15rem));
   }
 
   .admin-main {
@@ -8896,7 +8896,8 @@ a.admin-panel-title-link:hover {
 }
 
 .admin-page-header {
-  padding: 1.25rem 2rem;
+  /* Align the title with the centered .admin-main column (1120px + 2rem). */
+  padding: 1.25rem max(2rem, calc((100% - 1120px) / 2 + 2rem));
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
 }
