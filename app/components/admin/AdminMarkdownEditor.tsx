@@ -27,13 +27,12 @@ function escapeHtml(value: string): string {
 
 function mediaHtml(url: string, alt = ""): string {
   const embed = resourceVideoEmbedUrl(url);
-  if (embed) {
-    return `<span class="admin-md-embed" data-embed-url="${escapeHtml(url)}"><iframe src="${escapeHtml(embed)}" title="${escapeHtml(alt || "Video")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></span>`;
-  }
-  if (VIDEO_FILE.test(url)) {
-    return `<video src="${escapeHtml(url)}" controls preload="metadata"></video>`;
-  }
-  return `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`;
+  const media = embed
+    ? `<span class="admin-md-embed" data-embed-url="${escapeHtml(url)}"><iframe src="${escapeHtml(embed)}" title="${escapeHtml(alt || "Video")}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></span>`
+    : VIDEO_FILE.test(url)
+      ? `<video src="${escapeHtml(url)}" controls preload="metadata"></video>`
+      : `<img src="${escapeHtml(url)}" alt="${escapeHtml(alt)}" />`;
+  return `<span class="admin-md-media" contenteditable="false">${media}<span class="admin-md-media-tools" contenteditable="false"><button type="button" data-media-action="replace" title="Replace" aria-label="Replace">&#8635;</button><button type="button" data-media-action="remove" title="Remove" aria-label="Remove">&#215;</button></span></span>`;
 }
 
 function inlineHtml(text: string): string {
@@ -58,7 +57,7 @@ function markdownToHtml(markdown: string): string {
     .map((block) => {
       const media = block.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
       if (media) {
-        return `<p class="admin-md-media" contenteditable="false">${mediaHtml(media[2], media[1])}</p>`;
+        return `<p>${mediaHtml(media[2], media[1])}</p>`;
       }
       return `<p>${inlineHtml(block)}</p>`;
     })
@@ -68,6 +67,8 @@ function markdownToHtml(markdown: string): string {
 function inlineMarkdown(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
   if (!(node instanceof HTMLElement)) return "";
+  // The hover tools are editor chrome, not content.
+  if (node.matches(".admin-md-media-tools")) return "";
   if (node.matches("img")) {
     return `![${node.getAttribute("alt") ?? ""}](${node.getAttribute("src") ?? ""})`;
   }
@@ -145,6 +146,7 @@ export function AdminMarkdownEditor({
   const lastEmitted = useRef(value);
   const initialHtml = useRef(markdownToHtml(value));
   const savedRange = useRef<Range | null>(null);
+  const replaceBlock = useRef<HTMLElement | null>(null);
   const [picker, setPicker] = useState<MediaKind | null>(null);
 
   // External changes (loading a post, a CTA appended by the parent).
@@ -176,8 +178,6 @@ export function AdminMarkdownEditor({
     if (!root) return;
 
     const media = document.createElement("p");
-    media.className = "admin-md-media";
-    media.contentEditable = "false";
     media.innerHTML = mediaHtml(url);
 
     const after = document.createElement("p");
@@ -264,6 +264,24 @@ export function AdminMarkdownEditor({
         dangerouslySetInnerHTML={{ __html: initialHtml.current }}
         onInput={emit}
         onBlur={emit}
+        onClick={(event) => {
+          const action = (event.target as HTMLElement).closest<HTMLElement>(
+            "[data-media-action]"
+          );
+          if (!action) return;
+          const block = action.closest<HTMLElement>(".admin-md-media");
+          if (!block) return;
+          event.preventDefault();
+          if (action.dataset.mediaAction === "remove") {
+            block.remove();
+            emit();
+            return;
+          }
+          replaceBlock.current = block;
+          setPicker(
+            block.querySelector("video,[data-embed-url]") ? "video" : "image"
+          );
+        }}
         onPaste={(event) => {
           event.preventDefault();
           const text = event.clipboardData.getData("text/plain");
@@ -275,9 +293,19 @@ export function AdminMarkdownEditor({
         kind={picker ?? "image"}
         open={picker !== null}
         folder={folder}
-        onClose={() => setPicker(null)}
+        onClose={() => {
+          replaceBlock.current = null;
+          setPicker(null);
+        }}
         onPick={(url) => {
-          insertMedia(url);
+          const target = replaceBlock.current;
+          replaceBlock.current = null;
+          if (target) {
+            target.outerHTML = mediaHtml(url);
+            emit();
+          } else {
+            insertMedia(url);
+          }
           setPicker(null);
         }}
       />

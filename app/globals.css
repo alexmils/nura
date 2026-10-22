@@ -14494,7 +14494,10 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   margin-bottom: 0;
 }
 
-.admin-md-rich p.admin-md-media {
+.admin-md-rich .admin-md-media {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
   margin: 0.5rem 0;
 }
 
@@ -14505,6 +14508,39 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   max-height: 240px;
   margin: 0;
   border-radius: 8px;
+}
+
+/* Hover tools: replace or remove a media block without hunting for markdown. */
+.admin-md-media-tools {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: none;
+  gap: 0.25rem;
+}
+
+.admin-md-media:hover .admin-md-media-tools,
+.admin-md-media:focus-within .admin-md-media-tools {
+  display: inline-flex;
+}
+
+.admin-md-media-tools button {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(27, 47, 12, 0.86);
+  color: #eaf8ea;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-md-media-tools button:hover {
+  background: rgba(27, 47, 12, 1);
 }
 
 .admin-md-embed {
