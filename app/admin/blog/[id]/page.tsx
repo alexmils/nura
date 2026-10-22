@@ -316,9 +316,8 @@ export default function AdminBlogEditorPage() {
             <div className="admin-box">
               <h3 className="admin-box-title">Sections</h3>
               <p className="admin-panel-sub">
-                One paragraph per blank line. An em dash is rewritten and the
-                acronym BLS is rejected. Insert media drops markdown at the
-                cursor. A bare YouTube or Vimeo link becomes an embed.
+                Write in Markdown and separate paragraphs with a blank line.
+                Insert image, video, or CTA to add it where the cursor is.
               </p>
               {form.sections.map((section, index) => (
                 <div key={index} className="admin-section-card">
