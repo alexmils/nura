@@ -577,10 +577,6 @@
  * End reveal sits in document flow after the footer.
  * (position:fixed glued the lockup to the viewport on Privacy / other inner pages.)
  */
-.frontend-main {
-  background-color: var(--fe-bg, #edf9ed);
-}
-
 .fe-site-footer-reveal {
   --fe-ft-reveal-h: calc(100vw * 280.51 / 1110.69 + 4.5rem);
   position: relative;
