@@ -118,6 +118,8 @@ export function pinnedHandoff(
     fade?: boolean;
     /** morph: element whose colour drives the blend when the box is a wrapper. */
     tint?: HTMLElement | null;
+    /** morph: visible incoming block, when `next` is an admin wrapper around it. */
+    nextTint?: HTMLElement | null;
     /**
      * Still viewports the outgoing block is pinned before the effect starts
      * (SectionHandoff's `hold`). Adds that much scroll runway below `prev`; a
@@ -347,6 +349,13 @@ export function pinnedHandoff(
           tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
         }
         tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        // Editor wrappers can leave the visible block painting its own colour
+        // above the tweened wrapper; blend that block too so the join never
+        // shows a hard yellow-to-green line.
+        if (opts.nextTint && opts.nextTint !== next) {
+          gsap.set(opts.nextTint, { backgroundColor: from });
+          tl.fromTo(opts.nextTint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        }
       }
       const content = opts.content ?? next.firstElementChild;
       const contentY = opts.morphY ?? 160;

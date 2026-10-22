@@ -121,11 +121,19 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       gsap.set(afterNext, { position: getComputedStyle(afterNext).position === "static" ? "relative" : undefined, zIndex: 3 });
     }
     pinnedHandoff(one(".v2-modes"), one(".v2-session"), "lift");
-    pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", { content: one(".v2-stories .v2-container") });
+    pinnedHandoff(one(".fe-topics"), one(".v2-stories"), "morph", {
+      content: one(".v2-stories .v2-container"),
+      // In the editor the sections live inside admin wrappers; tint keeps the
+      // colour blend on the visible block (otherwise the yellow stays put).
+      tint: one(".fe-topics"),
+      nextTint: one(".v2-stories"),
+    });
     pinnedHandoff(one(".v2-stories"), one(".v2-pricing"), "morph", {
       content: one(".v2-pricing .v2-container"),
       morphY: 48,
       fade: false,
+      tint: one(".v2-stories"),
+      nextTint: one(".v2-pricing"),
     });
   }
   // Session -> topics on every screen: a calm sheet rise, no circle.
