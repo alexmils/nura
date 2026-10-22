@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminCtaBuilder } from "@/app/components/admin/AdminCtaBuilder";
+import { AdminMarkdownEditor } from "@/app/components/admin/AdminMarkdownEditor";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
-import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
-import { AdminRichPreview } from "@/app/components/admin/AdminRichPreview";
 import { serializeBlogCta, type BlogCtaData } from "@/lib/blog-cta";
 import {
   CLUSTER_TOPICS,
@@ -93,12 +92,7 @@ export default function AdminBlogEditorPage() {
   const [missing, setMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const sectionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const [ctaTarget, setCtaTarget] = useState<number | "end" | null>(null);
-  const [mediaPicker, setMediaPicker] = useState<{
-    kind: "image" | "video";
-    section: number;
-  } | null>(null);
 
   function insertCta(data: BlogCtaData) {
     const block = serializeBlogCta(data);
@@ -119,27 +113,19 @@ export default function AdminBlogEditorPage() {
       });
       return;
     }
-    insertAtSection(target, `\n\n${block}\n\n`);
-  }
-
-  function insertAtSection(index: number, snippet: string) {
-    const el = sectionRefs.current[index];
-    const current = form.sections[index]?.paragraphs ?? "";
-    const pos = el?.selectionStart ?? current.length;
     setForm((f) => ({
       ...f,
       sections: f.sections.map((s, i) =>
-        i === index
-          ? { ...s, paragraphs: s.paragraphs.slice(0, pos) + snippet + s.paragraphs.slice(pos) }
+        i === target
+          ? {
+              ...s,
+              paragraphs: s.paragraphs.trim()
+                ? `${s.paragraphs.trim()}\n\n${block}`
+                : block,
+            }
           : s
       ),
     }));
-    requestAnimationFrame(() => {
-      if (!el) return;
-      el.focus();
-      const caret = pos + snippet.length;
-      el.setSelectionRange(caret, caret);
-    });
   }
 
 
@@ -331,26 +317,6 @@ export default function AdminBlogEditorPage() {
                         type="button"
                         className="btn-ghost"
                         disabled={busy}
-                        onClick={() =>
-                          setMediaPicker({ kind: "image", section: index })
-                        }
-                      >
-                        Insert image
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy}
-                        onClick={() =>
-                          setMediaPicker({ kind: "video", section: index })
-                        }
-                      >
-                        Insert video
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy}
                         onClick={() => setCtaTarget(index)}
                       >
                         Insert CTA
@@ -420,29 +386,20 @@ export default function AdminBlogEditorPage() {
                       }
                     />
                   </label>
-                  <label className="admin-field-label">
-                    Paragraphs
-                    <textarea
-                      ref={(el) => {
-                        sectionRefs.current[index] = el;
-                      }}
-                      className="field"
-                      rows={8}
-                      value={section.paragraphs}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          sections: f.sections.map((s, i) =>
-                            i === index
-                              ? { ...s, paragraphs: e.target.value }
-                              : s
-                          ),
-                        }))
-                      }
-                    />
-                  </label>
-                  <AdminRichPreview text={section.paragraphs} />
+                  <AdminMarkdownEditor
+                    label="Paragraphs"
+                    value={section.paragraphs}
+                    disabled={busy}
+                    folder="nura/blog"
+                    onChange={(paragraphs) =>
+                      setForm((f) => ({
+                        ...f,
+                        sections: f.sections.map((s, i) =>
+                          i === index ? { ...s, paragraphs } : s
+                        ),
+                      }))
+                    }
+                  />
                 </div>
               ))}
               <div className="admin-content-actions">
@@ -646,20 +603,6 @@ export default function AdminBlogEditorPage() {
         open={ctaTarget !== null}
         onClose={() => setCtaTarget(null)}
         onInsert={insertCta}
-      />
-
-      <AdminMediaPicker
-        kind={mediaPicker?.kind ?? "image"}
-        open={mediaPicker !== null}
-        folder="nura/blog"
-        onClose={() => setMediaPicker(null)}
-        onPick={(url) => {
-          if (!mediaPicker) return;
-          insertAtSection(
-            mediaPicker.section,
-            `\n\n![${mediaPicker.kind}](${url})\n\n`
-          );
-        }}
       />
     </div>
   );

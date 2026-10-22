@@ -1,11 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { AdminMarkdownEditor } from "@/app/components/admin/AdminMarkdownEditor";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
-import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
-import { AdminRichPreview } from "@/app/components/admin/AdminRichPreview";
 import {
   RESOURCE_KINDS,
   slugifyTitle,
@@ -70,28 +69,6 @@ export default function AdminResourceEditorPage() {
   const [missing, setMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const [pickerKind, setPickerKind] = useState<"image" | "video" | null>(null);
-
-  function insertAtCursor(snippet: string) {
-    const el = bodyRef.current;
-    const current = form.body;
-    const pos = el?.selectionStart ?? current.length;
-    setForm((f) => ({
-      ...f,
-      body: current.slice(0, pos) + snippet + current.slice(pos),
-    }));
-    requestAnimationFrame(() => {
-      if (!el) return;
-      el.focus();
-      const caret = pos + snippet.length;
-      el.setSelectionRange(caret, caret);
-    });
-  }
-
-  function insertMediaUrl(url: string, kind: "image" | "video") {
-    insertAtCursor(`\n![${kind}](${url})\n`);
-  }
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/resources");
@@ -246,41 +223,16 @@ export default function AdminResourceEditorPage() {
 
             <div className="admin-box">
               <h3 className="admin-box-title">Body</h3>
-              <p className="admin-panel-sub">
-                Markdown. Images, bold, and video clips are allowed.
-              </p>
-              <div className="admin-body-tools">
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={busy}
-                  onClick={() => setPickerKind("image")}
-                >
-                  Insert image
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={busy}
-                  onClick={() => setPickerKind("video")}
-                >
-                  Insert video
-                </button>
-              </div>
-              <textarea
-                ref={bodyRef}
-                className="field admin-body-textarea"
-                rows={22}
+              <AdminMarkdownEditor
+                label="Paragraphs"
                 value={form.body}
                 disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, body: e.target.value }))
-                }
+                folder="nura/resources"
+                onChange={(body) => setForm((f) => ({ ...f, body }))}
               />
-              <AdminRichPreview text={form.body} />
               <p className="admin-panel-sub">
-                Media is inserted where the cursor was. MP4, WebM, YouTube, and
-                Vimeo render as a player inside the guide.
+                MP4, WebM, YouTube, and Vimeo render as a player inside the
+                guide.
               </p>
             </div>
           </section>
@@ -403,14 +355,6 @@ export default function AdminResourceEditorPage() {
           </aside>
         </div>
       </main>
-
-      <AdminMediaPicker
-        kind={pickerKind ?? "image"}
-        open={pickerKind !== null}
-        folder="nura/resources"
-        onClose={() => setPickerKind(null)}
-        onPick={(url) => insertMediaUrl(url, pickerKind ?? "image")}
-      />
     </div>
   );
 }
