@@ -62,6 +62,8 @@ function whenLabel(iso: string): string {
 const TOOLS = [
   ["list_blog_categories", "List the clinical categories with post counts"],
   ["create_blog_category", "Add a category without a deploy"],
+  ["update_blog_category", "Rename a category or change its copy"],
+  ["delete_blog_category", "Delete an empty runtime category"],
   ["list_blog_posts", "List guides, optionally by category or published state"],
   ["get_blog_post", "Read one guide, including its sections"],
   ["create_blog_post", "Publish a guide and choose its category"],

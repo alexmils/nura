@@ -25,10 +25,12 @@ import { getPlatformSettings } from "@/lib/platform-settings";
 import type { McpScope, PlatformMcpConfig } from "@/lib/mcp-settings";
 import { getSeoPage, listSeoPages, updateSeoPage } from "@/lib/mcp-seo";
 import {
+  deleteBlogCategory,
   deleteBlogPost,
   getBlogPostBySlugOrId,
   listAllBlogPosts,
   listBlogCategories,
+  updateBlogCategory,
   upsertBlogCategory,
   upsertBlogPost,
   type BlogPostInput,
@@ -205,6 +207,34 @@ const TOOLS = [
     },
   },
   {
+    name: "update_blog_category",
+    description:
+      "Rename or retitle a category. Tagged posts stay attached because the join uses the id; changing the slug changes the hub URL.",
+    inputSchema: {
+      type: "object",
+      required: ["slug"],
+      properties: {
+        slug: { type: "string", description: "Current slug." },
+        newSlug: { type: "string", description: "Rename the slug (optional)." },
+        name: { type: "string" },
+        description: { type: "string" },
+        sortOrder: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "delete_blog_category",
+    description:
+      "Delete an empty category that was added at runtime. Built-in categories, and categories that still have posts, are refused.",
+    inputSchema: {
+      type: "object",
+      required: ["slug"],
+      properties: { slug: { type: "string" } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: "get_blog_post",
     description: "Get one post by slug or id, including full sections.",
     inputSchema: {
@@ -356,6 +386,8 @@ const TOOLS = [
 const TOOL_SCOPES: Record<string, McpScope> = {
   list_blog_categories: "blog:read",
   create_blog_category: "blog:write",
+  update_blog_category: "blog:write",
+  delete_blog_category: "blog:write",
   list_blog_posts: "blog:read",
   get_blog_post: "blog:read",
   create_blog_post: "blog:write",
@@ -499,6 +531,38 @@ async function callTool(
         detail: { source: "mcp", slug: result.category.slug },
       });
       return text(result.category);
+    }
+
+    case "update_blog_category": {
+      const slug = String(args.slug ?? "").trim();
+      if (!slug) return toolError("slug is required.");
+      const result = await updateBlogCategory({
+        slug,
+        newSlug: typeof args.newSlug === "string" ? args.newSlug : undefined,
+        name: typeof args.name === "string" ? args.name : undefined,
+        description:
+          typeof args.description === "string" ? args.description : undefined,
+        sortOrder:
+          typeof args.sortOrder === "number" ? args.sortOrder : undefined,
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.category_updated",
+        detail: { source: "mcp", slug: result.category.slug },
+      });
+      return text(result.category);
+    }
+
+    case "delete_blog_category": {
+      const slug = String(args.slug ?? "").trim();
+      if (!slug) return toolError("slug is required.");
+      const result = await deleteBlogCategory(slug);
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.category_deleted",
+        detail: { source: "mcp", slug: result.slug },
+      });
+      return text({ ok: true, deleted: result.slug });
     }
 
     case "list_blog_posts": {

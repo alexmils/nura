@@ -12,6 +12,7 @@
 import { revalidatePath } from "next/cache";
 import {
   BLOG_CATEGORIES,
+  isKnownBlogCategorySlug,
   normalizeBlogCategorySlug,
   normalizeCategorySlugList,
   sanitizeBlogCategorySlugs,
@@ -481,6 +482,148 @@ export async function upsertBlogCategory(
       postCount: Number(counts[0]?.n ?? 0),
     },
   };
+}
+
+/**
+ * Rename or retitle an existing category. The slug is the address, not the id,
+ * so renaming keeps every tagged post attached (the join uses the id).
+ */
+export async function updateBlogCategory(input: {
+  slug: string;
+  newSlug?: string;
+  name?: string;
+  description?: string;
+  sortOrder?: number;
+}): Promise<BlogCategoryWriteResult> {
+  try {
+    await ensureBlogSchema();
+  } catch (err) {
+    warnFallback("updateBlogCategory/schema", err);
+    return { ok: false, error: "Blog storage is unavailable" };
+  }
+
+  const current = normalizeBlogCategorySlug(input.slug);
+  const db = getPool();
+  const { rows } = await db.query<Record<string, unknown>>(
+    `SELECT id, slug, name, description, sort_order
+     FROM blog_categories WHERE slug = $1`,
+    [current]
+  );
+  const row = rows[0];
+  if (!row) return { ok: false, error: `No category with slug "${current}".` };
+
+  const name =
+    input.name === undefined ? (row.name as string) : input.name.trim();
+  if (!name) return { ok: false, error: "Name is required" };
+  if (name.length > 80) {
+    return { ok: false, error: "Name must be ≤ 80 characters" };
+  }
+
+  const slug =
+    input.newSlug === undefined
+      ? (row.slug as string)
+      : normalizeBlogCategorySlug(input.newSlug);
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length < 2) {
+    return { ok: false, error: "Invalid slug" };
+  }
+
+  const description =
+    input.description === undefined
+      ? (row.description as string)
+      : input.description.trim();
+  if (description.length > 400) {
+    return { ok: false, error: "Description must be ≤ 400 characters" };
+  }
+
+  const sortOrder =
+    input.sortOrder === undefined
+      ? Number(row.sort_order ?? 0)
+      : typeof input.sortOrder === "number" && Number.isFinite(input.sortOrder)
+        ? Math.round(input.sortOrder)
+        : Number(row.sort_order ?? 0);
+
+  try {
+    await db.query(
+      `UPDATE blog_categories
+       SET slug = $2, name = $3, description = $4, sort_order = $5,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [row.id, slug, name, description, sortOrder]
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("unique")) {
+      return { ok: false, error: `Slug "${slug}" is already in use.` };
+    }
+    throw err;
+  }
+
+  const { rows: counts } = await db.query<{ n: number }>(
+    `SELECT COUNT(p.id)::int AS n
+     FROM blog_post_categories pc
+     JOIN blog_posts p ON p.id = pc.post_id AND p.published = TRUE
+     WHERE pc.category_id = $1`,
+    [row.id]
+  );
+  return {
+    ok: true,
+    category: {
+      slug,
+      name,
+      description,
+      sortOrder,
+      postCount: Number(counts[0]?.n ?? 0),
+    },
+  };
+}
+
+/**
+ * Delete an empty, runtime-only category. Built-in categories ship with the
+ * code and `ensureBlogSchema` would recreate them on the next start, so they
+ * are refused rather than silently restored.
+ */
+export async function deleteBlogCategory(
+  slug: string
+): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+  try {
+    await ensureBlogSchema();
+  } catch (err) {
+    warnFallback("deleteBlogCategory/schema", err);
+    return { ok: false, error: "Blog storage is unavailable" };
+  }
+
+  const key = normalizeBlogCategorySlug(slug);
+  if (isKnownBlogCategorySlug(key)) {
+    return {
+      ok: false,
+      error: `"${key}" ships with the code and would return on the next deploy. Only runtime categories can be deleted.`,
+    };
+  }
+
+  const db = getPool();
+  const { rows } = await db.query<{ id: string }>(
+    `SELECT id FROM blog_categories WHERE slug = $1`,
+    [key]
+  );
+  const row = rows[0];
+  if (!row) return { ok: false, error: `No category with slug "${key}".` };
+
+  const { rows: counts } = await db.query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM blog_post_categories WHERE category_id = $1`,
+    [row.id]
+  );
+  const count = Number(counts[0]?.n ?? 0);
+  if (count > 0) {
+    return {
+      ok: false,
+      error: `"${key}" still has ${count} post${
+        count === 1 ? "" : "s"
+      }. Re-tag them with update_blog_post first.`,
+    };
+  }
+
+  await db.query(`DELETE FROM blog_categories WHERE id = $1`, [row.id]);
+  return { ok: true, slug: key };
 }
 
 export async function listPublishedBlogPosts(opts?: {
