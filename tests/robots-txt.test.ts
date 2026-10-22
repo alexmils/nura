@@ -104,7 +104,7 @@ describe("llms.txt", () => {
   it("lists every public EMDR guide under /blog", () => {
     assert.match(body, /## EMDR guides/);
     assert.match(body, /nurahelp\.com\/blog\/what-is-emdr/);
-    assert.match(body, /nurahelp\.com\/blog\/guided-vs-free-mode/);
+    assert.match(body, /nurahelp\.com\/blog\/ai-agent-guided-vs-self-guided/);
     const articleLinks =
       body.match(/nurahelp\.com\/blog\/[a-z0-9-]+/g)?.filter(
         (u) => !u.endsWith("rss") && u !== "nurahelp.com/blog"

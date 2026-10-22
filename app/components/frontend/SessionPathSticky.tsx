@@ -275,7 +275,7 @@ export function SessionPathSticky() {
             Ground first. Choose your rhythm. Check in after each set.{" "}
           </span>
           <span className="fe-spath-intro-fade fe-spath-intro-fade--2">
-            Close gently when it’s enough — then Free between sessions.{" "}
+            Close gently when it’s enough, then Self-guided between sessions.{" "}
           </span>
           <span className="fe-spath-intro-fade fe-spath-intro-fade--3">
             One calm loop in the app. No rush. No cold starts.

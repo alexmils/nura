@@ -81,7 +81,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     topic: "understand",
     featured: true,
     coverUrl: COVER.reading,
-    emdrAnchor: "how a guided EMDR session is structured in Nura",
+    emdrAnchor: "how an AI agent-guided session is structured in Nura",
     related: [
       "what-is-bilateral-stimulation",
       "emdr-session-structure",
@@ -167,7 +167,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     related: [
       "what-is-bilateral-stimulation",
       "what-happens-in-an-emdr-set",
-      "guided-vs-free-mode",
+      "ai-agent-guided-vs-self-guided",
     ],
     sections: [
       {
@@ -180,8 +180,8 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
       {
         heading: "Why this is the cluster’s spine",
         paragraphs: [
-          "Competitors can write about EMDR. Some say out loud that their AI cannot do the left–right work. Nura’s product is built around that work: visual sets in Guided and Free.",
-          "If you only need the ball, use Free. If you want phases and a guide that waits for grounding, use Guided. Same stimulus, different wrapper.",
+          "Competitors can write about EMDR. Some say out loud that their AI cannot do the left–right work. Nura’s product is built around that work: visual sets in AI agent-guided and Self-guided sessions.",
+          "If you only need the set, use Self-guided. If you want phases and a guide that waits for grounding, use AI agent-guided. Same stimulus, different wrapper.",
         ],
       },
       {
@@ -217,7 +217,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
       {
         heading: "What an app can honestly offer",
         paragraphs: [
-          "Nura does not grade your thoughts. It gives you a place to run visual sets with a moving ball, with or without a guided protocol around them.",
+          "Nura does not grade your thoughts. It gives you a place to run visual sets with a moving ball, with or without an AI agent-guided protocol around them.",
           "If you need CBT skills, that is a different product — and often a different clinician. Do not expect this workspace to be a thought record with a nicer font.",
         ],
       },
@@ -282,7 +282,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     topic: "practice",
     featured: false,
     coverUrl: COVER.desk,
-    emdrAnchor: "how to run a Free or Guided set on your own in Nura",
+    emdrAnchor: "how to run an AI agent-guided or Self-guided session on your own in Nura",
     related: [
       "emdr-between-sessions",
       "when-to-pause-or-stop",
@@ -410,7 +410,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
       {
         heading: "What the product is",
         paragraphs: [
-          "Nura gives you visual sets (a moving ball), Guided phases including intake and grounding, and Self-guided. It is for people who want structured practice, including between sessions.",
+          "Nura gives you visual sets (a moving ball), AI agent-guided phases including intake and grounding, and Self-guided. It is for people who want structured practice, including between sessions.",
           "It does not diagnose PTSD. It does not certify that a memory is “processed.” It does not replace VA, NHS, or private trauma care.",
         ],
       },
@@ -435,12 +435,12 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     featured: false,
     coverUrl: COVER.hands,
     emdrAnchor: "what an online Nura EMDR session actually contains",
-    related: ["emdr-session-structure", "eye-movements-and-online-emdr", "guided-vs-free-mode"],
+    related: ["emdr-session-structure", "eye-movements-and-online-emdr", "ai-agent-guided-vs-self-guided"],
     sections: [
       {
         heading: "The tab is the room",
         paragraphs: [
-          "You open the app, pick Guided or Free, and the set happens on your screen. There is no other person watching your face. That is the appeal and the risk.",
+          "You open the app, pick AI agent-guided or Self-guided, and the set happens on your screen. There is no other person watching your face. That is the appeal and the risk.",
           "Close extra tabs. Tell anyone in the house you need twenty minutes. A notification in the middle of a set is a cheap way to spike.",
         ],
       },
@@ -461,7 +461,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     ],
   },
   {
-    slug: "guided-vs-free-mode",
+    slug: "ai-agent-guided-vs-self-guided",
     title: "AI agent-guided vs Self-guided — two ways to run a set",
     description:
       "Nura has two session types: AI agent-guided, which walks you through phases and check-ins, and Self-guided, where you run visual sets yourself. How to choose.",
@@ -582,21 +582,21 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     topic: "practice",
     featured: false,
     coverUrl: COVER.sofa,
-    emdrAnchor: "the phases of a guided EMDR session in Nura",
-    related: ["what-is-emdr", "guided-vs-free-mode", "emdr-check-ins-after-sets"],
+    emdrAnchor: "the phases of an AI agent-guided session in Nura",
+    related: ["what-is-emdr", "ai-agent-guided-vs-self-guided", "emdr-check-ins-after-sets"],
     sections: [
       {
-        heading: "Guided, in order",
+        heading: "AI agent-guided, in order",
         paragraphs: [
           "Intake: what you are here for, safety, a target if you have one. Grounding: a way back. Then sets with the moving ball. Then a check-in — what is here now, not a performance review.",
           "The guide is software following a protocol. It is not a clinician who can see your face. If the order feels too slow, that is often your window talking, not a bug.",
         ],
       },
       {
-        heading: "Free, in order",
+        heading: "Self-guided, in order",
         paragraphs: [
           "You decide the order. The product still gives you a ball, speed, and stop. The structure you skip, you must replace with your own.",
-          "If you use Free because Guided “asks too much,” notice whether you also skip grounding. That combination is how people get in trouble.",
+          "If you use Self-guided because AI agent-guided “asks too much,” notice whether you also skip grounding. That combination is how people get in trouble.",
         ],
       },
       {
@@ -632,7 +632,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
       {
         heading: "What the app can do",
         paragraphs: [
-          "Be there at 11pm. Run a visual set with a moving ball. Offer Guided phases or Free quiet. Cost less than an extra clinical hour. Ask nothing of your calendar except a door you can close.",
+          "Be there at 11pm. Run a visual set with a moving ball. Offer AI agent-guided phases or quiet Self-guided. Cost less than an extra clinical hour. Ask nothing of your calendar except a door you can close.",
           "That is a real gift. It is still self-help software.",
         ],
       },
@@ -697,7 +697,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
     topic: "practice",
     featured: false,
     coverUrl: COVER.practice,
-    emdrAnchor: "check-ins after visual sets in Guided Nura sessions",
+    emdrAnchor: "check-ins after visual sets in AI agent-guided sessions",
     related: ["what-happens-in-an-emdr-set", "emdr-session-structure", "when-to-pause-or-stop"],
     sections: [
       {
@@ -710,7 +710,7 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
       {
         heading: "Self-guided has no prompt",
         paragraphs: [
-          "If you run Free, you must ask yourself the same questions. Skip that and you are just watching a ball, which is a different hobby.",
+          "If you run Self-guided, you must ask yourself the same questions. Skip that and you are just watching a ball, which is a different hobby.",
           "Ten seconds of honesty after the set is cheaper than an hour of being weird at dinner.",
         ],
       },
@@ -773,21 +773,21 @@ const CLUSTER_ARTICLE_SEEDS: ClusterArticleSeed[] = [
 const SEED_ARTICLE_CATEGORIES: Record<string, string[]> = {
   "what-is-emdr": ["trauma", "ptsd"],
   "what-is-bilateral-stimulation": ["trauma"],
-  "visual-sets-and-the-moving-ball": [],
+  "visual-sets-and-the-moving-ball": ["trauma"],
   "emdr-vs-cbt": ["trauma", "anxiety"],
   "emdr-between-sessions": ["trauma"],
   "can-you-do-emdr-alone": [],
   "how-long-does-emdr-take": [],
   "emdr-for-anxiety": ["anxiety", "panic"],
   "emdr-for-ptsd": ["ptsd", "trauma"],
-  "emdr-online-what-to-expect": [],
-  "guided-vs-free-mode": [],
+  "emdr-online-what-to-expect": ["trauma"],
+  "ai-agent-guided-vs-self-guided": ["trauma"],
   "grounding-before-a-set": ["panic", "anxiety"],
-  "when-to-pause-or-stop": ["panic"],
-  "emdr-session-structure": [],
-  "self-help-emdr-vs-a-therapist": [],
+  "when-to-pause-or-stop": ["panic", "dissociation"],
+  "emdr-session-structure": ["trauma"],
+  "self-help-emdr-vs-a-therapist": ["trauma"],
   "eye-movements-and-online-emdr": [],
-  "emdr-check-ins-after-sets": [],
+  "emdr-check-ins-after-sets": ["trauma"],
   "what-happens-in-an-emdr-set": [],
 };
 
