@@ -153,6 +153,24 @@ export const BLOG_REMOTE_IMAGE_HOSTS = [
   "res.cloudinary.com",
 ] as const;
 
+/**
+ * Can this cover be shown at all? A site path or any https URL.
+ *
+ * Wider than `isOptimizableBlogCover` on purpose: an agent or an editor can
+ * point at a CDN we have not allowlisted, and the renderer falls back to a
+ * plain <img> instead of next/image.
+ */
+export function isUsableBlogCover(value: string): boolean {
+  const t = value.trim();
+  if (!t) return false;
+  if (t.startsWith("/")) return !t.startsWith("//");
+  try {
+    return new URL(t).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /** Can this cover be rendered by `next/image`? */
 export function isOptimizableBlogCover(value: string): boolean {
   const t = value.trim();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Fragment, type ReactNode } from "react";
+import { useEffect, useState, Fragment } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   resourceVideoEmbedUrl,
   type ResourceItem,
 } from "@/lib/resources";
+import { renderInlineMarkdown } from "./frontend/InlineMarkdown";
 import { WorkspaceMenuButton } from "./SidebarNavContext";
 import { AdDisplayUnit } from "./AdDisplayUnit";
 import { CrisisHelpButton } from "./CrisisHelpButton";
@@ -97,47 +98,6 @@ function ResourceVideoCard({ item }: { item: ResourceItem }) {
       {inner}
     </Link>
   );
-}
-
-function renderInlineMarkdown(text: string): ReactNode[] {
-  const parts = text.split(/(!\[[^\]]*\]\([^)]+\)|\*\*[^*]+\*\*)/g);
-  return parts.map((part, i) => {
-    const img = part.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (img) {
-      const src = img[2];
-      if (!isValidResourceImageUrl(src)) {
-        return <span key={i}>{img[1] || "image"}</span>;
-      }
-      // The same markdown carries a clip: `![alt](clip.mp4)`. Detect the
-      // extension and render a player instead of a broken image.
-      const isVideo = /\.(mp4|webm)(?:[?#].*)?$/i.test(src);
-      if (isVideo) {
-        return (
-          <video
-            key={i}
-            src={src}
-            controls
-            playsInline
-            preload="metadata"
-            className="resource-article-img"
-          />
-        );
-      }
-      return (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={i}
-          src={src}
-          alt={img[1] || ""}
-          className="resource-article-img"
-        />
-      );
-    }
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
-    }
-    return <span key={i}>{part}</span>;
-  });
 }
 
 export function ResourcesLibrary() {

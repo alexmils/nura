@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BlogCover } from "@/app/components/frontend/BlogCover";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
+import { renderInlineMarkdown } from "@/app/components/frontend/InlineMarkdown";
 import { blogCategoryName } from "@/lib/blog-categories";
 import { BRAND_CIRCLE_AVATAR, BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
 import {
@@ -82,12 +84,11 @@ export function ClusterArticleView({
 
         {article.coverUrl ? (
           <div className="fe-cluster-hero">
-            <Image
+            <BlogCover
               src={article.coverUrl}
               // Decorative editorial still: an invented description would be fake
               // specificity, so the image is skipped by assistive tech.
               alt=""
-              fill
               priority
               sizes="(max-width: 1100px) 100vw, 1156px"
               className="fe-cluster-hero-image"
@@ -100,7 +101,7 @@ export function ClusterArticleView({
             <section key={section.heading}>
               <h2>{section.heading}</h2>
               {section.paragraphs.map((p) => (
-                <p key={p.slice(0, 48)}>{p}</p>
+                <p key={p.slice(0, 48)}>{renderInlineMarkdown(p)}</p>
               ))}
             </section>
           ))}

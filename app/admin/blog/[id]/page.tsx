@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
@@ -89,6 +89,59 @@ export default function AdminBlogEditorPage() {
   const [missing, setMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const sectionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const imageSectionRef = useRef<number | null>(null);
+
+  function insertAtSection(index: number, snippet: string) {
+    const el = sectionRefs.current[index];
+    const current = form.sections[index]?.paragraphs ?? "";
+    const pos = el?.selectionStart ?? current.length;
+    setForm((f) => ({
+      ...f,
+      sections: f.sections.map((s, i) =>
+        i === index
+          ? { ...s, paragraphs: s.paragraphs.slice(0, pos) + snippet + s.paragraphs.slice(pos) }
+          : s
+      ),
+    }));
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      const caret = pos + snippet.length;
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  async function insertImage(file: File) {
+    const index = imageSectionRef.current;
+    if (index === null) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "nura/blog");
+      const res = await fetch("/api/admin/cloudinary/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
+      const url = String(data.url ?? "");
+      if (!url) throw new Error("Upload returned no URL.");
+      const alt = file.name
+        .replace(/\.[a-z0-9]+$/i, "")
+        .replace(/[-_]+/g, " ")
+        .trim();
+      insertAtSection(index, `\n\n![${alt || "image"}](${url})\n\n`);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+      imageSectionRef.current = null;
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/blog");
@@ -265,8 +318,20 @@ export default function AdminBlogEditorPage() {
               <h3 className="admin-box-title">Sections</h3>
               <p className="admin-panel-sub">
                 One paragraph per blank line. An em dash is rewritten and the
-                acronym BLS is rejected.
+                acronym BLS is rejected. Insert image drops markdown at the
+                cursor.
               </p>
+              <input
+                ref={imageInputRef}
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void insertImage(file);
+                  e.target.value = "";
+                }}
+              />
               {form.sections.map((section, index) => (
                 <div key={index} className="admin-section-card">
                   <div className="admin-section-card-head">
@@ -274,6 +339,17 @@ export default function AdminBlogEditorPage() {
                       Section {index + 1}
                     </span>
                     <div className="admin-content-actions">
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={busy}
+                        onClick={() => {
+                          imageSectionRef.current = index;
+                          imageInputRef.current?.click();
+                        }}
+                      >
+                        Insert image
+                      </button>
                       <button
                         type="button"
                         className="btn-ghost"
@@ -342,6 +418,9 @@ export default function AdminBlogEditorPage() {
                   <label className="admin-field-label">
                     Paragraphs
                     <textarea
+                      ref={(el) => {
+                        sectionRefs.current[index] = el;
+                      }}
                       className="field"
                       rows={8}
                       value={section.paragraphs}

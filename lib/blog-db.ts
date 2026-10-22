@@ -23,13 +23,12 @@ import {
   BLOG_DEK_MAX,
   BLOG_DESCRIPTION_MAX,
   BLOG_KICKER_MAX,
-  BLOG_REMOTE_IMAGE_HOSTS,
   BLOG_TITLE_MAX,
   blogBodyLength,
   cleanCopy,
   defaultBlogCover,
   findBlsAcronym,
-  isOptimizableBlogCover,
+  isUsableBlogCover,
   isValidCoverUrl,
   parseSections,
   type BlogSectionInput,
@@ -318,7 +317,7 @@ function rowToRecord(r: Record<string, unknown>): BlogPostRecord {
     ),
     featured: Boolean(r.featured),
     // Never hand next/image an empty or unconfigured src.
-    coverUrl: isOptimizableBlogCover((r.cover_url as string) ?? "")
+    coverUrl: isUsableBlogCover((r.cover_url as string) ?? "")
       ? ((r.cover_url as string) ?? "").trim()
       : defaultBlogCover(slug),
     emdrAnchor: (r.emdr_anchor as string) ?? "",
@@ -941,13 +940,9 @@ export async function upsertBlogPost(
   if (!isValidCoverUrl(coverUrlRaw)) {
     return { ok: false, error: "Cover must be a site path or https URL" };
   }
-  // next/image throws on unconfigured hosts, which would 500 the article page.
-  if (coverUrlRaw && !isOptimizableBlogCover(coverUrlRaw)) {
-    return {
-      ok: false,
-      error: `Cover https URLs must be on: ${BLOG_REMOTE_IMAGE_HOSTS.join(", ")} (or use a site path such as /marketing/landing/calm-water.jpg)`,
-    };
-  }
+  // Any https URL is accepted. The renderer uses next/image for the configured
+  // hosts and a plain <img> for the rest, so an unconfigured CDN cannot 500
+  // the article page.
 
   const related =
     input.related === undefined
