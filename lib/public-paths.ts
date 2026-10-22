@@ -73,6 +73,7 @@ const API_PUBLIC_PREFIXES = [
   "/api/cron/help-guest-transcripts",
   "/api/cron/trial-charge-reminders",
   "/api/cron/trial-feedback",
+  "/api/cron/post-trial-checkin",
   "/api/newsletter/subscribe",
   "/api/webhooks/brevo",
 ] as const;

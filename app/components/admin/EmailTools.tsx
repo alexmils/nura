@@ -24,12 +24,19 @@ export function TemplateEditor({
     html: string;
     text: string;
     isCustom: boolean;
+    enabled: boolean;
+    delayHours: number | null;
+    scheduled: boolean;
   };
   onSaved: () => void;
 }) {
   const [subject, setSubject] = useState(template.subject);
   const [html, setHtml] = useState(template.html);
   const [text, setText] = useState(template.text);
+  const [enabled, setEnabled] = useState(template.enabled);
+  const [delayHours, setDelayHours] = useState<number | "">(
+    template.delayHours ?? ""
+  );
   const [previewHtml, setPreviewHtml] = useState(() =>
     previewLogoHtml(template.html)
   );
@@ -40,6 +47,8 @@ export function TemplateEditor({
     setSubject(template.subject);
     setHtml(template.html);
     setText(template.text);
+    setEnabled(template.enabled);
+    setDelayHours(template.delayHours ?? "");
     setPreviewHtml(previewLogoHtml(template.html));
   }, [template]);
 
@@ -64,6 +73,12 @@ export function TemplateEditor({
           subject,
           html,
           text: text || html.replace(/<[^>]+>/g, " "),
+          ...(template.scheduled
+            ? {
+                enabled,
+                delayHours: delayHours === "" ? null : Number(delayHours),
+              }
+            : {}),
         }),
       });
       onSaved();
@@ -79,6 +94,35 @@ export function TemplateEditor({
   return (
     <div className="admin-template-editor-wrap">
       <form className="admin-template-editor" onSubmit={(e) => void save(e)}>
+        {template.scheduled ? (
+          <div className="admin-field-label">
+            <span>Scheduled send</span>
+            <label className="admin-inline-check">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
+              Sending is on
+            </label>
+            <label>
+              Send after (hours)
+              <input
+                type="number"
+                min={0}
+                max={8760}
+                value={delayHours}
+                onChange={(e) =>
+                  setDelayHours(e.target.value === "" ? "" : Number(e.target.value))
+                }
+                className="field"
+              />
+            </label>
+            <p className="admin-field-hint">
+              Counted from the first app use after the trial date. 72 is three days.
+            </p>
+          </div>
+        ) : null}
         <label className="admin-field-label">
           Subject
           <input

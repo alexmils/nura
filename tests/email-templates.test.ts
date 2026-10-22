@@ -101,6 +101,12 @@ const FIXTURES: Record<string, Record<string, string | boolean>> = {
     name: "Alex",
     feedbackUrl: "https://nurahelp.com/app/feedback?source=trial",
   },
+  post_trial_checkin: {
+    name: "Alex",
+    trialEndedOn: "October 22, 2026",
+    appUrl: "https://nurahelp.com/app",
+    preferencesUrl: "https://nurahelp.com/app/settings",
+  },
   subscription_canceled: {
     name: "Alex",
     accessEndsAt: "October 22, 2026",

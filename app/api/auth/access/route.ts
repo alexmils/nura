@@ -6,6 +6,8 @@ import {
 } from "@/lib/entitlements";
 import { ensureUserAccessStub } from "@/lib/user-access";
 import { resolveAccessRedirect } from "@/lib/access-gate";
+import { markPostTrialAppUse } from "@/lib/email/post-trial-app-use";
+import { isWithinPostTrialAnchorWindow } from "@/lib/email/post-trial-checkin-policy";
 
 /** Lightweight access check for middleware + client gates (DB-backed). */
 export async function GET() {
@@ -21,6 +23,19 @@ export async function GET() {
     role: auth.user.role,
     onboardingCompletedAt: auth.user.onboardingCompletedAt,
   });
+
+  // This gate is the first thing an app page hits, so it is also the earliest
+  // honest signal that someone is using the app after their trial. The write
+  // is a no-op after the first call, and must never block access on failure.
+  if (
+    entitlement.canUseApp &&
+    entitlement.trialEndsAt &&
+    isWithinPostTrialAnchorWindow(new Date(entitlement.trialEndsAt))
+  ) {
+    await markPostTrialAppUse(auth.user.id).catch((err) => {
+      console.error("[access] could not record post-trial app use", err);
+    });
+  }
 
   const redirectTo = resolveAccessRedirect({
     role: auth.user.role,

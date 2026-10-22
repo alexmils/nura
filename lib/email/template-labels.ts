@@ -16,6 +16,7 @@ export const EMAIL_TEMPLATE_IDS = [
   "payment_failed",
   "trial_charge_reminder",
   "trial_feedback",
+  "post_trial_checkin",
   "subscription_canceled",
   "admin_signup",
   "admin_trial",
@@ -40,6 +41,7 @@ export const EMAIL_TEMPLATE_AUDIENCE: Record<EmailTemplateId, EmailTemplateAudie
   payment_failed: "customer",
   trial_charge_reminder: "customer",
   trial_feedback: "customer",
+  post_trial_checkin: "customer",
   subscription_canceled: "customer",
   admin_signup: "admin",
   admin_trial: "admin",
@@ -55,6 +57,23 @@ export function isEmailTemplateId(value: unknown): value is EmailTemplateId {
   );
 }
 
+/**
+ * Templates the cron sends on a delay.
+ *
+ * The number is the shipped default; Admin → Email can override it per
+ * template and turn the send off without a deploy. A template absent from this
+ * map is transactional and has no "send after".
+ */
+export const SCHEDULED_TEMPLATE_DELAY_HOURS: Partial<
+  Record<EmailTemplateId, number>
+> = {
+  post_trial_checkin: 72,
+};
+
+export function isScheduledTemplate(id: EmailTemplateId): boolean {
+  return id in SCHEDULED_TEMPLATE_DELAY_HOURS;
+}
+
 /** Admin-facing names — never show snake_case ids in UI. */
 export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   password_reset: "Reset password",
@@ -67,6 +86,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateId, string> = {
   payment_failed: "Payment failed",
   trial_charge_reminder: "Charge reminder",
   trial_feedback: "Trial feedback",
+  post_trial_checkin: "Post-trial check-in",
   subscription_canceled: "Subscription canceled",
   admin_signup: "New account",
   admin_trial: "Trial started",

@@ -47,6 +47,8 @@ export async function PUT(
       subject?: string;
       html?: string;
       text?: string;
+      enabled?: boolean;
+      delayHours?: number | null;
     };
     if (!body.subject?.trim() || !body.html || !body.text) {
       return NextResponse.json(
@@ -54,10 +56,22 @@ export async function PUT(
         { status: 400 }
       );
     }
+    if (
+      body.delayHours !== undefined &&
+      body.delayHours !== null &&
+      (!Number.isFinite(body.delayHours) || body.delayHours < 0)
+    ) {
+      return NextResponse.json(
+        { error: "delayHours must be zero or a positive number" },
+        { status: 400 }
+      );
+    }
     const template = await saveEmailTemplate(id, {
       subject: body.subject,
       html: body.html,
       text: body.text,
+      enabled: body.enabled,
+      delayHours: body.delayHours,
     });
     return NextResponse.json({ template });
   } catch (err) {

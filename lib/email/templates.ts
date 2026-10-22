@@ -65,6 +65,12 @@ export type EmailTemplateData = {
     name: string;
     feedbackUrl: string;
   };
+  post_trial_checkin: {
+    name: string;
+    trialEndedOn: string;
+    appUrl: string;
+    preferencesUrl: string;
+  };
   subscription_canceled: {
     name: string;
     accessEndsAt: string;
@@ -446,6 +452,35 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your trial week is over. A 1–10 score and a short note on suggestions or bugs helps us improve Nura.</p>
          ${ctaButton(d.feedbackUrl, "Share feedback")}`,
         `Or open this link: <a href="${safeUrl}" style="color:${brandColor};">${safeUrl}</a>`
+      );
+      return { subject, html, text };
+    }
+    case "post_trial_checkin": {
+      const d = data as EmailTemplateData["post_trial_checkin"];
+      const safeName = escapeEmailHtml(d.name);
+      const safeDate = escapeEmailHtml(d.trialEndedOn);
+      const safePrefs = escapeEmailHtml(d.preferencesUrl);
+      const subject = "How are the sessions going?";
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        `Your trial ended on ${d.trialEndedOn}, and you have been using Nura since. We would love to know how it is going — whether the guided sessions fit into your routine, and whether anything in the app feels awkward.`,
+        "",
+        "Reply to this email and it reaches a person, not a bot.",
+        "",
+        `Open Nura: ${d.appUrl}`,
+        "",
+        `Manage what Nura emails you about any time in Settings: ${d.preferencesUrl}`,
+      ].join("\n");
+      const html = layout(
+        brand,
+        "How are the sessions going?",
+        `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Hi ${safeName},</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Your trial ended on ${safeDate}, and you have been using Nura since. We would love to know how it is going — whether the guided sessions fit into your routine, and whether anything in the app feels awkward.</p>
+         <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Reply to this email and it reaches a person, not a bot.</p>
+         ${ctaButton(d.appUrl, "Open Nura")}
+         <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Manage what Nura emails you about any time in <a href="${safePrefs}" style="color:${brandColor};">Settings</a>.</p>`,
+        `Manage what Nura emails you about any time in Settings: ${d.preferencesUrl}`
       );
       return { subject, html, text };
     }

@@ -55,6 +55,9 @@ function AdminEmailPageInner() {
       html: string;
       text: string;
       isCustom: boolean;
+      enabled: boolean;
+      delayHours: number | null;
+      scheduled: boolean;
     }[]
   >([]);
   const [events, setEvents] = useState<EmailEvent[]>([]);
@@ -88,6 +91,9 @@ function AdminEmailPageInner() {
           html: string;
           text: string;
           isCustom: boolean;
+          enabled: boolean;
+          delayHours: number | null;
+          scheduled: boolean;
         }[];
       }>("/api/admin/email/templates"),
     ]);

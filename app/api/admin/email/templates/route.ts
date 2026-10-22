@@ -19,6 +19,9 @@ export async function GET() {
         text: t.text,
         isCustom: t.isCustom,
         updatedAt: t.updatedAt,
+        enabled: t.enabled,
+        delayHours: t.delayHours,
+        scheduled: t.scheduled,
       })),
     });
   } catch (err) {

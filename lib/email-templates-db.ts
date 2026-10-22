@@ -1,6 +1,10 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 import type { EmailTemplateId } from "@/lib/email/templates";
-import { EMAIL_TEMPLATE_IDS } from "@/lib/email/template-labels";
+import {
+  EMAIL_TEMPLATE_IDS,
+  SCHEDULED_TEMPLATE_DELAY_HOURS,
+  isScheduledTemplate,
+} from "@/lib/email/template-labels";
 import { renderEmailTemplate } from "@/lib/email/templates";
 import { getPlatformSettings, getPublicAppUrl } from "@/lib/platform-settings";
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
@@ -12,7 +16,24 @@ export type EmailTemplateRecord = {
   text: string;
   updatedAt: string;
   isCustom: boolean;
+  /** False turns a scheduled template off without losing its copy. */
+  enabled: boolean;
+  /** Hours after the trigger; only scheduled templates have a value. */
+  delayHours: number | null;
+  /** True when this template is sent by a cron rather than an event. */
+  scheduled: boolean;
 };
+
+/** What a template does before anyone edits it in Admin → Email. */
+export function defaultTemplateAutomation(id: EmailTemplateId): {
+  enabled: boolean;
+  delayHours: number | null;
+} {
+  return {
+    enabled: true,
+    delayHours: SCHEDULED_TEMPLATE_DELAY_HOURS[id] ?? null,
+  };
+}
 
 const ALL_TEMPLATE_IDS = EMAIL_TEMPLATE_IDS;
 
@@ -26,6 +47,8 @@ export async function ensureEmailTemplatesSchema() {
       text TEXT NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL
     );
+    ALTER TABLE email_templates ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE email_templates ADD COLUMN IF NOT EXISTS delay_hours INTEGER;
   `);
 }
 
@@ -101,6 +124,13 @@ function sampleData(id: EmailTemplateId) {
         name: base.name,
         feedbackUrl: "https://example.com/app/feedback?source=trial",
       };
+    case "post_trial_checkin":
+      return {
+        name: base.name,
+        trialEndedOn: "12 October 2026",
+        appUrl: "https://example.com/app",
+        preferencesUrl: "https://example.com/app/settings",
+      };
     case "subscription_canceled":
       return {
         name: base.name,
@@ -169,7 +199,10 @@ export async function getEmailTemplate(
     html: string;
     text: string;
     updated_at: string;
+    enabled: boolean;
+    delay_hours: number | null;
   }>("SELECT * FROM email_templates WHERE id = $1", [id]);
+  const defaults = defaultTemplateAutomation(id);
 
   if (rows[0]) {
     return {
@@ -179,6 +212,9 @@ export async function getEmailTemplate(
       text: rows[0].text,
       updatedAt: new Date(rows[0].updated_at).toISOString(),
       isCustom: true,
+      enabled: rows[0].enabled !== false,
+      delayHours: rows[0].delay_hours ?? defaults.delayHours,
+      scheduled: isScheduledTemplate(id),
     };
   }
 
@@ -196,6 +232,31 @@ export async function getEmailTemplate(
     text: rendered.text,
     updatedAt: new Date().toISOString(),
     isCustom: false,
+    enabled: defaults.enabled,
+    delayHours: defaults.delayHours,
+    scheduled: isScheduledTemplate(id),
+  };
+}
+
+/**
+ * Just the automation switch and the delay — no rendering.
+ *
+ * The cron calls this on every run, and rendering a 20 KB email to learn
+ * whether it is switched on would be work for nothing.
+ */
+export async function getEmailTemplateAutomation(
+  id: EmailTemplateId
+): Promise<{ enabled: boolean; delayHours: number | null }> {
+  await ensureEmailTemplatesSchema();
+  const defaults = defaultTemplateAutomation(id);
+  const { rows } = await getPool().query<{
+    enabled: boolean;
+    delay_hours: number | null;
+  }>("SELECT enabled, delay_hours FROM email_templates WHERE id = $1", [id]);
+
+  return {
+    enabled: rows[0] ? rows[0].enabled !== false : defaults.enabled,
+    delayHours: rows[0]?.delay_hours ?? defaults.delayHours,
   };
 }
 
@@ -205,18 +266,34 @@ export async function listEmailTemplates(): Promise<EmailTemplateRecord[]> {
 
 export async function saveEmailTemplate(
   id: EmailTemplateId,
-  patch: { subject: string; html: string; text: string }
+  patch: {
+    subject: string;
+    html: string;
+    text: string;
+    enabled?: boolean;
+    delayHours?: number | null;
+  }
 ): Promise<EmailTemplateRecord> {
   await ensureEmailTemplatesSchema();
+  const defaults = defaultTemplateAutomation(id);
+  const enabled = patch.enabled ?? defaults.enabled;
+  // Only a scheduled template keeps a delay; a transactional one stores null
+  // so an accidental value cannot make it look schedulable in the admin.
+  const delayHours = isScheduledTemplate(id)
+    ? patch.delayHours ?? defaults.delayHours
+    : null;
+
   await getPool().query(
-    `INSERT INTO email_templates (id, subject, html, text, updated_at)
-     VALUES ($1, $2, $3, $4, NOW())
+    `INSERT INTO email_templates (id, subject, html, text, enabled, delay_hours, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, NOW())
      ON CONFLICT (id) DO UPDATE SET
        subject = EXCLUDED.subject,
        html = EXCLUDED.html,
        text = EXCLUDED.text,
+       enabled = EXCLUDED.enabled,
+       delay_hours = EXCLUDED.delay_hours,
        updated_at = NOW()`,
-    [id, patch.subject.trim(), patch.html, patch.text]
+    [id, patch.subject.trim(), patch.html, patch.text, enabled, delayHours]
   );
   return getEmailTemplate(id);
 }
