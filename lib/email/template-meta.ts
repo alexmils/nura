@@ -161,7 +161,7 @@ export const EMAIL_TEMPLATE_PLACEHOLDERS: Record<
   ],
   trial_feedback: [
     { token: "name", description: "Member's name" },
-    { token: "feedbackUrl", description: "Feedback form link" },
+    { token: "feedbackUrl", description: "One-use review link, with its token" },
   ],
   post_trial_checkin: [
     { token: "name", description: "Member's name" },

@@ -8,6 +8,8 @@ import type { EmailTemplateId } from "@/lib/email/templates";
 import { isEmailTemplateId } from "@/lib/email/template-labels";
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
+import { getUserByEmail } from "@/lib/users";
+import { createReviewInvite } from "@/lib/review-invite";
 
 export async function POST(request: Request) {
   const auth = await requirePlatformSettingsAccess();
@@ -92,9 +94,15 @@ export async function POST(request: Request) {
         manageBillingUrl: await getAppUrl("/app/billing"),
       });
     } else if (id === "trial_feedback") {
+      // A real token, so the test mail can be clicked through end to end.
+      // A recipient with no account falls back to the signed-in form.
+      const recipient = await getUserByEmail(to.trim());
+      const invite = recipient ? await createReviewInvite(recipient.id) : null;
       await sendTemplateEmail(to.trim(), id, {
-        name: sample.name,
-        feedbackUrl: await getAppUrl("/app/feedback?source=review"),
+        name: recipient?.name?.trim() || sample.name,
+        feedbackUrl: invite
+          ? await getAppUrl(`/review?t=${encodeURIComponent(invite.token)}`)
+          : await getAppUrl("/app/feedback?source=review"),
       });
     } else if (id === "subscription_canceled") {
       await sendTemplateEmail(to.trim(), id, {

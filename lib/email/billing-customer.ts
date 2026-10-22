@@ -14,6 +14,7 @@ import {
   receiptPlanLabel,
 } from "@/lib/email/purchase-receipt";
 import { getEmailTemplateAutomation } from "@/lib/email-templates-db";
+import { createReviewInvite } from "@/lib/review-invite";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { getUserById } from "@/lib/users";
 
@@ -337,7 +338,12 @@ export async function sendDueTrialFeedbackEmails(
     }
 
     try {
-      const feedbackUrl = await getAppUrl("/app/feedback?source=review");
+      // The link is the credential: it must work without an account, so make
+      // an invite before the send and put its token in the URL.
+      const invite = await createReviewInvite(row.user_id);
+      const feedbackUrl = await getAppUrl(
+        `/review?t=${encodeURIComponent(invite.token)}`
+      );
       await sendTemplateEmail(
         who.email,
         "trial_feedback",

@@ -74,6 +74,7 @@ const API_PUBLIC_PREFIXES = [
   "/api/cron/trial-charge-reminders",
   "/api/cron/trial-feedback",
   "/api/cron/post-trial-checkin",
+  "/api/review",
   "/api/newsletter/subscribe",
   "/api/webhooks/brevo",
 ] as const;
@@ -86,6 +87,8 @@ const PUBLIC_EXACT = new Set([
   "/robots.txt",
   "/sitemap.xml",
   "/health",
+  // Tokenised review landing page: the token in the URL is the credential.
+  "/review",
 ]);
 
 const PUBLIC_PREFIXES = ["/brand-assets/"] as const;
