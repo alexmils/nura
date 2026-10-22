@@ -14199,6 +14199,11 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   margin-bottom: 1rem;
 }
 
+/* Status pills followed by type pills read as one filter block. */
+.admin-filter-pills + .admin-filter-pills {
+  margin-top: -0.5rem;
+}
+
 .admin-filter-pill {
   display: inline-flex;
   align-items: center;

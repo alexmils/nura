@@ -25,6 +25,7 @@ export default function AdminResourcesPage() {
   const [items, setItems] = useState<ResourcePost[]>([]);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "visible" | "draft">("all");
+  const [kind, setKind] = useState<"all" | ResourcePost["kind"]>("all");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
@@ -68,15 +69,19 @@ export default function AdminResourcesPage() {
     return items.filter((item) => {
       if (filter === "visible" && !item.enabled) return false;
       if (filter === "draft" && item.enabled) return false;
+      if (kind !== "all" && item.kind !== kind) return false;
       if (!q) return true;
       return [item.title, item.slug, item.kind]
         .join(" ")
         .toLowerCase()
         .includes(q);
     });
-  }, [items, query, filter]);
+  }, [items, query, filter, kind]);
 
   const drafts = items.filter((item) => !item.enabled).length;
+  const articles = items.filter((item) => item.kind === "article").length;
+  const videos = items.filter((item) => item.kind === "video").length;
+  const safety = items.filter((item) => item.kind === "safety").length;
 
   return (
     <div className="admin-page">
@@ -129,6 +134,29 @@ export default function AdminResourcesPage() {
                 }`}
                 aria-pressed={filter === key}
                 onClick={() => setFilter(key)}
+              >
+                {label} <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+
+          <div className="admin-filter-pills">
+            {(
+              [
+                ["all", "All types", items.length],
+                ["article", "Articles", articles],
+                ["video", "Videos", videos],
+                ["safety", "Safety", safety],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`admin-filter-pill ${
+                  kind === key ? "is-active" : ""
+                }`}
+                aria-pressed={kind === key}
+                onClick={() => setKind(key)}
               >
                 {label} <strong>{count}</strong>
               </button>
