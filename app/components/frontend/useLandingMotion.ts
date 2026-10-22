@@ -65,9 +65,10 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       return y;
     };
     type Edge = { y: number; ms: number; pin: boolean };
-    /** A longer, snapping beat where the next boundary is a plain seam. */
+    /** Longer, snapping beats on the pricing and FAQ entries. */
     const edgeHoldMs = (el: HTMLElement) =>
-      el.matches(".fe-faq, .fe-blog") ? 620 : 300;
+      el.matches(".v2-pricing, .fe-faq") ? 620 : 300;
+    const edgePins = (el: HTMLElement) => el.matches(".v2-pricing, .fe-faq");
     let edges: Edge[] = [];
     const measureEdges = () => {
       edges = Array.from(
@@ -77,7 +78,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         .map((el) => ({
           y: layoutTop(el),
           ms: edgeHoldMs(el),
-          pin: el.matches(".fe-faq, .fe-blog"),
+          pin: edgePins(el),
         }))
         .filter((e) => e.y > 0)
         .sort((a, b) => a.y - b.y)
