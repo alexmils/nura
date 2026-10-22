@@ -98,6 +98,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
     let previousScroll = lenis.scroll;
     let lastEdgeAt = 0;
+    let lastEdgeY = Number.NaN;
     let catchUntil = 0;
     let lastWheelInput = 0;
 
@@ -116,17 +117,21 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       const lo = Math.min(previousScroll, y);
       const hi = Math.max(previousScroll, y);
       const edge = down
-        ? edges.find((value) => value.y > lo && value.y <= hi)
-        : [...edges].reverse().find((value) => value.y < hi && value.y >= lo);
+        ? edges.find((value) => value.y >= lo && value.y <= hi)
+        : [...edges].reverse().find((value) => value.y <= hi && value.y >= lo);
       const now = performance.now();
-      // One catch per 0.9s: a fast fling must not machine-gun the brake
-      // through several sections in a row.
+      // A fast fling must not machine-gun the brake through several sections,
+      // but a different edge must always get its catch — the fixed 0.9s
+      // cooldown skipped the FAQ pin whenever pricing was crossed too soon.
       if (
         edge !== undefined &&
-        now - lastWheelInput < 700 &&
-        now - lastEdgeAt > 900
+        // Momentum can carry across the edge a while after the last notch;
+        // pinned edges wait longer so the catch does not drop out.
+        now - lastWheelInput < (edge.pin ? 1600 : 700) &&
+        (edge.y !== lastEdgeY || now - lastEdgeAt > 1200)
       ) {
         lastEdgeAt = now;
+        lastEdgeY = edge.y;
         catchUntil = now + edge.ms;
         if (lenis) {
           lenis.options.wheelMultiplier = 0;
