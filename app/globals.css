@@ -14350,7 +14350,9 @@ a.help-drawer-signin.btn-primary {
 }
 
 .og-library-preview-overlay {
-  position: absolute;
+  /* Fixed, not absolute: the outer library is only as tall as its content,
+     and an absolute dialog would be capped by that instead of the screen. */
+  position: fixed;
   inset: 0;
   z-index: 2;
   display: flex;
@@ -14359,16 +14361,15 @@ a.help-drawer-signin.btn-primary {
   padding: 1rem;
   background: rgba(10, 14, 8, 0.55);
   backdrop-filter: blur(3px);
-  border-radius: inherit;
 }
 
 .og-library-preview {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  width: min(42rem, 100%);
+  gap: 0.55rem;
+  width: min(40rem, 100%);
   max-height: 100%;
-  padding: 1.1rem;
+  padding: 0.9rem;
   overflow-y: auto;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
@@ -14378,20 +14379,24 @@ a.help-drawer-signin.btn-primary {
 
 .og-library-preview-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 
 .og-library-preview-head h3 {
-  margin: 0.1rem 0 0;
-  font-size: 1rem;
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .og-library-preview-img {
-  flex-shrink: 0;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  aspect-ratio: 1200 / 630;
+  height: clamp(8rem, 28vh, 15rem);
+  padding: 0.25rem;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.05);
   border: 1px solid var(--border);
@@ -14407,7 +14412,7 @@ a.help-drawer-signin.btn-primary {
 
 .og-library-used {
   margin: 0;
-  font-size: 0.76rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 
@@ -14415,7 +14420,21 @@ a.help-drawer-signin.btn-primary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+}
+
+.og-library-preview-actions .btn-primary,
+.og-library-preview-actions .btn-secondary,
+.og-library-preview-actions .og-library-delete {
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.og-library-preview .field {
+  min-height: 2.2rem;
+  padding-block: 0.35rem;
+  font-size: 0.82rem;
 }
 
 .og-library-delete {

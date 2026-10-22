@@ -379,8 +379,12 @@ export function OgImageLibrary({
             <div className="og-library-preview" role="dialog" aria-modal="true">
               <div className="og-library-preview-head">
                 <div>
-                  <p className="admin-kicker">Image</p>
                   <h3>{preview.name}</h3>
+                  <p className="og-library-used">
+                    {preview.usedBy.length > 0
+                      ? `Used by: ${preview.usedBy.join(", ")}`
+                      : "Not used anywhere yet."}
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -396,14 +400,6 @@ export function OgImageLibrary({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={preview.url} alt={preview.name} />
               </div>
-
-              {preview.usedBy.length > 0 ? (
-                <p className="og-library-used">
-                  Used by: {preview.usedBy.join(", ")}
-                </p>
-              ) : (
-                <p className="og-library-used">Not used anywhere yet.</p>
-              )}
 
               <label className="admin-field-label">
                 Name
