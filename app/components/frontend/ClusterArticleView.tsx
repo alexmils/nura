@@ -6,7 +6,7 @@ import { parseBlogCta } from "@/lib/blog-cta";
 import { ClusterKeepReading } from "@/app/components/frontend/ClusterKeepReading";
 import { renderInlineMarkdown } from "@/app/components/frontend/InlineMarkdown";
 import { blogCategoryName } from "@/lib/blog-categories";
-import { BRAND_CIRCLE_AVATAR, BRAND_LIMITS_LINE, BRAND_SPOKEN } from "@/lib/brand";
+import { BRAND_CIRCLE_AVATAR, BRAND_SPOKEN } from "@/lib/brand";
 import {
   CLUSTER_TOPIC_LABEL,
   learnTopicHref,
@@ -117,11 +117,6 @@ export function ClusterArticleView({
             <Link href="/emdr">{article.emdrAnchor}</Link>.
           </p>
         ) : null}
-
-        <p className="fe-cluster-note">
-          {BRAND_LIMITS_LINE}{" "}
-          <Link href="/limits">Read the limits</Link>.
-        </p>
       </div>
 
       {related.length ? (
