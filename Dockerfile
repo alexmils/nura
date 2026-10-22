@@ -37,6 +37,12 @@ COPY --from=builder --chown=nextjs:nodejs /nura/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /nura/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /nura/CHANGELOG.md ./CHANGELOG.md
 
+# Local uploads (task screenshots, marketing media) write under ./data. /nura
+# belongs to root while the app runs as nextjs, so without this the first
+# upload fails with EACCES: permission denied, mkdir '/nura/data'.
+RUN mkdir -p /nura/data/admin-tasks /nura/data/marketing-media \
+  && chown -R nextjs:nodejs /nura/data
+
 USER nextjs
 EXPOSE 3471
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 \
