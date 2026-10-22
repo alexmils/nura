@@ -14167,6 +14167,7 @@ a.help-drawer-signin.btn-primary {
 
 /* Feedback page + legacy modal styles */
 .feedback-page {
+  position: relative;
   min-height: 100dvh;
   display: flex;
   justify-content: center;
@@ -14187,9 +14188,26 @@ a.help-drawer-signin.btn-primary {
 }
 
 .feedback-page-brand {
+  position: absolute;
+  top: 2rem;
+  left: 2rem;
   display: flex;
-  justify-content: center;
-  margin-bottom: 4rem;
+}
+
+@media (max-width: 640px) {
+  .feedback-page {
+    padding-top: 6.5rem;
+  }
+
+  .feedback-page-brand {
+    top: 1.25rem;
+    left: 1.25rem;
+  }
+
+  .feedback-page-brand .brand-logo {
+    height: 2.5rem;
+    max-width: 11rem;
+  }
 }
 
 .feedback-page-brand .brand-logo {
