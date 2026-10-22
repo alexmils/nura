@@ -25,7 +25,7 @@ describe("hero decorations follow the Background panel", () => {
     assert.match(c, /\{heroDecor \? <div className="v2-hero-sky" aria-hidden \/> : null\}/);
     assert.match(c, /\{heroDecor \? <div className="v2-hero-sun" aria-hidden \/> : null\}/);
     assert.match(c, /\$\{heroDecor \? "" : " v2-hero--plain"\}/);
-    assert.match(c, /closeBg \? null : <span className="v2-close-tint"/);
+    assert.match(c, /closeHasPhoto && !closeBg \? <span className="v2-close-tint"/);
     const css = src("app/components/frontend/landing-v2.css");
     assert.match(css, /\.v2-hero--plain \.v2-hero-photo \{[^}]*mask-image: none;/);
     assert.doesNotMatch(css, /\.v2-hero-(tint|scrim|flowers) \{/);

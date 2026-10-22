@@ -3,8 +3,11 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { MARKETING_PAGES } from "../lib/marketing-layout";
 import {
+  CLOSE_TEMPLATES,
+  CLOSE_TEMPLATE_KEY,
   PAGE_CTA_PAGES,
   SECTION_OFF_KEY,
+  closeTemplate,
   getSectionDef,
   isSectionOn,
   normalizeSection,
@@ -35,6 +38,17 @@ describe("new homepage sections", () => {
   it("hero and close paint their own background in place of the photo", () => {
     assert.equal(getSectionDef("home-hero")?.ownBackground, true);
     assert.equal(getSectionDef("home-close")?.ownBackground, true);
+  });
+
+  it("lets the editor pick one of six closing CTA layouts", () => {
+    assert.equal(CLOSE_TEMPLATES.length, 6);
+    const field = getSectionDef("home-close")?.fields.find((f) => f.key === CLOSE_TEMPLATE_KEY);
+    assert.ok(field && "options" in field && field.options?.length === 6);
+    assert.equal(closeTemplate(normalizeSection("home-close", null)), "default");
+    assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "panel" })), "panel");
+    assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "nope" })), "default");
+    const page = readFileSync(new URL("../app/components/frontend/HomeLandingV2.tsx", import.meta.url), "utf8");
+    assert.match(page, /v2-close--tpl-\$\{closeTpl\}/);
   });
 
   it("every band of the new homepage has a chip", () => {

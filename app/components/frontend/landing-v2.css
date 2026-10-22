@@ -2373,6 +2373,226 @@
 }
 
 /* ---------------------------------------------------------------- */
+/* Closing CTA templates (Admin -> Edit -> Template)                */
+/* ---------------------------------------------------------------- */
+
+.v2-close-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.v2-close-deco {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Light templates share the same ink + transparent card. */
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: #1d2a17;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-kicker {
+  color: #55703d;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card h2 {
+  color: #1d2a17;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-em {
+  color: #4a7234;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card p {
+  color: #55654a;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-note {
+  color: #6b7a5f;
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-btn--ghost {
+  color: #1d2a17;
+  border-color: rgba(29, 42, 23, 0.22);
+}
+:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial)::after {
+  content: none;
+}
+
+/* Minimal: pale wash, centred copy, no picture. */
+.v2-close--tpl-minimal {
+  background: radial-gradient(ellipse 62% 55% at 50% 32%, #fbfdf6, #e8f2db);
+  place-items: center;
+}
+.v2-close--tpl-minimal .v2-close-inner {
+  max-width: 42rem;
+}
+.v2-close--tpl-minimal .v2-close-card {
+  justify-items: center;
+  padding: 0;
+  text-align: center;
+}
+.v2-close--tpl-minimal .v2-close-actions {
+  justify-content: center;
+}
+
+/* Panel: bright gradient card on ink. */
+.v2-close--tpl-panel {
+  background: #0e150d;
+}
+.v2-close-deco--panel {
+  background:
+    radial-gradient(circle at 18% 18%, rgba(198, 214, 126, 0.16), transparent 55%),
+    radial-gradient(circle at 82% 82%, rgba(164, 237, 165, 0.12), transparent 55%);
+}
+.v2-close--tpl-panel .v2-close-inner {
+  max-width: 46rem;
+}
+.v2-close--tpl-panel .v2-close-card {
+  justify-items: center;
+  padding: clamp(2rem, 5vw, 4rem);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: clamp(1.5rem, 3vw, 2.5rem);
+  background: linear-gradient(135deg, #d9f78f 0%, #a8ee9b 48%, #eafcbf 100%);
+  color: #12220f;
+  text-align: center;
+  box-shadow: 0 30px 90px rgba(150, 240, 150, 0.22);
+}
+.v2-close--tpl-panel .v2-kicker {
+  color: #33511f;
+}
+.v2-close--tpl-panel .v2-close-card h2 {
+  color: #0f1f0b;
+}
+.v2-close--tpl-panel .v2-em {
+  color: #3f6b25;
+}
+.v2-close--tpl-panel .v2-close-card p {
+  color: #2c4420;
+}
+.v2-close--tpl-panel .v2-close-note {
+  color: #45612f;
+}
+.v2-close--tpl-panel .v2-close-actions {
+  justify-content: center;
+}
+.v2-close--tpl-panel .v2-btn--primary {
+  background: #12200d;
+  color: #ecfbe6;
+}
+.v2-close--tpl-panel .v2-btn--ghost {
+  color: #12200d;
+  border-color: rgba(18, 32, 13, 0.25);
+}
+
+/* Arches: copy left, concentric rings right. */
+.v2-close--tpl-split {
+  background: #f4f7e5;
+  place-items: center start;
+}
+.v2-close--tpl-split .v2-close-inner {
+  max-width: 38rem;
+  margin-left: clamp(0rem, 4vw, 3rem);
+}
+.v2-close-deco--split {
+  inset: 0 0 0 auto;
+  width: 58%;
+  background: repeating-radial-gradient(
+    circle at 100% 50%,
+    rgba(132, 176, 103, 0.18) 0 2px,
+    transparent 2px 84px
+  );
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 28%);
+  mask-image: linear-gradient(90deg, transparent, #000 28%);
+}
+
+/* Contour: deep pine with fine concentric lines. */
+.v2-close--tpl-contour {
+  background: #11352c;
+  place-items: center;
+}
+.v2-close-deco--contour {
+  background: repeating-radial-gradient(
+    circle at 82% 18%,
+    rgba(198, 214, 126, 0.16) 0 1px,
+    transparent 1px 110px
+  );
+}
+.v2-close--tpl-contour .v2-close-inner {
+  max-width: 44rem;
+}
+.v2-close--tpl-contour .v2-close-card {
+  justify-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: #eef8ea;
+  text-align: center;
+}
+.v2-close--tpl-contour .v2-kicker {
+  color: #cfe6a8;
+}
+.v2-close--tpl-contour .v2-close-card h2 {
+  color: #f3fbef;
+}
+.v2-close--tpl-contour .v2-em {
+  color: #b9e58a;
+}
+.v2-close--tpl-contour .v2-close-card p {
+  color: #c7dcc0;
+}
+.v2-close--tpl-contour .v2-close-note {
+  color: #a9c2a1;
+}
+.v2-close--tpl-contour .v2-close-actions {
+  justify-content: center;
+}
+.v2-close--tpl-contour .v2-btn--ghost {
+  color: #eaf7e6;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Editorial: photo half, copy half. */
+.v2-close--tpl-editorial {
+  background: #edf3e2;
+  place-items: center end;
+}
+.v2-close--tpl-editorial .v2-close-media {
+  inset: 0 52% 0 0;
+  border-radius: 0 1.75rem 1.75rem 0;
+}
+.v2-close--tpl-editorial .v2-close-inner {
+  max-width: 36rem;
+  margin-right: clamp(0rem, 4vw, 3.5rem);
+}
+.v2-close--tpl-editorial .v2-close-card {
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .v2-close--tpl-split {
+    place-items: center;
+  }
+  .v2-close--tpl-split .v2-close-inner {
+    margin: 0;
+  }
+  .v2-close--tpl-editorial {
+    place-items: center;
+  }
+  .v2-close--tpl-editorial .v2-close-media {
+    inset: 0 0 46% 0;
+    border-radius: 0;
+  }
+  .v2-close--tpl-editorial .v2-close-inner {
+    margin: 24vh 0 0;
+    max-width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------- */
 /* Unified heading voice for the original sections used on this page */
 /* ---------------------------------------------------------------- */
 

@@ -37,6 +37,7 @@ import {
   sectionDecor,
   heroInk,
   heroTemplate,
+  closeTemplate,
 } from "@/lib/marketing-sections";
 import { HeroTemplateBody, heroInkStyle, useReducedMotion, type HeroParts } from "./HeroTemplates";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
@@ -277,6 +278,8 @@ export function HomeLandingV2({
       </div>
   );
   const closeBg = sectionBackground(close);
+  const closeTpl = closeTemplate(close);
+  const closeHasPhoto = closeTpl === "default" || closeTpl === "editorial";
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
     label: mode.label ?? "",
@@ -820,22 +823,29 @@ export function HomeLandingV2({
 
       "home-close": (
       <EditablePart id="home-close" backdrop={false}>
-      <section className="v2-close" id="start" aria-labelledby="v2-close-title">
-        {closeBg ? (
-          <BandBackground bg={closeBg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
-        ) : (
-          <Image
-            src="/marketing/landing/green-meadow.jpg"
-            alt=""
-            fill
-            sizes="100vw"
-            className="v2-close-img"
-          />
-        )}
+      <section className={`v2-close v2-close--tpl-${closeTpl}`} id="start" aria-labelledby="v2-close-title">
+        {closeHasPhoto ? (
+          <div className="v2-close-media">
+            {closeBg ? (
+              <BandBackground bg={closeBg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
+            ) : (
+              <Image
+                src="/marketing/landing/green-meadow.jpg"
+                alt=""
+                fill
+                sizes="100vw"
+                className="v2-close-img"
+              />
+            )}
+          </div>
+        ) : null}
         {/* Built-in tint only over the default photo; a custom background uses the editor overlay. */}
-        {closeBg ? null : <span className="v2-close-tint" aria-hidden />}
+        {closeHasPhoto && !closeBg ? <span className="v2-close-tint" aria-hidden /> : null}
+        {closeHasPhoto ? null : (
+          <div className={`v2-close-deco v2-close-deco--${closeTpl}`} aria-hidden />
+        )}
         <div className="v2-close-inner">
-          <div className="v2-glass v2-glass--dark v2-close-card fe-animate">
+          <div className={`v2-glass v2-glass--dark v2-close-card v2-close-card--${closeTpl} fe-animate`}>
             <p className="v2-kicker">{sectionText(close, "kicker")}</p>
             <h2 id="v2-close-title">
               <Accent text={sectionText(close, "title")} accent={sectionText(close, "accent")} />

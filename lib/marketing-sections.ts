@@ -183,6 +183,25 @@ export function fieldInTemplate(field: { templates?: readonly string[] }, templa
   return !field.templates || field.templates.includes(template);
 }
 
+/* ---------- Closing CTA templates ---------- */
+
+/** The closing CTA's look. "default" is the original photo + glass card. */
+export const CLOSE_TEMPLATE_KEY = "template";
+export const CLOSE_TEMPLATES = [
+  { value: "default", label: "Meadow card", hint: "Photo with the dark glass card." },
+  { value: "minimal", label: "Minimal", hint: "Pale surface, centred copy, no photo." },
+  { value: "panel", label: "Gradient panel", hint: "Bright pistachio panel on ink." },
+  { value: "split", label: "Arches", hint: "Copy left, soft concentric arches right." },
+  { value: "contour", label: "Contour", hint: "Deep pine with fine contour lines." },
+  { value: "editorial", label: "Editorial", hint: "Photo half, framed copy half." },
+] as const satisfies readonly FieldOption[];
+export type CloseTemplate = (typeof CLOSE_TEMPLATES)[number]["value"];
+
+export function closeTemplate(config: SectionConfig | undefined): CloseTemplate {
+  const raw = config?.[CLOSE_TEMPLATE_KEY];
+  return CLOSE_TEMPLATES.some((option) => option.value === raw) ? (raw as CloseTemplate) : "default";
+}
+
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /** Editable hero text colours; blank = as designed. */
@@ -1614,6 +1633,7 @@ const V2_SECTIONS: SectionDef[] = [
     name: "Home: call to action",
     ownBackground: true,
     fields: [
+      { ...text(CLOSE_TEMPLATE_KEY, "Template"), options: CLOSE_TEMPLATES },
       text("kicker", "Kicker"),
       text("title", "Title"),
       text("accent", "Accent words"),
@@ -1625,6 +1645,7 @@ const V2_SECTIONS: SectionDef[] = [
       text("note", "Note"),
     ],
     defaults: {
+      [CLOSE_TEMPLATE_KEY]: "default",
       kicker: "A gentler next step",
       title: "A calmer next step.",
       accent: "calmer",
