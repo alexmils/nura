@@ -300,10 +300,10 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
 
       const topicsOrbit = root.querySelector<HTMLElement>(".fe-topics-orbit");
       if (topicsOrbit) {
+        // Fade only: scaling the ring read as a circle growing after the join.
         gsap.from(topicsOrbit, {
-          y: 32,
+          y: 20,
           opacity: 0,
-          scale: 0.94,
           duration: 0.9,
           ease: "power3.out",
           scrollTrigger: {

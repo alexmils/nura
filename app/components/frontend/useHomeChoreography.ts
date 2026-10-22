@@ -149,7 +149,9 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
       blendColor: false,
     });
   }
-  // Session -> topics on every screen: a calm sheet rise, no circle.
+  // Session -> topics on every screen: the guides sheet rises over the held
+  // room; the section's own top band (session cream -> transparent) does the
+  // colour blend, so the two sections keep their own colours.
   pinnedHandoff(one(".v2-session"), one(".fe-topics"), "settle");
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {

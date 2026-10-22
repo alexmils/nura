@@ -381,20 +381,14 @@ export function pinnedHandoff(
       break;
     }
     case "settle": {
-      // Calm sheet rise: stories is held and eases back a hair while a soft
-      // pricing-coloured veil settles over it, and pricing itself rises over
-      // the held block with rounded top corners that flatten as it lands. No
-      // sideways travel, no cut edge, no dark wash, no held next block.
+      // Calm sheet rise: the held block eases back a hair under a soft veil
+      // while the next one rises over it. No rounded edge and no shadow: they
+      // read as a line at the end. The next section's own top band blends the
+      // two colours, so both keep their identity.
       holdPrev();
       if (prevStill) tl.fromTo(prev, { scale: 1 }, { scale: 0.985 }, 0);
       const veil = layer(prev, { background: nextBg });
-      tl.fromTo(veil, { autoAlpha: 0 }, { autoAlpha: 0.38 }, 0);
-      tl.fromTo(
-        next,
-        { borderTopLeftRadius: 32, borderTopRightRadius: 32, boxShadow: "0 -30px 60px -30px rgba(42, 48, 32, 0.24)" },
-        { borderTopLeftRadius: 0, borderTopRightRadius: 0, boxShadow: "0 0px 0px 0px rgba(42, 48, 32, 0)", duration: 0.75 },
-        0
-      );
+      tl.fromTo(veil, { autoAlpha: 0 }, { autoAlpha: 0.3 }, 0);
       break;
     }
     case "curtain": {
