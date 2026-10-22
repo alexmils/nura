@@ -5,6 +5,17 @@
   --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
+/*
+ * shadcn-style utilities used by ported admin components (Cloudinary picker).
+ * They map onto Nura's palette instead of introducing a second colour system.
+ */
+@theme inline {
+  --color-card: var(--bg-elevated);
+  --color-foreground: var(--text);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--text-muted);
+}
+
 :root {
   /* Nura — Pistachio palette (see docs/brand.md) */
   --sidebar-bg: #3d4129;
