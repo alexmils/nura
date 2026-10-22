@@ -453,7 +453,8 @@ export function pinnedHandoff(
         ),
       ];
       if (blogCopy.length) {
-        tl.fromTo(blogCopy, { opacity: 1 }, { opacity: 0, duration: 0.55, ease: "none" }, 0.1);
+        // Long fade across the whole bloom — never a one-frame disappearance.
+        tl.fromTo(blogCopy, { opacity: 1 }, { opacity: 0, duration: 0.9, ease: "none" }, 0.05);
       }
       if (pinned) {
         /** Card rect drives the CTA clip; the image rect drives the ghost so
@@ -535,7 +536,7 @@ export function pinnedHandoff(
             return;
           }
           conceal(false);
-          const e = inOut(clamp01(p / 0.86));
+          const e = inOut(clamp01(p / 0.95));
           // Start the lens on the card picture: anything below it (meta,
           // title) stays uncovered and fades with its own opacity tween.
           const L = lerp(src.gl, 0, e);
@@ -544,7 +545,9 @@ export function pinnedHandoff(
           const Hh = lerp(src.gh, h, e);
           const R = lerp(src.r, 0, e);
           next.style.clipPath = `inset(${T}px ${Math.max(0, w - L - W)}px ${Math.max(0, H - T - Hh)}px ${L}px round ${R}px)`;
-          const fade = 1 - clamp01((p - 0.12) / 0.4);
+          // The post picture dissolves slowly into the CTA photo over almost
+          // the whole window instead of vanishing in the first half.
+          const fade = 1 - clamp01((p - 0.05) / 0.9);
           ghost.style.visibility = src.img && fade > 0 && p > 0.001 ? "visible" : "hidden";
           ghost.style.opacity = String(fade);
           // Grow the picture from its own box inside the card, not from the

@@ -161,6 +161,8 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
     image: one(".v2-close-img"),
     content: one(".v2-close-inner"),
     from: () => q<HTMLElement>(root, ".fe-blog .fe-blog-masonry-card"),
+    // More runway before the lens: the card picture lingers, then blooms.
+    hold: 0.8,
   });
 
   const trust = root.querySelector(".v2-trust");
