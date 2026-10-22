@@ -10,7 +10,7 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
 
   const pairs: Array<[string, string, string]> = [
     [".v2-modes", ".v2-session", "lift"],
-    [".v2-session", ".fe-topics", "settle"],
+    [".v2-session", ".fe-topics", "focus"],
     [".fe-topics", ".v2-stories", "morph"],
     [".v2-stories", ".v2-pricing", "morph"],
     [".fe-blog", ".v2-close", "lens"],
@@ -29,7 +29,7 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
   });
 
   it("implements every effect and names its alexandermils source", () => {
-    for (const fx of ["zoom", "lift", "halo", "morph", "settle", "curtain", "lens"]) {
+    for (const fx of ["zoom", "lift", "halo", "morph", "settle", "focus", "curtain", "lens"]) {
       assert.match(lib, new RegExp(`case "${fx}"`));
     }
     for (const source of ["SectionHandoff", "CurtainPin", "Aperture"]) {

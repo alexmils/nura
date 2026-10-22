@@ -34,7 +34,7 @@ import { DEFAULT_HANDOFF_HOLD, paintedBg, siblingBoxesOf, pinnedInsideOf } from 
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "curtain" | "lens" | "tilt";
+export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "focus" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -377,6 +377,39 @@ export function pinnedHandoff(
           { y: 0, opacity: 1, duration: 0.9 },
           0.1
         );
+      }
+      break;
+    }
+    case "focus": {
+      // Focus pull: the held room softly loses focus while the guides surface
+      // through a tall feathered mask, as if the camera racks focus through
+      // fog. No edge, no ring, no sheet sliding over a line.
+      holdPrev();
+      if (prevStill) {
+        tl.fromTo(
+          prev,
+          { scale: 1, filter: "blur(0px) brightness(1)" },
+          { scale: 0.975, filter: "blur(7px) brightness(0.96)" },
+          0
+        );
+      }
+      const state = { p: 0 };
+      const feather = () => Math.max(220, vh() * 0.55);
+      const paint = () => {
+        if (state.p >= 0.999) {
+          gsap.set(next, { clearProps: "maskImage,webkitMaskImage" });
+          return;
+        }
+        const f = feather();
+        const edge = f + state.p * (vh() + f);
+        const mask = `linear-gradient(180deg, #000 0px, #000 ${edge - f}px, transparent ${edge}px)`;
+        gsap.set(next, { maskImage: mask, webkitMaskImage: mask });
+      };
+      paint();
+      drive(state, paint);
+      if (opts.content) {
+        // Fade only: the copy surfaces through the same fog, it never slides.
+        tl.fromTo(opts.content, { opacity: 0.35 }, { opacity: 1, duration: 0.85 }, 0.1);
       }
       break;
     }
