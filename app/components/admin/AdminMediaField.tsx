@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Repeat } from "lucide-react";
 import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
 
 type Props = {
@@ -67,46 +68,60 @@ export function AdminMediaField({
       {value ? (
         <div className="admin-media-preview">
           {kind === "video" ? (
-            <video src={value} controls preload="metadata" />
+            <>
+              <video src={value} controls preload="metadata" />
+              {/* A full overlay would swallow the player controls. */}
+              <button
+                type="button"
+                className="admin-media-replace-corner"
+                disabled={disabled || busy}
+                aria-label="Replace video"
+                onClick={() => setPickerOpen(true)}
+              >
+                <Repeat size={16} />
+              </button>
+            </>
           ) : (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={value} alt="" />
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={value} alt="" />
+              <button
+                type="button"
+                className="admin-media-replace"
+                disabled={disabled || busy}
+                onClick={() => setPickerOpen(true)}
+              >
+                <Repeat size={20} />
+                <span>Replace</span>
+              </button>
+            </>
           )}
         </div>
       ) : (
-        <div className="admin-media-empty">
-          {kind === "video" ? "No video selected" : "No image selected"}
-        </div>
+        <>
+          <div className="admin-media-empty">
+            {kind === "video" ? "No video selected" : "No image selected"}
+          </div>
+          <div className="admin-media-actions">
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={disabled || busy}
+              onClick={() => inputRef.current?.click()}
+            >
+              {busy ? "Uploading…" : "Upload"}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={disabled || busy}
+              onClick={() => setPickerOpen(true)}
+            >
+              Cloudinary
+            </button>
+          </div>
+        </>
       )}
-
-      <div className="admin-media-actions">
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={disabled || busy}
-          onClick={() => inputRef.current?.click()}
-        >
-          {busy ? "Uploading…" : value ? "Replace" : "Upload"}
-        </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          disabled={disabled || busy}
-          onClick={() => setPickerOpen(true)}
-        >
-          Cloudinary
-        </button>
-        {value ? (
-          <button
-            type="button"
-            className="btn-ghost"
-            disabled={disabled || busy}
-            onClick={() => onChange("")}
-          >
-            Remove
-          </button>
-        ) : null}
-      </div>
 
       <input
         ref={inputRef}

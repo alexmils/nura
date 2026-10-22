@@ -14460,10 +14460,54 @@ html[data-a11y-motion="reduced"] .fe-display-word {
 }
 
 .admin-media-preview {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
   background: var(--bg-muted);
+}
+
+.admin-media-replace {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 0;
+  background: rgba(20, 26, 18, 0.52);
+  color: #fff;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.admin-media-preview:hover .admin-media-replace,
+.admin-media-replace:focus-visible {
+  opacity: 1;
+}
+
+.admin-media-replace-corner {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(20, 26, 18, 0.62);
+  color: #fff;
+  cursor: pointer;
+}
+
+.admin-media-replace-corner:hover {
+  background: rgba(20, 26, 18, 0.82);
 }
 
 .admin-media-preview img,
