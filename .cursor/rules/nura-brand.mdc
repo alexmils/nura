@@ -42,7 +42,7 @@ Hero: **EMDR therapy online.** *in a calm app.* (tagline still: Support for ther
 
 ## Visual
 
-- Pistachio palette: Paper/mint `#A4EDA5` · Sage `#84B067` (buttons, wordmark) · Ink `#2A3020` (body) · Pistachio `#C6D67E` **focus/hover only, never body or default field borders** · Olive `#948F4E` (muted) · Sidebar `#3D4129`
+- Pistachio palette: Paper/mint `#A4EDA5` · Sage `#84B067` (wordmark, icons, large surfaces) · Action `#4A7234` (filled buttons and small accent text; white on sage fails AA) · Ink `#2A3020` (body) · Pistachio `#C6D67E` **focus/hover only, never body or default field borders** (`--pistachio`; `--gold` is an alias) · Olive `#5A5C2B` (muted) · Sidebar `#3D4129`
 - Forbidden: OpenAI `#10a37f`, Apple `#007AFF`, Inter, purple wellness, hospital blue
 - **Product type** (`/app`, `.app-shell`, `.auth-shell`): **Source Sans 3 only** — remaps `--font-display` to sans (same idea as admin). No Fraunces in product chrome or auth titles.
 - **Admin type** (`/admin`, `.admin-shell`): **Source Sans 3 only** — sober UI; remaps `--font-display` to `--font-sans` so titles/KPIs are not ornamental Fraunces

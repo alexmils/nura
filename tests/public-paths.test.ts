@@ -164,6 +164,8 @@ describe("legacyConsolePath", () => {
     assert.equal(legacyConsolePath("/billing"), "/app/billing");
     assert.equal(legacyConsolePath("/onboarding"), "/app/onboarding");
     assert.equal(legacyConsolePath("/create-account"), "/app/create-account");
+    assert.equal(legacyConsolePath("/signup"), "/app/create-account");
+    assert.equal(legacyConsolePath("/checkout"), "/pricing");
     assert.equal(legacyConsolePath("/about"), null);
   });
 });

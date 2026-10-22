@@ -117,12 +117,12 @@ export type EmailTemplateData = {
   };
 };
 
-const brandColor = BRAND_COLORS.earth;
+const brandColor = BRAND_COLORS.action;
 const mutedColor = BRAND_COLORS.olive;
 const inkColor = BRAND_COLORS.ink;
 const pageBg = "#EDF9ED";
 const cardBg = "#F7FDF7";
-const borderColor = "#B8D4A8";
+const borderColor = "#5F8A4C";
 
 type EmailBrand = {
   name: string;

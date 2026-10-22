@@ -14,6 +14,7 @@ import {
   trackMetaEvent,
 } from "@/lib/meta-pixel";
 import { useToast } from "@/app/components/Toast";
+import { checkoutStartNotice } from "@/lib/checkout-feedback";
 
 type UpgradeReason = "trial_limit_reached" | "bls_limit_reached" | "generic";
 
@@ -128,9 +129,10 @@ export function UpgradeModal({
           // Stripe can return an ended trial that still needs to collect.
           const nextStatus = activateData.entitlement?.status;
           if (nextStatus && nextStatus !== "active") {
-            setError(
-              "Your trial has ended but the payment has not cleared yet. Open Manage billing to check your card."
-            );
+            const message =
+              "Your trial has ended but the payment has not cleared yet. Open Manage billing to check your card.";
+            setError(message);
+            toast(message, "error");
             return;
           }
           // The charge itself is reported from the Stripe webhook, with the
@@ -150,7 +152,7 @@ export function UpgradeModal({
             { onceKey: "subscribe_activate" }
           );
           setActivated(true);
-          toast("Payment successful — your subscription is active.");
+          toast("Payment successful. Your subscription is active.");
           onActivated?.();
           return;
         }
@@ -158,7 +160,9 @@ export function UpgradeModal({
           activateData.code !== "needs_checkout" &&
           activateData.code !== "not_trialing"
         ) {
-          setError(activateData.error ?? "Could not activate subscription");
+          const message = activateData.error ?? "Could not activate subscription";
+          setError(message);
+          toast(message, "error");
           return;
         }
       }
@@ -169,25 +173,29 @@ export function UpgradeModal({
         body: JSON.stringify({ plan, source: "upgrade_modal" }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Checkout unavailable");
+      const notice = checkoutStartNotice({
+        ok: res.ok,
+        error: data.error,
+        url: data.url,
+      });
+      if (notice) {
+        setError(notice.message);
+        toast(notice.message, "error");
         return;
       }
-      if (data.url) {
-        const money = metaMoneyFromPlanPrice(
-          plans[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-        );
-        trackMetaEvent("InitiateCheckout", {
-          ...money,
-          content_name: plan,
-          content_category: "subscription",
-        });
-        window.location.href = data.url;
-        return;
-      }
-      setError("Checkout unavailable");
+      const money = metaMoneyFromPlanPrice(
+        plans[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
+      );
+      trackMetaEvent("InitiateCheckout", {
+        ...money,
+        content_name: plan,
+        content_category: "subscription",
+      });
+      window.location.href = data.url;
     } catch {
-      setError("Could not start upgrade.");
+      const message = "Could not start upgrade.";
+      setError(message);
+      toast(message, "error");
     } finally {
       setBusy(false);
     }

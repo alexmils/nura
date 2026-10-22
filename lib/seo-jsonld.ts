@@ -517,7 +517,7 @@ export const PRICING_JSON_LD = {
 export const PUBLIC_FAQ_JSON_LD = {
   name: "EMDR App FAQ",
   description:
-    "Answers to the questions people ask before starting: is guided EMDR safe, how long a session takes, what happens if you feel worse, and how billing works.",
+    "Answers about sessions, Self-guided sets, the trial, privacy, and when to get help.",
 } as const;
 
 /** H1 + lead mirrored into JSON-LD for `/support`. */
@@ -527,7 +527,10 @@ export const SUPPORT_JSON_LD = {
     "Get help with your Nura account, billing, sessions, or data. How to reach us and what to include so we can fix it fast.",
 } as const;
 
-export function buildPricingJsonLd(origin: string) {
+export function buildPricingJsonLd(
+  origin: string,
+  faqItems?: readonly { q: string; a: string }[]
+) {
   const base = origin.replace(/\/$/, "");
   const plans = orderedBillingPlans(BILLING_PLANS);
   const offerNodes = plans.map((plan, i) => ({
@@ -583,7 +586,7 @@ export function buildPricingJsonLd(origin: string) {
         },
       },
       ...offerNodes,
-      faqPageJsonLd([...PRICING_FAQ_ITEMS]),
+      faqPageJsonLd([...(faqItems ?? PRICING_FAQ_ITEMS)]),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
         { name: "Pricing", path: "/pricing" },

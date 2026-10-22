@@ -45,6 +45,11 @@ function redactPlatformSettings(settings: PlatformSettings): PlatformSettings {
       privateKey: "",
       subject: settings.adminPush.subject || "",
     },
+    cloudinary: {
+      cloudName: "",
+      apiKey: "",
+      apiSecret: "",
+    },
   };
 }
 
@@ -121,6 +126,7 @@ export async function PUT(request: Request) {
       email: current.email,
       seo: current.seo,
       adminPush: current.adminPush,
+      cloudinary: current.cloudinary,
     });
 
     await writeAuditEvent({

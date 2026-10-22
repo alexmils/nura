@@ -649,7 +649,7 @@ a.fe-post-pill:hover {
   line-height: 1.35;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 .fe-blog-masonry-title {

@@ -128,6 +128,15 @@ export function shouldRedirectToLoginOn401(pathname: string): boolean {
   return true;
 }
 
+/**
+ * Short public URLs people type. Registration is `/app/create-account`.
+ * Stripe Checkout is not a page — plans live on `/pricing`.
+ */
+const PUBLIC_PATH_ALIASES: Record<string, string> = {
+  "/signup": `${APP_BASE}/create-account`,
+  "/checkout": "/pricing",
+};
+
 /** Legacy console bookmarks before the /app prefix. */
 export const LEGACY_CONSOLE_PREFIXES = [
   "/login",
@@ -141,6 +150,8 @@ export const LEGACY_CONSOLE_PREFIXES = [
 ] as const;
 
 export function legacyConsolePath(pathname: string): string | null {
+  const alias = PUBLIC_PATH_ALIASES[pathname];
+  if (alias) return alias;
   for (const prefix of LEGACY_CONSOLE_PREFIXES) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
       return `${APP_BASE}${pathname}`;

@@ -70,6 +70,8 @@ describe("admin search index", () => {
     assert.ok(titles.includes("SEO"));
     assert.ok(titles.includes("Settings"));
     assert.ok(index.some((e) => e.href === "/admin/tasks"));
+    assert.ok(index.some((e) => e.href === "/admin/media" && e.title === "Media"));
+    assert.ok(index.some((e) => e.href === "/admin/media?tab=settings" && e.title === "Settings"));
     assert.ok(index.some((e) => e.href.startsWith("/admin/seo")));
     assert.ok(index.some((e) => e.kind === "section"));
     assert.ok(index.some((e) => e.kind === "tab" && e.href.includes("tab=")));

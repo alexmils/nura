@@ -171,6 +171,7 @@ async function runBlogSchema(): Promise<void> {
 
   await refreshSeedCopy(db);
   await backfillSeedCategoryOrder(db);
+  await spreadSeedPublishDates(db);
 }
 
 /**
@@ -361,6 +362,66 @@ async function backfillSeedCategoryOrder(
 
   await db.query(
     `INSERT INTO schema_migrations (id) VALUES ('blog_category_order_v1')
+     ON CONFLICT DO NOTHING`
+  );
+}
+
+/**
+ * The built-in guides shipped in one 10-day burst. Move a row only when its
+ * publish time is still that original stamp, so an editor's date stays put.
+ * Unedited bodies also move `updated_at`, which is what the sitemap uses.
+ */
+const PREVIOUS_SEED_PUBLISHED_AT: Record<string, string> = {
+  "what-is-emdr": "2026-09-02T10:00:00.000Z",
+  "what-is-bilateral-stimulation": "2026-09-03T10:00:00.000Z",
+  "visual-sets-and-the-moving-ball": "2026-09-04T10:00:00.000Z",
+  "emdr-vs-cbt": "2026-09-05T10:00:00.000Z",
+  "emdr-between-sessions": "2026-09-06T10:00:00.000Z",
+  "can-you-do-emdr-alone": "2026-09-07T10:00:00.000Z",
+  "how-long-does-emdr-take": "2026-09-08T10:00:00.000Z",
+  "emdr-for-anxiety": "2026-09-09T10:00:00.000Z",
+  "emdr-for-ptsd": "2026-09-10T10:00:00.000Z",
+  "emdr-online-what-to-expect": "2026-09-11T10:00:00.000Z",
+  "guided-vs-free-mode": "2026-09-12T10:00:00.000Z",
+  "grounding-before-a-set": "2026-09-12T11:00:00.000Z",
+  "when-to-pause-or-stop": "2026-09-12T12:00:00.000Z",
+  "emdr-session-structure": "2026-09-12T13:00:00.000Z",
+  "self-help-emdr-vs-a-therapist": "2026-09-12T14:00:00.000Z",
+  "eye-movements-and-online-emdr": "2026-09-12T15:00:00.000Z",
+  "emdr-check-ins-after-sets": "2026-09-12T16:00:00.000Z",
+  "what-happens-in-an-emdr-set": "2026-09-12T17:00:00.000Z",
+};
+
+async function spreadSeedPublishDates(
+  db: ReturnType<typeof getPool>
+): Promise<void> {
+  const { rows: applied } = await db.query<{ id: string }>(
+    `SELECT id FROM schema_migrations WHERE id = 'blog_publish_spread_v1'`
+  );
+  if (applied.length) return;
+
+  for (const article of CLUSTER_ARTICLES) {
+    const previous = PREVIOUS_SEED_PUBLISHED_AT[article.slug];
+    if (!previous || previous === article.publishedAt) continue;
+    await db.query(
+      `UPDATE blog_posts
+       SET published_at = $2::timestamptz,
+           updated_at = CASE
+             WHEN sections = $4::jsonb THEN $2::timestamptz
+             ELSE updated_at
+           END
+       WHERE slug = $1 AND published_at = $3::timestamptz`,
+      [
+        article.slug,
+        article.publishedAt,
+        previous,
+        JSON.stringify(article.sections),
+      ]
+    );
+  }
+
+  await db.query(
+    `INSERT INTO schema_migrations (id) VALUES ('blog_publish_spread_v1')
      ON CONFLICT DO NOTHING`
   );
 }

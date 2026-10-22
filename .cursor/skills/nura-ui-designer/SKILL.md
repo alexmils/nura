@@ -54,10 +54,11 @@ Onboarding follows marketing rhythm (`OnboardingShell` + `.frontend-home` tokens
 | Token | Hex | Use |
 |---|---|---|
 | Paper/mint | `#A4EDA5` | Tint, highlights |
-| Sage | `#84B067` | Primary buttons, icons, wordmark |
+| Sage | `#84B067` | Icons, wordmark, large surfaces. Not under white text |
+| Action | `#4A7234` | Filled buttons and small accent text |
 | Ink | `#2A3020` | Body |
 | Pistachio | `#C6D67E` | **Focus/hover only** — never body or default field borders |
-| Olive | `#948F4E` | Muted |
+| Olive | `#5A5C2B` | Muted |
 | Sidebar | `#3D4129` | App/admin rail |
 | Page | `#EDF9ED` | Soft mint canvas |
 

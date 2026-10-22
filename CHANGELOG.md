@@ -432,6 +432,12 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Onboarding **Pick a plan**: flush layout (no inner card), radio plan rows, **Try free** CTA, one-line trial footnote under the button
 - [internal] Admin **Trial started** email also fires when Checkout syncs via `/api/billing/status?session_id=` (local dev without Stripe webhook), deduped per subscription
 - [internal] Cloudflare Access bypass on `dev.nurahelp.com/api/webhooks/*` for Stripe/Brevo (dev tunnel no longer 302 on webhook POST)
+- [internal] FAQ meta description and the lead under the title say Self-guided sets (saved “Free sets” copy rewrites on load)
+- [internal] Blog category hubs stay in the sitemap with zero guides (grief, phobias, childhood memories, self-worth) and are no longer noindex
+- [internal] `/signup` redirects to create-account; `/checkout` redirects to pricing (those paths were 404)
+- [internal] Security headers on every response: HSTS in production, CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy (microphone stays on for session voice)
+- [internal] Blog guides publish every four days from August 3 to October 10 (was a 10-day burst); each guide links to pricing; empty category hubs stay in the sitemap
+- [internal] Default contrast: filled buttons and small accent text use `#4A7234` (sage `#84B067` stays for surfaces); muted text `#5A5C2B`; field borders `#5F8A4C` (the suggested `#94B884` is only 2.05:1 on paper); `--gold` aliases `--pistachio`; stars use `--star`
 
 ### Fixed
 - [internal] Turnstile siteverify timeout 10s → 25s (default); dev console warns on reject/timeout; optional `TURNSTILE_BYPASS_DEV` for local dev only
@@ -809,6 +815,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Manage billing shows the card saved at checkout during trial (reads customer default, not only subscription default)
 - Feedback moves to `/app/feedback` and a trial-end email (no popup). We only ask after 4+ days and at least one real session; trial week ends with one email link to rate and leave suggestions or bugs
 - [internal] Admin Feedback lists trial email and page sources; cron `POST /api/cron/trial-feedback`; template `trial_feedback`
+- [internal] Marketing sections have an Edit chip for platform admins, with a drawer that saves that band’s copy
+- [internal] Section save refreshes every public page, keeps a moved row with its id, and allows an emptied list
+
+- [internal] Section editors collapse into accordions, and image slots can switch to a video or an upload
+- [internal] Home page loads again after the media editor change
+- [internal] Marketing images upload to Cloudinary, with a Media library and Settings in admin
+- [internal] Importing a site image points the live pages at Cloudinary, and the library loads every page of files
+- [internal] Hero Edit sits under the transparent header, so the header no longer takes clicks outside the nav pill
+- [internal] The home preloader no longer sticks at 0% when the early head scripts hydrate
+- [internal] Hero Edit no longer trips a hydration error from the footer email field or a rewritten head script
+- [internal] Hero Edit opens the section drawer again (the editor was calling a draft hook that was not imported)
+- Checkout tells you when payment succeeds, is still confirming, fails, or is canceled, including a toast so the page does not look stuck
 
 ### Removed
 - [internal] In-app NPS popup host (`FeedbackPromptHost`) removed from `/app` layout

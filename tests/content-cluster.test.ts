@@ -64,6 +64,20 @@ describe("content cluster", () => {
     }
   });
 
+  it("spreads publication instead of one 10-day burst", () => {
+    const times = CLUSTER_ARTICLES.map((article) => Date.parse(article.publishedAt)).sort(
+      (a, b) => a - b
+    );
+    const spanDays = (times.at(-1)! - times[0]!) / 86_400_000;
+    assert.ok(spanDays >= 60, `span ${spanDays}`);
+    for (let i = 1; i < times.length; i++) {
+      const gapDays = (times[i]! - times[i - 1]!) / 86_400_000;
+      assert.ok(gapDays >= 3, `gap ${gapDays}`);
+    }
+    const days = new Set(times.map((t) => new Date(t).toISOString().slice(0, 10)));
+    assert.equal(days.size, times.length);
+  });
+
   it("lists newest first and features enough posts for the home grid", () => {
     const listed = listClusterArticles();
     assert.equal(listed[0]?.slug, CLUSTER_ARTICLES.at(-1)?.slug);

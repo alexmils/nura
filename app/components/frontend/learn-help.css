@@ -3,7 +3,7 @@
 .fe-help {
   --help-border: color-mix(in srgb, var(--fe-fg) 10%, transparent);
   --help-surface: color-mix(in srgb, #ffffff 72%, var(--fe-bg, #edf9ed));
-  --help-muted: var(--fe-muted, #948f4e);
+  --help-muted: var(--fe-muted, #5a5c2b);
   --help-ink: var(--fe-fg, #2a3020);
   --help-sage: #84b067;
   --help-side: 15.5rem;

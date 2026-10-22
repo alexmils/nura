@@ -1,5 +1,6 @@
 "use client";
 
+import { PageCta } from "./section-editor/PageCta";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
@@ -7,18 +8,45 @@ import { Pause, Play } from "lucide-react";
 import { LetterRevealHeading } from "@/app/components/frontend/LetterRevealHeading";
 import { KnowledgeSeriesBlock } from "@/app/components/frontend/KnowledgeSeriesBlock";
 import {
-  KNOWLEDGE_HERO,
-  KNOWLEDGE_INTRO,
-  KNOWLEDGE_MORE_LINKS,
   KNOWLEDGE_SERIES,
 } from "@/lib/knowledge-clips";
+import { sectionList, sectionText } from "@/lib/marketing-sections";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
+import { SectionEdit } from "@/app/components/frontend/section-editor/SectionEdit";
+import { SectionGate } from "@/app/components/frontend/section-editor/EditablePart";
+import { useSectionConfig } from "@/app/components/frontend/section-editor/MarketingCopy";
 import "./knowledge.css";
 
 export function KnowledgeHub() {
+  const heroCopy = useSectionConfig("knowledge-hero");
+  const seriesCopy = useSectionConfig("knowledge-series");
+  const moreCopy = useSectionConfig("knowledge-more");
+  const seriesHeadings = sectionList(seriesCopy, "series");
+  const seriesOrder = [
+    ...seriesHeadings
+      .map((row) => row.id)
+      .filter((id): id is string => KNOWLEDGE_SERIES.some((series) => series.id === id)),
+    ...KNOWLEDGE_SERIES.map((series) => series.id).filter(
+      (id) => !seriesHeadings.some((row) => row.id === id)
+    ),
+  ];
+  const seriesList = seriesOrder.flatMap((id) => {
+    const series = KNOWLEDGE_SERIES.find((item) => item.id === id);
+    if (!series) return [];
+    const saved = seriesHeadings.find((row) => row.id === id);
+    return [{
+      ...series,
+      title: saved?.title || series.title,
+      role: saved?.role || series.role,
+    }];
+  });
   const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [heroPlaying, setHeroPlaying] = useState(false);
   const [heroStarted, setHeroStarted] = useState(false);
-  const hasHeroVideo = Boolean(KNOWLEDGE_HERO.videoSrc);
+  const clipKind = sectionText(heroCopy, "clipKind");
+  const clipVideo = sectionText(heroCopy, "clipVideo");
+  const clipPoster = sectionText(heroCopy, "clipPoster") || sectionText(heroCopy, "clipImage");
+  const hasHeroVideo = clipKind !== "image" && Boolean(clipVideo);
 
   const toggleHero = useCallback(() => {
     const el = heroVideoRef.current;
@@ -44,10 +72,17 @@ export function KnowledgeHub() {
 
   return (
     <div className="fe-knowledge">
+      <PageSections
+        page="knowledge"
+        slots={{ "page-cta-knowledge": <PageCta page="knowledge" />,
+      "knowledge-hero": (
+      <>
       <section
-        className="fe-knowledge-hero"
+        className="fe-knowledge-hero fe-has-edit"
+        data-section="knowledge-hero"
         aria-labelledby="fe-knowledge-hero-title"
       >
+        <SectionEdit id="knowledge-hero" lift />
         <div
           className={`fe-knowledge-hero-media${heroPlaying ? " is-playing" : ""}`}
         >
@@ -55,19 +90,20 @@ export function KnowledgeHub() {
             <>
               {!heroStarted ? (
                 <Image
-                  src={KNOWLEDGE_HERO.poster}
+                  src={clipPoster}
                   alt=""
                   fill
                   priority
                   sizes="100vw"
                   className="fe-knowledge-hero-image"
+                  unoptimized={!clipPoster.startsWith("/marketing/")}
                 />
               ) : null}
               <video
                 ref={heroVideoRef}
                 className={`fe-knowledge-hero-video${heroStarted ? " is-on" : ""}`}
-                src={KNOWLEDGE_HERO.videoSrc}
-                poster={KNOWLEDGE_HERO.poster}
+                src={clipVideo}
+                poster={clipPoster}
                 playsInline
                 loop
                 preload="metadata"
@@ -77,12 +113,13 @@ export function KnowledgeHub() {
             </>
           ) : (
             <Image
-              src={KNOWLEDGE_HERO.poster}
+              src={clipPoster}
               alt=""
               fill
               priority
               sizes="100vw"
               className="fe-knowledge-hero-image"
+              unoptimized={!clipPoster.startsWith("/marketing/")}
             />
           )}
           <div className="fe-knowledge-hero-shade" aria-hidden />
@@ -106,35 +143,41 @@ export function KnowledgeHub() {
               id="fe-knowledge-hero-title"
               className="fe-knowledge-hero-title"
             >
-              {KNOWLEDGE_HERO.title}
+              {sectionText(heroCopy, "title")}
             </h1>
-            <p className="fe-knowledge-hero-lead">{KNOWLEDGE_HERO.lead}</p>
+            <p className="fe-knowledge-hero-lead">{sectionText(heroCopy, "lead")}</p>
           </div>
         </div>
       </section>
 
-      <p className="fe-knowledge-intro">{KNOWLEDGE_INTRO}</p>
-
-      <div className="fe-knowledge-body">
-        {KNOWLEDGE_SERIES.map((series) => (
+      <p className="fe-knowledge-intro">{sectionText(heroCopy, "intro")}</p>
+      </>
+      ),
+      "knowledge-series": (
+      <div className="fe-knowledge-body fe-has-edit" data-section="knowledge-series">
+        <SectionEdit id="knowledge-series" />
+        {seriesList.map((series) => (
           <KnowledgeSeriesBlock key={series.id} series={series} />
         ))}
 
+        <SectionGate id="knowledge-more">
         <section
-          className="fe-knowledge-more"
+          className="fe-knowledge-more fe-has-edit"
+          data-section="knowledge-more"
           aria-labelledby="fe-knowledge-more-title"
         >
-          <p className="fe-section-kicker">Keep going</p>
+          <SectionEdit id="knowledge-more" />
+          <p className="fe-section-kicker">{sectionText(moreCopy, "kicker")}</p>
           <LetterRevealHeading
             id="fe-knowledge-more-title"
             className="fe-knowledge-more-title"
           >
-            Guides beside the clips
+            {sectionText(moreCopy, "title")}
           </LetterRevealHeading>
           <ul className="fe-knowledge-more-list">
-            {KNOWLEDGE_MORE_LINKS.map((item) => (
+            {sectionList(moreCopy, "links").map((item) => (
               <li key={item.href}>
-                <Link href={item.href} className="fe-knowledge-more-link">
+                <Link href={item.href ?? "/"} className="fe-knowledge-more-link">
                   <span className="fe-knowledge-more-label">{item.label}</span>
                   <span className="fe-knowledge-more-dek">{item.dek}</span>
                 </Link>
@@ -142,7 +185,11 @@ export function KnowledgeHub() {
             ))}
           </ul>
         </section>
+        </SectionGate>
       </div>
+      ),
+        }}
+      />
     </div>
   );
 }

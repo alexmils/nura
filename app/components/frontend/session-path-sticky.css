@@ -18,6 +18,164 @@
   --spath-nav-h: 0px;
 }
 
+/* Hidden unless a full-screen video sits directly above (desktop). */
+.fe-spath-slide-hold,
+.fe-spath-curtain-hold {
+  display: none;
+}
+
+@media (min-width: 860px) {
+  /* Video -> How hand-off (Alexander Mils page slide): overlap the video's
+     last viewport, slide a full-screen pale sheet and the first stage's inner
+     content in from the right, while the video screen goes left. The sticky
+     nav/panels themselves are never transformed. */
+  .fe-custom--video + .fe-spath {
+    position: relative;
+    z-index: 3;
+    /* Two viewports of overlap: one for the slide, one so the video screen's
+       sticky range still covers the whole slide (no vertical drift). */
+    margin-top: -200svh;
+    padding-top: 0;
+    background: transparent;
+    /* The pale sheet is a sticky 100svh layer pinned for the whole stage. At
+       the section's tail it would otherwise hang past the border box and paint
+       over the next section (a long pale screen). `clip` bounds it to this
+       section without creating a scroll container, so the sticky stage panels
+       keep working (unlike `hidden`). */
+    overflow: clip;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+    border-top-color: transparent;
+  }
+
+  /* The video hand-off consumes the first viewport of this section. Give the
+     first stage (Ground first) that extra scroll range so the active-stage
+     sentinel math still starts there instead of jumping to rhythm. */
+  .fe-custom--video + .fe-spath .fe-spath-stage-scroll {
+    height: 500vh;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-sentinel:first-child {
+    flex-grow: 2;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-hold {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100svh;
+    background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+    /* Enters from the right and moves left, like the reference's page slide. */
+    transform: translateX(100%);
+    will-change: transform;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-edge {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: var(--fe-pistachio, #c6d67e);
+    will-change: opacity;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-curtain-hold {
+    display: block;
+    position: sticky;
+    top: 0;
+    height: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-slide-curtain {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50vw;
+    height: 100svh;
+    background: #fff;
+    box-shadow: 0 0 60px rgba(42, 48, 32, 0.08);
+    transform: translateX(100vw);
+    will-change: transform;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-nav {
+    opacity: 0;
+    will-change: opacity;
+  }
+
+  .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-custom--video + .fe-spath {
+    margin-top: 0;
+    padding-top: 200px;
+    background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+  }
+  .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+    border-top-color: color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
+  }
+  .fe-custom--video + .fe-spath .fe-spath-slide-hold,
+  .fe-custom--video + .fe-spath .fe-spath-curtain-hold {
+    display: none;
+  }
+  .fe-custom--video + .fe-spath .fe-spath-nav {
+    opacity: 1;
+  }
+  .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+    transform: none !important;
+  }
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath {
+  margin-top: 0;
+  padding-top: 200px;
+  background: color-mix(in srgb, #fff 55%, var(--fe-bg, #edf9ed));
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-track-wrap {
+  border-top-color: color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-slide-hold,
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-curtain-hold {
+  display: none;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-nav {
+  opacity: 1;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:first-child .fe-spath-panel-inner {
+  transform: none !important;
+}
+
+/* "How it works" intro above the Heal poster: separate section, one visual block. */
+.fe-spath-intro-section {
+  position: relative;
+  z-index: 1;
+  scroll-margin-top: 5.5rem;
+  padding: clamp(8rem, 16vw, 12rem) 0 clamp(1.25rem, 2.5vw, 2rem);
+  /* Pure white, same as the poster's top: one joined block. */
+  background: #fff;
+}
+
 /* —— Intro (Attio “Platform” + big H2) —— */
 .fe-spath-intro {
   padding: clamp(1.5rem, 4vw, 2.5rem) 0 0;
@@ -62,12 +220,12 @@
 }
 
 .fe-spath-intro-fade--2 {
-  color: color-mix(in srgb, var(--fe-muted, #948f4e) 78%, #fff);
+  color: color-mix(in srgb, var(--fe-muted, #5a5c2b) 78%, #fff);
   font-weight: 500;
 }
 
 .fe-spath-intro-fade--3 {
-  color: color-mix(in srgb, var(--fe-muted, #948f4e) 52%, #fff);
+  color: color-mix(in srgb, var(--fe-muted, #5a5c2b) 52%, #fff);
   font-weight: 500;
 }
 
@@ -232,7 +390,7 @@
   font-weight: 400;
   line-height: 1.4;
   letter-spacing: -0.02em;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
   text-wrap: pretty;
 }
 
@@ -249,7 +407,7 @@
 
 .fe-spath-panel-line {
   font-weight: 400;
-  color: color-mix(in srgb, var(--fe-muted, #948f4e) 88%, #fff);
+  color: color-mix(in srgb, var(--fe-muted, #5a5c2b) 88%, #fff);
 }
 
 .fe-spath-media {
@@ -447,7 +605,7 @@
   margin: 0;
   font-size: clamp(0.95rem, 1.3vw, 1.05rem);
   line-height: 1.4;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 /* Solid card media — never collapse under transforms */
@@ -498,11 +656,26 @@
 }
 
 .fe-spath-rhythm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 0.45rem;
   background: color-mix(in srgb, var(--fe-accent, #84b067) 28%, transparent);
   margin-bottom: 0.25rem;
+  overflow: hidden;
+}
+
+.fe-spath-rhythm-icon.has-image {
+  background: transparent;
+}
+
+.fe-spath-rhythm-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .fe-spath-rhythm-label {
@@ -518,19 +691,55 @@
 
 .fe-spath-rhythm-hint {
   font-size: 0.9375rem;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
+}
+
+/* Matches the stage sheet above, so the finale's opening slit shows the same
+   pale colour instead of the page canvas. Kept on a pseudo-element so the
+   morph hand-off can still tween the shell's own background colour. */
+.fe-between-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.fe-between-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: #f7fcf7;
 }
 
 .fe-spath-finale {
+  position: relative;
   margin-top: 0;
-  padding: clamp(4rem, 9vw, 6.5rem) 0 clamp(2rem, 4vw, 3rem);
-  background: color-mix(in srgb, #fff 78%, var(--fe-bg, #edf9ed));
-  border-top: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 8%, transparent);
+  /* A normal section height: the reveal is tied to its entry, so it must not
+     spend a viewport of empty padding before the content is on screen. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58svh;
+  padding: clamp(4.5rem, 9vw, 7rem) 0;
+  background: #e4edd4;
   overflow: hidden;
   perspective: 1600px;
 }
 
+/* Same soft colour blend as the other sections: the stage's pale sheet fades
+   into the green instead of cutting at the boundary. */
+.fe-spath-finale::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: clamp(4.5rem, 9vw, 8rem);
+  background: linear-gradient(180deg, #f7fcf7 0%, transparent 100%);
+  pointer-events: none;
+}
+
 .fe-spath-finale-zoom {
+  width: 100%;
   transform-origin: 50% 42%;
   transform-style: preserve-3d;
   will-change: transform, opacity, filter;
@@ -545,7 +754,7 @@
 }
 
 .fe-spath-finale-kicker {
-  margin: 0 0 0.85rem;
+  margin: 0 0 1.25rem;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--fe-accent, #84b067) 18%, transparent);
@@ -558,7 +767,7 @@
 }
 
 .fe-spath-finale-title {
-  margin: 0 0 0.75rem;
+  margin: 0 0 1.15rem;
   font-family: var(--font-sans);
   font-size: clamp(1.85rem, 4vw, 2.75rem);
   font-weight: 600;
@@ -569,18 +778,18 @@
 }
 
 .fe-spath-finale-line {
-  margin: 0 0 1.5rem;
+  margin: 0 0 2rem;
   max-width: 28rem;
   font-size: clamp(1rem, 1.8vw, 1.125rem);
   line-height: 1.45;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 .fe-spath-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: clamp(2rem, 5vw, 3rem);
+  margin-bottom: 0;
   padding: 0.85rem 1.5rem;
   border-radius: 0.65rem;
   border: 1.5px solid color-mix(in srgb, var(--fe-fg, #2a3020) 18%, transparent);
@@ -589,44 +798,6 @@
   font-size: 1.0625rem;
   font-weight: 500;
   text-decoration: none;
-}
-
-.fe-spath-screen {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  width: min(100%, 56rem);
-  min-height: clamp(16rem, 48vw, 26rem);
-  margin-inline: auto;
-  padding: 1.25rem;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 12%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      #fff 0%,
-      color-mix(in srgb, var(--fe-bg, #edf9ed) 70%, #fff) 100%
-    );
-  box-shadow:
-    0 18px 48px color-mix(in srgb, var(--fe-fg, #2a3020) 8%, transparent);
-}
-
-.fe-spath-screen-chrome {
-  position: absolute;
-  top: 0.85rem;
-  left: 1rem;
-  display: flex;
-  gap: 0.35rem;
-}
-
-.fe-spath-screen-chrome span {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--fe-fg, #2a3020) 14%, transparent);
 }
 
 @media (min-width: 860px) {
@@ -908,24 +1079,47 @@
   }
 }
 
-/* BrightHub language-board → session chips (same band as Between sessions) */
+/* Language support is its own section, separate from "Between sessions". */
+.fe-spath-kit-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* A full section of its own: the next band must not peek in under the facts
+     while this one is on screen. */
+  min-height: 100svh;
+  padding: clamp(5rem, 9vw, 7rem) 0;
+  /* No seam rule: the morph hand-off already blends this band into the one
+     above it, and the 1px line read as a flickering break while scrolling. */
+  border-top: 0;
+  /* Plain rgb for the colour morph: a computed color(srgb …) value interpolates
+     through black in GSAP. A warm paper (not another pale pistachio) gives the
+     between -> languages blend an actual colour shift to glide through. */
+  background: #f7f0d9;
+}
+
+/* The colour morph joins the two sections; a seam would cut it in half. */
+.fe-spath-kit-section[data-mo-handoff="morph"] {
+  border-top-color: transparent;
+}
+
+/* BrightHub language-board → session chips */
 .fe-spath-kit {
-  padding: clamp(1.25rem, 3vw, 2rem) 0 clamp(4.5rem, 10vw, 7rem);
-  background: color-mix(in srgb, #fff 78%, var(--fe-bg, #edf9ed));
+  padding: 0;
+  background: transparent;
 }
 
 .fe-spath-kit-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: clamp(1.75rem, 4vw, 3rem);
+  gap: clamp(2rem, 4.5vw, 3.25rem);
   align-items: center;
-  padding-bottom: clamp(2.25rem, 5vw, 3.25rem);
+  padding-bottom: clamp(3rem, 6vw, 4.5rem);
   border-bottom: 1px solid color-mix(in srgb, var(--fe-fg, #2a3020) 10%, transparent);
 }
 
 .fe-spath-kit-kicker {
   display: inline-flex;
-  margin: 0 0 1rem;
+  margin: 0 0 1.15rem;
   padding: 0.35rem 0.75rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--fe-accent, #84b067) 18%, transparent);
@@ -938,7 +1132,7 @@
 }
 
 .fe-spath-kit-title {
-  margin: 0 0 0.85rem;
+  margin: 0 0 1.15rem;
   max-width: 28rem;
   font-family: var(--font-sans);
   font-size: clamp(1.85rem, 3.4vw, 2.65rem);
@@ -950,12 +1144,12 @@
 }
 
 .fe-spath-kit-sub {
-  margin: 0;
+  margin: 0 0 2rem;
   max-width: 28rem;
   font-size: clamp(1rem, 1.5vw, 1.125rem);
   font-weight: 400;
   line-height: 1.4;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 .fe-spath-kit-board {
@@ -964,13 +1158,8 @@
   gap: 0.7rem;
   min-width: 0;
   overflow: hidden;
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    #000 10%,
-    #000 90%,
-    transparent 100%
-  );
+  /* No edge fade: the mask made the first and last column read as 50% opacity
+     at rest. The row clips cleanly at the board edge instead. */
 }
 
 .fe-spath-kit-row-clip {
@@ -1051,7 +1240,7 @@
   font-size: 0.75rem;
   font-weight: 400;
   line-height: 1.2;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 @keyframes fe-spath-kit-ltr {
@@ -1077,7 +1266,7 @@
   grid-template-columns: minmax(0, 1fr);
   gap: clamp(1.5rem, 3vw, 2.25rem);
   list-style: none;
-  margin: clamp(2rem, 5vw, 2.75rem) 0 0;
+  margin: clamp(2.5rem, 5.5vw, 3.5rem) 0 0;
   padding: 0;
 }
 
@@ -1106,7 +1295,7 @@
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.4;
-  color: var(--fe-muted, #948f4e);
+  color: var(--fe-muted, #5a5c2b);
 }
 
 @media (min-width: 860px) {

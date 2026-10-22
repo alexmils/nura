@@ -83,11 +83,17 @@ export const BRAND_CIRCLE_AVATAR = "/brand/nura-circle-variants/A-white-on-sage-
 /** Pistachio palette — see docs/brand.md */
 export const BRAND_COLORS = {
   paper: "#A4EDA5",
+  /** Focus and hover. `gold` is the old name. */
+  pistachio: "#C6D67E",
   gold: "#C6D67E",
+  /** Surfaces, icons, wordmark. Too light under white text. */
   earth: "#84B067",
-  olive: "#948F4E",
+  /** Filled controls and small accent text. White on this passes AA. */
+  action: "#4A7234",
+  olive: "#5A5C2B",
   ink: "#2A3020",
   sidebar: "#3D4129",
+  star: "#E8C547",
 } as const;
 
 const LEGACY_CHROME_NAMES = new Set([

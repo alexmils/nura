@@ -1,6 +1,8 @@
+import { PageCta } from "@/app/components/frontend/section-editor/PageCta";
 import { FrontendShell } from "@/app/components/frontend/FrontendShell";
 import { JsonLd } from "@/app/components/frontend/JsonLd";
 import { SupportPageView } from "@/app/components/frontend/SupportPageView";
+import { PageSections } from "@/app/components/frontend/section-editor/PageSections";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { buildSupportJsonLd } from "@/lib/seo-jsonld";
 import { buildCachedPageMetadata } from "@/lib/site-seo-cache";
@@ -25,7 +27,7 @@ export default async function SupportPage() {
   return (
     <FrontendShell>
       <JsonLd data={buildSupportJsonLd(origin)} />
-      <SupportPageView />
+      <PageSections page="support" slots={{ "page-cta-support": <PageCta page="support" />, "support-page": <SupportPageView /> }} />
     </FrontendShell>
   );
 }
