@@ -230,7 +230,9 @@ export function AdminMarkdownEditor({
           ? (start as HTMLElement)
           : start.parentElement;
       block = element?.closest("p,div,li,blockquote") ?? null;
-      if (block && !root.contains(block)) block = null;
+      // `closest` can return the editor itself (caret between blocks); never
+      // insert after it, or the media lands outside the box.
+      if (!block || block === root || !root.contains(block)) block = null;
     }
 
     if (range && block) {
@@ -328,19 +330,59 @@ export function AdminMarkdownEditor({
           const action = (event.target as HTMLElement).closest<HTMLElement>(
             "[data-media-action]"
           );
-          if (!action) return;
-          const block = action.closest<HTMLElement>(".admin-md-media");
-          if (!block) return;
-          event.preventDefault();
-          if (action.dataset.mediaAction === "remove") {
-            block.remove();
-            emit();
+          if (action) {
+            const block = action.closest<HTMLElement>(".admin-md-media");
+            if (!block) return;
+            event.preventDefault();
+            if (action.dataset.mediaAction === "remove") {
+              block.remove();
+              emit();
+              return;
+            }
+            replaceBlock.current = block;
+            setPicker(
+              block.querySelector("video,[data-embed-url]") ? "video" : "image"
+            );
             return;
           }
-          replaceBlock.current = block;
-          setPicker(
-            block.querySelector("video,[data-embed-url]") ? "video" : "image"
+
+          const root = ref.current;
+          if (!root) return;
+
+          // Clicking the media puts the caret on the line after it, so Enter
+          // continues the article below the image.
+          const mediaBlock = (event.target as HTMLElement).closest<HTMLElement>(
+            ".admin-md-media"
           );
+          if (mediaBlock) {
+            const host = mediaBlock.closest("p") ?? mediaBlock;
+            let next = host.nextElementSibling as HTMLElement | null;
+            if (!next || !next.matches("p")) {
+              next = document.createElement("p");
+              next.appendChild(document.createElement("br"));
+              host.after(next);
+            }
+            const range = document.createRange();
+            range.setStart(next, 0);
+            range.collapse(true);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            root.focus();
+            return;
+          }
+
+          // Clicking the empty area below the text should start a new line,
+          // not lose the caret.
+          if (event.target === root) {
+            const range = document.createRange();
+            range.selectNodeContents(root);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            root.focus();
+          }
         }}
         onPaste={(event) => {
           event.preventDefault();
