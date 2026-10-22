@@ -7,6 +7,7 @@ import {
   BookOpen,
   ChevronDown,
   CreditCard,
+  ExternalLink,
   Globe,
   BarChart3,
   Image as ImageIcon,
@@ -480,6 +481,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             feedbackUnread={feedbackUnread}
           />
         </Suspense>
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          className="admin-sidebar-web"
+        >
+          <ExternalLink size={15} aria-hidden />
+          Open webpage
+        </a>
         <AdminAccountMenu user={user} onLogout={() => void logout()} />
       </aside>
       <div className="admin-canvas">

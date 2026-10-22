@@ -7942,6 +7942,25 @@ button.admin-nav-item {
   font-weight: 650;
 }
 
+.admin-sidebar-web {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 1rem 0.75rem;
+  padding: 0.5rem 0.85rem;
+  font-size: var(--ui-body);
+  font-weight: 550;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  border-radius: 12px;
+}
+
+.admin-sidebar-web:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .admin-sidebar-foot {
   position: relative;
   flex-shrink: 0;
