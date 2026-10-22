@@ -13,8 +13,6 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
     [".v2-session", ".fe-topics", "focus"],
     [".fe-topics", ".v2-stories", "morph"],
     [".v2-stories", ".v2-pricing", "morph"],
-    [".v2-pricing", ".fe-faq", "hold"],
-    [".fe-faq", ".fe-blog", "hold"],
     [".fe-blog", ".v2-close", "lens"],
   ];
 
@@ -24,15 +22,15 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
     for (const [a, b, fx] of pairs) {
       assert.ok(home.includes(`pinnedHandoff(one("${a}"), one("${b}"), "${fx}"`), `${a} -> ${b} ${fx}`);
     }
-    // Pricing -> FAQ and FAQ -> blog are plain cuts that still pin.
-    assert.ok(home.includes('pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "hold"'));
-    assert.ok(home.includes('pinnedHandoff(one(".fe-faq"), one(".fe-blog"), "hold"'));
+    // Pricing -> FAQ and FAQ -> blog are plain scroll with a gradient seam.
+    assert.ok(!home.includes('pinnedHandoff(one(".v2-pricing")'));
+    assert.ok(!home.includes('pinnedHandoff(one(".fe-faq")'));
     // Every boundary is a deliberate morph join except the two colour blends.
     assert.equal(pairs.filter((p) => p[2] === "morph").length, 2);
   });
 
   it("implements every effect and names its alexandermils source", () => {
-    for (const fx of ["zoom", "lift", "halo", "morph", "settle", "focus", "hold", "curtain", "lens"]) {
+    for (const fx of ["zoom", "lift", "halo", "morph", "settle", "focus", "curtain", "lens"]) {
       assert.match(lib, new RegExp(`case "${fx}"`));
     }
     for (const source of ["SectionHandoff", "CurtainPin", "Aperture"]) {

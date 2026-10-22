@@ -34,7 +34,7 @@ import { DEFAULT_HANDOFF_HOLD, paintedBg, siblingBoxesOf, pinnedInsideOf } from 
  * callers fall back to the lighter `handoff` on phones. Nothing is built under
  * reduced motion (see useChoreography).
  */
-export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "focus" | "hold" | "curtain" | "lens" | "tilt";
+export type PinnedEffect = "zoom" | "lift" | "halo" | "iris" | "morph" | "settle" | "focus" | "curtain" | "lens" | "tilt";
 
 const WASH = "rgb(14, 18, 10)";
 const LIME = "#c6d67e";
@@ -131,12 +131,6 @@ export function pinnedHandoff(
      * section shorter than the viewport cannot cover it, so it is skipped.
      */
     hold?: number;
-    /**
-     * hold: explicit stacking order for the reveal. Sections that are pinned
-     * in sequence each raise their own z-index, so without a fixed ladder the
-     * next one can tie with the previous and cover it.
-     */
-    z?: number;
   } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
@@ -157,18 +151,10 @@ export function pinnedHandoff(
 
   // Layering: the covering block above the covered one.
   const base = Math.max(1, zOf(prev));
-  // curtain and hold reveal the next block from underneath.
-  const nextOnTop = effect !== "curtain" && effect !== "hold";
-  if (effect === "hold" && opts.z) {
-    // Fixed ladder: an earlier section must stay above the ones below it even
-    // after a later hold raises its own block (otherwise the next one ties
-    // and covers the outgoing section).
-    gsap.set(prev, { position: relative(prev), zIndex: opts.z });
-    gsap.set(next, { position: relative(next), zIndex: Math.max(1, opts.z - 1) });
-  } else {
-    gsap.set(prev, { position: relative(prev), zIndex: nextOnTop ? base : base + 1 });
-    gsap.set(next, { position: relative(next), zIndex: nextOnTop ? base + 1 : base });
-  }
+  // curtain reveals the next block from underneath.
+  const nextOnTop = effect !== "curtain";
+  gsap.set(prev, { position: relative(prev), zIndex: nextOnTop ? base : base + 1 });
+  gsap.set(next, { position: relative(next), zIndex: nextOnTop ? base + 1 : base });
   if (getComputedStyle(next).backgroundColor.match(/rgba\(0, 0, 0, 0\)|transparent/) && getComputedStyle(next).backgroundImage === "none") {
     gsap.set(next, { backgroundColor: nextBg });
   }
@@ -393,17 +379,6 @@ export function pinnedHandoff(
           0.1
         );
       }
-      break;
-    }
-    case "hold": {
-      // Pin only: the block stands still for the hold runway, then, with the
-      // next block already pinned underneath, the outgoing one simply scrolls
-      // away and reveals it. No transition, and the hold margin never shows
-      // as a gap because the next block covers it.
-      const pinned = holdNext();
-      // Keep a one-unit tail even if the incoming block has sticky children
-      // and cannot be pulled up.
-      if (!pinned) tl.to({}, { duration: 1 }, 0);
       break;
     }
     case "focus": {

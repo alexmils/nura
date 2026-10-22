@@ -154,12 +154,8 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   pinnedHandoff(one(".v2-session"), one(".fe-topics"), "focus", {
     content: one(".fe-topics-head"),
   });
-  // These boundaries stay plain cuts, but the outgoing section still holds
-  // (stands still) for its pin runway before scrolling away.
-  // A fixed z ladder keeps pricing above FAQ above blog while each hold
-  // reveals the next block from underneath.
-  pinnedHandoff(one(".v2-pricing"), one(".fe-faq"), "hold", { z: 40 });
-  pinnedHandoff(one(".fe-faq"), one(".fe-blog"), "hold", { z: 30 });
+  // Pricing -> FAQ and FAQ -> blog are plain scroll with only a gradient
+  // seam (the FAQ/blog top bands); no pin and no transition.
   // Blog -> close on every screen: the CTA comes out of a real post card.
   pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),
