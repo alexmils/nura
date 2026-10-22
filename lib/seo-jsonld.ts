@@ -223,7 +223,7 @@ export function buildBlogIndexJsonLd(
       organizationJsonLd(origin),
       collectionPageJsonLd({
         origin,
-        path: "/blog",
+        path: "/learn",
         name: BLOG_INDEX_JSON_LD.name,
         description: BLOG_INDEX_JSON_LD.description,
         types: ["CollectionPage", "Blog"],
@@ -231,7 +231,7 @@ export function buildBlogIndexJsonLd(
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Blog", path: "/learn" },
       ]),
     ],
   };
@@ -257,7 +257,7 @@ export function buildBlogCategoryJsonLd(
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Blog", path: "/learn" },
         { name: category.name, path: `/blog/category/${category.slug}` },
       ]),
     ],
@@ -332,7 +332,7 @@ export function buildClusterArticleJsonLd(
       },
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Blog", path: "/learn" },
         { name: article.title, path },
       ]),
     ],

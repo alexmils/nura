@@ -62,7 +62,7 @@ export function SessionTopicsGrid() {
             </ul>
           </div>
 
-          <Link href="/blog" className="fe-topics-more fe-animate">
+          <Link href="/learn" className="fe-topics-more fe-animate">
             Read the guides
             <span className="fe-topics-more-arrow" aria-hidden>
               →

@@ -46,8 +46,8 @@ export function ClusterArticleView({
               // A guide with no clinical category still needs a clickable
               // section link, so it points at the blog index rather than
               // showing a topic label that looks like a category.
-              <Link href="/blog" className="fe-post-pill">
-                Blog
+              <Link href="/learn" className="fe-post-pill">
+                Learn
               </Link>
             )}
           </div>

@@ -1069,6 +1069,7 @@ export async function deleteBlogPost(value: string): Promise<boolean> {
 function revalidateBlogPost(slug: string, categorySlugs: string[]): void {
   const paths = [
     "/",
+    "/learn",
     "/blog",
     `/blog/${slug}`,
     "/blog/rss.xml",

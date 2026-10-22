@@ -155,7 +155,7 @@ describe("blog index JSON-LD", () => {
       "BreadcrumbList",
     ]);
     assert.equal(page?.name, BLOG_INDEX_JSON_LD.name);
-    assert.equal(page?.url, `${origin}/blog`);
+    assert.equal(page?.url, `${origin}/learn`);
   });
 
   it("lists posts newest first", () => {
@@ -182,7 +182,7 @@ describe("blog index JSON-LD", () => {
       items.map((item) => [item.name, item.item]),
       [
         ["Home", `${origin}/`],
-        ["Blog", `${origin}/blog`],
+        ["Blog", `${origin}/learn`],
       ],
     );
   });

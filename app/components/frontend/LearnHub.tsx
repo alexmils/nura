@@ -1,8 +1,8 @@
 import {
   learnReadingPath,
-  listClusterArticles,
   type ClusterTopic,
 } from "@/lib/content-cluster";
+import { listPublishedBlogPosts } from "@/lib/blog-db";
 import {
   LearnHelpCenter,
   type LearnHelpArticle,
@@ -63,10 +63,25 @@ function toHelpArticle(article: {
   };
 }
 
-export function LearnHub() {
-  const articles = listClusterArticles().map(toHelpArticle);
+/**
+ * The blog hub. Every published post comes from the database, so an article
+ * added in admin shows up here; the curated reading order still comes first
+ * in each topic group, with anything new appended after it.
+ */
+export async function LearnHub() {
+  const posts = await listPublishedBlogPosts();
+  const published = new Set(posts.map((post) => post.slug));
+  const articles = posts.map(toHelpArticle);
+
   const paths: LearnHelpPath[] = TOPIC_ORDER.map((topic) => {
     const copy = PATH_COPY[topic];
+    const curated = learnReadingPath(topic)
+      .filter((article) => published.has(article.slug))
+      .map(toHelpArticle);
+    const chosen = new Set(curated.map((article) => article.slug));
+    const rest = articles.filter(
+      (article) => article.topic === topic && !chosen.has(article.slug)
+    );
     return {
       topic,
       label: copy.cardLabel,
@@ -76,7 +91,7 @@ export function LearnHub() {
       panelDek: copy.panelDek,
       moreHref: copy.moreHref,
       moreLabel: copy.moreLabel,
-      articles: learnReadingPath(topic).map(toHelpArticle),
+      articles: [...curated, ...rest],
     };
   }).filter((path) => path.articles.length > 0);
 

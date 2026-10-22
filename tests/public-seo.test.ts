@@ -55,7 +55,8 @@ describe("public sitemap", () => {
     assert.ok(urls.has("https://nurahelp.com/pricing"));
     assert.ok(urls.has("https://nurahelp.com/faq"));
     assert.ok(urls.has("https://nurahelp.com/support"));
-    assert.ok(urls.has("https://nurahelp.com/blog"));
+    // /blog redirects to /learn, so only the hub is in the sitemap.
+    assert.equal(urls.has("https://nurahelp.com/blog"), false);
     assert.ok(urls.has("https://nurahelp.com/changelog"));
     assert.ok(urls.has("https://nurahelp.com/blog/what-is-emdr"));
   });

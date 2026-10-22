@@ -10,7 +10,19 @@ import type { Metadata } from "next";
 export const revalidate = 3600; // PUBLIC_PAGE_REVALIDATE_SECONDS
 
 export async function generateMetadata(): Promise<Metadata> {
-  return buildCachedPageMetadata("learn");
+  const meta = await buildCachedPageMetadata("learn");
+  return {
+    ...meta,
+    alternates: {
+      ...meta.alternates,
+      types: {
+        "application/rss+xml": [
+          { url: "/blog/rss.xml", title: "Nura EMDR guides" },
+          { url: "/feed.xml", title: "Nura EMDR guides" },
+        ],
+      },
+    },
+  };
 }
 
 export default async function LearnPage() {

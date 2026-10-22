@@ -19,7 +19,7 @@ export function EditorialView() {
             <h2>What you are reading</h2>
             <p>
               The{" "}
-              <Link href="/blog">guides</Link> describe how EMDR-style visual
+              <Link href="/learn">guides</Link> describe how EMDR-style visual
               sets work in this app: a moving ball, AI agent-guided and Self-guided modes,
               grounding, and when to stop. They exist so search and a tired
               Tuesday night can meet the same honest sentences.

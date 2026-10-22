@@ -57,7 +57,6 @@ const SIDE_PATHS: { href: string; label: string }[] = [
 ];
 
 const SIDE_MORE: { href: string; label: string }[] = [
-  { href: "/blog", label: "All articles" },
   { href: "/knowledge", label: "Knowledge clips" },
   { href: "/emdr", label: "How EMDR works" },
   { href: "/safety", label: "Safety guide" },
@@ -349,10 +348,6 @@ export function LearnHelpCenter({
           </section>
         ))}
 
-        <p className="fe-help-footer-link">
-          Full archive with dates?{" "}
-          <Link href="/blog">Browse all EMDR articles</Link>
-        </p>
       </div>
     </div>
   );
