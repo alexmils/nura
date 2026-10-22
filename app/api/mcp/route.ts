@@ -37,6 +37,12 @@ import {
   type BlogPostRecord,
 } from "@/lib/blog-db";
 import { CLUSTER_TOPICS } from "@/lib/content-cluster";
+import {
+  appendCtaToSections,
+  BLOG_CTA_TEMPLATES,
+  normalizeBlogCta,
+  serializeBlogCta,
+} from "@/lib/blog-cta";
 import { hasBlsAcronym } from "@/lib/blog-post-input";
 import {
   isResourceKind,
@@ -61,7 +67,8 @@ const SECTION_SCHEMA = {
       minItems: 1,
       items: {
         type: "string",
-        description: "One paragraph. No em dash, no BLS acronym.",
+        description:
+          "One paragraph. No em dash, no BLS acronym. Markdown image syntax ![alt](https://…) is allowed and renders inline. A paragraph starting with ::cta {json} renders a call-to-action block; prefer the add_blog_cta tool.",
       },
     },
   },
@@ -108,7 +115,7 @@ const POST_FIELDS = {
   coverUrl: {
     type: "string",
     description:
-      "Featured image shown on the card and at the top of the guide. Site path (/marketing/landing/calm-water.jpg) or an https URL on images.unsplash.com / images.pexels.com. Omit to use a fallback image.",
+      "Featured image shown on the card and at the top of the guide. A site path (/marketing/landing/calm-water.jpg) or any https image URL. Omit to use a fallback image.",
   },
   emdrAnchor: {
     type: "string",
@@ -202,6 +209,29 @@ const TOOLS = [
           type: "number",
           description: "Order on the blog; lower comes first (default 100).",
         },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "add_blog_cta",
+    description:
+      "Append a call-to-action block to a guide and save it. Templates: calm (soft card), split (text + button row), band (dark full-width), minimal (bordered line). Optional background and text colours are hex. Put it in the last section by default.",
+    inputSchema: {
+      type: "object",
+      required: ["slug", "title"],
+      properties: {
+        slug: { type: "string", description: "Post slug or id." },
+        title: { type: "string", description: "Headline of the CTA." },
+        body: { type: "string", description: "One supporting sentence." },
+        button: { type: "string", description: "Button label." },
+        href: {
+          type: "string",
+          description: "Where the button goes: /pricing, /app/create-account, or an https URL.",
+        },
+        template: { type: "string", enum: [...BLOG_CTA_TEMPLATES] },
+        background: { type: "string", description: "Hex colour, e.g. #eaf4e2." },
+        text: { type: "string", description: "Hex text colour, e.g. #2a3020." },
       },
       additionalProperties: false,
     },
@@ -390,6 +420,7 @@ const TOOL_SCOPES: Record<string, McpScope> = {
   delete_blog_category: "blog:write",
   list_blog_posts: "blog:read",
   get_blog_post: "blog:read",
+  add_blog_cta: "blog:write",
   create_blog_post: "blog:write",
   update_blog_post: "blog:write",
   delete_blog_post: "blog:write",
@@ -580,6 +611,44 @@ async function callTool(
       const post = await getBlogPostBySlugOrId(slug);
       if (!post) return toolError(`No post with slug "${slug}".`);
       return text({ ...postSummary(post), sections: post.sections });
+    }
+
+    case "add_blog_cta": {
+      const slug = String(args.slug ?? "").trim();
+      if (!slug) return toolError("slug is required.");
+      const cta = normalizeBlogCta({
+        template: args.template,
+        title: args.title,
+        body: args.body,
+        button: args.button,
+        href: args.href,
+        background: args.background,
+        text: args.text,
+      });
+      if (!cta) return toolError("A CTA needs a title.");
+      const post = await getBlogPostBySlugOrId(slug);
+      if (!post) return toolError(`No post with slug "${slug}".`);
+
+      const block = serializeBlogCta(cta);
+      const result = await upsertBlogPost({
+        id: post.id,
+        sections: appendCtaToSections(post.sections, block),
+      });
+      if (!result.ok) return toolError(result.error);
+      await writeAuditEvent({
+        action: "blog.post_updated",
+        detail: {
+          source: "mcp",
+          slug: result.post.slug,
+          cta: cta.template,
+        },
+      });
+      return text({
+        ok: true,
+        slug: result.post.slug,
+        template: cta.template,
+        sections: result.post.sections.length,
+      });
     }
 
     case "create_blog_post": {

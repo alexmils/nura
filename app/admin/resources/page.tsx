@@ -1,92 +1,34 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { FileText, Film, ShieldCheck } from "lucide-react";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
-import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
-import {
-  AdminSettingToggle,
-  AdminSettingToggleStack,
-} from "@/app/components/admin/AdminSettingToggle";
-import { fileToResourceCoverDataUrl } from "@/lib/avatar-client";
-import {
-  RESOURCE_KINDS,
-  slugifyTitle,
-  type ResourceKind,
-  type ResourcePost,
-} from "@/lib/resources";
+import type { ResourcePost } from "@/lib/resources";
 
-type FormState = {
-  id: string;
-  slug: string;
-  kind: ResourceKind;
-  title: string;
-  summary: string;
-  body: string;
-  coverUrl: string;
-  videoUrl: string;
-  readMinutes: string;
-  featured: boolean;
-  enabled: boolean;
-  sortOrder: string;
+const KIND_LABEL: Record<ResourcePost["kind"], string> = {
+  article: "Article",
+  video: "Video",
+  safety: "Safety",
 };
 
-const EMPTY: FormState = {
-  id: "",
-  slug: "",
-  kind: "article",
-  title: "",
-  summary: "",
-  body: "",
-  coverUrl: "",
-  videoUrl: "",
-  readMinutes: "",
-  featured: false,
-  enabled: true,
-  sortOrder: "0",
-};
-
-const TABS = ["library", "editor"] as const;
-type Tab = (typeof TABS)[number];
-const ALL_TAB_ITEMS = [
-  { id: "library", label: "Library" },
-  { id: "editor", label: "Editor" },
-] as const;
-
-function postToForm(p: ResourcePost): FormState {
-  return {
-    id: p.id,
-    slug: p.slug,
-    kind: p.kind,
-    title: p.title,
-    summary: p.summary,
-    body: p.body ?? "",
-    coverUrl: p.coverUrl ?? "",
-    videoUrl: p.videoUrl ?? "",
-    readMinutes: p.readMinutes != null ? String(p.readMinutes) : "",
-    featured: p.featured,
-    enabled: p.enabled,
-    sortOrder: String(p.sortOrder ?? 0),
-  };
+function KindIcon({ kind }: { kind: ResourcePost["kind"] }) {
+  if (kind === "video") return <Film size={18} />;
+  if (kind === "safety") return <ShieldCheck size={18} />;
+  return <FileText size={18} />;
 }
 
-function AdminResourcesPageInner() {
+/** Signed-in library at /app/resources. The editor is `/admin/resources/<id>`. */
+
+export default function AdminResourcesPage() {
+  const router = useRouter();
   const [items, setItems] = useState<ResourcePost[]>([]);
-  const [form, setForm] = useState<FormState>(EMPTY);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"all" | "visible" | "draft">("all");
+  const [kind, setKind] = useState<"all" | ResourcePost["kind"]>("all");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [canWrite, setCanWrite] = useState(false);
-
-  const tabItems = useMemo(
-    () =>
-      canWrite
-        ? ALL_TAB_ITEMS
-        : ALL_TAB_ITEMS.filter((t) => t.id === "library"),
-    [canWrite]
-  );
-  const [tab, setTab] = useAdminTab(
-    canWrite ? TABS : (["library"] as const),
-    "library"
-  );
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/resources");
@@ -102,96 +44,44 @@ function AdminResourcesPageInner() {
       .catch(() => setCanWrite(false));
   }, [load]);
 
-  const resetForm = () => setForm(EMPTY);
-
-  const save = async () => {
-    if (!canWrite) {
-      setMsg("Only platform admins can edit resources");
-      return;
-    }
+  const remove = async (item: ResourcePost) => {
+    if (!window.confirm(`Delete "${item.title}"?`)) return;
     setBusy(true);
     setMsg("");
     try {
       const res = await fetch("/api/admin/resources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save",
-          resource: {
-            id: form.id || undefined,
-            slug: form.slug || slugifyTitle(form.title),
-            kind: form.kind,
-            title: form.title,
-            summary: form.summary,
-            body: form.body,
-            coverUrl: form.coverUrl || null,
-            videoUrl: form.videoUrl || null,
-            readMinutes: form.readMinutes
-              ? Number(form.readMinutes)
-              : null,
-            featured: form.featured,
-            enabled: form.enabled,
-            sortOrder: Number(form.sortOrder) || 0,
-          },
-        }),
+        body: JSON.stringify({ action: "delete", resourceId: item.id }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setMsg(data.error ?? "Save failed");
-        return;
-      }
-      setMsg("Resource saved");
-      resetForm();
-      setTab("library");
-      void load();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async (id: string) => {
-    if (!canWrite) return;
-    if (!window.confirm("Delete this resource?")) return;
-    setBusy(true);
-    setMsg("");
-    try {
-      const res = await fetch("/api/admin/resources", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "delete", resourceId: id }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setMsg(data.error ?? "Delete failed");
-        return;
-      }
-      if (form.id === id) resetForm();
-      setMsg("Deleted");
-      void load();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onCover = async (file: File | null) => {
-    if (!file) return;
-    setBusy(true);
-    setMsg("");
-    try {
-      const url = await fileToResourceCoverDataUrl(file);
-      setForm((f) => ({ ...f, coverUrl: url }));
+      if (!res.ok) throw new Error(data.error ?? "Delete failed");
+      await load();
     } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Image failed");
+      setMsg(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setBusy(false);
     }
   };
 
-  const openEditor = (item?: ResourcePost) => {
-    if (item) setForm(postToForm(item));
-    else resetForm();
-    setTab("editor");
-  };
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (filter === "visible" && !item.enabled) return false;
+      if (filter === "draft" && item.enabled) return false;
+      if (kind !== "all" && item.kind !== kind) return false;
+      if (!q) return true;
+      return [item.title, item.slug, item.kind]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [items, query, filter, kind]);
+
+  const drafts = items.filter((item) => !item.enabled).length;
+  const articles = items.filter((item) => item.kind === "article").length;
+  const videos = items.filter((item) => item.kind === "video").length;
+  const safety = items.filter((item) => item.kind === "safety").length;
 
   return (
     <div className="admin-page">
@@ -208,296 +98,129 @@ function AdminResourcesPageInner() {
         )}
         {msg && <p className="admin-invite-msg">{msg}</p>}
 
-        <AdminTabs
-          tabs={tabItems}
-          value={tab}
-          onChange={(id) => setTab(id as Tab)}
-        />
+        <section className="admin-panel">
+          <div className="admin-content-toolbar">
+            <input
+              className="field"
+              value={query}
+              placeholder="Filter by title, slug, or kind"
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {canWrite && (
+              <button
+                type="button"
+                className="btn-primary shrink-0"
+                disabled={busy}
+                onClick={() => router.push("/admin/resources/new")}
+              >
+                New resource
+              </button>
+            )}
+          </div>
 
-        {tab === "library" && (
-          <section className="admin-panel">
-            <div className="admin-filters mb-4">
-              {canWrite && (
+          <div className="admin-filter-pills">
+            {(
+              [
+                ["all", "All", items.length],
+                ["visible", "Visible", items.length - drafts],
+                ["draft", "Drafts", drafts],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`admin-filter-pill ${
+                  filter === key ? "is-active" : ""
+                }`}
+                aria-pressed={filter === key}
+                onClick={() => setFilter(key)}
+              >
+                {label} <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+
+          <div className="admin-filter-pills">
+            {(
+              [
+                ["all", "All types", items.length],
+                ["article", "Articles", articles],
+                ["video", "Videos", videos],
+                ["safety", "Safety", safety],
+              ] as const
+            ).map(([key, label, count]) => (
+              <button
+                key={key}
+                type="button"
+                className={`admin-filter-pill ${
+                  kind === key ? "is-active" : ""
+                }`}
+                aria-pressed={kind === key}
+                onClick={() => setKind(key)}
+              >
+                {label} <strong>{count}</strong>
+              </button>
+            ))}
+          </div>
+
+          <ul className="admin-content-list">
+            {visible.map((item) => (
+              <li key={item.id} className="admin-content-item">
                 <button
                   type="button"
-                  className="btn-primary shrink-0"
-                  disabled={busy}
-                  onClick={() => openEditor()}
+                  className="admin-content-row"
+                  onClick={() => router.push(`/admin/resources/${item.id}`)}
                 >
-                  New resource
+                  <span className="admin-content-lead">
+                    <span
+                      className={`admin-content-kind admin-content-kind--${item.kind}`}
+                      aria-hidden
+                    >
+                      <KindIcon kind={item.kind} />
+                    </span>
+                    <span className="admin-content-main">
+                      <span className="admin-content-title">{item.title}</span>
+                      <span className="admin-content-meta">
+                        /app/resources/{item.slug}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="admin-chips">
+                    <span className="admin-chip">{KIND_LABEL[item.kind]}</span>
+                    <span
+                      className={`admin-chip ${
+                        item.enabled ? "admin-chip--ok" : "admin-chip--warn"
+                      }`}
+                    >
+                      {item.enabled ? "Visible" : "Draft"}
+                    </span>
+                    {item.featured ? (
+                      <span className="admin-chip admin-chip--muted">
+                        Featured
+                      </span>
+                    ) : null}
+                  </span>
                 </button>
-              )}
-            </div>
-            <h2 className="admin-panel-title">All resources</h2>
-            <ul className="admin-resources-list">
-              {items.map((item) => (
-                <li key={item.id} className="admin-resources-list-item">
-                  <div className="min-w-0">
-                    <strong>{item.title}</strong>
-                    <p className="admin-panel-sub !mt-1">
-                      {item.kind}
-                      {!item.enabled ? " · draft" : ""}
-                      {item.featured ? " · featured" : ""}
-                      {" · "}/{item.slug}
-                    </p>
-                  </div>
-                  <div className="admin-resources-list-actions">
+                {canWrite ? (
+                  <div className="admin-content-actions">
                     <button
                       type="button"
-                      className="btn-ghost"
+                      className="btn-ghost is-danger"
                       disabled={busy}
-                      onClick={() => openEditor(item)}
+                      onClick={() => void remove(item)}
                     >
-                      Edit
+                      Delete
                     </button>
-                    {canWrite ? (
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy}
-                        onClick={() => void remove(item.id)}
-                      >
-                        Delete
-                      </button>
-                    ) : null}
                   </div>
-                </li>
-              ))}
-              {items.length === 0 ? (
-                <li className="admin-panel-sub">No resources yet.</li>
-              ) : null}
-            </ul>
-          </section>
-        )}
-
-        {tab === "editor" && canWrite && (
-          <section className="admin-panel">
-            <h2 className="admin-panel-title">
-              {form.id ? "Edit resource" : "New resource"}
-            </h2>
-
-            <label className="admin-field-label">
-              Title
-              <input
-                className="field"
-                value={form.title}
-                disabled={!canWrite || busy}
-                onChange={(e) => {
-                  const title = e.target.value;
-                  setForm((f) => ({
-                    ...f,
-                    title,
-                    slug:
-                      !f.id && (!f.slug || f.slug === slugifyTitle(f.title))
-                        ? slugifyTitle(title)
-                        : f.slug,
-                  }));
-                }}
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Slug
-              <input
-                className="field"
-                value={form.slug}
-                disabled={!canWrite || busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Kind
-              <select
-                className="field"
-                value={form.kind}
-                disabled={!canWrite || busy}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    kind: e.target.value as ResourceKind,
-                  }))
-                }
-              >
-                {RESOURCE_KINDS.map((k) => (
-                  <option key={k} value={k}>
-                    {k}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="admin-field-label">
-              Summary
-              <textarea
-                className="field admin-textarea"
-                rows={2}
-                value={form.summary}
-                disabled={!canWrite || busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, summary: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Body
-              <textarea
-                className="field admin-textarea"
-                rows={12}
-                value={form.body}
-                disabled={!canWrite || busy}
-                placeholder="Paragraphs separated by blank lines. Use **bold** and ![alt](https://…)."
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, body: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Video URL (YouTube, Vimeo, or https .mp4)
-              <input
-                className="field"
-                value={form.videoUrl}
-                disabled={!canWrite || busy}
-                placeholder="https://www.youtube.com/watch?v=…"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, videoUrl: e.target.value }))
-                }
-              />
-            </label>
-
-            <div className="admin-field-label">
-              Cover image
-              <div className="admin-resources-cover-row">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  disabled={!canWrite || busy}
-                  onChange={(e) =>
-                    void onCover(e.target.files?.[0] ?? null)
-                  }
-                />
-                {form.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={form.coverUrl}
-                    alt=""
-                    className="admin-resources-cover-preview"
-                  />
                 ) : null}
-                {form.coverUrl && canWrite ? (
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    disabled={busy}
-                    onClick={() => setForm((f) => ({ ...f, coverUrl: "" }))}
-                  >
-                    Remove cover
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <AdminSettingToggleStack>
-              <AdminSettingToggle
-                id="resource-published"
-                title="Published"
-                status={
-                  form.enabled
-                    ? "On — visible in the Resources library"
-                    : "Off — draft, hidden from users"
-                }
-                checked={form.enabled}
-                disabled={!canWrite || busy}
-                tone={form.enabled ? "ok" : "neutral"}
-                onChange={(enabled) => setForm((f) => ({ ...f, enabled }))}
-              />
-              <AdminSettingToggle
-                id="resource-featured"
-                title="Featured"
-                status={
-                  form.featured
-                    ? "On — eligible for the Learn teaser"
-                    : "Off — not featured"
-                }
-                checked={form.featured}
-                disabled={!canWrite || busy}
-                tone={form.featured ? "ok" : "neutral"}
-                onChange={(featured) => setForm((f) => ({ ...f, featured }))}
-              />
-            </AdminSettingToggleStack>
-
-            <div className="admin-resources-meta-row">
-              <label className="admin-field-label">
-                Read minutes
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  max={120}
-                  value={form.readMinutes}
-                  disabled={!canWrite || busy}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, readMinutes: e.target.value }))
-                  }
-                />
-              </label>
-              <label className="admin-field-label">
-                Sort order
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  value={form.sortOrder}
-                  disabled={!canWrite || busy}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, sortOrder: e.target.value }))
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="admin-modal-actions mt-4">
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={busy}
-                onClick={() => {
-                  resetForm();
-                  setTab("library");
-                }}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!canWrite || busy || !form.title.trim()}
-                onClick={() => void save()}
-              >
-                {busy ? "Saving…" : form.id ? "Update" : "Create"}
-              </button>
-            </div>
-          </section>
-        )}
+              </li>
+            ))}
+            {visible.length === 0 ? (
+              <li className="admin-panel-sub">No resources match.</li>
+            ) : null}
+          </ul>
+        </section>
       </main>
     </div>
-  );
-}
-
-export default function AdminResourcesPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="admin-page flex min-h-screen items-center justify-center">
-          <p className="text-[var(--text-secondary)]">Loading…</p>
-        </div>
-      }
-    >
-      <AdminResourcesPageInner />
-    </Suspense>
   );
 }

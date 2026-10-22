@@ -13,6 +13,7 @@ export type AdminNavIcon =
   | "feedback"
   | "blog"
   | "resources"
+  | "media"
   | "billing"
   | "finance"
   | "analytics"
@@ -146,31 +147,23 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         href: "/admin/blog",
         label: "Blog",
         icon: "blog",
-        children: [
-          { href: "/admin/blog", label: "Posts", tab: "posts" },
-          {
-            href: "/admin/blog?tab=editor",
-            label: "Editor",
-            tab: "editor",
-            adminOnly: true,
-          },
-        ],
       },
       {
         href: "/admin/resources",
         label: "Resources",
         icon: "resources",
+      },
+      {
+        href: "/admin/media",
+        label: "Media",
+        icon: "media",
+        adminOnly: true,
         children: [
+          { href: "/admin/media", label: "Library", tab: "library" },
           {
-            href: "/admin/resources?tab=library",
-            label: "Library",
-            tab: "library",
-          },
-          {
-            href: "/admin/resources?tab=editor",
-            label: "Editor",
-            tab: "editor",
-            adminOnly: true,
+            href: "/admin/media?tab=settings",
+            label: "Settings",
+            tab: "settings",
           },
         ],
       },

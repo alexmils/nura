@@ -57,7 +57,6 @@ const SIDE_PATHS: { href: string; label: string }[] = [
 ];
 
 const SIDE_MORE: { href: string; label: string }[] = [
-  { href: "/blog", label: "All articles" },
   { href: "/knowledge", label: "Knowledge clips" },
   { href: "/emdr", label: "How EMDR works" },
   { href: "/safety", label: "Safety guide" },
@@ -201,9 +200,10 @@ export function LearnHelpCenter({
             Watch Knowledge clips
             <ChevronRight aria-hidden />
           </Link>
-          <h1 className="fe-help-title">How can we help?</h1>
+          <h1 className="fe-help-title">EMDR guides, by topic</h1>
           <p className="fe-help-dek">
-            Short guides on EMDR, sets, and staying safe.
+            Understand what EMDR is, run a set with care, and know when to
+            stop.
           </p>
 
           <div className="fe-help-search">
@@ -349,10 +349,6 @@ export function LearnHelpCenter({
           </section>
         ))}
 
-        <p className="fe-help-footer-link">
-          Full archive with dates?{" "}
-          <Link href="/blog">Browse all EMDR articles</Link>
-        </p>
       </div>
     </div>
   );

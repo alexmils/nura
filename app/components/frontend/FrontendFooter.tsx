@@ -26,7 +26,6 @@ const FOOTER_COLS = [
   {
     title: "Explore",
     links: [
-      { href: "/blog", label: "Blog" },
       { href: "/learn", label: "Learn" },
       { href: "/knowledge", label: "Knowledge" },
       { href: "/changelog", label: "What's new" },

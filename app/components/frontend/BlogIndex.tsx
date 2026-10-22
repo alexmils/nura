@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { BlogCover } from "@/app/components/frontend/BlogCover";
 import { categoriesWithPosts, blogCategoryName } from "@/lib/blog-categories";
 import {
   CLUSTER_TOPIC_LABEL,
@@ -121,10 +121,9 @@ export function BlogPostMasonry({
                   className="fe-blog-masonry-card"
                 >
                   <span className="fe-blog-masonry-media" style={{ height }}>
-                    <Image
+                    <BlogCover
                       src={article.coverUrl}
                       alt=""
-                      fill
                       sizes="(max-width: 720px) 100vw, (max-width: 1100px) 50vw, 33vw"
                       className="fe-blog-masonry-image"
                     />

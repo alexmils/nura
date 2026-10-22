@@ -68,7 +68,6 @@ export function buildPublicSitemap(
     "/emdr",
     "/learn",
     "/knowledge",
-    "/blog",
     "/pricing",
     "/faq",
     "/support",
@@ -83,7 +82,7 @@ export function buildPublicSitemap(
     const lastModified =
       path === "/changelog"
         ? changelogFileMtime() ?? atUtc(STATIC_LASTMOD[path] ?? "2026-09-12")
-        : path === "/" || path === "/blog" || path === "/learn"
+        : path === "/" || path === "/learn"
           ? clusterLatest
           : atUtc(STATIC_LASTMOD[path] ?? "2026-09-12");
     return {

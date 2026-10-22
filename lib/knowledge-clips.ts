@@ -153,7 +153,7 @@ export const KNOWLEDGE_SERIES: readonly KnowledgeSeries[] = [
 
 export const KNOWLEDGE_MORE_LINKS = [
   { href: "/learn", label: "Learn", dek: "Start-here map" },
-  { href: "/blog", label: "Blog", dek: "Full guide archive" },
+  { href: "/learn", label: "Learn", dek: "Full guide archive" },
   { href: "/safety", label: "Safety", dek: "When to stop" },
   { href: "/emdr", label: "EMDR", dek: "How the app works" },
 ] as const;

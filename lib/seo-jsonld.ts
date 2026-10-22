@@ -13,7 +13,6 @@ import {
   CLUSTER_TOPICS,
   CLUSTER_TOPIC_LABEL,
   articleModifiedAt,
-  clusterArticleFaqs,
   clusterArticlesByTopic,
   clusterTimeRequired,
   clusterWordCount,
@@ -136,8 +135,9 @@ export function collectionPageJsonLd({
 
 /** Visible H1 + dek on `/learn` — JSON-LD must match the hub, not the meta title. */
 export const LEARN_JSON_LD = {
-  name: "How can we help?",
-  description: "Short guides on EMDR, sets, and staying safe.",
+  name: "EMDR guides, by topic",
+  description:
+    "Understand what EMDR is, run a set with care, and know when to stop. Plain-language guides for practice between sessions.",
 } as const;
 
 /** Visible H1 on `/knowledge` — matches meta keyword focus. */
@@ -161,7 +161,13 @@ function articleListItems(posts: ClusterArticle[] = listClusterArticles()) {
   }));
 }
 
-function learnListItems() {
+function learnListItems(posts?: ClusterArticle[]) {
+  if (posts?.length) {
+    return posts.map((article) => ({
+      name: article.title,
+      path: `/blog/${article.slug}`,
+    }));
+  }
   const groups = clusterArticlesByTopic();
   return CLUSTER_TOPICS.flatMap((topic) =>
     groups[topic].map((article) => ({
@@ -171,7 +177,7 @@ function learnListItems() {
   );
 }
 
-export function buildLearnJsonLd(origin: string) {
+export function buildLearnJsonLd(origin: string, posts?: ClusterArticle[]) {
   return {
     "@context": "https://schema.org",
     "@graph": [
@@ -181,7 +187,7 @@ export function buildLearnJsonLd(origin: string) {
         path: "/learn",
         name: LEARN_JSON_LD.name,
         description: LEARN_JSON_LD.description,
-        items: learnListItems(),
+        items: learnListItems(posts),
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
@@ -224,7 +230,7 @@ export function buildBlogIndexJsonLd(
       organizationJsonLd(origin),
       collectionPageJsonLd({
         origin,
-        path: "/blog",
+        path: "/learn",
         name: BLOG_INDEX_JSON_LD.name,
         description: BLOG_INDEX_JSON_LD.description,
         types: ["CollectionPage", "Blog"],
@@ -232,7 +238,7 @@ export function buildBlogIndexJsonLd(
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Learn", path: "/learn" },
       ]),
     ],
   };
@@ -258,7 +264,7 @@ export function buildBlogCategoryJsonLd(
       }),
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Learn", path: "/learn" },
         { name: category.name, path: `/blog/category/${category.slug}` },
       ]),
     ],
@@ -287,7 +293,6 @@ export function buildClusterArticleJsonLd(
   const path = `/blog/${article.slug}`;
   const url = `${base}${path}`;
   const editorial = `${base}/editorial`;
-  const faqs = clusterArticleFaqs(article);
 
   return {
     "@context": "https://schema.org",
@@ -332,15 +337,9 @@ export function buildClusterArticleJsonLd(
           url: `${base}/`,
         },
       },
-      {
-        ...faqPageJsonLd(faqs),
-        "@id": `${url}#faq`,
-        url,
-        mainEntityOfPage: url,
-      },
       breadcrumbJsonLd(origin, [
         { name: "Home", path: "/" },
-        { name: "Blog", path: "/blog" },
+        { name: "Learn", path: "/learn" },
         { name: article.title, path },
       ]),
     ],

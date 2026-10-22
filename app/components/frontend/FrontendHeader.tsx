@@ -31,7 +31,7 @@ const NAV_LINKS = [
   { href: "/", label: "Home", id: "home" },
   { href: "/#how-it-works", label: "How it works", id: "how-it-works" },
   { href: "/pricing", label: "Prices", id: "prices" },
-  { href: "/blog", label: "Blog", id: "blog" },
+  { href: "/learn", label: "Learn", id: "blog" },
   { href: "/faq", label: "FAQ", id: "faq" },
 ] as const;
 

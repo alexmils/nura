@@ -19,7 +19,7 @@ type ClusterKeepReadingProps = {
 
 export function ClusterKeepReading({
   posts,
-  indexHref = "/blog",
+  indexHref = "/learn",
   indexLabel = "All articles",
 }: ClusterKeepReadingProps) {
   const cards = posts.filter((p) => Boolean(p.coverUrl)).slice(0, 3);

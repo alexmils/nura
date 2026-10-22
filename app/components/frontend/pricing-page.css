@@ -48,9 +48,18 @@
   --fe-pricing-muted: #5c6450;
   --fe-pricing-line: color-mix(in srgb, #2a3020 11%, transparent);
   --fe-pricing-lime: #84b067;
-  background: var(--pricing-band-white);
+  background: var(--pricing-band-white, #fff);
   color: var(--fe-pricing-text);
   border-radius: 0;
+}
+
+/*
+ * The home landing ships a dark `.fe-pricing-section` rule in another
+ * stylesheet. Win by specificity, not by load order, so /pricing can never
+ * render dark cards' text on a dark band after a chunk reshuffle.
+ */
+.fe-pricing-page .fe-pricing-section.fe-pricing-section--page {
+  background: #fff;
 }
 
 .fe-pricing-section--page .fe-pricing-head {

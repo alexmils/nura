@@ -535,11 +535,11 @@
 /*
  * End reveal sits in document flow after the footer.
  * (position:fixed glued the lockup to the viewport on Privacy / other inner pages.)
+ *
+ * `main` stays transparent: the page shell already paints --fe-bg plus its
+ * top gradient, and a second opaque background here read as a panel on top
+ * of it.
  */
-.frontend-main {
-  background-color: var(--fe-bg, #edf9ed);
-}
-
 .fe-site-footer-reveal {
   --fe-ft-reveal-h: calc(100vw * 280.51 / 1110.69 + 4.5rem);
   position: relative;

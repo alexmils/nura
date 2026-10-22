@@ -69,6 +69,7 @@ const TOOLS = [
   ["create_blog_post", "Publish a guide and choose its category"],
   ["update_blog_post", "Edit a guide, rename its slug, publish or unpublish"],
   ["delete_blog_post", "Delete a guide"],
+  ["add_blog_cta", "Add a CTA block to a guide"],
   ["list_seo_pages", "List pages that can carry their own search copy"],
   ["get_seo_page", "Read a page's search title and description"],
   ["update_seo_page", "Edit a page's search title and description"],
