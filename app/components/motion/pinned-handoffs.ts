@@ -1,7 +1,7 @@
 "use client";
 
 import gsap from "gsap";
-import { paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
+import { DEFAULT_HANDOFF_HOLD, paintedBg, siblingBoxesOf, pinnedInsideOf } from "./choreography";
 
 /**
  * Pinned section hand-offs, partly ported from D:\Python\alexandermils
@@ -118,6 +118,12 @@ export function pinnedHandoff(
     fade?: boolean;
     /** morph: element whose colour drives the blend when the box is a wrapper. */
     tint?: HTMLElement | null;
+    /**
+     * Still viewports the outgoing block is pinned before the effect starts
+     * (SectionHandoff's `hold`). Adds that much scroll runway below `prev`; a
+     * section shorter than the viewport cannot cover it, so it is skipped.
+     */
+    hold?: number;
   } = {}
 ): PinnedEffect | null {
   if (!prevIn || !nextIn) return null;
@@ -128,6 +134,12 @@ export function pinnedHandoff(
   const nextBg = paintedBg(next);
   const prevStill = !pinnedInsideOf(prev);
   const nextStill = !pinnedInsideOf(next) && next.offsetHeight >= window.innerHeight * 0.95;
+  // The hold needs a full-viewport outgoing block that can be counter-
+  // translated; its runway is a static margin below `prev`.
+  const wantedHold = Math.max(0, opts.hold ?? DEFAULT_HANDOFF_HOLD);
+  const hold = prevStill && prev.offsetHeight >= vh() * 0.99 ? wantedHold : 0;
+  const holdPx = () => hold * vh();
+  if (hold > 0) gsap.set(prev, { marginBottom: holdPx() });
   nextIn.setAttribute("data-mo-handoff", effect);
 
   // Layering: the covering block above the covered one.
@@ -152,15 +164,21 @@ export function pinnedHandoff(
       // at -100vh until its own window), and a transform-skewed measurement
       // would run this window a whole viewport early, over the wrong section.
       start: () => layoutBottom(prev) - vh(),
-      end: () => layoutBottom(prev),
+      // The hold runway sits between prev's bottom and next's top.
+      end: () => layoutBottom(prev) + holdPx(),
       scrub: true,
       invalidateOnRefresh: true,
+      onRefreshInit: () => {
+        if (hold > 0) gsap.set(prev, { marginBottom: holdPx() });
+      },
       // A refresh moves the progress without firing onUpdate; repaint proxies.
       onRefresh: () => refreshers.forEach((fn) => fn()),
     },
   });
   const holdPrev = () => {
-    if (prevStill) tl.fromTo(prev, { y: 0 }, { y: () => vh() }, 0);
+    // immediateRender: false — the hold tween must own `y` before this starts;
+    // otherwise its start frame (y = holdPx) is painted at scroll 0.
+    if (prevStill) tl.fromTo(prev, { y: () => holdPx() }, { y: () => holdPx() + vh(), immediateRender: false }, 0);
   };
   const holdNext = () => {
     if (nextStill) tl.fromTo(next, { y: () => -vh() }, { y: 0 }, 0);
@@ -171,7 +189,9 @@ export function pinnedHandoff(
   const drive = (state: { p: number }, paint: () => void) => {
     tl.to({}, { duration: 1 }, 0);
     const sync = () => {
-      state.p = tl.progress();
+      // Timeline time includes the hold segment; proxies only care about the
+      // effect itself (the last unit of the track).
+      state.p = Math.min(1, Math.max(0, tl.time() - hold));
       paint();
     };
     tl.eventCallback("onUpdate", sync);
@@ -479,6 +499,12 @@ export function pinnedHandoff(
       }
       break;
     }
+  }
+  // Move every effect child one hold-length later, then pin the outgoing block
+  // through that runway: the page scrolls, the block does not.
+  if (hold > 0) {
+    tl.shiftChildren(hold, false, -1);
+    tl.fromTo(prev, { y: 0 }, { y: holdPx, duration: hold, ease: "none" }, 0);
   }
   return effect;
 }

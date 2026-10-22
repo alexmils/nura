@@ -84,6 +84,8 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     const edgeMutations = new MutationObserver(scheduleEdges);
     edgeMutations.observe(root, { childList: true, subtree: true });
     window.addEventListener("resize", scheduleEdges);
+    // Hand-offs add their hold runway as margins after the first measurement.
+    ScrollTrigger.addEventListener("refresh", scheduleEdges);
 
     let previousScroll = lenis.scroll;
     let lastEdgeAt = 0;
@@ -328,6 +330,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       window.removeEventListener("wheel", onWheelBump);
       window.removeEventListener("resize", scheduleEdges);
       edgeMutations.disconnect();
+      ScrollTrigger.removeEventListener("refresh", scheduleEdges);
       window.clearTimeout(edgeTimer);
       releaseEdge();
       lenis?.destroy();

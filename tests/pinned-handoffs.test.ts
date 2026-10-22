@@ -38,11 +38,24 @@ describe("advanced pinned hand-offs (alexandermils port)", () => {
   });
 
   it("scrubs 1:1 on the previous block and never animates layout", () => {
-    assert.match(lib, /trigger: prev,[\s\S]*?start: \(\) => layoutBottom\(prev\) - vh\(\),\s*end: \(\) => layoutBottom\(prev\),\s*scrub: true/);
+    assert.match(lib, /trigger: prev,[\s\S]*?start: \(\) => layoutBottom\(prev\) - vh\(\)/);
+    assert.match(lib, /end: \(\) => layoutBottom\(prev\) \+ holdPx\(\),[\s\S]*?scrub: true/);
     // Tweens only touch transform, opacity, clip-path, radius and colour.
     assert.doesNotMatch(lib, /tl\.(?:to|fromTo)\([^;]*\b(?:width|height|margin\w*|padding\w*|top|left)\s*:/);
-    assert.doesNotMatch(lib, /margin|padding/);
+    // The hold runway is a one-off static margin, never a tween.
+    assert.match(lib, /gsap\.set\(prev, \{ marginBottom: holdPx\(\) \}\)/);
+    assert.doesNotMatch(lib, /padding/);
     assert.doesNotMatch(lib, /pinSpacing|pin: true/);
+  });
+
+  it("pins the outgoing block for `hold` viewports before the effect", () => {
+    assert.match(lib, /opts\.hold \?\? DEFAULT_HANDOFF_HOLD/);
+    assert.match(lib, /const holdPx = \(\) => hold \* vh\(\)/);
+    // Every effect child starts after the hold; the hold itself only moves y.
+    assert.match(lib, /tl\.shiftChildren\(hold, false, -1\)/);
+    assert.match(lib, /tl\.fromTo\(prev, \{ y: 0 \}, \{ y: holdPx, duration: hold, ease: "none" \}, 0\)/);
+    // Proxy effects ignore the hold segment.
+    assert.match(lib, /tl\.time\(\) - hold/);
   });
 
   it("only animates neighbours, keeps overlays inert and leaves phones on the light hand-offs", () => {
