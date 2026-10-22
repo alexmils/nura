@@ -279,7 +279,8 @@ export function HomeLandingV2({
   );
   const closeBg = sectionBackground(close);
   const closeTpl = closeTemplate(close);
-  const closeHasPhoto = closeTpl === "default" || closeTpl === "editorial";
+  const closeHasPhoto = closeTpl === "meadow" || closeTpl === "magazine";
+  const closeHasMedia = closeHasPhoto || Boolean(closeBg);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
     label: mode.label ?? "",
@@ -825,8 +826,12 @@ export function HomeLandingV2({
 
       "home-close": (
       <EditablePart id="home-close" backdrop={false}>
-      <section className={`v2-close v2-close--tpl-${closeTpl}`} id="start" aria-labelledby="v2-close-title">
-        {closeHasPhoto ? (
+      <section
+        className={`v2-close v2-close--tpl-${closeTpl}${closeBg ? " v2-close--custom-bg" : ""}`}
+        id="start"
+        aria-labelledby="v2-close-title"
+      >
+        {closeHasMedia ? (
           <div className="v2-close-media">
             {closeBg ? (
               <BandBackground bg={closeBg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />

@@ -190,18 +190,36 @@ export function fieldInTemplate(field: { templates?: readonly string[] }, templa
 /** The closing CTA's look. "default" is the original photo + glass card. */
 export const CLOSE_TEMPLATE_KEY = "template";
 export const CLOSE_TEMPLATES = [
-  { value: "default", label: "Meadow card", hint: "Photo with the dark glass card." },
+  { value: "meadow", label: "Meadow card", hint: "Photo with the dark glass card." },
   { value: "minimal", label: "Minimal", hint: "Pale surface, centred copy, no photo." },
   { value: "panel", label: "Gradient panel", hint: "Bright pistachio panel on ink." },
-  { value: "split", label: "Arches", hint: "Copy left, soft concentric arches right." },
-  { value: "contour", label: "Contour", hint: "Deep pine with fine contour lines." },
-  { value: "editorial", label: "Editorial", hint: "Photo half, framed copy half." },
+  { value: "arches", label: "Arches", hint: "Copy left, soft concentric arches right." },
+  { value: "contour", label: "Contour", hint: "Deep pine with fine contour lines, copy right." },
+  { value: "magazine", label: "Magazine", hint: "Photo half, framed copy half." },
 ] as const satisfies readonly FieldOption[];
 export type CloseTemplate = (typeof CLOSE_TEMPLATES)[number]["value"];
 
 export function closeTemplate(config: SectionConfig | undefined): CloseTemplate {
   const raw = config?.[CLOSE_TEMPLATE_KEY];
-  return CLOSE_TEMPLATES.some((option) => option.value === raw) ? (raw as CloseTemplate) : "default";
+  return CLOSE_TEMPLATES.some((option) => option.value === raw) ? (raw as CloseTemplate) : "meadow";
+}
+
+/* ---------- Between sessions templates ---------- */
+
+/** Where the "Between sessions" copy sits. */
+export const BETWEEN_TEMPLATE_KEY = "template";
+export const BETWEEN_TEMPLATES = [
+  { value: "center", label: "Centred", hint: "Kicker, title and button stacked in the middle." },
+  { value: "split", label: "Split", hint: "Copy left, the button alone on the right." },
+  { value: "card", label: "Glass card", hint: "The copy sits in a soft frosted card." },
+  { value: "offset", label: "Offset", hint: "Low-left copy with a wide quiet field." },
+  { value: "banner", label: "Banner", hint: "Title left, button right on one row." },
+] as const satisfies readonly FieldOption[];
+export type BetweenTemplate = (typeof BETWEEN_TEMPLATES)[number]["value"];
+
+export function betweenTemplate(config: SectionConfig | undefined): BetweenTemplate {
+  const raw = config?.[BETWEEN_TEMPLATE_KEY];
+  return BETWEEN_TEMPLATES.some((option) => option.value === raw) ? (raw as BetweenTemplate) : "center";
 }
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -1650,7 +1668,7 @@ const V2_SECTIONS: SectionDef[] = [
       text("note", "Note"),
     ],
     defaults: {
-      [CLOSE_TEMPLATE_KEY]: "default",
+      [CLOSE_TEMPLATE_KEY]: "meadow",
       kicker: "A gentler next step",
       title: "A calmer next step.",
       accent: "calmer",
@@ -1737,6 +1755,7 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
       keys: [],
       extra: {
         fields: [
+          { ...text(BETWEEN_TEMPLATE_KEY, "Template"), options: BETWEEN_TEMPLATES },
           text("betweenKicker", "Kicker"),
           text("betweenTitle", "Title"),
           text("betweenAccent", "Accent words", "Part of the title shown in the green italic accent."),
@@ -1745,6 +1764,7 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
           link("betweenCtaHref", "Button link"),
         ],
         defaults: {
+          [BETWEEN_TEMPLATE_KEY]: "center",
           betweenKicker: "Between sessions",
           betweenTitle: "Self-guided session \u2014 sets without an agent",
           betweenAccent: "Self-guided",

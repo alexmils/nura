@@ -753,6 +753,106 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   max-width: 42rem;
 }
 
+/* —— Between sessions layouts (Admin -> Edit -> Template) —— */
+
+/* Split: copy left, the button alone on the right. */
+.fe-between--tpl-split .fe-spath-finale-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  column-gap: clamp(2rem, 6vw, 5rem);
+  max-width: 64rem;
+  text-align: left;
+}
+.fe-between--tpl-split .fe-spath-finale-kicker {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.fe-between--tpl-split .fe-spath-finale-title,
+.fe-between--tpl-split .fe-spath-finale-line {
+  grid-column: 1;
+}
+.fe-between--tpl-split .fe-spath-cta {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  justify-self: end;
+}
+
+/* Card: the copy inside a soft frosted card. */
+.fe-between--tpl-card .fe-spath-finale-inner {
+  padding: clamp(2rem, 5vw, 3.5rem);
+  border: 1px solid rgba(42, 48, 32, 0.1);
+  border-radius: 2rem;
+  background: rgba(250, 253, 246, 0.82);
+  box-shadow: 0 30px 80px -40px rgba(42, 48, 32, 0.35);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+/* Offset: low-left copy with a wide quiet field above. */
+.fe-between--tpl-offset .fe-spath-finale-inner {
+  align-items: flex-start;
+  max-width: 52rem;
+  margin-left: clamp(0rem, 4vw, 3rem);
+  margin-right: auto;
+  padding-left: clamp(0rem, 3vw, 2rem);
+  text-align: left;
+  transform: translateY(7vh);
+}
+.fe-between--tpl-offset .fe-spath-finale-kicker {
+  align-self: flex-start;
+}
+
+/* Banner: title left, button right on one row. */
+.fe-between--tpl-banner .fe-spath-finale-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: clamp(1.5rem, 4vw, 3rem);
+  max-width: 64rem;
+  text-align: left;
+}
+.fe-between--tpl-banner .fe-spath-finale-kicker {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+.fe-between--tpl-banner .fe-spath-finale-title,
+.fe-between--tpl-banner .fe-spath-finale-line {
+  grid-column: 1;
+}
+.fe-between--tpl-banner .fe-spath-cta {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  justify-self: end;
+}
+
+/* A custom Background from the editor must show through the pale sheet. */
+.fe-bgwrap .fe-between-shell::before,
+.fe-bgwrap .fe-spath-finale::before {
+  content: none;
+}
+
+@media (max-width: 760px) {
+  .fe-between--tpl-split .fe-spath-finale-inner,
+  .fe-between--tpl-banner .fe-spath-finale-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .fe-between--tpl-split .fe-spath-cta,
+  .fe-between--tpl-banner .fe-spath-cta {
+    justify-self: center;
+  }
+  .fe-between--tpl-offset .fe-spath-finale-inner {
+    align-items: center;
+    margin: 0;
+    padding-left: 0;
+    text-align: center;
+    transform: none;
+  }
+}
+
 .fe-spath-finale-kicker {
   margin: 0 0 1.25rem;
   padding: 0.35rem 0.75rem;

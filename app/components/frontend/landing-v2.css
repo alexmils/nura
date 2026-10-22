@@ -2409,33 +2409,33 @@
 }
 
 /* Light templates share the same ink + transparent card. */
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-close-card {
   background: none;
   border: 0;
   box-shadow: none;
   backdrop-filter: none;
   color: #1d2a17;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-kicker {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-kicker {
   color: #55703d;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card h2 {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-close-card h2 {
   color: #1d2a17;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-em {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-em {
   color: #4a7234;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-card p {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-close-card p {
   color: #55654a;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-close-note {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-close-note {
   color: #6b7a5f;
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial) .v2-btn--ghost {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine) .v2-btn--ghost {
   color: #1d2a17;
   border-color: rgba(29, 42, 23, 0.22);
 }
-:is(.v2-close--tpl-minimal, .v2-close--tpl-split, .v2-close--tpl-editorial)::after {
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches, .v2-close--tpl-magazine)::after {
   content: none;
 }
 
@@ -2506,15 +2506,15 @@
 }
 
 /* Arches: copy left, concentric rings right. */
-.v2-close--tpl-split {
+.v2-close--tpl-arches {
   background: #f4f7e5;
   place-items: center start;
 }
-.v2-close--tpl-split .v2-close-inner {
+.v2-close--tpl-arches .v2-close-inner {
   max-width: 38rem;
   margin-left: clamp(0rem, 4vw, 3rem);
 }
-.v2-close-deco--split {
+.v2-close-deco--arches {
   inset: 0 0 0 auto;
   width: 58%;
   background: repeating-radial-gradient(
@@ -2526,29 +2526,30 @@
   mask-image: linear-gradient(90deg, transparent, #000 28%);
 }
 
-/* Contour: deep pine with fine concentric lines. */
+/* Contour: deep pine with fine concentric lines, copy right. */
 .v2-close--tpl-contour {
   background: #11352c;
-  place-items: center;
+  place-items: center end;
 }
 .v2-close-deco--contour {
   background: repeating-radial-gradient(
-    circle at 82% 18%,
+    circle at 18% 82%,
     rgba(198, 214, 126, 0.16) 0 1px,
     transparent 1px 110px
   );
 }
 .v2-close--tpl-contour .v2-close-inner {
-  max-width: 44rem;
+  max-width: 42rem;
+  margin-right: clamp(0rem, 4vw, 3rem);
 }
 .v2-close--tpl-contour .v2-close-card {
-  justify-items: center;
+  justify-items: end;
   padding: 0;
   border: 0;
   background: none;
   box-shadow: none;
   color: #eef8ea;
-  text-align: center;
+  text-align: right;
 }
 .v2-close--tpl-contour .v2-kicker {
   color: #cfe6a8;
@@ -2566,7 +2567,7 @@
   color: #a9c2a1;
 }
 .v2-close--tpl-contour .v2-close-actions {
-  justify-content: center;
+  justify-content: flex-end;
 }
 .v2-close--tpl-contour .v2-btn--ghost {
   color: #eaf7e6;
@@ -2574,37 +2575,54 @@
 }
 
 /* Editorial: photo half, copy half. */
-.v2-close--tpl-editorial {
+.v2-close--tpl-magazine {
   background: #edf3e2;
   place-items: center end;
 }
-.v2-close--tpl-editorial .v2-close-media {
+.v2-close--tpl-magazine .v2-close-media {
   inset: 0 52% 0 0;
   border-radius: 0 1.75rem 1.75rem 0;
 }
-.v2-close--tpl-editorial .v2-close-inner {
+.v2-close--tpl-magazine .v2-close-inner {
   max-width: 36rem;
   margin-right: clamp(0rem, 4vw, 3.5rem);
 }
-.v2-close--tpl-editorial .v2-close-card {
+.v2-close--tpl-magazine .v2-close-card {
   padding: 0;
 }
 
+/* A custom Background from the editor must beat the preset's own surface:
+   keep the copy readable on top of an image or colour. */
+:is(.v2-close--tpl-minimal, .v2-close--tpl-arches).v2-close--custom-bg .v2-close-card {
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-radius: 1.5rem;
+  background: rgba(250, 253, 246, 0.86);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.v2-close--tpl-contour.v2-close--custom-bg .v2-close-card {
+  padding: clamp(1.5rem, 4vw, 2.75rem);
+  border-radius: 1.5rem;
+  background: rgba(10, 21, 16, 0.64);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 @media (max-width: 900px) {
-  .v2-close--tpl-split {
+  .v2-close--tpl-arches {
     place-items: center;
   }
-  .v2-close--tpl-split .v2-close-inner {
+  .v2-close--tpl-arches .v2-close-inner {
     margin: 0;
   }
-  .v2-close--tpl-editorial {
+  .v2-close--tpl-magazine {
     place-items: center;
   }
-  .v2-close--tpl-editorial .v2-close-media {
+  .v2-close--tpl-magazine .v2-close-media {
     inset: 0 0 46% 0;
     border-radius: 0;
   }
-  .v2-close--tpl-editorial .v2-close-inner {
+  .v2-close--tpl-magazine .v2-close-inner {
     margin: 24vh 0 0;
     max-width: 100%;
   }

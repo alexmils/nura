@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { appPath } from "@/lib/app-base";
-import { sectionText } from "@/lib/marketing-sections";
+import { betweenTemplate, sectionText } from "@/lib/marketing-sections";
 import { AccentText } from "./AccentText";
 import { SectionEdit } from "./section-editor/SectionEdit";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
@@ -16,13 +16,14 @@ import "./session-path-sticky.css";
  */
 export function BetweenSessionsSection() {
   const between = useSectionConfig("home-how-between");
+  const tpl = betweenTemplate(between);
 
   return (
     // The shell carries the stage's pale sheet so the section's wipe slit
     // reveals that colour, not the page canvas, while it opens.
     <div className="fe-between-shell">
       <section
-        className="fe-spath-finale fe-has-edit"
+        className={`fe-spath-finale fe-has-edit fe-between--tpl-${tpl}`}
         data-section="home-how-between"
         aria-labelledby="fe-between-title"
       >

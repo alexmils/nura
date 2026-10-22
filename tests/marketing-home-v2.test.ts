@@ -3,10 +3,13 @@ import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { MARKETING_PAGES } from "../lib/marketing-layout";
 import {
+  BETWEEN_TEMPLATES,
+  BETWEEN_TEMPLATE_KEY,
   CLOSE_TEMPLATES,
   CLOSE_TEMPLATE_KEY,
   PAGE_CTA_PAGES,
   SECTION_OFF_KEY,
+  betweenTemplate,
   closeTemplate,
   getSectionDef,
   isSectionOn,
@@ -44,11 +47,22 @@ describe("new homepage sections", () => {
     assert.equal(CLOSE_TEMPLATES.length, 6);
     const field = getSectionDef("home-close")?.fields.find((f) => f.key === CLOSE_TEMPLATE_KEY);
     assert.ok(field && "options" in field && field.options?.length === 6);
-    assert.equal(closeTemplate(normalizeSection("home-close", null)), "default");
+    assert.equal(closeTemplate(normalizeSection("home-close", null)), "meadow");
     assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "panel" })), "panel");
-    assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "nope" })), "default");
+    assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "nope" })), "meadow");
     const page = readFileSync(new URL("../app/components/frontend/HomeLandingV2.tsx", import.meta.url), "utf8");
     assert.match(page, /v2-close--tpl-\$\{closeTpl\}/);
+  });
+
+  it("lets the editor pick the between-sessions layout", () => {
+    assert.equal(BETWEEN_TEMPLATES.length, 5);
+    const field = getSectionDef("home-how-between")?.fields.find((f) => f.key === BETWEEN_TEMPLATE_KEY);
+    assert.ok(field && "options" in field && field.options?.length === 5);
+    assert.equal(betweenTemplate(normalizeSection("home-how-between", null)), "center");
+    assert.equal(betweenTemplate(normalizeSection("home-how-between", { [BETWEEN_TEMPLATE_KEY]: "split" })), "split");
+    assert.equal(betweenTemplate(normalizeSection("home-how-between", { [BETWEEN_TEMPLATE_KEY]: "nope" })), "center");
+    const between = readFileSync(new URL("../app/components/frontend/BetweenSessionsSection.tsx", import.meta.url), "utf8");
+    assert.match(between, /fe-between--tpl-\$\{tpl\}/);
   });
 
   it("every band of the new homepage has a chip", () => {
