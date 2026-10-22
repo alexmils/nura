@@ -1371,6 +1371,7 @@ function AdminSeoPageInner() {
   });
   const [draftDefaultOg, setDraftDefaultOg] = useState("");
   const [ogBusy, setOgBusy] = useState(false);
+  const [pageQuery, setPageQuery] = useState("");
 
   const [connDraft, setConnDraft] = useState<ConnFormState>(emptyConnDraft);
   const [connModal, setConnModal] = useState<ConnId | null>(null);
@@ -1469,6 +1470,20 @@ function AdminSeoPageInner() {
     (c) => c.status === "connected"
   ).length;
 
+  const pageQueryClean = pageQuery.trim().toLowerCase();
+  const matchingPages = pages.filter(
+    (page) =>
+      !pageQueryClean ||
+      page.label.toLowerCase().includes(pageQueryClean) ||
+      page.path.toLowerCase().includes(pageQueryClean)
+  );
+  const mainPageItems = matchingPages.filter((page) => !page.id.startsWith("blog-"));
+  const blogPageItems = matchingPages.filter((page) => page.id.startsWith("blog-"));
+  const hasPageOverride = (id: SeoPageId) => {
+    const override = seo.pages[id];
+    return Boolean(override && Object.keys(override).length > 0);
+  };
+
   return (
     <div className="admin-page">
       <AdminPageHeader
@@ -1486,6 +1501,55 @@ function AdminSeoPageInner() {
 
         {tab === "overview" && home ? (
           <div className="admin-seo-section">
+            <form
+              className="admin-form-stack admin-panel admin-seo-default-og"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void savePatch(
+                  { defaultOgImageUrl: draftDefaultOg || "clear" },
+                  "Default share image saved."
+                );
+              }}
+            >
+              <div className="admin-seo-section-head">
+                <div>
+                  <p className="admin-seo-kicker">Site-wide</p>
+                  <h2 className="admin-panel-title">Default Open Graph image</h2>
+                  <p className="admin-panel-sub">
+                    Used on every public page that does not set its own image.
+                    The built-in fallback is the Nura lockup.
+                  </p>
+                </div>
+              </div>
+              <SeoOgImageField
+                label="Default share image"
+                hint="Upload an image, paste a URL, or keep the lockup."
+                value={draftDefaultOg}
+                previewUrl={displayOgImageUrl(
+                  draftDefaultOg,
+                  "/brand/lockup.png"
+                )}
+                disabled={!canEdit}
+                busy={busy || ogBusy}
+                clearLabel="Use lockup"
+                onChange={(next) => setDraftDefaultOg(next)}
+                onClear={() => setDraftDefaultOg("")}
+                onBusy={setOgBusy}
+                onError={setMsg}
+              />
+              {canEdit ? (
+                <div className="admin-form-actions">
+                  <button
+                    type="submit"
+                    className="admin-btn-edit"
+                    disabled={busy || ogBusy}
+                  >
+                    {busy ? "Saving…" : "Save default image"}
+                  </button>
+                </div>
+              ) : null}
+            </form>
+
             <SeoSnippetPreview
               canonical={home.canonical}
               title={home.title}
@@ -1514,168 +1578,231 @@ function AdminSeoPageInner() {
         ) : null}
 
         {tab === "pages" && activePage ? (
-          <div className="admin-seo-pages">
-            <div>
-              <h2 className="admin-panel-title">Pages</h2>
-              <p className="admin-panel-sub">
-                Title, description, and share image for each public page.
-              </p>
+          <>
+            <div className="admin-seo-pages">
+              <aside className="admin-seo-page-list" aria-label="Public pages">
+                <div className="admin-seo-page-list-head">
+                  <h2 className="admin-panel-title">Pages</h2>
+                  <p className="admin-panel-sub">
+                    Choose a page, then edit its search and share copy.
+                  </p>
+                  <input
+                    type="search"
+                    className="field admin-seo-page-search"
+                    placeholder="Filter pages"
+                    value={pageQuery}
+                    onChange={(e) => setPageQuery(e.target.value)}
+                    aria-label="Filter pages"
+                  />
+                </div>
+                <div className="admin-seo-page-list-scroll">
+                  {mainPageItems.length ? (
+                    <>
+                      <p className="admin-seo-page-group-title">Main pages</p>
+                      {mainPageItems.map((page) => (
+                        <button
+                          key={page.id}
+                          type="button"
+                          className={`admin-seo-page-item${
+                            page.id === activePage.id ? " is-active" : ""
+                          }`}
+                          onClick={() => setPage(page.id)}
+                        >
+                          <span className="admin-seo-page-item-label">
+                            {page.label}
+                          </span>
+                          <span className="admin-seo-page-item-path">
+                            {page.path}
+                          </span>
+                          {hasPageOverride(page.id) ? (
+                            <span className="admin-seo-page-item-badge">
+                              Custom
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </>
+                  ) : null}
+                  {blogPageItems.length ? (
+                    <>
+                      <p className="admin-seo-page-group-title">
+                        Blog categories
+                      </p>
+                      {blogPageItems.map((page) => (
+                        <button
+                          key={page.id}
+                          type="button"
+                          className={`admin-seo-page-item${
+                            page.id === activePage.id ? " is-active" : ""
+                          }`}
+                          onClick={() => setPage(page.id)}
+                        >
+                          <span className="admin-seo-page-item-label">
+                            {page.label}
+                          </span>
+                          <span className="admin-seo-page-item-path">
+                            {page.path}
+                          </span>
+                          {hasPageOverride(page.id) ? (
+                            <span className="admin-seo-page-item-badge">
+                              Custom
+                            </span>
+                          ) : null}
+                        </button>
+                      ))}
+                    </>
+                  ) : null}
+                  {matchingPages.length === 0 ? (
+                    <p className="admin-muted">No pages match.</p>
+                  ) : null}
+                </div>
+              </aside>
 
-              <form
-                className="admin-form-stack admin-panel admin-seo-default-og"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void savePatch(
-                    { defaultOgImageUrl: draftDefaultOg || "clear" },
-                    "Default share image saved."
-                  );
-                }}
-              >
-                <SeoOgImageField
-                  label="Default share image (Open Graph)"
-                  hint="Used on every public page unless that page sets its own image. Built-in fallback is the Nura lockup."
-                  value={draftDefaultOg}
-                  previewUrl={displayOgImageUrl(
-                    draftDefaultOg,
-                    "/brand/lockup.png"
-                  )}
-                  disabled={!canEdit}
-                  busy={busy || ogBusy}
-                  clearLabel="Use lockup"
-                  onChange={(next) => setDraftDefaultOg(next)}
-                  onClear={() => setDraftDefaultOg("")}
-                  onBusy={setOgBusy}
-                  onError={setMsg}
-                />
-                {canEdit ? (
-                  <div className="admin-form-actions">
-                    <button
-                      type="submit"
-                      className="admin-btn-edit"
-                      disabled={busy || ogBusy}
-                    >
-                      {busy ? "Saving…" : "Save default image"}
-                    </button>
+              <div className="admin-seo-page-main">
+                <div className="admin-seo-page-head">
+                  <div>
+                    <p className="admin-seo-kicker">Page</p>
+                    <h2 className="admin-panel-title">{activePage.label}</h2>
+                    <p className="admin-panel-sub">{activePage.path}</p>
                   </div>
-                ) : null}
-              </form>
-
-              <div className="admin-seo-page-picker">
-                {pages.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={
-                      p.id === activePage.id
-                        ? "admin-seo-page-chip is-active"
-                        : "admin-seo-page-chip"
-                    }
-                    onClick={() => setPage(p.id)}
+                  <Link
+                    href={activePage.path}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-secondary"
                   >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-              <form
-                className="admin-form-stack admin-panel"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void savePatch(
-                    {
-                      pages: {
-                        [activePage.id]: {
-                          title: draftPage.title,
-                          description: draftPage.description,
-                          ogTitle: draftPage.ogTitle,
-                          ogImageUrl: draftPage.ogImageUrl,
-                        },
-                      },
-                    },
-                    "Page SEO saved."
-                  );
-                }}
-              >
-                <label className="admin-field-label">
-                  Title
-                  <input
-                    className="field"
-                    value={draftPage.title}
-                    disabled={!canEdit || busy}
-                    onChange={(e) =>
-                      setDraftPage((d) => ({ ...d, title: e.target.value }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Description
-                  <textarea
-                    className="field admin-textarea"
-                    rows={3}
-                    value={draftPage.description}
-                    disabled={!canEdit || busy}
-                    onChange={(e) =>
-                      setDraftPage((d) => ({
-                        ...d,
-                        description: e.target.value,
-                      }))
-                    }
-                  />
-                </label>
-                <label className="admin-field-label">
-                  Share title (optional)
-                  <input
-                    className="field"
-                    value={draftPage.ogTitle}
-                    disabled={!canEdit || busy}
-                    placeholder={draftPage.title}
-                    onChange={(e) =>
-                      setDraftPage((d) => ({ ...d, ogTitle: e.target.value }))
-                    }
-                  />
-                </label>
-                <SeoOgImageField
-                  label="Share image for this page"
-                  hint="Leave empty to use the default share image above."
-                  value={draftPage.ogImageUrl}
-                  previewUrl={displayOgImageUrl(
+                    Open page
+                  </Link>
+                </div>
+
+                <SeoSnippetPreview
+                  canonical={activePage.canonical}
+                  title={draftPage.title || activePage.title}
+                  description={
+                    draftPage.description || activePage.description
+                  }
+                  ogTitle={
+                    draftPage.ogTitle || draftPage.title || activePage.title
+                  }
+                  ogImageUrl={displayOgImageUrl(
                     draftPage.ogImageUrl || draftDefaultOg,
                     "/brand/lockup.png"
                   )}
-                  disabled={!canEdit}
-                  busy={busy || ogBusy}
-                  onChange={(next) =>
-                    setDraftPage((d) => ({ ...d, ogImageUrl: next }))
-                  }
-                  onClear={() =>
-                    setDraftPage((d) => ({ ...d, ogImageUrl: "" }))
-                  }
-                  onBusy={setOgBusy}
-                  onError={setMsg}
                 />
-                {canEdit ? (
-                  <div className="admin-form-actions">
-                    <button
-                      type="submit"
-                      className="admin-btn-edit"
-                      disabled={busy || ogBusy}
-                    >
-                      {busy ? "Saving…" : "Save page"}
-                    </button>
+
+                <form
+                  className="admin-form-stack admin-panel"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void savePatch(
+                      {
+                        pages: {
+                          [activePage.id]: {
+                            title: draftPage.title,
+                            description: draftPage.description,
+                            ogTitle: draftPage.ogTitle,
+                            ogImageUrl: draftPage.ogImageUrl,
+                          },
+                        },
+                      },
+                      "Page SEO saved."
+                    );
+                  }}
+                >
+                  <div className="admin-seo-field">
+                    <label className="admin-field-label">
+                      Title
+                      <input
+                        className="field"
+                        value={draftPage.title}
+                        disabled={!canEdit || busy}
+                        onChange={(e) =>
+                          setDraftPage((d) => ({
+                            ...d,
+                            title: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <p className="admin-field-hint">
+                      {draftPage.title.length} characters. The site name is
+                      appended automatically.
+                    </p>
                   </div>
-                ) : null}
-              </form>
+
+                  <div className="admin-seo-field">
+                    <label className="admin-field-label">
+                      Description
+                      <textarea
+                        className="field admin-textarea"
+                        rows={3}
+                        value={draftPage.description}
+                        disabled={!canEdit || busy}
+                        onChange={(e) =>
+                          setDraftPage((d) => ({
+                            ...d,
+                            description: e.target.value,
+                          }))
+                        }
+                      />
+                    </label>
+                    <p className="admin-field-hint">
+                      {draftPage.description.length} characters. Around 150–160
+                      reads best in a search result.
+                    </p>
+                  </div>
+
+                  <label className="admin-field-label">
+                    Share title (optional)
+                    <input
+                      className="field"
+                      value={draftPage.ogTitle}
+                      disabled={!canEdit || busy}
+                      placeholder={draftPage.title}
+                      onChange={(e) =>
+                        setDraftPage((d) => ({
+                          ...d,
+                          ogTitle: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <SeoOgImageField
+                    label="Share image for this page"
+                    hint="Leave empty to use the site-wide default image above."
+                    value={draftPage.ogImageUrl}
+                    previewUrl={displayOgImageUrl(
+                      draftPage.ogImageUrl || draftDefaultOg,
+                      "/brand/lockup.png"
+                    )}
+                    disabled={!canEdit}
+                    busy={busy || ogBusy}
+                    onChange={(next) =>
+                      setDraftPage((d) => ({ ...d, ogImageUrl: next }))
+                    }
+                    onClear={() =>
+                      setDraftPage((d) => ({ ...d, ogImageUrl: "" }))
+                    }
+                    onBusy={setOgBusy}
+                    onError={setMsg}
+                  />
+
+                  {canEdit ? (
+                    <div className="admin-form-actions">
+                      <button
+                        type="submit"
+                        className="admin-btn-edit"
+                        disabled={busy || ogBusy}
+                      >
+                        {busy ? "Saving…" : "Save page"}
+                      </button>
+                    </div>
+                  ) : null}
+                </form>
+              </div>
             </div>
-            <SeoSnippetPreview
-              canonical={activePage.canonical}
-              title={draftPage.title || activePage.title}
-              description={draftPage.description || activePage.description}
-              ogTitle={draftPage.ogTitle || draftPage.title || activePage.title}
-              ogImageUrl={displayOgImageUrl(
-                draftPage.ogImageUrl || draftDefaultOg,
-                "/brand/lockup.png"
-              )}
-            />
-          </div>
+          </>
         ) : null}
 
         {tab === "analytics" ? <SeoAnalyticsPanel /> : null}
