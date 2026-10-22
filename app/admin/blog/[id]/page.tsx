@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AdminCtaBuilder } from "@/app/components/admin/AdminCtaBuilder";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
 import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
+import { AdminRichPreview } from "@/app/components/admin/AdminRichPreview";
 import { serializeBlogCta, type BlogCtaData } from "@/lib/blog-cta";
 import {
   CLUSTER_TOPICS,
@@ -441,6 +442,7 @@ export default function AdminBlogEditorPage() {
                       }
                     />
                   </label>
+                  <AdminRichPreview text={section.paragraphs} />
                 </div>
               ))}
               <div className="admin-content-actions">

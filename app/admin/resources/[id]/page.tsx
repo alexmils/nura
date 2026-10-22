@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
 import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
+import { AdminRichPreview } from "@/app/components/admin/AdminRichPreview";
 import {
   RESOURCE_KINDS,
   slugifyTitle,
@@ -276,9 +277,10 @@ export default function AdminResourceEditorPage() {
                   setForm((f) => ({ ...f, body: e.target.value }))
                 }
               />
+              <AdminRichPreview text={form.body} />
               <p className="admin-panel-sub">
-                A chip is inserted where the cursor was. MP4 and WebM render as
-                a player inside the guide.
+                Media is inserted where the cursor was. MP4, WebM, YouTube, and
+                Vimeo render as a player inside the guide.
               </p>
             </div>
           </section>

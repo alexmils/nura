@@ -14446,6 +14446,21 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   gap: 0.5rem;
 }
 
+/* Live render of inserted media/CTAs, so the textarea isn't the only view. */
+.admin-rich-preview {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  padding: 0.7rem 0.85rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.admin-rich-preview .resource-article-img,
+.admin-rich-preview video {
+  margin: 0.25rem 0;
+}
+
 .admin-chip-checks {
   display: grid;
   gap: 0.4rem;
