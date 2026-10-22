@@ -1675,21 +1675,7 @@ function AdminSeoPageInner() {
                   </Link>
                 </div>
 
-                <SeoSnippetPreview
-                  canonical={activePage.canonical}
-                  title={draftPage.title || activePage.title}
-                  description={
-                    draftPage.description || activePage.description
-                  }
-                  ogTitle={
-                    draftPage.ogTitle || draftPage.title || activePage.title
-                  }
-                  ogImageUrl={displayOgImageUrl(
-                    draftPage.ogImageUrl || draftDefaultOg,
-                    "/brand/lockup.png"
-                  )}
-                />
-
+                <div className="admin-seo-page-body">
                 <form
                   className="admin-form-stack admin-panel"
                   onSubmit={(e) => {
@@ -1770,7 +1756,7 @@ function AdminSeoPageInner() {
 
                   <SeoOgImageField
                     label="Share image for this page"
-                    hint="Leave empty to use the site-wide default image above."
+                    hint="Leave empty to use the site-wide default image from Overview."
                     value={draftPage.ogImageUrl}
                     previewUrl={displayOgImageUrl(
                       draftPage.ogImageUrl || draftDefaultOg,
@@ -1800,6 +1786,22 @@ function AdminSeoPageInner() {
                     </div>
                   ) : null}
                 </form>
+
+                <SeoSnippetPreview
+                  canonical={activePage.canonical}
+                  title={draftPage.title || activePage.title}
+                  description={
+                    draftPage.description || activePage.description
+                  }
+                  ogTitle={
+                    draftPage.ogTitle || draftPage.title || activePage.title
+                  }
+                  ogImageUrl={displayOgImageUrl(
+                    draftPage.ogImageUrl || draftDefaultOg,
+                    "/brand/lockup.png"
+                  )}
+                />
+                </div>
               </div>
             </div>
           </>

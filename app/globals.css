@@ -13441,12 +13441,40 @@ a.help-drawer-signin.btn-primary {
   gap: 1rem;
 }
 
+.admin-seo-page-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
 .admin-seo-page-main .admin-seo-previews {
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
 }
 
 .admin-seo-page-main .admin-seo-share {
   max-width: none;
+}
+
+.admin-seo-page-body .admin-seo-previews {
+  position: sticky;
+  top: 1rem;
+  grid-template-columns: 1fr;
+}
+
+.admin-seo-page-body .admin-seo-share {
+  max-width: none;
+}
+
+@media (max-width: 1200px) {
+  .admin-seo-page-body {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-seo-page-body .admin-seo-previews {
+    position: static;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  }
 }
 
 .admin-seo-field {
