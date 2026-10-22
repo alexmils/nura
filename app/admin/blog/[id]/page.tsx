@@ -59,6 +59,45 @@ function slugify(value: string): string {
     .slice(0, 80);
 }
 
+/** Sections are stored separately; the editor shows one WordPress-like flow. */
+function sectionsToContent(sections: SectionForm[]): string {
+  return sections
+    .map((section) => {
+      const heading = section.heading.trim();
+      const body = section.paragraphs.trim();
+      if (!heading) return body;
+      return body ? `## ${heading}\n\n${body}` : `## ${heading}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function contentToSections(content: string): SectionForm[] {
+  const out: SectionForm[] = [];
+  let heading = "";
+  let body: string[] = [];
+
+  const flush = () => {
+    if (!heading && body.length === 0) return;
+    out.push({ heading, paragraphs: body.join("\n\n") });
+    body = [];
+  };
+
+  for (const raw of content.split(/\n\s*\n/)) {
+    const block = raw.trim();
+    if (!block) continue;
+    const match = block.match(/^##\s+(.+)$/);
+    if (match) {
+      flush();
+      heading = match[1].trim();
+      continue;
+    }
+    body.push(block);
+  }
+  flush();
+  return out;
+}
+
 function postToForm(post: BlogPostRecord): FormState {
   return {
     id: post.id,
@@ -92,40 +131,24 @@ export default function AdminBlogEditorPage() {
   const [missing, setMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const [ctaTarget, setCtaTarget] = useState<number | "end" | null>(null);
+  const [ctaOpen, setCtaOpen] = useState(false);
 
   function insertCta(data: BlogCtaData) {
     const block = serializeBlogCta(data);
-    const target = ctaTarget;
-    setCtaTarget(null);
-    if (target === null) return;
-    if (target === "end") {
-      setForm((f) => {
-        const last = f.sections.length - 1;
-        if (last < 0) return f;
-        const next = [...f.sections];
-        const current = next[last].paragraphs.trim();
-        next[last] = {
-          ...next[last],
-          paragraphs: current ? `${current}\n\n${block}` : block,
-        };
-        return { ...f, sections: next };
-      });
-      return;
-    }
-    setForm((f) => ({
-      ...f,
-      sections: f.sections.map((s, i) =>
-        i === target
-          ? {
-              ...s,
-              paragraphs: s.paragraphs.trim()
-                ? `${s.paragraphs.trim()}\n\n${block}`
-                : block,
-            }
-          : s
-      ),
-    }));
+    setCtaOpen(false);
+    setForm((f) => {
+      const last = f.sections.length - 1;
+      if (last < 0) {
+        return { ...f, sections: [{ heading: "", paragraphs: block }] };
+      }
+      const next = [...f.sections];
+      const current = next[last].paragraphs.trim();
+      next[last] = {
+        ...next[last],
+        paragraphs: current ? `${current}\n\n${block}` : block,
+      };
+      return { ...f, sections: next };
+    });
   }
 
 
@@ -178,8 +201,16 @@ export default function AdminBlogEditorPage() {
       if (form.categories.length === 0) {
         throw new Error("Choose at least one category.");
       }
+      if (form.sections.some((section) => !section.heading.trim() && section.paragraphs.trim())) {
+        throw new Error(
+          "Text before the first heading needs one. Put the line under the text and press H2."
+        );
+      }
+      if (form.sections.some((section) => section.heading.trim() && !section.paragraphs.trim())) {
+        throw new Error("Every heading needs at least one paragraph under it.");
+      }
       if (sections.length === 0) {
-        throw new Error("Add at least one section with a heading and a paragraph.");
+        throw new Error("Write the article and add a heading with H2.");
       }
 
       const published = publish ?? form.published;
@@ -301,126 +332,29 @@ export default function AdminBlogEditorPage() {
             </div>
 
             <div className="admin-box">
-              <h3 className="admin-box-title">Sections</h3>
+              <h3 className="admin-box-title">Article</h3>
               <p className="admin-panel-sub">
-                Type as usual. Image and Video place media at the cursor; CTA
-                adds a prebuilt block to the end of the section.
+                One editor for the whole post. Use H2 for a section heading;
+                Image and Video place media at the cursor.
               </p>
-              {form.sections.map((section, index) => (
-                <div key={index} className="admin-section-card">
-                  <div className="admin-section-card-head">
-                    <span className="admin-chip admin-chip--muted">
-                      Section {index + 1}
-                    </span>
-                    <div className="admin-content-actions">
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy}
-                        onClick={() => setCtaTarget(index)}
-                      >
-                        Insert CTA
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy || index === 0}
-                        onClick={() =>
-                          setForm((f) => {
-                            const next = [...f.sections];
-                            [next[index - 1], next[index]] = [
-                              next[index],
-                              next[index - 1],
-                            ];
-                            return { ...f, sections: next };
-                          })
-                        }
-                      >
-                        Up
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost"
-                        disabled={busy || index === form.sections.length - 1}
-                        onClick={() =>
-                          setForm((f) => {
-                            const next = [...f.sections];
-                            [next[index + 1], next[index]] = [
-                              next[index],
-                              next[index + 1],
-                            ];
-                            return { ...f, sections: next };
-                          })
-                        }
-                      >
-                        Down
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-ghost is-danger"
-                        disabled={busy || form.sections.length === 1}
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            sections: f.sections.filter((_, i) => i !== index),
-                          }))
-                        }
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                  <label className="admin-field-label">
-                    Heading
-                    <input
-                      className="field"
-                      value={section.heading}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          sections: f.sections.map((s, i) =>
-                            i === index ? { ...s, heading: e.target.value } : s
-                          ),
-                        }))
-                      }
-                    />
-                  </label>
-                  <AdminMarkdownEditor
-                    label="Paragraphs"
-                    value={section.paragraphs}
-                    disabled={busy}
-                    folder="nura/blog"
-                    onChange={(paragraphs) =>
-                      setForm((f) => ({
-                        ...f,
-                        sections: f.sections.map((s, i) =>
-                          i === index ? { ...s, paragraphs } : s
-                        ),
-                      }))
-                    }
-                  />
-                </div>
-              ))}
+              <AdminMarkdownEditor
+                label="Content"
+                value={sectionsToContent(form.sections)}
+                disabled={busy}
+                folder="nura/blog"
+                onChange={(content) =>
+                  setForm((f) => ({
+                    ...f,
+                    sections: contentToSections(content),
+                  }))
+                }
+              />
               <div className="admin-content-actions">
                 <button
                   type="button"
                   className="btn-secondary"
                   disabled={busy}
-                  onClick={() =>
-                    setForm((f) => ({
-                      ...f,
-                      sections: [...f.sections, { heading: "", paragraphs: "" }],
-                    }))
-                  }
-                >
-                  Add section
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={busy}
-                  onClick={() => setCtaTarget("end")}
+                  onClick={() => setCtaOpen(true)}
                 >
                   Add closing CTA
                 </button>
@@ -600,8 +534,8 @@ export default function AdminBlogEditorPage() {
       </main>
 
       <AdminCtaBuilder
-        open={ctaTarget !== null}
-        onClose={() => setCtaTarget(null)}
+        open={ctaOpen}
+        onClose={() => setCtaOpen(false)}
         onInsert={insertCta}
       />
     </div>

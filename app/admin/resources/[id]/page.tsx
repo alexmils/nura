@@ -227,6 +227,7 @@ export default function AdminResourceEditorPage() {
                 label="Paragraphs"
                 value={form.body}
                 disabled={busy}
+                allowHeadings={false}
                 folder="nura/resources"
                 onChange={(body) => setForm((f) => ({ ...f, body }))}
               />

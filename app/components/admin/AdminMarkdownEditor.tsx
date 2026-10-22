@@ -55,6 +55,10 @@ function markdownToHtml(markdown: string): string {
     .map((block) => block.trim())
     .filter(Boolean)
     .map((block) => {
+      const heading = block.match(/^##\s+(.+)$/);
+      if (heading) {
+        return `<h2>${inlineHtml(heading[1].trim())}</h2>`;
+      }
       const media = block.match(/^!\[([^\]]*)\]\(([^)\s]+)\)$/);
       if (media) {
         return `<p>${mediaHtml(media[2], media[1])}</p>`;
@@ -91,6 +95,12 @@ function htmlToMarkdown(root: HTMLElement): string {
       continue;
     }
     if (!(node instanceof HTMLElement)) continue;
+
+    if (node.matches("h1,h2,h3,h4,h5,h6")) {
+      const heading = inlineMarkdown(node).trim();
+      if (heading) blocks.push(`## ${heading}`);
+      continue;
+    }
 
     if (node.matches(".admin-md-media")) {
       const media = inlineMarkdown(node).trim();
@@ -134,6 +144,7 @@ export function AdminMarkdownEditor({
   folder = "nura/admin",
   disabled = false,
   label = "Paragraphs",
+  allowHeadings = true,
 }: {
   value: string;
   onChange: (markdown: string) => void;
@@ -141,6 +152,8 @@ export function AdminMarkdownEditor({
   folder?: string;
   disabled?: boolean;
   label?: string;
+  /** The blog maps H2 to section headings; resources have no headings. */
+  allowHeadings?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef(value);
@@ -162,6 +175,31 @@ export function AdminMarkdownEditor({
     const markdown = htmlToMarkdown(root);
     lastEmitted.current = markdown;
     onChange(markdown);
+  }
+
+  function formatHeading() {
+    const root = ref.current;
+    if (!root) return;
+    root.focus();
+    const selection = window.getSelection();
+    const node = selection?.anchorNode ?? null;
+    const element =
+      node?.nodeType === Node.ELEMENT_NODE
+        ? (node as HTMLElement)
+        : node?.parentElement ?? null;
+    const block = element?.closest("h1,h2,h3,h4,h5,h6,p,div,li,blockquote");
+    document.execCommand(
+      "formatBlock",
+      false,
+      block?.tagName === "H2" ? "p" : "h2"
+    );
+    emit();
+  }
+
+  function formatBold() {
+    ref.current?.focus();
+    document.execCommand("bold");
+    emit();
   }
 
   function openPicker(kind: MediaKind) {
@@ -248,6 +286,31 @@ export function AdminMarkdownEditor({
           onClick={() => openPicker("video")}
         >
           <Film size={14} /> Video
+        </button>
+        {allowHeadings ? (
+          <>
+            <span className="admin-md-divider" aria-hidden />
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={disabled}
+              title="Heading"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={formatHeading}
+            >
+              H2
+            </button>
+          </>
+        ) : null}
+        <button
+          type="button"
+          className="btn-secondary admin-md-bold"
+          disabled={disabled}
+          title="Bold"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={formatBold}
+        >
+          B
         </button>
         <span className="admin-panel-sub">Inserted where the cursor is.</span>
       </div>
