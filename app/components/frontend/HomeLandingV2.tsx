@@ -11,6 +11,7 @@ import {
   Leaf,
   Lock,
   MessageCircle,
+  Pause,
   Play,
   ShieldCheck,
   Sparkles,
@@ -133,6 +134,43 @@ function sessionEmbedUrl(url: string): string {
   const vimeo = url.match(/vimeo\.com\/(\d+)/);
   if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
   return url;
+}
+
+/** Direct-file walkthrough video: plays on its own, with a pause/play button
+ *  that only fades in while the pointer is over the frame. */
+function SessionVideo({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement | null>(null);
+  // No autoplay: the walkthrough waits on a big play button.
+  const [paused, setPaused] = useState(true);
+  return (
+    <div className={`v2-video-player${paused ? " is-paused" : ""}`}>
+      <video
+        ref={ref}
+        className="v2-video-iframe"
+        src={src}
+        muted
+        loop
+        playsInline
+        onPlay={() => setPaused(false)}
+        onPause={() => setPaused(true)}
+      />
+      <button
+        type="button"
+        className="v2-video-toggle"
+        aria-label={paused ? "Play video" : "Pause video"}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const video = ref.current;
+          if (!video) return;
+          if (video.paused) void video.play().catch(() => undefined);
+          else video.pause();
+        }}
+      >
+        {paused ? <Play size={26} aria-hidden /> : <Pause size={22} aria-hidden />}
+      </button>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -632,18 +670,7 @@ export function HomeLandingV2({
               {SESSION_VIDEO_URL ? (
                 /\.(mp4|webm|ogg|mov)(\?|$)/i.test(SESSION_VIDEO_URL) ||
                 SESSION_VIDEO_URL.includes("res.cloudinary.com") ? (
-                  <video
-                    className="v2-video-iframe"
-                    src={SESSION_VIDEO_URL}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    onMouseEnter={(event) => event.currentTarget.pause()}
-                    onMouseLeave={(event) => {
-                      void event.currentTarget.play().catch(() => undefined);
-                    }}
-                  />
+                  <SessionVideo src={SESSION_VIDEO_URL} />
                 ) : (
                   <iframe
                     src={sessionEmbedUrl(SESSION_VIDEO_URL)}
