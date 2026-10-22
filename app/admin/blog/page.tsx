@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
+import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
 import {
   CLUSTER_TOPICS,
   CLUSTER_TOPIC_LABEL,
@@ -130,7 +131,8 @@ function AdminBlogPageInner() {
     setTab("editor");
   };
 
-  const save = async () => {
+  const save = async (publish?: boolean) => {
+    if (!canWrite) return;
     setBusy(true);
     setMsg("");
     try {
@@ -154,6 +156,7 @@ function AdminBlogPageInner() {
         throw new Error("Add at least one section with a heading and a paragraph.");
       }
 
+      const published = publish ?? form.published;
       const res = await fetch("/api/admin/blog", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -169,7 +172,7 @@ function AdminBlogPageInner() {
             topic: form.topic,
             categories: form.categories,
             featured: form.featured,
-            published: form.published,
+            published,
             coverUrl: form.coverUrl || null,
             emdrAnchor: form.emdrAnchor,
             publishedAt: form.publishedAt || undefined,
@@ -179,9 +182,9 @@ function AdminBlogPageInner() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not save post");
-      setMsg("Saved.");
+      if (data.post) setForm(postToForm(data.post as BlogPostRecord));
+      setMsg(published ? "Published." : "Saved as draft.");
       await load();
-      setTab("posts");
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Could not save post");
     } finally {
@@ -220,6 +223,7 @@ function AdminBlogPageInner() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not delete post");
+      if (form.id === post.id) setForm(EMPTY);
       await load();
     } catch (err) {
       setMsg(err instanceof Error ? err.message : "Could not delete post");
@@ -239,7 +243,11 @@ function AdminBlogPageInner() {
     );
   }, [posts, query]);
 
-  const uncategorised = posts.filter((post) => (post.categories ?? []).length === 0).length;
+  const uncategorised = posts.filter(
+    (post) => (post.categories ?? []).length === 0
+  ).length;
+
+  const publishedCount = posts.filter((post) => post.published).length;
 
   return (
     <div className="admin-page">
@@ -264,7 +272,7 @@ function AdminBlogPageInner() {
 
         {tab === "posts" && (
           <section className="admin-panel">
-            <div className="admin-filters mb-4">
+            <div className="admin-content-toolbar">
               <input
                 className="field"
                 value={query}
@@ -283,41 +291,70 @@ function AdminBlogPageInner() {
               )}
             </div>
 
-            <h2 className="admin-panel-title">
-              {visible.length} of {posts.length} posts
-            </h2>
-            {uncategorised > 0 ? (
-              <p className="admin-panel-sub">
-                {uncategorised} post{uncategorised === 1 ? "" : "s"} have no
-                category and no category page.
-              </p>
-            ) : null}
+            <div className="admin-content-stats">
+              <span>
+                <strong>{posts.length}</strong> posts
+              </span>
+              <span>
+                <strong>{publishedCount}</strong> published
+              </span>
+              <span>
+                <strong>{posts.length - publishedCount}</strong> drafts
+              </span>
+              {uncategorised > 0 ? (
+                <span className="admin-content-warn">
+                  <strong>{uncategorised}</strong> with no category
+                </span>
+              ) : null}
+            </div>
 
-            <ul className="admin-resources-list">
-              {visible.map((post) => (
-                <li key={post.id} className="admin-resources-list-item">
-                  <div className="min-w-0">
-                    <strong>{post.title}</strong>
-                    <p className="admin-panel-sub !mt-1">
-                      {post.published ? "published" : "draft"}
-                      {post.featured ? " · featured" : ""}
-                      {(post.categories ?? []).length
-                        ? ` · ${post.categories.join(", ")}`
-                        : " · no category"}
-                      {" · "}/blog/{post.slug}
-                    </p>
-                  </div>
-                  <div className="admin-resources-list-actions">
-                    {canWrite ? (
-                      <>
-                        <button
-                          type="button"
-                          className="btn-ghost"
-                          disabled={busy}
-                          onClick={() => openEditor(post)}
+            <ul className="admin-content-list">
+              {visible.map((post) => {
+                const chips = (post.categories ?? []).map((slug) => {
+                  const name =
+                    categories.find((c) => c.slug === slug)?.name ?? slug;
+                  return (
+                    <span key={slug} className="admin-chip">
+                      {name}
+                    </span>
+                  );
+                });
+                return (
+                  <li key={post.id} className="admin-content-item">
+                    <button
+                      type="button"
+                      className="admin-content-row"
+                      onClick={() => openEditor(post)}
+                    >
+                      <span className="admin-content-main">
+                        <span className="admin-content-title">
+                          {post.title}
+                        </span>
+                        <span className="admin-content-meta">
+                          /blog/{post.slug}
+                        </span>
+                      </span>
+                      <span className="admin-chips">
+                        <span
+                          className={`admin-chip ${
+                            post.published
+                              ? "admin-chip--ok"
+                              : "admin-chip--warn"
+                          }`}
                         >
-                          Edit
-                        </button>
+                          {post.published ? "Published" : "Draft"}
+                        </span>
+                        {chips.length ? (
+                          chips
+                        ) : (
+                          <span className="admin-chip admin-chip--muted">
+                            No category
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                    {canWrite ? (
+                      <div className="admin-content-actions">
                         <button
                           type="button"
                           className="btn-ghost"
@@ -328,17 +365,17 @@ function AdminBlogPageInner() {
                         </button>
                         <button
                           type="button"
-                          className="btn-ghost"
+                          className="btn-ghost is-danger"
                           disabled={busy}
                           onClick={() => void remove(post)}
                         >
                           Delete
                         </button>
-                      </>
+                      </div>
                     ) : null}
-                  </div>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
               {visible.length === 0 ? (
                 <li className="admin-panel-sub">No posts match.</li>
               ) : null}
@@ -347,271 +384,339 @@ function AdminBlogPageInner() {
         )}
 
         {tab === "editor" && canWrite && (
-          <section className="admin-panel">
-            <h2 className="admin-panel-title">
-              {form.id ? "Edit post" : "New post"}
-            </h2>
-
-            <label className="admin-field-label">
-              Title
-              <input
-                className="field"
-                value={form.title}
-                disabled={busy}
-                onChange={(e) => {
-                  const title = e.target.value;
-                  setForm((f) => ({
-                    ...f,
-                    title,
-                    slug: !f.id && (!f.slug || f.slug === slugify(f.title))
-                      ? slugify(title)
-                      : f.slug,
-                  }));
-                }}
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Slug
-              <input
-                className="field"
-                value={form.slug}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, slug: e.target.value.toLowerCase() }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Description
-              <input
-                className="field"
-                value={form.description}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, description: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Dek
-              <input
-                className="field"
-                value={form.dek}
-                disabled={busy}
-                onChange={(e) => setForm((f) => ({ ...f, dek: e.target.value }))}
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Kicker
-              <input
-                className="field"
-                value={form.kicker}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, kicker: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Topic
-              <select
-                className="field"
-                value={form.topic}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, topic: e.target.value as ClusterTopic }))
-                }
-              >
-                {CLUSTER_TOPICS.map((topic) => (
-                  <option key={topic} value={topic}>
-                    {CLUSTER_TOPIC_LABEL[topic]}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <fieldset className="admin-field-label">
-              Categories
-              <div className="flex flex-wrap gap-3">
-                {categories.map((category) => (
-                  <label key={category.slug} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.categories.includes(category.slug)}
-                      disabled={busy}
-                      onChange={(e) =>
-                        setForm((f) => ({
-                          ...f,
-                          categories: e.target.checked
-                            ? [...f.categories, category.slug]
-                            : f.categories.filter((c) => c !== category.slug),
-                        }))
-                      }
-                    />
-                    <span>
-                      {category.name} ({category.postCount})
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <label className="admin-field-label">
-              EMDR link text
-              <input
-                className="field"
-                value={form.emdrAnchor}
-                disabled={busy}
-                placeholder="How a guided session is structured in Nura"
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, emdrAnchor: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Cover image URL
-              <input
-                className="field"
-                value={form.coverUrl}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, coverUrl: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="admin-field-label">
-              Published date
-              <input
-                type="date"
-                className="field"
-                value={form.publishedAt}
-                disabled={busy}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, publishedAt: e.target.value }))
-                }
-              />
-            </label>
-
-            <div className="admin-filters mb-4">
-              <label className="flex items-center gap-2">
+          <div className="admin-editor">
+            <section className="admin-editor-main">
+              <div className="admin-box">
                 <input
-                  type="checkbox"
-                  checked={form.published}
+                  className="admin-title-input"
+                  value={form.title}
+                  placeholder="Add title"
                   disabled={busy}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, published: e.target.checked }))
-                  }
+                  onChange={(e) => {
+                    const title = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      title,
+                      slug:
+                        !f.id && (!f.slug || f.slug === slugify(f.title))
+                          ? slugify(title)
+                          : f.slug,
+                    }));
+                  }}
                 />
-                Published
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={form.featured}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, featured: e.target.checked }))
-                  }
-                />
-                Featured
-              </label>
-            </div>
-
-            <h3 className="admin-panel-title">Sections</h3>
-            <p className="admin-panel-sub">
-              One paragraph per blank line. An em dash is rewritten and the
-              acronym BLS is rejected.
-            </p>
-            {form.sections.map((section, index) => (
-              <div key={index} className="admin-panel mb-4">
                 <label className="admin-field-label">
-                  Heading
+                  Slug
                   <input
                     className="field"
-                    value={section.heading}
+                    value={form.slug}
                     disabled={busy}
+                    placeholder="auto from the title"
                     onChange={(e) =>
                       setForm((f) => ({
                         ...f,
-                        sections: f.sections.map((s, i) =>
-                          i === index ? { ...s, heading: e.target.value } : s
-                        ),
+                        slug: e.target.value.toLowerCase(),
                       }))
                     }
                   />
                 </label>
-                <label className="admin-field-label">
-                  Paragraphs
-                  <textarea
-                    className="field"
-                    rows={6}
-                    value={section.paragraphs}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        sections: f.sections.map((s, i) =>
-                          i === index ? { ...s, paragraphs: e.target.value } : s
-                        ),
-                      }))
-                    }
-                  />
-                </label>
+                <p className="admin-panel-sub">
+                  /blog/{form.slug || slugify(form.title) || "slug"}
+                </p>
+              </div>
+
+              <div className="admin-box">
+                <h3 className="admin-box-title">Sections</h3>
+                <p className="admin-panel-sub">
+                  One paragraph per blank line. An em dash is rewritten and the
+                  acronym BLS is rejected.
+                </p>
+                {form.sections.map((section, index) => (
+                  <div key={index} className="admin-section-card">
+                    <div className="admin-section-card-head">
+                      <span className="admin-chip admin-chip--muted">
+                        Section {index + 1}
+                      </span>
+                      <div className="admin-content-actions">
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          disabled={busy || index === 0}
+                          onClick={() =>
+                            setForm((f) => {
+                              const next = [...f.sections];
+                              [next[index - 1], next[index]] = [
+                                next[index],
+                                next[index - 1],
+                              ];
+                              return { ...f, sections: next };
+                            })
+                          }
+                        >
+                          Up
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost"
+                          disabled={busy || index === form.sections.length - 1}
+                          onClick={() =>
+                            setForm((f) => {
+                              const next = [...f.sections];
+                              [next[index + 1], next[index]] = [
+                                next[index],
+                                next[index + 1],
+                              ];
+                              return { ...f, sections: next };
+                            })
+                          }
+                        >
+                          Down
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost is-danger"
+                          disabled={busy || form.sections.length === 1}
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              sections: f.sections.filter((_, i) => i !== index),
+                            }))
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                    <label className="admin-field-label">
+                      Heading
+                      <input
+                        className="field"
+                        value={section.heading}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sections: f.sections.map((s, i) =>
+                              i === index ? { ...s, heading: e.target.value } : s
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                    <label className="admin-field-label">
+                      Paragraphs
+                      <textarea
+                        className="field"
+                        rows={8}
+                        value={section.paragraphs}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            sections: f.sections.map((s, i) =>
+                              i === index
+                                ? { ...s, paragraphs: e.target.value }
+                                : s
+                            ),
+                          }))
+                        }
+                      />
+                    </label>
+                  </div>
+                ))}
                 <button
                   type="button"
-                  className="btn-ghost"
-                  disabled={busy || form.sections.length === 1}
+                  className="btn-secondary"
+                  disabled={busy}
                   onClick={() =>
                     setForm((f) => ({
                       ...f,
-                      sections: f.sections.filter((_, i) => i !== index),
+                      sections: [...f.sections, { heading: "", paragraphs: "" }],
                     }))
                   }
                 >
-                  Remove section
+                  Add section
                 </button>
               </div>
-            ))}
-            <button
-              type="button"
-              className="btn-secondary"
-              disabled={busy}
-              onClick={() =>
-                setForm((f) => ({
-                  ...f,
-                  sections: [...f.sections, { heading: "", paragraphs: "" }],
-                }))
-              }
-            >
-              Add section
-            </button>
+            </section>
 
-            <div className="admin-filters mt-6">
+            <aside className="admin-editor-side">
+              <div className="admin-box">
+                <h3 className="admin-box-title">Publish</h3>
+                <p className="admin-panel-sub">
+                  {form.published ? "Live on /blog." : "Draft, not on /blog."}
+                </p>
+                <label className="admin-field-label">
+                  Published date
+                  <input
+                    type="date"
+                    className="field"
+                    value={form.publishedAt}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, publishedAt: e.target.value }))
+                    }
+                  />
+                </label>
+                <div className="admin-content-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={busy}
+                    onClick={() => void save(false)}
+                  >
+                    {busy ? "Saving…" : "Save draft"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={() => void save(true)}
+                  >
+                    {form.published ? "Update" : "Publish"}
+                  </button>
+                </div>
+                {form.id ? (
+                  <a
+                    className="admin-media-link"
+                    href={`/blog/${form.slug || slugify(form.title)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    View on site
+                  </a>
+                ) : null}
+                <label className="admin-field-label admin-checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={form.featured}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, featured: e.target.checked }))
+                    }
+                  />
+                  Featured
+                </label>
+              </div>
+
+              <div className="admin-box">
+                <h3 className="admin-box-title">Featured image</h3>
+                <AdminMediaField
+                  label="Cover"
+                  value={form.coverUrl}
+                  onChange={(coverUrl) => setForm((f) => ({ ...f, coverUrl }))}
+                  folder="nura/blog"
+                  disabled={busy}
+                  hint="Shown on cards and at the top of the guide."
+                />
+              </div>
+
+              <div className="admin-box">
+                <h3 className="admin-box-title">Categories</h3>
+                <div className="admin-chip-checks">
+                  {categories.map((category) => (
+                    <label key={category.slug} className="admin-chip-check">
+                      <input
+                        type="checkbox"
+                        checked={form.categories.includes(category.slug)}
+                        disabled={busy}
+                        onChange={(e) =>
+                          setForm((f) => ({
+                            ...f,
+                            categories: e.target.checked
+                              ? [...f.categories, category.slug]
+                              : f.categories.filter((c) => c !== category.slug),
+                          }))
+                        }
+                      />
+                      <span>{category.name}</span>
+                      <span className="admin-chip admin-chip--muted">
+                        {category.postCount}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="admin-box">
+                <h3 className="admin-box-title">SEO and summary</h3>
+                <label className="admin-field-label">
+                  Meta description
+                  <textarea
+                    className="field"
+                    rows={3}
+                    value={form.description}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, description: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Dek
+                  <input
+                    className="field"
+                    value={form.dek}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, dek: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Kicker
+                  <input
+                    className="field"
+                    value={form.kicker}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, kicker: e.target.value }))
+                    }
+                  />
+                </label>
+                <label className="admin-field-label">
+                  Topic
+                  <select
+                    className="field"
+                    value={form.topic}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        topic: e.target.value as ClusterTopic,
+                      }))
+                    }
+                  >
+                    {CLUSTER_TOPICS.map((topic) => (
+                      <option key={topic} value={topic}>
+                        {CLUSTER_TOPIC_LABEL[topic]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="admin-field-label">
+                  EMDR link text
+                  <input
+                    className="field"
+                    value={form.emdrAnchor}
+                    disabled={busy}
+                    placeholder="How a guided session is structured in Nura"
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, emdrAnchor: e.target.value }))
+                    }
+                  />
+                </label>
+              </div>
+
               <button
                 type="button"
-                className="btn-primary"
-                disabled={busy}
-                onClick={() => void save()}
-              >
-                {busy ? "Saving…" : "Save post"}
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
+                className="btn-secondary w-full"
                 disabled={busy}
                 onClick={() => setTab("posts")}
               >
-                Cancel
+                Back to posts
               </button>
-            </div>
-          </section>
+            </aside>
+          </div>
         )}
       </main>
     </div>
