@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminCtaBuilder } from "@/app/components/admin/AdminCtaBuilder";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
+import { AdminMediaPicker } from "@/app/components/admin/AdminMediaPicker";
 import { serializeBlogCta, type BlogCtaData } from "@/lib/blog-cta";
 import {
   CLUSTER_TOPICS,
@@ -92,10 +93,11 @@ export default function AdminBlogEditorPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const sectionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
-  const mediaSectionRef = useRef<number | null>(null);
   const [ctaTarget, setCtaTarget] = useState<number | "end" | null>(null);
+  const [mediaPicker, setMediaPicker] = useState<{
+    kind: "image" | "video";
+    section: number;
+  } | null>(null);
 
   function insertCta(data: BlogCtaData) {
     const block = serializeBlogCta(data);
@@ -139,41 +141,6 @@ export default function AdminBlogEditorPage() {
     });
   }
 
-  /** Screenshot names are all digits; that alt text helps nobody. */
-  function altFromFilename(name: string): string {
-    const base = name
-      .replace(/\.[a-z0-9]+$/i, "")
-      .replace(/[-_]+/g, " ")
-      .trim();
-    return base && !/^[\d\s]+$/.test(base) ? base : "";
-  }
-
-  async function insertMediaFile(file: File, kind: "image" | "video") {
-    const index = mediaSectionRef.current;
-    if (index === null) return;
-    setBusy(true);
-    setMsg("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("folder", "nura/blog");
-      const res = await fetch("/api/admin/cloudinary/upload", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
-      const url = String(data.url ?? "");
-      if (!url) throw new Error("Upload returned no URL.");
-      const alt = altFromFilename(file.name) || kind;
-      insertAtSection(index, `\n\n![${alt}](${url})\n\n`);
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setBusy(false);
-      mediaSectionRef.current = null;
-    }
-  }
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/blog");
@@ -353,28 +320,6 @@ export default function AdminBlogEditorPage() {
                 acronym BLS is rejected. Insert media drops markdown at the
                 cursor. A bare YouTube or Vimeo link becomes an embed.
               </p>
-              <input
-                ref={imageInputRef}
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void insertMediaFile(file, "image");
-                  e.target.value = "";
-                }}
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                hidden
-                accept="video/mp4,video/webm"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void insertMediaFile(file, "video");
-                  e.target.value = "";
-                }}
-              />
               {form.sections.map((section, index) => (
                 <div key={index} className="admin-section-card">
                   <div className="admin-section-card-head">
@@ -386,10 +331,9 @@ export default function AdminBlogEditorPage() {
                         type="button"
                         className="btn-ghost"
                         disabled={busy}
-                        onClick={() => {
-                          mediaSectionRef.current = index;
-                          imageInputRef.current?.click();
-                        }}
+                        onClick={() =>
+                          setMediaPicker({ kind: "image", section: index })
+                        }
                       >
                         Insert image
                       </button>
@@ -397,10 +341,9 @@ export default function AdminBlogEditorPage() {
                         type="button"
                         className="btn-ghost"
                         disabled={busy}
-                        onClick={() => {
-                          mediaSectionRef.current = index;
-                          videoInputRef.current?.click();
-                        }}
+                        onClick={() =>
+                          setMediaPicker({ kind: "video", section: index })
+                        }
                       >
                         Insert video
                       </button>
@@ -702,6 +645,20 @@ export default function AdminBlogEditorPage() {
         open={ctaTarget !== null}
         onClose={() => setCtaTarget(null)}
         onInsert={insertCta}
+      />
+
+      <AdminMediaPicker
+        kind={mediaPicker?.kind ?? "image"}
+        open={mediaPicker !== null}
+        folder="nura/blog"
+        onClose={() => setMediaPicker(null)}
+        onPick={(url) => {
+          if (!mediaPicker) return;
+          insertAtSection(
+            mediaPicker.section,
+            `\n\n![${mediaPicker.kind}](${url})\n\n`
+          );
+        }}
       />
     </div>
   );

@@ -14516,6 +14516,23 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   overflow: auto;
 }
 
+.admin-media-picker-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.admin-media-picker-foot .admin-panel-sub {
+  margin: 0;
+}
+
+.admin-media-picker-foot .btn-ghost {
+  margin-left: auto;
+}
+
 .admin-media-tile {
   display: grid;
   gap: 0.3rem;

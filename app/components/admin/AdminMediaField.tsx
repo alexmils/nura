@@ -137,6 +137,7 @@ export function AdminMediaField({
       <AdminMediaPicker
         kind={kind}
         open={pickerOpen}
+        folder={folder}
         onClose={() => setPickerOpen(false)}
         onPick={onChange}
       />

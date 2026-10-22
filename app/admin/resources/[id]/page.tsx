@@ -70,8 +70,6 @@ export default function AdminResourceEditorPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
   const [pickerKind, setPickerKind] = useState<"image" | "video" | null>(null);
 
   function insertAtCursor(snippet: string) {
@@ -90,35 +88,8 @@ export default function AdminResourceEditorPage() {
     });
   }
 
-  function insertMediaUrl(url: string, kind: "image" | "video", name = "") {
-    const alt = name
-      .replace(/\.[a-z0-9]+$/i, "")
-      .replace(/[-_]+/g, " ")
-      .trim();
-    insertAtCursor(`\n![${alt || kind}](${url})\n`);
-  }
-
-  async function insertMedia(file: File, kind: "image" | "video") {
-    setBusy(true);
-    setMsg("");
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("folder", "nura/resources");
-      const res = await fetch("/api/admin/cloudinary/upload", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
-      const url = String(data.url ?? "");
-      if (!url) throw new Error("Upload returned no URL.");
-      insertMediaUrl(url, kind, file.name);
-    } catch (err) {
-      setMsg(err instanceof Error ? err.message : "Upload failed.");
-    } finally {
-      setBusy(false);
-    }
+  function insertMediaUrl(url: string, kind: "image" | "video") {
+    insertAtCursor(`\n![${kind}](${url})\n`);
   }
 
   const load = useCallback(async () => {
@@ -282,7 +253,7 @@ export default function AdminResourceEditorPage() {
                   type="button"
                   className="btn-secondary"
                   disabled={busy}
-                  onClick={() => imageInputRef.current?.click()}
+                  onClick={() => setPickerKind("image")}
                 >
                   Insert image
                 </button>
@@ -290,41 +261,11 @@ export default function AdminResourceEditorPage() {
                   type="button"
                   className="btn-secondary"
                   disabled={busy}
-                  onClick={() => videoInputRef.current?.click()}
+                  onClick={() => setPickerKind("video")}
                 >
                   Insert video
                 </button>
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  disabled={busy}
-                  onClick={() => setPickerKind("image")}
-                >
-                  Image from Cloudinary
-                </button>
               </div>
-              <input
-                ref={imageInputRef}
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void insertMedia(file, "image");
-                  e.target.value = "";
-                }}
-              />
-              <input
-                ref={videoInputRef}
-                type="file"
-                hidden
-                accept="video/mp4,video/webm"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) void insertMedia(file, "video");
-                  e.target.value = "";
-                }}
-              />
               <textarea
                 ref={bodyRef}
                 className="field admin-body-textarea"
@@ -464,6 +405,7 @@ export default function AdminResourceEditorPage() {
       <AdminMediaPicker
         kind={pickerKind ?? "image"}
         open={pickerKind !== null}
+        folder="nura/resources"
         onClose={() => setPickerKind(null)}
         onPick={(url) => insertMediaUrl(url, pickerKind ?? "image")}
       />
