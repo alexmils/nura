@@ -626,6 +626,22 @@
   margin-bottom: 0.6rem;
 }
 
+/* The bar is cinema's: keep its compact type scale, not the big hero one. */
+.fe-v2 .v2-tpl--billboard .v2-hero-title {
+  font-size: clamp(2.3rem, 4.4vw, 4.2rem);
+  line-height: 1.02;
+}
+.v2-tpl--billboard .v2-hero-sub {
+  margin-top: 0;
+  font-size: 1rem;
+}
+.v2-tpl--billboard .v2-hero-actions {
+  margin-top: 1.4rem;
+}
+.v2-tpl--billboard .v2-hero-trust {
+  margin-top: 1.2rem;
+}
+
 @media (max-width: 900px) {
   .v2-hero .v2-tpl--billboard {
     grid-template-rows: minmax(0, 0.9fr) auto;
