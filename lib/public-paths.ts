@@ -75,6 +75,7 @@ const API_PUBLIC_PREFIXES = [
   "/api/cron/trial-charge-reminders",
   "/api/cron/trial-feedback",
   "/api/cron/post-trial-checkin",
+  "/api/og-library",
   "/api/review",
   "/api/newsletter/subscribe",
   "/api/webhooks/brevo",

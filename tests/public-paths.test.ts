@@ -89,8 +89,11 @@ describe("isAuthPublicPath / isUnauthenticatedPublicPath", () => {
     );
   });
 
-  it("allows the public OG image route", () => {
+  it("allows the public OG image routes", () => {
     assert.equal(isUnauthenticatedPublicPath("/og-image"), true);
+    assert.equal(isUnauthenticatedPublicPath("/api/og-library/abc-123"), true);
+    // Uploading and deleting stay behind the admin session.
+    assert.equal(isUnauthenticatedPublicPath("/api/admin/og-library"), false);
   });
 
   it("allows GET /health for Coolify and Docker probes", () => {

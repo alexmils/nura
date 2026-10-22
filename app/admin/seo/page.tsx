@@ -26,7 +26,7 @@ import type {
   SiteAnalyticsRange,
 } from "@/lib/site-analytics-types";
 import type { SeoPageId } from "@/lib/seo-config";
-import { fileToOgImageDataUrl } from "@/lib/avatar-client";
+import { OgImageLibrary } from "@/app/components/admin/OgImageLibrary";
 import { parseAnalyticsIgnoreIps } from "@/lib/analytics-ignore";
 
 function ignoreIpRowsFromRaw(raw: string): string[] {
@@ -1043,11 +1043,7 @@ function SeoOgImageField({
   previewUrl,
   disabled,
   busy,
-  clearLabel = "Use default",
   onChange,
-  onClear,
-  onBusy,
-  onError,
 }: {
   label: string;
   hint: string;
@@ -1055,12 +1051,10 @@ function SeoOgImageField({
   previewUrl: string;
   disabled: boolean;
   busy: boolean;
-  clearLabel?: string;
   onChange: (next: string) => void;
-  onClear: () => void;
-  onBusy: (busy: boolean) => void;
-  onError: (message: string) => void;
 }) {
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
   return (
     <div className="admin-seo-og-field">
       <p className="admin-field-label" style={{ marginBottom: 0 }}>
@@ -1073,41 +1067,13 @@ function SeoOgImageField({
           <img src={previewUrl} alt="" />
         </div>
         <div className="admin-seo-og-actions">
-          <label className="admin-btn-edit admin-seo-upload-label">
-            {busy ? "Uploading…" : "Upload image"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              disabled={disabled || busy}
-              className="sr-only"
-              onChange={(e) => {
-                const file = e.target.files?.[0] ?? null;
-                e.target.value = "";
-                if (!file) return;
-                void (async () => {
-                  onBusy(true);
-                  onError("");
-                  try {
-                    const url = await fileToOgImageDataUrl(file);
-                    onChange(url);
-                  } catch (err) {
-                    onError(
-                      err instanceof Error ? err.message : "Image upload failed"
-                    );
-                  } finally {
-                    onBusy(false);
-                  }
-                })();
-              }}
-            />
-          </label>
           <button
             type="button"
             className="admin-btn-edit"
-            disabled={disabled || busy || !value}
-            onClick={onClear}
+            disabled={disabled}
+            onClick={() => setLibraryOpen(true)}
           >
-            {clearLabel}
+            Choose image
           </button>
         </div>
       </div>
@@ -1125,6 +1091,13 @@ function SeoOgImageField({
           onChange={(e) => onChange(e.target.value)}
         />
       </label>
+      {libraryOpen ? (
+        <OgImageLibrary
+          current={value}
+          onClose={() => setLibraryOpen(false)}
+          onPick={onChange}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1375,7 +1348,6 @@ function AdminSeoPageInner() {
     ogImageUrl: "",
   });
   const [draftDefaultOg, setDraftDefaultOg] = useState("");
-  const [ogBusy, setOgBusy] = useState(false);
   const [pageQuery, setPageQuery] = useState("");
 
   const [connDraft, setConnDraft] = useState<ConnFormState>(emptyConnDraft);
@@ -1529,26 +1501,22 @@ function AdminSeoPageInner() {
               </div>
               <SeoOgImageField
                 label="Default share image"
-                hint="Upload an image, paste a URL, or keep the lockup."
+                hint="Upload or pick from the library, paste a URL, or keep the lockup."
                 value={draftDefaultOg}
                 previewUrl={displayOgImageUrl(
                   draftDefaultOg,
                   "/brand/lockup.png"
                 )}
                 disabled={!canEdit}
-                busy={busy || ogBusy}
-                clearLabel="Use lockup"
+                busy={busy}
                 onChange={(next) => setDraftDefaultOg(next)}
-                onClear={() => setDraftDefaultOg("")}
-                onBusy={setOgBusy}
-                onError={setMsg}
               />
               {canEdit ? (
                 <div className="admin-form-actions">
                   <button
                     type="submit"
                     className="admin-btn-edit"
-                    disabled={busy || ogBusy}
+                    disabled={busy}
                   >
                     {busy ? "Saving…" : "Save default image"}
                   </button>
@@ -1764,22 +1732,17 @@ function AdminSeoPageInner() {
 
                   <SeoOgImageField
                     label="Share image for this page"
-                    hint="Leave empty to use the site-wide default image from Overview."
+                    hint="Pick from the library or upload. Leave empty to use the site-wide default from Overview."
                     value={draftPage.ogImageUrl}
                     previewUrl={displayOgImageUrl(
                       draftPage.ogImageUrl || draftDefaultOg,
                       "/brand/lockup.png"
                     )}
                     disabled={!canEdit}
-                    busy={busy || ogBusy}
+                    busy={busy}
                     onChange={(next) =>
                       setDraftPage((d) => ({ ...d, ogImageUrl: next }))
                     }
-                    onClear={() =>
-                      setDraftPage((d) => ({ ...d, ogImageUrl: "" }))
-                    }
-                    onBusy={setOgBusy}
-                    onError={setMsg}
                   />
 
                   {canEdit ? (
@@ -1787,7 +1750,7 @@ function AdminSeoPageInner() {
                       <button
                         type="submit"
                         className="admin-btn-edit"
-                        disabled={busy || ogBusy}
+                        disabled={busy}
                       >
                         {busy ? "Saving…" : "Save page"}
                       </button>

@@ -14076,6 +14076,335 @@ a.help-drawer-signin.btn-primary {
   cursor: not-allowed;
 }
 
+/* —— OG image library —— */
+
+.og-library-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 12, 0.55);
+  backdrop-filter: blur(4px);
+}
+
+.og-library {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  width: min(68rem, 100%);
+  max-height: min(88vh, 54rem);
+  padding: 1.15rem 1.25rem 1.25rem;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+}
+
+.og-library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.og-library-head .admin-panel-sub {
+  margin: 0.25rem 0 0;
+}
+
+.og-library-close {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.og-library-close:hover {
+  background: var(--bg-muted);
+  color: var(--text);
+}
+
+.og-library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.og-library-search {
+  flex: 1 1 14rem;
+  min-width: 10rem;
+}
+
+.og-library-error {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.78rem;
+  color: #a12727;
+  background: rgba(180, 40, 40, 0.1);
+  border-radius: 0.45rem;
+}
+
+.og-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.85rem;
+  min-height: 0;
+  padding: 0.15rem 0.15rem 0.4rem;
+  overflow-y: auto;
+}
+
+.og-library-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  text-align: left;
+  color: var(--text);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.og-library-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.og-library-card.is-current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.og-library-upload-card {
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 9rem;
+  color: var(--text-secondary);
+  text-align: center;
+  background: transparent;
+  border-style: dashed;
+}
+
+.og-library-upload-card:hover {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.og-library-upload-card:disabled {
+  opacity: 0.6;
+  cursor: wait;
+  transform: none;
+}
+
+.og-library-upload-icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  background: var(--bg-muted);
+  border-radius: 999px;
+}
+
+.og-library-upload-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.og-library-upload-hint {
+  font-size: 0.68rem;
+}
+
+.og-library-thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 1200 / 630;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0.4rem;
+}
+
+.og-library-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.og-library-check {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  display: grid;
+  place-items: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.og-library-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.og-library-name {
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.og-library-date {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+.og-library-badge {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  text-transform: uppercase;
+  background: rgba(15, 23, 12, 0.72);
+  border-radius: 999px;
+}
+
+.og-library-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 14, 8, 0.55);
+  backdrop-filter: blur(3px);
+  border-radius: inherit;
+}
+
+.og-library-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: min(42rem, 100%);
+  max-height: 100%;
+  padding: 1.1rem;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+}
+
+.og-library-preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.og-library-preview-head h3 {
+  margin: 0.1rem 0 0;
+  font-size: 1rem;
+}
+
+.og-library-preview-img {
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.og-library-preview-img img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.og-library-used {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.og-library-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.og-library-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #9b2323;
+  background: rgba(170, 40, 40, 0.08);
+  border: 1px solid rgba(170, 40, 40, 0.35);
+  border-radius: 0.45rem;
+  cursor: pointer;
+}
+
+.og-library-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.og-library-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 640px) {
+  .og-library-overlay {
+    padding: 0;
+  }
+
+  .og-library {
+    width: 100%;
+    max-height: 100dvh;
+    height: 100dvh;
+    border-radius: 0;
+  }
+
+  .og-library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  }
+}
+
 .admin-brand-favicon-preview {
   width: 3rem;
   height: 3rem;
