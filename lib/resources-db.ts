@@ -87,7 +87,7 @@ async function syncFeaturedSeedSummaries(
 ): Promise<void> {
   const legacyBySlug: Record<string, string[]> = {
     "what-is-emdr": [
-      "A short overview of the moving ball and how Guided sessions are structured in Nura.",
+      "A short overview of the moving ball and how AI agent-guided sessions are structured in Nura.",
     ],
     "grounding-before-a-set": [
       "Simple ways to settle your nervous system before starting a set with the moving ball.",

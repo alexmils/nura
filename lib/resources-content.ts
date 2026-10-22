@@ -49,7 +49,7 @@ In an **AI agent-guided** session, the guide will not start a set until after in
 - Physical symptoms that worry you (chest pain, trouble breathing)
 - Thoughts of harming yourself or others
 
-**What to do:** stop the set, orient to the room, use grounding, and consider ending the session. Guided mode will invite a check-in — answer honestly.
+**What to do:** stop the set, orient to the room, use grounding, and consider ending the session. AI agent-guided mode will invite a check-in, answer honestly.
 
 Nura is not an emergency service. If you might hurt yourself or someone else, contact **988** (US) or your local crisis line immediately.`,
   },

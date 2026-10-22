@@ -278,7 +278,7 @@ function BillingPageInner() {
                 {status.isTrialLimited && (
                   <>
                     <div className="settings-row settings-kv">
-                      <span>Guided sessions</span>
+                      <span>AI agent-guided sessions</span>
                       <strong>
                         {status.guidedUsed} / {status.guidedLimit}
                       </strong>
