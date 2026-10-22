@@ -456,7 +456,12 @@ export function pinnedHandoff(
         tl.fromTo(blogCopy, { opacity: 1 }, { opacity: 0, duration: 0.55, ease: "none" }, 0.1);
       }
       if (pinned) {
-        type Rect = { l: number; t: number; w: number; h: number; r: number; img: string };
+        /** Card rect drives the CTA clip; the image rect drives the ghost so
+         *  the card's meta/title stay visible and fade on their own. */
+        type Rect = {
+          l: number; t: number; w: number; h: number; r: number; img: string;
+          gl: number; gt: number; gw: number; gh: number;
+        };
         const state = { p: 0 };
         const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
         const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
@@ -487,8 +492,14 @@ export function pinnedHandoff(
             const d = Math.hypot(r.left + r.width / 2 - w / 2, r.top + r.height / 2 - h / 2);
             if (!best || d < best.d) best = { el, r, d };
           }
-          if (!best) return { l: w * 0.38, t: h * 0.3, w: w * 0.24, h: h * 0.4, r: 20, img: "" };
+          if (!best) {
+            return {
+              l: w * 0.38, t: h * 0.3, w: w * 0.24, h: h * 0.4, r: 20, img: "",
+              gl: w * 0.38, gt: h * 0.3, gw: w * 0.24, gh: h * 0.4,
+            };
+          }
           const img = best.el.querySelector("img");
+          const ir = img?.getBoundingClientRect();
           return {
             l: best.r.left,
             t: best.r.top,
@@ -496,6 +507,12 @@ export function pinnedHandoff(
             h: best.r.height,
             r: parseFloat(getComputedStyle(best.el).borderTopLeftRadius) || 18,
             img: img?.currentSrc || img?.src || "",
+            // The picture starts the lens; the text below it stays untouched
+            // until its own opacity fade catches up with the scroll.
+            gl: ir?.left ?? best.r.left,
+            gt: ir?.top ?? best.r.top,
+            gw: ir?.width ?? best.r.width,
+            gh: ir?.height ?? best.r.height,
           };
         };
         const paint = () => {
@@ -519,18 +536,22 @@ export function pinnedHandoff(
           }
           conceal(false);
           const e = inOut(clamp01(p / 0.86));
-          const L = lerp(src.l, 0, e);
-          const T = lerp(src.t, 0, e);
-          const W = lerp(src.w, w, e);
-          const Hh = lerp(src.h, h, e);
+          // Start the lens on the card picture: anything below it (meta,
+          // title) stays uncovered and fades with its own opacity tween.
+          const L = lerp(src.gl, 0, e);
+          const T = lerp(src.gt, 0, e);
+          const W = lerp(src.gw, w, e);
+          const Hh = lerp(src.gh, h, e);
           const R = lerp(src.r, 0, e);
           next.style.clipPath = `inset(${T}px ${Math.max(0, w - L - W)}px ${Math.max(0, H - T - Hh)}px ${L}px round ${R}px)`;
           const fade = 1 - clamp01((p - 0.12) / 0.4);
           ghost.style.visibility = src.img && fade > 0 && p > 0.001 ? "visible" : "hidden";
           ghost.style.opacity = String(fade);
-          ghost.style.transform = `translate(${L}px, ${T}px)`;
-          ghost.style.width = `${W}px`;
-          ghost.style.height = `${Hh}px`;
+          // Grow the picture from its own box inside the card, not from the
+          // whole card: the meta/title must not be painted over at once.
+          ghost.style.transform = `translate(${lerp(src.gl, 0, e)}px, ${lerp(src.gt, 0, e)}px)`;
+          ghost.style.width = `${lerp(src.gw, w, e)}px`;
+          ghost.style.height = `${lerp(src.gh, h, e)}px`;
           if (src.img && shown !== src.img) {
             shown = src.img;
             ghost.style.backgroundImage = `url("${src.img.replace(/"/g, "%22")}")`;
