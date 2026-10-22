@@ -1,9 +1,13 @@
 export type AdminNavChild = {
   href: string;
   label: string;
-  /** Query tab id; used for active matching. Empty = default/no tab. */
+  /** Query tab id; used for active matching. Empty = the whole page. */
   tab?: string;
+  /** Match this exact path (needed for /admin, which prefixes every page). */
+  exact?: boolean;
   adminOnly?: boolean;
+  /** Present in search, hidden from the sidebar submenu. */
+  searchOnly?: boolean;
 };
 
 export type AdminNavIcon =
@@ -36,6 +40,8 @@ export type AdminNavItem = {
   exact?: boolean;
   adminOnly?: boolean;
   badge?: "help" | "feedback";
+  /** A grouped parent can carry both inbox counts. */
+  badges?: Array<"help" | "feedback">;
   children?: AdminNavChild[];
 };
 
@@ -46,179 +52,181 @@ export type AdminNavSection = {
   items: AdminNavItem[];
 };
 
-/** Sectioned admin sidebar — children map to `?tab=` on the parent page. */
+/**
+ * A short, grouped sidebar: six top-level destinations instead of one row per
+ * page. A group opens on its own page or on any child page, and the page tabs
+ * remain in the search index (`searchOnly`) without lengthening the menu.
+ */
 export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
   {
     id: "dashboard",
     label: "Dashboard",
     items: [
-      { href: "/admin", label: "Overview", icon: "overview", exact: true },
-      { href: "/admin/marketing", label: "Marketing", icon: "marketing", children: [
-          { href: "/admin/marketing", label: "Meta", tab: "meta" },
-          { href: "/admin/marketing?tab=google", label: "Google Ads", tab: "google" },
-        ],
-      },
-      { href: "/admin/tasks", label: "Tasks", icon: "tasks" },
-      { href: "/admin/analytics",
-        label: "Analytics",
-        icon: "analytics",
+      {
+        href: "/admin",
+        label: "Workspace",
+        icon: "overview",
+        exact: true,
         children: [
-          {
-            href: "/admin/analytics",
-            label: "Overview",
-            tab: "overview",
-          },
-          {
-            href: "/admin/analytics?tab=audience",
-            label: "Audience",
-            tab: "audience",
-          },
-          {
-            href: "/admin/analytics?tab=acquisition",
-            label: "Acquisition",
-            tab: "acquisition",
-          },
-          {
-            href: "/admin/analytics?tab=engagement",
-            label: "Engagement",
-            tab: "engagement",
-          },
-          {
-            href: "/admin/analytics?tab=conversions",
-            label: "Conversions",
-            tab: "conversions",
-          },
+          { href: "/admin", label: "Overview", exact: true },
+          { href: "/admin/tasks", label: "Tasks" },
+          { href: "/admin/focus", label: "Focus" },
+          { href: "/admin/places", label: "Places" },
+          { href: "/admin/activity", label: "Activity" },
         ],
       },
-      { href: "/admin/focus", label: "Focus", icon: "focus" },
-      { href: "/admin/places", label: "Places", icon: "places" },
-    ],
-  },
-  {
-    id: "people",
-    label: "People",
-    items: [
       {
         href: "/admin/users",
-        label: "Users",
+        label: "People",
         icon: "users",
+        badges: ["help", "feedback"],
         children: [
-          { href: "/admin/users?tab=directory", label: "Directory", tab: "directory" },
+          { href: "/admin/users", label: "Users" },
+          { href: "/admin/help", label: "Help chat" },
+          { href: "/admin/feedback", label: "Feedback & reviews" },
+          {
+            href: "/admin/users?tab=directory",
+            label: "Directory",
+            tab: "directory",
+            searchOnly: true,
+          },
           {
             href: "/admin/users?tab=invite",
             label: "Invite",
             tab: "invite",
             adminOnly: true,
+            searchOnly: true,
           },
-        ],
-      },
-      {
-        href: "/admin/help",
-        label: "Help chat",
-        icon: "help",
-        badge: "help",
-        children: [
-          { href: "/admin/help?tab=inbox", label: "Inbox", tab: "inbox" },
+          {
+            href: "/admin/help?tab=inbox",
+            label: "Inbox",
+            tab: "inbox",
+            searchOnly: true,
+          },
           {
             href: "/admin/help?tab=knowledge",
             label: "Knowledge",
             tab: "knowledge",
+            searchOnly: true,
           },
           {
             href: "/admin/help?tab=settings",
             label: "Settings",
             tab: "settings",
+            searchOnly: true,
           },
         ],
       },
       {
-        href: "/admin/feedback",
-        label: "Feedback & reviews",
-        icon: "feedback",
-        badge: "feedback",
-      },
-    ],
-  },
-  {
-    id: "content",
-    label: "Content",
-    items: [
-      {
         href: "/admin/blog",
-        label: "Blog",
+        label: "Content",
         icon: "blog",
-      },
-      {
-        href: "/admin/resources",
-        label: "Resources",
-        icon: "resources",
-      },
-      {
-        href: "/admin/media",
-        label: "Media",
-        icon: "media",
-        adminOnly: true,
         children: [
-          { href: "/admin/media", label: "Library", tab: "library" },
+          { href: "/admin/blog", label: "Blog" },
+          { href: "/admin/resources", label: "Resources" },
+          { href: "/admin/media", label: "Media", adminOnly: true },
+          { href: "/admin/mcp", label: "MCP", adminOnly: true },
+          {
+            href: "/admin/media?tab=library",
+            label: "Library",
+            tab: "library",
+            adminOnly: true,
+            searchOnly: true,
+          },
           {
             href: "/admin/media?tab=settings",
             label: "Settings",
             tab: "settings",
+            adminOnly: true,
+            searchOnly: true,
           },
         ],
       },
       {
-        href: "/admin/seo",
-        label: "SEO",
-        icon: "seo",
+        href: "/admin/marketing",
+        label: "Marketing",
+        icon: "marketing",
         children: [
-          { href: "/admin/seo", label: "Overview", tab: "overview" },
-          { href: "/admin/seo?tab=pages", label: "Pages", tab: "pages" },
+          { href: "/admin/marketing", label: "Marketing" },
+          { href: "/admin/analytics", label: "Analytics" },
+          { href: "/admin/seo", label: "SEO" },
+          {
+            href: "/admin/marketing",
+            label: "Meta",
+            tab: "meta",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/marketing?tab=google",
+            label: "Google Ads",
+            tab: "google",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/analytics",
+            label: "Overview",
+            tab: "overview",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/analytics?tab=audience",
+            label: "Audience",
+            tab: "audience",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/analytics?tab=acquisition",
+            label: "Acquisition",
+            tab: "acquisition",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/analytics?tab=engagement",
+            label: "Engagement",
+            tab: "engagement",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/analytics?tab=conversions",
+            label: "Conversions",
+            tab: "conversions",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/seo",
+            label: "Overview",
+            tab: "overview",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/seo?tab=pages",
+            label: "Pages",
+            tab: "pages",
+            searchOnly: true,
+          },
           {
             href: "/admin/seo?tab=analytics",
             label: "Analytics",
             tab: "analytics",
+            searchOnly: true,
           },
           {
             href: "/admin/seo?tab=connections",
             label: "Connections",
             tab: "connections",
+            searchOnly: true,
           },
           {
             href: "/admin/seo?tab=indexing",
             label: "Indexing",
             tab: "indexing",
+            searchOnly: true,
           },
-          { href: "/admin/seo?tab=cookies", label: "Cookies", tab: "cookies" },
-        ],
-      },
-      {
-        href: "/admin/mcp",
-        label: "MCP",
-        icon: "mcp",
-        adminOnly: true,
-      },
-    ],
-  },
-  {
-    id: "revenue",
-    label: "Billing",
-    items: [
-      {
-        href: "/admin/finance",
-        label: "Finances",
-        icon: "finance",
-        children: [
           {
-            href: "/admin/finance",
-            label: "Dashboard",
-            tab: "dashboard",
-          },
-          { href: "/admin/finance?tab=plans", label: "Plans", tab: "plans" },
-          {
-            href: "/admin/finance?tab=payments",
-            label: "Payments",
-            tab: "payments",
+            href: "/admin/seo?tab=cookies",
+            label: "Cookies",
+            tab: "cookies",
+            searchOnly: true,
           },
         ],
       },
@@ -227,21 +235,52 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
         label: "Billing",
         icon: "billing",
         children: [
+          { href: "/admin/billing", label: "Billing" },
+          { href: "/admin/finance", label: "Finances" },
           {
             href: "/admin/billing?tab=overview",
             label: "Overview",
             tab: "overview",
+            searchOnly: true,
           },
-          { href: "/admin/billing?tab=stripe", label: "Stripe", tab: "stripe" },
+          {
+            href: "/admin/billing?tab=stripe",
+            label: "Stripe",
+            tab: "stripe",
+            searchOnly: true,
+          },
           {
             href: "/admin/billing?tab=subscriptions",
             label: "Subscriptions",
             tab: "subscriptions",
+            searchOnly: true,
           },
-          { href: "/admin/billing?tab=usage", label: "Usage", tab: "usage" },
+          {
+            href: "/admin/billing?tab=usage",
+            label: "Usage",
+            tab: "usage",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/finance",
+            label: "Dashboard",
+            tab: "dashboard",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/finance?tab=plans",
+            label: "Plans",
+            tab: "plans",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/finance?tab=payments",
+            label: "Payments",
+            tab: "payments",
+            searchOnly: true,
+          },
         ],
       },
-      { href: "/admin/activity", label: "Activity", icon: "activity" },
     ],
   },
   {
@@ -250,98 +289,129 @@ export const ADMIN_NAV_SECTIONS: AdminNavSection[] = [
     adminOnly: true,
     items: [
       {
-        href: "/admin/email",
-        label: "Email",
-        icon: "email",
-        adminOnly: true,
-        children: [
-          {
-            href: "/admin/email?tab=delivery",
-            label: "Delivery",
-            tab: "delivery",
-          },
-          { href: "/admin/email?tab=send", label: "Send", tab: "send" },
-          {
-            href: "/admin/email?tab=templates",
-            label: "Templates",
-            tab: "templates",
-          },
-          {
-            href: "/admin/email?tab=admin",
-            label: "Admin",
-            tab: "admin",
-          },
-          { href: "/admin/email?tab=log", label: "Log", tab: "log" },
-        ],
-      },
-      {
-        href: "/admin/ai",
-        label: "AI & Voice",
-        icon: "ai",
-        adminOnly: true,
-        children: [
-          { href: "/admin/ai?tab=ai", label: "AI", tab: "ai" },
-          { href: "/admin/ai?tab=voice", label: "Voice", tab: "voice" },
-        ],
-      },
-      {
-        href: "/admin/security",
-        label: "Sign-in",
-        icon: "security",
-        adminOnly: true,
-        children: [
-          { href: "/admin/security", label: "Settings", tab: "settings" },
-          {
-            href: "/admin/security?tab=limits",
-            label: "Limits",
-            tab: "limits",
-          },
-          {
-            href: "/admin/security?tab=addresses",
-            label: "Addresses",
-            tab: "addresses",
-          },
-          {
-            href: "/admin/security?tab=attempts",
-            label: "Attempts",
-            tab: "attempts",
-          },
-          { href: "/admin/security?tab=locks", label: "Locks", tab: "locks" },
-        ],
-      },
-      {
         href: "/admin/platform",
-        label: "Platform",
+        label: "System",
         icon: "platform",
         adminOnly: true,
         children: [
+          { href: "/admin/platform", label: "Platform" },
+          { href: "/admin/email", label: "Email" },
+          { href: "/admin/ai", label: "AI & Voice" },
+          { href: "/admin/security", label: "Sign-in" },
           {
             href: "/admin/platform?tab=brand",
             label: "Brand",
             tab: "brand",
+            searchOnly: true,
           },
           {
             href: "/admin/platform?tab=guided-chat",
             label: "Guided chat",
             tab: "guided-chat",
+            searchOnly: true,
           },
           {
             href: "/admin/platform?tab=free-session",
             label: "Self-guided",
             tab: "free-session",
+            searchOnly: true,
           },
           {
             href: "/admin/platform?tab=access",
             label: "Access",
             tab: "access",
+            searchOnly: true,
           },
           {
             href: "/admin/platform?tab=features",
             label: "Features",
             tab: "features",
+            searchOnly: true,
           },
-          { href: "/admin/platform?tab=ads", label: "Ads", tab: "ads" },
-          { href: "/admin/platform?tab=agent", label: "Agent", tab: "agent" },
+          {
+            href: "/admin/platform?tab=ads",
+            label: "Ads",
+            tab: "ads",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/platform?tab=agent",
+            label: "Agent",
+            tab: "agent",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/email?tab=delivery",
+            label: "Delivery",
+            tab: "delivery",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/email?tab=send",
+            label: "Send",
+            tab: "send",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/email?tab=templates",
+            label: "Templates",
+            tab: "templates",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/email?tab=admin",
+            label: "Admin",
+            tab: "admin",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/email?tab=log",
+            label: "Log",
+            tab: "log",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/ai?tab=ai",
+            label: "AI",
+            tab: "ai",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/ai?tab=voice",
+            label: "Voice",
+            tab: "voice",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/security",
+            label: "Settings",
+            tab: "settings",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/security?tab=limits",
+            label: "Limits",
+            tab: "limits",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/security?tab=addresses",
+            label: "Addresses",
+            tab: "addresses",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/security?tab=attempts",
+            label: "Attempts",
+            tab: "attempts",
+            searchOnly: true,
+          },
+          {
+            href: "/admin/security?tab=locks",
+            label: "Locks",
+            tab: "locks",
+            searchOnly: true,
+          },
         ],
       },
     ],
@@ -365,10 +435,17 @@ export function adminChildIsActive(
   child: AdminNavChild,
   defaultTab: string
 ): boolean {
-  if (!adminPathMatches(pathname, parentHref)) return false;
-  const currentTab = new URLSearchParams(search).get("tab") ?? defaultTab;
-  const childTab = child.tab ?? defaultTab;
-  return currentTab === childTab;
+  const childPath = new URL(child.href, "http://nura.local").pathname;
+  if (!adminPathMatches(pathname, childPath, child.exact)) return false;
+  // A page-level child (Email, Users, …) stays active on any of its tabs.
+  if (!child.tab) return true;
+
+  const fallbackTab =
+    childPath === parentHref
+      ? defaultTab
+      : ADMIN_DEFAULT_TAB_BY_PATH[childPath] ?? "";
+  const currentTab = new URLSearchParams(search).get("tab") ?? fallbackTab;
+  return currentTab === child.tab;
 }
 
 /** Default `?tab=` when a page omits the query — keep in sync with page tabs. */
@@ -443,7 +520,13 @@ export function buildAdminSearchIndex(
         pageKeywords.push("search console", "seo performance");
       }
       if (item.href === "/admin/marketing") {
-        pageKeywords.push("meta ads", "google ads", "facebook", "campaigns", "ad groups");
+        pageKeywords.push(
+          "meta ads",
+          "google ads",
+          "facebook",
+          "campaigns",
+          "ad groups"
+        );
       }
       entries.push({
         id: `page:${item.href}`,
@@ -456,14 +539,20 @@ export function buildAdminSearchIndex(
       });
 
       for (const child of children) {
+        const childKeywords = child.tab
+          ? [child.tab]
+          : child.href.split("/").filter(Boolean);
+        if (child.href === "/admin/tasks") {
+          childKeywords.push("todo", "todos", "ideas", "board", "scratchpad");
+        }
         entries.push({
-          id: `tab:${child.href}`,
+          id: `${child.tab ? "tab" : "page"}:${item.href}:${child.href}`,
           href: child.href,
           title: child.label,
           group: `${section.label} · ${item.label}`,
-          kind: "tab",
+          kind: child.tab ? "tab" : "page",
           adminOnly: child.adminOnly,
-          keywords: child.tab ? [child.tab] : undefined,
+          keywords: childKeywords,
         });
       }
     }

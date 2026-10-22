@@ -94,7 +94,9 @@ function filterChildren(
   isPlatformAdmin: boolean
 ): AdminNavChild[] {
   if (!children) return [];
-  return children.filter((c) => !c.adminOnly || isPlatformAdmin);
+  return children.filter(
+    (c) => !c.searchOnly && (!c.adminOnly || isPlatformAdmin)
+  );
 }
 
 function NavItemLink({
@@ -115,9 +117,14 @@ function NavItemLink({
   const children = filterChildren(item.children, isPlatformAdmin);
   const parentActive = adminPathMatches(pathname, item.href, item.exact);
   const defaultTab = ADMIN_DEFAULT_TAB_BY_PATH[item.href] ?? "";
-  const showChildren = children.length > 0 && parentActive;
+  const childActive = children.some((child) =>
+    adminChildIsActive(pathname, search, item.href, child, defaultTab)
+  );
+  const showChildren = children.length > 0 && (parentActive || childActive);
+  const groupActive = parentActive || childActive;
   const Icon = NAV_ICONS[item.icon];
   const leafActive = parentActive && children.length === 0;
+  const badges = item.badges ?? (item.badge ? [item.badge] : []);
 
   return (
     <div className="admin-nav-group">
@@ -125,17 +132,25 @@ function NavItemLink({
         href={item.href}
         className={`admin-nav-item ${
           leafActive ? "admin-nav-item-active" : ""
-        } ${parentActive && children.length > 0 ? "admin-nav-item-open" : ""}`}
+        } ${groupActive && children.length > 0 ? "admin-nav-item-open" : ""}`}
       >
         <span className="admin-nav-item-main">
           <Icon size={20} strokeWidth={1.75} className="admin-nav-icon" />
           <span className="admin-nav-label">{item.label}</span>
-          {item.badge === "help" && helpUnread > 0 && (
-            <span className="admin-nav-badge">{helpUnread}</span>
-          )}
-          {item.badge === "feedback" && feedbackUnread > 0 && (
-            <span className="admin-nav-badge">{feedbackUnread}</span>
-          )}
+          {badges.map((kind) => {
+            const count = kind === "help" ? helpUnread : feedbackUnread;
+            if (count <= 0) return null;
+            return (
+              <span
+                className={`admin-nav-badge${
+                  kind === "feedback" ? " admin-nav-badge-feedback" : ""
+                }`}
+                key={kind}
+              >
+                {count}
+              </span>
+            );
+          })}
         </span>
         {children.length > 0 && (
           <ChevronDown
