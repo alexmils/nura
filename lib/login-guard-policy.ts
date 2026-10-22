@@ -48,7 +48,17 @@ export const RESERVED_GUARD_SLUGS = new Set([
 ]);
 
 /** 6–64 chars, starts with a letter, letters/numbers/hyphens only. */
-const SLUG_RE = /^[A-Za-z][A-Za-z0-9-]{5,63}$/;
+/**
+ * Production needs 6 characters so the private path is not guessable. `next
+ * dev` allows 3 so a local address is quick to type. Reserved root paths stay
+ * blocked either way: they already belong to a real page.
+ */
+export const GUARD_SLUG_MIN_LENGTH =
+  process.env.NODE_ENV === "development" ? 3 : 6;
+
+const SLUG_RE = new RegExp(
+  `^[A-Za-z][A-Za-z0-9-]{${GUARD_SLUG_MIN_LENGTH - 1},63}$`
+);
 
 /** Failures that spend the attempt budget: the credentials were not proven. */
 export const LOCKOUT_OUTCOMES = [
@@ -119,7 +129,7 @@ export function slugError(value: string): string | null {
   if (SLUG_RE.test(slug)) {
     return "That address is already used by the site. Pick another.";
   }
-  return "Use 6 to 64 letters, numbers, or hyphens, and start with a letter.";
+  return `Use ${GUARD_SLUG_MIN_LENGTH} to 64 letters, numbers, or hyphens, and start with a letter.`;
 }
 
 export function normalizeGuardIp(ip: string | null | undefined): string {
