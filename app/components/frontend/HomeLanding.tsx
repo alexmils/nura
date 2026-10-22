@@ -5,36 +5,46 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
+  Calendar,
   Check,
   ChevronLeft,
   ChevronRight,
   HeartHandshake,
   Play,
+  Sparkles,
   Star,
 } from "lucide-react";
 import { appPath } from "@/lib/app-base";
 import {
-  BRAND_SPOKEN,
-  SESSION_MODE_GUIDED_SHORT,
-  SESSION_MODE_SELF_SHORT,
-} from "@/lib/brand";
-import {
   BILLING_PLANS,
-  TRIAL_DAYS,
+  type BillingPlanId,
 } from "@/lib/billing-constants";
 import {
   formatBlogDate,
   type LandingBlogPost,
 } from "@/lib/landing-blog";
-import { LANDING_FAQ_ITEMS } from "@/lib/landing-faq";
 import { scheduleScrollToLandingHash } from "@/lib/landing-scroll";
-import { MARKETING_PRICING_CARDS } from "./marketingPricingCards";
+import {
+  linesOf,
+  sectionList,
+  sectionText,
+  type SectionConfig,
+  type SectionItem,
+} from "@/lib/marketing-sections";
+import { AccentText } from "./AccentText";
 import { LetterRevealHeading } from "./LetterRevealHeading";
+import { PageSections } from "./section-editor/PageSections";
+import { SectionEdit } from "./section-editor/SectionEdit";
+import { EditablePart } from "./section-editor/EditablePart";
+import { useSectionConfig } from "./section-editor/MarketingCopy";
 import { SessionPathSticky } from "./SessionPathSticky";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { HomePauseCta } from "./HomePauseCta";
 import { HomeMemorySets } from "./HomeMemorySets";
 import { SessionModesPair } from "./SessionModesPair";
+import { SectionMedia } from "./SectionMedia";
+import { SectionRise } from "@/app/components/motion/SectionRise";
+import { SectionWipe } from "@/app/components/motion/SectionWipe";
 import { useLandingMotion } from "./useLandingMotion";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
@@ -76,50 +86,36 @@ function DecorativeImg({
   );
 }
 
-const TESTIMONIALS = [
-  {
-    quote:
-      "The interface feels calm enough to actually stay with a difficult memory. Self-guided sessions let me practice without an agent.",
-    name: "Maya L.",
-    role: "Trial member",
-    image: IMG.avatarMaya,
-  },
-  {
-    quote:
-      "The session agent walks me through phases instead of dumping me into a blank screen.",
-    name: "James R.",
-    role: "Monthly plan",
-    image: IMG.avatarJames,
-  },
-  {
-    quote:
-      "Resources are short and clear — finally something that explains EMDR without overwhelming me.",
-    name: "Sophie T.",
-    role: "Resources reader",
-    image: IMG.avatarSophie,
-  },
-  {
-    quote:
-      "I use it between sessions. The steps feel structured but never rushed.",
-    name: "Daniel K.",
-    role: "Yearly plan",
-    image: IMG.avatarDaniel,
-  },
-  {
-    quote:
-      "I open Self-guided when I need a quiet set — no agent, no pressure, just the controls I need.",
-    name: "Elena P.",
-    role: "Weekly plan",
-    image: IMG.avatarMaya,
-  },
-  {
-    quote:
-      "Nura stays out of the way. I get enough structure to feel held, without clinical noise.",
-    name: "Chris W.",
-    role: "Trial member",
-    image: IMG.avatarJames,
-  },
-];
+const STORY_IMAGES = [
+  IMG.avatarMaya,
+  IMG.avatarJames,
+  IMG.avatarSophie,
+  IMG.avatarDaniel,
+] as const;
+
+const PLAN_ICONS = {
+  weekly: Calendar,
+  yearly: HeartHandshake,
+  monthly: Sparkles,
+} as const;
+
+function planCards(config: SectionConfig) {
+  return sectionList(config, "cards").flatMap((card) => {
+    const id = card.id as BillingPlanId;
+    if (!BILLING_PLANS[id]) return [];
+    return [
+      {
+        id,
+        title: card.title,
+        badge: card.badge,
+        details: card.details,
+        periodNote: card.periodNote,
+        features: linesOf(card.features ?? ""),
+        featured: id === "yearly",
+      },
+    ];
+  });
+}
 
 function StoriesStars({ className }: { className?: string }) {
   return (
@@ -131,7 +127,16 @@ function StoriesStars({ className }: { className?: string }) {
   );
 }
 
-function StoriesSection() {
+export function StoriesSection() {
+  const copy = useSectionConfig("home-stories");
+  const stories: Array<Record<string, string> & { image: string }> =
+    sectionList(copy, "stories").map((story, index) => ({
+      ...story,
+      image:
+        story.image ||
+        STORY_IMAGES[index % STORY_IMAGES.length] ||
+        IMG.avatarMaya,
+    }));
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const hoverPaused = useRef(false);
   const manualPaused = useRef(false);
@@ -185,28 +190,28 @@ function StoriesSection() {
     el.scrollBy({ left: dir * step, behavior: "smooth" });
   }
 
-  const loop = [...TESTIMONIALS, ...TESTIMONIALS];
+  const loop = [...stories, ...stories];
 
   return (
-    <section className="fe-stories" aria-labelledby="fe-stories-title">
+    <section className="fe-stories fe-has-edit" data-section="home-stories" aria-labelledby="fe-stories-title">
+      <SectionEdit id="home-stories" />
       <div className="fe-container">
         <div className="fe-stories-intro">
           <LetterRevealHeading
             id="fe-stories-title"
             className="fe-stories-title"
           >
-            Their experience, your confidence
+            {sectionText(copy, "title")}
           </LetterRevealHeading>
           <p className="fe-stories-sub">
-            Voices from people using {BRAND_SPOKEN} between sessions — calm
-            enough to stay with the work.
+            {sectionText(copy, "sub")}
           </p>
         </div>
 
         <div className="fe-stories-toolbar">
           <div className="fe-stories-rating">
             <div className="fe-stories-avatars" aria-hidden>
-              {TESTIMONIALS.slice(0, 4).map((t) => (
+              {stories.slice(0, 4).map((t) => (
                 <DecorativeImg
                   key={t.name}
                   src={t.image}
@@ -219,9 +224,9 @@ function StoriesSection() {
             <div className="fe-stories-rating-copy">
               <div className="fe-stories-rating-row">
                 <StoriesStars />
-                <strong>4.9</strong>
+                <strong>{sectionText(copy, "rating")}</strong>
               </div>
-              <p>From early members exploring {BRAND_SPOKEN}</p>
+              <p>{sectionText(copy, "ratingLine")}</p>
             </div>
           </div>
           <div className="fe-stories-nav">
@@ -294,14 +299,12 @@ function StoriesSection() {
   );
 }
 
-const HERO_IMAGE = IMG.supportTalk;
-const HERO_PREVIEW_IMAGE = IMG.calmRest;
-
 /** Nexsas home/blog stagger — fixed crop heights across 3 columns. */
 const HOME_BLOG_HEIGHTS = [420, 320, 520] as const;
 const HOME_BLOG_PAGE_SIZE = 5;
 
-function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
+export function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
+  const copy = useSectionConfig("home-blog");
   const [visibleCount, setVisibleCount] = useState(HOME_BLOG_PAGE_SIZE);
 
   if (posts.length === 0) return null;
@@ -315,13 +318,17 @@ function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
   });
 
   return (
-    <section className="fe-blog" id="blog" aria-labelledby="fe-blog-title">
+    <section className="fe-blog fe-has-edit" id="blog" data-section="home-blog" aria-labelledby="fe-blog-title">
+      <SectionEdit id="home-blog" />
       <div className="fe-container fe-blog-inner">
         <div className="fe-blog-head">
-          <p className="fe-section-kicker fe-animate">Blog</p>
-          <LetterRevealHeading id="fe-blog-title" className="fe-blog-title">
-            Guides for practice between sessions
-          </LetterRevealHeading>
+          <p className="fe-section-kicker fe-animate">{sectionText(copy, "kicker")}</p>
+          <h2 id="fe-blog-title" className="fe-blog-title fe-animate">
+            <AccentText
+              text={sectionText(copy, "title")}
+              accent="between sessions"
+            />
+          </h2>
         </div>
 
         <div className="fe-blog-masonry" role="list">
@@ -381,7 +388,7 @@ function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
                 )
               }
             >
-              Load more
+              {sectionText(copy, "more")}
             </button>
           </div>
         ) : null}
@@ -390,24 +397,26 @@ function BlogSection({ posts }: { posts: LandingBlogPost[] }) {
   );
 }
 
-function FaqSection() {
+export function FaqSection() {
+  const copy = useSectionConfig("home-faq");
+  const items = sectionList(copy, "items");
   const [open, setOpen] = useState(0);
 
   return (
-    <section className="fe-faq" id="faq" aria-labelledby="fe-faq-title">
+    <section className="fe-faq fe-has-edit" id="faq" data-section="home-faq" aria-labelledby="fe-faq-title">
+      <SectionEdit id="home-faq" />
       <div className="fe-container">
         <div className="fe-faq-head">
-          <p className="fe-section-kicker fe-animate">FAQ</p>
-          <LetterRevealHeading id="fe-faq-title" className="fe-faq-title">
-            Questions, answered calmly
-          </LetterRevealHeading>
+          <p className="fe-section-kicker fe-animate">{sectionText(copy, "kicker")}</p>
+          <h2 id="fe-faq-title" className="fe-faq-title fe-animate">
+            <AccentText text={sectionText(copy, "title")} accent="calmly" />
+          </h2>
           <p className="fe-faq-sub fe-animate">
-            Short answers about how Nura works — before you start a trial or open a
-            session.
+            {sectionText(copy, "sub")}
           </p>
         </div>
         <div className="fe-faq-list">
-          {LANDING_FAQ_ITEMS.map((item, i) => {
+          {items.map((item, i) => {
             const isOpen = open === i;
             const answerId = `fe-faq-a-${i}`;
             return (
@@ -439,143 +448,30 @@ function FaqSection() {
   );
 }
 
-export function HomeLanding({
-  blogPosts = [],
-}: {
-  blogPosts?: LandingBlogPost[];
-}) {
-  const landingRef = useRef<HTMLDivElement | null>(null);
-  useLandingMotion(landingRef);
-
-  useEffect(() => {
-    let stop = scheduleScrollToLandingHash({ consumePending: true });
-    const onHashChange = () => {
-      stop();
-      stop = scheduleScrollToLandingHash({ consumePending: true });
-    };
-    window.addEventListener("hashchange", onHashChange);
-    return () => {
-      stop();
-      window.removeEventListener("hashchange", onHashChange);
-    };
-  }, []);
+export function PricingSection() {
+  const pricing = useSectionConfig("home-pricing");
+  const cardCopy = useSectionConfig("pricing-cards");
+  const cards = planCards(cardCopy);
 
   return (
-    <div ref={landingRef} className="fe-landing">
-      <section className="fe-hero" id="home">
-        <div className="fe-hero-image-wrap">
-          <div className="fe-hero-image">
-            <Image
-              src={HERO_IMAGE}
-              alt="Person in a calm, supportive setting"
-              fill
-              priority
-              sizes="100vw"
-              className="fe-hero-image-bg"
-            />
-            <div className="fe-hero-image-overlay" aria-hidden />
-            <div className="fe-hero-content-wrap">
-              <div className="fe-container">
-                <div className="fe-hero-info-inner">
-                  <div className="fe-hero-left">
-                    <p className="fe-hero-kicker">The time is right for</p>
-                    <h1 className="fe-hero-title">
-                      <span className="fe-hero-title-line">
-                        {["EMDR", "therapy", "online"].map((word, i, arr) => (
-                          <span key={word} className="fe-split-line">
-                            <span className="fe-split-word">
-                              {word}
-                              {i < arr.length - 1 ? "\u00A0" : ""}
-                            </span>
-                          </span>
-                        ))}
-                      </span>{" "}
-                      <span className="fe-hero-title-line fe-hero-title-line--accent">
-                        <em>
-                          {["in", "a", "calm", "app."].map((word, i, arr) => (
-                            <span key={word} className="fe-split-line">
-                              <span className="fe-split-word">
-                                {word}
-                                {i < arr.length - 1 ? "\u00A0" : ""}
-                              </span>
-                            </span>
-                          ))}
-                        </em>
-                      </span>
-                    </h1>
-                  </div>
-                  <div className="fe-hero-right">
-                    <p className="fe-hero-description">
-                      AI agent-guided sessions with visual sets, optional voice,
-                      grounding, and short guides for the moments between
-                      sessions.
-                    </p>
-                    <div className="fe-hero-card-row">
-                      <div className="fe-hero-inner-card">
-                        <span className="fe-hero-inner-icon" aria-hidden>
-                          <HeartHandshake size={22} strokeWidth={1.5} />
-                        </span>
-                        <div className="fe-hero-inner-text">
-                          <p className="fe-hero-inner-label">
-                            Support you can trust
-                          </p>
-                          <Link href="/learn" className="fe-hero-inner-link">
-                            Learn
-                          </Link>
-                        </div>
-                      </div>
-                      <Link
-                        href="/learn"
-                        className="fe-hero-video-thumb"
-                        aria-label="Learn where to start"
-                      >
-                        <DecorativeImg
-                          src={HERO_PREVIEW_IMAGE}
-                          width={160}
-                          height={112}
-                          className="fe-hero-video-image"
-                        />
-                        <span className="fe-hero-video-play" aria-hidden>
-                          <Play size={18} fill="currentColor" />
-                        </span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <SessionPathSticky />
-
-      <SessionTopicsGrid />
-
-      <SessionModesPair />
-
-      <HomePauseCta />
-
-      <HomeMemorySets />
-
-      <section className="fe-pricing-section" id="prices">
+    <SectionRise>
+      <section className="fe-pricing-section fe-has-edit" id="prices" data-section="home-pricing">
+        <SectionEdit id="home-pricing" />
         <div className="fe-container">
           <div className="fe-pricing-head">
             <LetterRevealHeading className="fe-pricing-title">
-              Plans tailored to your pace
+              {sectionText(pricing, "title")}
             </LetterRevealHeading>
             <p className="fe-pricing-sub fe-animate">
-              Start with a {TRIAL_DAYS}-day trial. Every paid plan unlocks the same{" "}
-              {SESSION_MODE_GUIDED_SHORT} sessions and {SESSION_MODE_SELF_SHORT}{" "}
-              sessions — pick how often you want to be billed.
+              {sectionText(pricing, "sub")}
             </p>
           </div>
 
           <div className="fe-pricing-grid">
-            {MARKETING_PRICING_CARDS.map((card) => {
+            {cards.map((card) => {
               const plan = BILLING_PLANS[card.id];
-              const featured = Boolean(card.featured);
-              const Icon = card.icon;
+              const featured = card.featured;
+              const Icon = PLAN_ICONS[card.id] ?? Sparkles;
               return (
                 <article
                   key={card.id}
@@ -608,10 +504,10 @@ export function HomeLanding({
                     href={appPath("/create-account")}
                     className={`fe-price-card-cta${featured ? " fe-price-card-cta--accent" : ""}`}
                   >
-                    Get started
+                    {sectionText(cardCopy, "cta")}
                     <ArrowRight size={16} aria-hidden />
                   </Link>
-                  <p className="fe-price-card-features-label">Features</p>
+                  <p className="fe-price-card-features-label">{sectionText(pricing, "featuresLabel")}</p>
                   <ul className="fe-price-card-features">
                     {card.features.map((f) => (
                       <li key={f}>
@@ -631,10 +527,132 @@ export function HomeLanding({
           </div>
         </div>
       </section>
+    </SectionRise>
+  );
+}
+
+export function HomeLanding({
+  blogPosts = [],
+}: {
+  blogPosts?: LandingBlogPost[];
+}) {
+  const hero = useSectionConfig("home-hero");
+  const landingRef = useRef<HTMLDivElement | null>(null);
+  useLandingMotion(landingRef);
+
+  useEffect(() => {
+    let stop = scheduleScrollToLandingHash({ consumePending: true });
+    const onHashChange = () => {
+      stop();
+      stop = scheduleScrollToLandingHash({ consumePending: true });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => {
+      stop();
+      window.removeEventListener("hashchange", onHashChange);
+    };
+  }, []);
+
+  return (
+    <div ref={landingRef} className="fe-landing">
+      <section className="fe-hero fe-has-edit" id="home" data-section="home-hero">
+        <SectionEdit id="home-hero" lift />
+        <div className="fe-hero-image-wrap">
+          <div className="fe-hero-image">
+            <SectionMedia
+              className="fe-hero-image-bg"
+              kind={sectionText(hero, "heroKind")}
+              image={sectionText(hero, "heroImage")}
+              video={sectionText(hero, "heroVideo")}
+              poster={sectionText(hero, "heroPoster")}
+              alt={sectionText(hero, "heroAlt")}
+            />
+            <div className="fe-hero-image-overlay" aria-hidden />
+            <div className="fe-hero-content-wrap">
+              <div className="fe-container">
+                <div className="fe-hero-info-inner">
+                  <div className="fe-hero-left">
+                    <p className="fe-hero-kicker">{sectionText(hero, "kicker")}</p>
+                    <h1 className="fe-hero-title">
+                      <span className="fe-hero-title-line">
+                        {sectionText(hero, "title").split(/\s+/).filter(Boolean).map((word, i) => (
+                          <span key={`${word}-${i}`} className="fe-split-line">
+                            <span className="fe-split-word">{word}</span>
+                          </span>
+                        ))}
+                      </span>{" "}
+                      <span className="fe-hero-title-line fe-hero-title-line--accent">
+                        <em>
+                          {sectionText(hero, "accent").split(/\s+/).filter(Boolean).map((word, i) => (
+                            <span key={`${word}-${i}`} className="fe-split-line">
+                              <span className="fe-split-word">{word}</span>
+                            </span>
+                          ))}
+                        </em>
+                      </span>
+                    </h1>
+                  </div>
+                  <div className="fe-hero-right">
+                    <p className="fe-hero-description">
+                      {sectionText(hero, "description")}
+                    </p>
+                    <div className="fe-hero-card-row">
+                      <div className="fe-hero-inner-card">
+                        <span className="fe-hero-inner-icon" aria-hidden>
+                          <HeartHandshake size={22} strokeWidth={1.5} />
+                        </span>
+                        <div className="fe-hero-inner-text">
+                          <p className="fe-hero-inner-label">
+                            {sectionText(hero, "cardLabel")}
+                          </p>
+                          <Link href={sectionText(hero, "cardHref")} className="fe-hero-inner-link">
+                            {sectionText(hero, "cardLink")}
+                          </Link>
+                        </div>
+                      </div>
+                      <Link
+                        href="/learn"
+                        className="fe-hero-video-thumb"
+                        aria-label="Learn where to start"
+                      >
+                        <SectionMedia
+                          className="fe-hero-video-image"
+                          kind={sectionText(hero, "thumbKind")}
+                          image={sectionText(hero, "thumbImage")}
+                          video={sectionText(hero, "thumbVideo")}
+                          poster={sectionText(hero, "thumbPoster")}
+                          alt={sectionText(hero, "thumbAlt")}
+                        />
+                        <span className="fe-hero-video-play" aria-hidden>
+                          <Play size={18} fill="currentColor" />
+                        </span>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <SessionPathSticky />
+
+      <SessionTopicsGrid />
+
+      <SessionModesPair />
+
+      <HomePauseCta />
+
+      <HomeMemorySets />
+
+      <PricingSection />
 
       <StoriesSection />
 
-      <BlogSection posts={blogPosts} />
+      <SectionWipe>
+        <BlogSection posts={blogPosts} />
+      </SectionWipe>
 
       <FaqSection />
     </div>

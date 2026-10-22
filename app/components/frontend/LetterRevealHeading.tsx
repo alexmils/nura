@@ -72,8 +72,9 @@ export function LetterRevealHeading({
       ref={ref}
       id={id}
       className={`fe-letter-reveal${className ? ` ${className}` : ""}`}
-      aria-label={children}
     >
+      {/* Full text for SEO and screen readers; the animated copy is decorative. */}
+      <span className="fe-letter-reveal-sr">{children}</span>
       <span aria-hidden="true" className="fe-letter-reveal-inner">
         {words.map((word, wi) => (
           <span key={`w-${wi}`} className="fe-letter-word">
@@ -91,9 +92,6 @@ export function LetterRevealHeading({
                 </span>
               );
             })}
-            {wi < words.length - 1 ? (
-              <span className="fe-letter-space">{"\u00A0"}</span>
-            ) : null}
           </span>
         ))}
       </span>

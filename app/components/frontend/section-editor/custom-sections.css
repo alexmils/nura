@@ -1,0 +1,599 @@
+/* Admin-added sections (custom-<type>-<id>). Neutral, on-brand defaults. */
+
+.fe-custom {
+  padding: clamp(3rem, 7vw, 6rem) 0;
+  color: var(--ink);
+}
+
+.fe-custom-inner {
+  width: min(100% - 2.5rem, 72rem);
+  margin: 0 auto;
+}
+
+.fe-custom-kicker {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+}
+
+.fe-custom-title {
+  margin: 0 0 1.1rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3.6vw, 2.8rem);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.fe-custom-body {
+  max-width: 44rem;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.fe-custom-body > :first-child {
+  margin-top: 0;
+}
+
+.fe-custom-body a,
+.fe-custom-faq a,
+.fe-custom-card a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.fe-custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.fe-custom-actions:empty {
+  display: none;
+}
+
+.fe-custom-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.9rem;
+  padding: 0 1.4rem;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.fe-custom-btn--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.fe-custom-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 4rem);
+  align-items: center;
+}
+
+.fe-custom-split.is-right .fe-custom-media {
+  order: 2;
+}
+
+.fe-custom-media,
+.fe-custom-card-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  aspect-ratio: 4 / 3;
+  background: color-mix(in srgb, var(--ink) 7%, white);
+}
+
+.fe-custom-media-el {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 0;
+}
+
+.fe-custom-band {
+  padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 3rem);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--sage, #84b067) 16%, white);
+  text-align: center;
+}
+
+.fe-custom-band .fe-custom-actions {
+  justify-content: center;
+}
+
+.fe-custom-lead {
+  max-width: 40rem;
+  margin: 0 auto;
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.fe-custom-faq {
+  max-width: 48rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.fe-custom-faq details {
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.fe-custom-faq summary {
+  padding: 1.1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fe-custom-faq details p {
+  margin: 0 0 1.2rem;
+  line-height: 1.65;
+}
+
+.fe-custom-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: 1.25rem;
+}
+
+.fe-custom-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, white 70%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.fe-custom-card.is-link:hover {
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.fe-custom-card h3 {
+  margin: 0.3rem 0 0;
+  font-size: 1.15rem;
+}
+
+.fe-custom-card p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .fe-custom-split {
+    grid-template-columns: 1fr;
+  }
+
+  .fe-custom-split.is-right .fe-custom-media {
+    order: 0;
+  }
+}
+
+/* Inside a long-form article the article already sets width and padding. */
+.frontend-legal .fe-custom {
+  padding: 1.5rem 0;
+}
+
+.frontend-legal .fe-custom-inner {
+  width: 100%;
+}
+
+/* ---- Call to action with image marquee (after Insurily's closing band) ---- */
+.fe-custom--marquee {
+  --mq-bg: #141a12;
+  padding-bottom: 0;
+  background: var(--mq-bg);
+  color: #fff;
+  overflow: hidden;
+}
+
+.fe-custom--marquee .fe-custom-band {
+  max-width: 36rem;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0 0;
+  border-radius: 0;
+  background: none;
+  text-align: center;
+}
+
+.fe-custom--marquee .fe-custom-kicker {
+  color: color-mix(in srgb, #fff 70%, transparent);
+}
+
+.fe-custom--marquee .fe-custom-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.fe-custom--marquee .fe-custom-lead {
+  color: color-mix(in srgb, #fff 78%, transparent);
+}
+
+.fe-custom--marquee .fe-custom-actions {
+  justify-content: center;
+}
+
+.fe-custom--marquee .fe-custom-btn {
+  border-color: #f2c94c;
+  background: #f2c94c;
+  color: #141a12;
+}
+
+.fe-custom--marquee .fe-custom-btn--ghost {
+  border-color: #fff;
+  background: #fff;
+  color: #141a12;
+}
+
+.fe-custom-marquee {
+  position: relative;
+  margin-top: clamp(2.5rem, 6vw, 4rem);
+}
+
+.fe-custom-marquee .mo-marquee-group {
+  align-items: flex-end;
+  gap: 12px;
+  padding-right: 12px;
+}
+
+.fe-custom-marquee-tile {
+  flex: 0 0 auto;
+  width: clamp(100px, 12.5vw, 180px);
+  height: clamp(120px, 16.8vw, 242px);
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  background: color-mix(in srgb, #fff 8%, transparent);
+}
+
+.fe-custom-marquee-tile.is-short {
+  height: clamp(92px, 12.5vw, 180px);
+}
+
+.fe-custom-marquee-tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fe-custom-marquee-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: clamp(60px, 9vw, 120px);
+  background: linear-gradient(0deg, var(--mq-bg), color-mix(in srgb, var(--mq-bg) 50%, transparent) 70%, transparent);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .fe-custom-marquee .mo-marquee-group {
+    gap: 8px;
+    padding-right: 8px;
+  }
+}
+
+
+/* ---- Poster word ("Heal"): one photo, paper over the top, word straddling the edge ---- */
+.fe-custom.fe-custom--poster {
+  padding: 0;
+  /* One white block with the How it works intro above. */
+  background: #fff;
+}
+
+/* Diving into the next Video screen: the poster itself must not paint over it.
+   Pointer events pass through to the video's Edit chip; the poster's own chip
+   stays clickable. The explicit z-index keeps the poster ABOVE the video screen
+   pulled up underneath it - the hero hand-off sets this for visitors, but its
+   neighbour walk differs behind the admin's editable wrappers. */
+.fe-custom.fe-custom--poster.fe-custom--poster-dive {
+  position: relative;
+  z-index: 3;
+  background: transparent;
+  pointer-events: none;
+}
+
+.fe-custom--poster-dive [data-admin-chip] {
+  pointer-events: auto;
+}
+
+.fe-poster {
+  /* Overridden inline: section colour (Background panel) and its ink; the edge from JS. */
+  --poster-paper: #ffffff;
+  --poster-ink: #1d2a17;
+  --poster-cut: 52%;
+  position: relative;
+  color: var(--poster-ink);
+  height: max(560px, 100svh);
+}
+
+/* With a video screen next, the poster stays pinned while the camera dives. */
+.fe-poster.has-through {
+  height: calc(var(--poster-runway, 100svh) + max(560px, 100svh));
+}
+
+.fe-poster-pin {
+  height: max(560px, 100svh);
+}
+
+.fe-poster.has-through .fe-poster-pin {
+  position: sticky;
+  top: 0;
+}
+
+.fe-poster-stage {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--poster-paper);
+  /* The depth the camera flies through. */
+  perspective: 1100px;
+  perspective-origin: 50% 42%;
+}
+
+/* The video screen is pinned underneath; the stage itself must not paint over it. */
+.fe-poster.has-through .fe-poster-stage {
+  background: transparent;
+}
+
+/* Everything painted on the poster travels together through the dive. */
+.fe-poster-scene {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 50% 41%;
+  will-change: transform;
+}
+
+/* ONE photo for the whole stage; everything else is positioned against the same box. */
+.fe-poster-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.fe-poster-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Full-bleed photo: no paper band, the word is a solid white overlay. */
+.fe-poster-paper {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--poster-paper);
+}
+
+.fe-poster.has-image .fe-poster-paper {
+  /* Soft edge: the paper melts into the photo instead of cutting a hard line. */
+  clip-path: none;
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 calc(var(--poster-cut) - 7rem),
+    transparent var(--poster-cut)
+  );
+  mask-image: linear-gradient(
+    180deg,
+    #000 0,
+    #000 calc(var(--poster-cut) - 7rem),
+    transparent var(--poster-cut)
+  );
+}
+
+.fe-poster-line,
+.fe-poster-note {
+  font-family: var(--font-fe-alt), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 400;
+}
+
+.fe-poster-line {
+  position: absolute;
+  /* Level with the kicker, clear of the tall letters. */
+  top: clamp(104px, 14vh, 132px);
+  right: clamp(16px, 8vw, 160px);
+  z-index: 4;
+  max-width: 15ch;
+  margin: 0;
+  font-size: clamp(0.82rem, 1.05vw, 1rem);
+  line-height: 1.35;
+  /* Sits on the white paper above the photo edge. */
+  color: var(--poster-ink);
+}
+
+/* Every copy of the word is stage-sized, so all of them share one box. */
+.frontend-home .fe-custom--poster .fe-poster-word,
+.fe-custom--poster .fe-poster-word {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  pointer-events: none;
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-weight: 800;
+  font-variation-settings: "SOFT" 0, "WONK" 0, "opsz" 144;
+  line-height: 0.8;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.fe-poster-word-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  width: 100%;
+  /* Clear of the fixed header and the top-right line, photo below. */
+  height: 55%;
+  padding-top: clamp(110px, 15vh, 170px);
+  /* JS fits it to the stage width; this is the pre-fit guess. */
+  font-size: min(calc(170vw / var(--poster-len)), 46svh);
+}
+
+.fe-poster-letter {
+  display: inline-block;
+  padding: 0.04em 0.01em;
+}
+
+/* HEAL is a window onto the same photo (letters filled with the image), so the
+   white block above and the photo below are one poster with a hard edge. */
+.fe-custom--poster .fe-poster-word--photo {
+  z-index: 3;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.fe-custom--poster .fe-poster-word--photo.is-plain {
+  color: var(--poster-ink);
+  -webkit-text-fill-color: currentColor;
+}
+
+.fe-poster-note {
+  position: absolute;
+  /* Clear of the floating back-to-top / help buttons. */
+  right: clamp(72px, 8vw, 128px);
+  bottom: clamp(88px, 13vh, 120px);
+  z-index: 4;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(0.78rem, 0.95vw, 0.95rem);
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.35);
+}
+
+@media (max-width: 640px) {
+  .fe-poster-line {
+    top: clamp(140px, 20vh, 170px);
+    right: 16px;
+    left: auto;
+  }
+}
+
+/* ---- Video screen: a full-bleed film with its own Edit chip ---- */
+.fe-custom.fe-custom--video {
+  padding: 0;
+  background: #06120b;
+}
+
+.fe-video-screen {
+  position: relative;
+  height: max(560px, 100svh);
+  overflow: hidden;
+  isolation: isolate;
+  background: #06120b;
+}
+
+.fe-video-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+
+.fe-video-empty {
+  position: absolute;
+  inset: 0;
+  background: #06120b;
+}
+
+/* Directly after the diving poster: pull the block up behind it and pin the
+   screen for the poster's runway, then one more screen of its own. The
+   --poster-runway value mirrors POSTER_DIVE_VH in PosterSection.tsx. */
+.fe-custom--video-under {
+  --poster-runway: 100svh;
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-1 * (var(--poster-runway) + max(560px, 100svh)));
+  height: calc(var(--poster-runway) + 2 * max(560px, 100svh));
+}
+
+.fe-custom--video-under .fe-video-screen {
+  position: sticky;
+  top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-poster-letter,
+  .fe-poster-stage,
+  .fe-poster-scene,
+  .fe-custom--poster .fe-poster-word {
+    will-change: auto;
+  }
+  /* No pin, no dive: the poster stays the plain static frame and the video
+     screen sits after it in normal flow. */
+  .fe-poster.has-through {
+    height: max(560px, 100svh);
+  }
+  .fe-poster.has-through .fe-poster-pin {
+    position: relative;
+  }
+  .fe-custom--video-under {
+    margin-top: 0;
+    height: auto;
+  }
+  .fe-custom--video-under .fe-video-screen {
+    position: relative;
+  }
+}
+
+html[data-a11y-motion="reduced"] .fe-poster.has-through {
+  height: max(560px, 100svh);
+}
+
+html[data-a11y-motion="reduced"] .fe-poster.has-through .fe-poster-pin {
+  position: relative;
+}
+
+html[data-a11y-motion="reduced"] .fe-poster-scene {
+  will-change: auto;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video-under {
+  margin-top: 0;
+  height: auto;
+}
+
+html[data-a11y-motion="reduced"] .fe-custom--video-under .fe-video-screen {
+  position: relative;
+}
+
+/* Zoomed photos (per-image position/zoom) stay inside their frames. */
+.fe-custom-marquee-tile,
+.fe-custom-media,
+.fe-custom-card-media {
+  overflow: hidden;
+}

@@ -1,0 +1,69 @@
+/* Footer-wide wordmark (after Helora): fades to transparent, divider below. */
+
+.fe-ft-wordmark {
+  --wm-color: #ffffff;
+  --wm-fade: linear-gradient(
+    180deg,
+    var(--wm-color) 0%,
+    color-mix(in srgb, var(--wm-color) 92%, transparent) 30%,
+    color-mix(in srgb, var(--wm-color) 0%, transparent) 100%
+  );
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  margin-top: clamp(0.5rem, 2vw, 1.5rem);
+}
+
+.fe-ft-wordmark-clip {
+  overflow: clip;
+  /* a hair of room so the rise starts hidden and nothing crops at rest */
+  padding-top: 0.5%;
+}
+
+.fe-ft-wordmark-mark {
+  display: block;
+  width: 100%;
+  transform-origin: 50% 100%;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* The "nura" lettering of the logo (vector mask stays sharp at any width). */
+.fe-ft-wordmark-mark--logo {
+  aspect-ratio: 600 / 185;
+  background: var(--wm-fade);
+  -webkit-mask: url("/brand/logo-variants/nura-text-white.svg") center / contain no-repeat;
+  mask: url("/brand/logo-variants/nura-text-white.svg") center / contain no-repeat;
+}
+
+.fe-ft-wordmark-mark--text {
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+  font-size: calc(100cqi / (var(--wm-chars, 4) * 0.58));
+  font-weight: 700;
+  line-height: 0.86;
+  letter-spacing: -0.05em;
+  text-align: center;
+  white-space: nowrap;
+  background: var(--wm-fade);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.fe-ft-wordmark-line {
+  height: 1px;
+  margin-top: clamp(1.25rem, 3vw, 2.25rem);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--wm-color) 70%, transparent) 50%,
+    transparent
+  );
+  transform-origin: 50% 50%;
+}
+
+/* The wordmark brings its own divider, so the meta row drops its top rule. */
+.fe-site-footer--wordmark .fe-site-footer-meta {
+  border-top-color: transparent;
+  padding-top: 0;
+}

@@ -1,0 +1,27 @@
+/*
+ * SectionRise wrapper. The clip itself is driven inline by GSAP; this file
+ * only guarantees a sane static fallback and keeps the section's own
+ * background bleeding to the edges.
+ */
+
+.mo-section-rise {
+  position: relative;
+  width: 100%;
+}
+
+/* Without JS (or before the tween mounts) the section is a plain block. */
+.mo-section-rise {
+  clip-path: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-section-rise {
+    clip-path: none !important;
+    transform: none !important;
+  }
+}
+
+html[data-a11y-motion="reduced"] .mo-section-rise {
+  clip-path: none !important;
+  transform: none !important;
+}

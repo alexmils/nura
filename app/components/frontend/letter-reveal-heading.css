@@ -1,5 +1,22 @@
 /* Aiero-style letter rise for marketing H2s */
 
+.fe-letter-reveal {
+  position: relative;
+}
+
+/* Full heading text for SEO and assistive tech. */
+.fe-letter-reveal-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .fe-letter-reveal-inner {
   display: block;
 }
@@ -9,6 +26,11 @@
   align-items: flex-start;
   clip-path: inset(-0.15em -0.1em);
   vertical-align: top;
+}
+
+/* Word spacing is CSS, not a literal space in the animated copy. */
+.fe-letter-word + .fe-letter-word {
+  margin-left: 0.24em;
 }
 
 .fe-letter {

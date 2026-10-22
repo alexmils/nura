@@ -28,8 +28,7 @@
 .frontend-home .fe-price-card-cta--accent,
 .frontend-home .fe-site-footer-cta-btn--primary,
 .frontend-home .fe-site-footer-send,
-.frontend-home .fe-stories-nav-btn--accent,
-.frontend-home .fe-topics-more {
+.frontend-home .fe-stories-nav-btn--accent {
   transition:
     background 0.22s ease,
     border-color 0.22s ease,
@@ -48,8 +47,7 @@
 .frontend-home .fe-site-footer-cta-btn--primary:hover,
 .frontend-home .fe-site-footer-send:hover,
 .frontend-home .fe-stories-nav-btn--accent:hover,
-.frontend-home .fe-blog-cta:hover,
-.frontend-home .fe-topics-more:hover {
+.frontend-home .fe-blog-cta:hover {
   background: var(--fe-btn-pistachio);
   border-color: var(--fe-btn-pistachio);
   color: var(--fe-btn-ink);
@@ -60,7 +58,7 @@
 
 .frontend-home .frontend-header-cta:hover .frontend-header-cta-icon {
   background: var(--fe-btn-ink);
-  color: var(--fe-btn-pistachio);
+  color: #fff;
 }
 
 .frontend-home .fe-about-cta:hover .fe-about-cta-icon {
@@ -118,7 +116,6 @@
   .frontend-home .fe-site-footer-send:hover,
   .frontend-home .fe-stories-nav-btn--accent:hover,
   .frontend-home .fe-blog-cta:hover,
-  .frontend-home .fe-topics-more:hover,
   .frontend-home .fe-pause-cta:hover,
   .frontend-home .frontend-btn-ghost:hover,
   .frontend-home .fe-site-footer-cta-btn--ghost:hover,

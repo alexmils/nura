@@ -1,0 +1,88 @@
+/*
+ * Scroll hand-off patterns (beyond SectionRise). All are decorative overlays
+ * clipped to their wrapper: absolutely positioned, pointer-events none, no
+ * layout impact, no pin. The tween itself lives in the component (GSAP).
+ */
+
+/* —— Wave wipe: a mint veil with the Nura wavy edge lifts off the section top —— */
+.mo-swipe {
+  position: relative;
+  overflow: hidden;
+  overflow: clip;
+}
+
+.mo-swipe-veil {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: min(38vh, 320px);
+  background: #a4eda5;
+  z-index: 4;
+  pointer-events: none;
+  /* Opaque default would hide the heading before JS mounts — stay hidden until
+     the tween sets the covered state. */
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mo-swipe-wave {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 12px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='12' viewBox='0 0 120 12' preserveAspectRatio='none'><path d='M0,0 L120,0 L120,6 q-15,12 -30,0 t-30,0 t-30,0 t-30,0 Z' fill='%23c6d67e'/></svg>");
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+}
+
+/* —— Bloom: a pistachio disc grows from the section top and fades —— */
+.mo-bloom {
+  position: relative;
+  overflow: hidden;
+  overflow: clip;
+}
+
+.mo-bloom-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at 50% 0%,
+    rgba(198, 214, 126, 0.55),
+    rgba(164, 237, 165, 0.28) 55%,
+    rgba(164, 237, 165, 0) 80%
+  );
+  will-change: clip-path, opacity;
+}
+
+
+/* ---- Curve hand-off: a dome in the incoming block's colour rises above its
+   top edge and flattens as it scrolls in (driven by --mo-curve, 1 -> 0). ---- */
+.mo-curve::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(-1 * clamp(80px, 15vw, 240px) + 1px);
+  height: clamp(80px, 15vw, 240px);
+  background: var(--mo-curve-bg, inherit);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  transform: scaleY(var(--mo-curve, 0));
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mo-curve::before {
+    display: none;
+  }
+}
+
+html[data-a11y-motion="reduced"] .mo-curve::before {
+  display: none;
+}
