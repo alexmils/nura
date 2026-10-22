@@ -5508,8 +5508,9 @@ body:has(.app-shell.session-immersive) .help-fab {
 }
 
 .admin-main {
+  /* One layout everywhere: full width, same gutter as the page header. */
   width: 100%;
-  max-width: 1120px;
+  max-width: none;
   margin: 0 auto;
   padding: 1.75rem 2rem 2.25rem;
   display: flex;
@@ -8671,7 +8672,7 @@ a.admin-panel-title-link:hover {
   }
 
   .admin-page-header {
-    padding: 1rem max(1.15rem, calc((100% - 1120px) / 2 + 1.15rem));
+    padding: 1rem 1.15rem;
   }
 
   .admin-main {
@@ -8896,8 +8897,7 @@ a.admin-panel-title-link:hover {
 }
 
 .admin-page-header {
-  /* Align the title with the centered .admin-main column (1120px + 2rem). */
-  padding: 1.25rem max(2rem, calc((100% - 1120px) / 2 + 2rem));
+  padding: 1.25rem 2rem;
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
 }
