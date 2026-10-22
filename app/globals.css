@@ -9617,26 +9617,82 @@ button.admin-nav-item {
 }
 
 .admin-places-board {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.admin-places-split {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns:
+    minmax(18rem, 22rem)
+    minmax(0, 1fr)
+    minmax(18rem, 22rem);
+  grid-template-areas: "signins map signups";
   gap: 1rem;
   align-items: start;
 }
 
+.admin-places-signins {
+  grid-area: signins;
+}
+
+.admin-places-signups {
+  grid-area: signups;
+}
+
 .admin-places-map-panel {
-  width: min(100%, 36rem);
-  align-self: center;
+  grid-area: map;
+  width: 100%;
   padding: 0.65rem;
 }
 
 .admin-places-map-panel .admin-places-map {
   width: 100%;
+}
+
+.admin-places-board > .admin-panel:not(.admin-places-map-panel) {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 12rem);
+  overflow-y: auto;
+}
+
+.admin-places-board
+  > .admin-panel:not(.admin-places-map-panel)
+  .admin-places-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 1699px) {
+  .admin-places-board {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "map map"
+      "signins signups";
+  }
+
+  .admin-places-board > .admin-panel:not(.admin-places-map-panel) {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .admin-places-board
+    > .admin-panel:not(.admin-places-map-panel)
+    .admin-places-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-places-board {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "map"
+      "signins"
+      "signups";
+  }
+
+  .admin-places-board
+    > .admin-panel:not(.admin-places-map-panel)
+    .admin-places-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .admin-places-map {
@@ -9794,7 +9850,6 @@ button.admin-nav-item {
 }
 
 @media (max-width: 720px) {
-  .admin-places-split,
   .admin-places-grid,
   .admin-places-rank li {
     grid-template-columns: minmax(0, 1fr);

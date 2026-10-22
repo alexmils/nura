@@ -32,12 +32,14 @@ function RankList({ rows, empty }: { rows: PlaceCount[]; empty: string }) {
 function BucketBlock({
   title,
   bucket,
+  className = "",
 }: {
   title: string;
   bucket: PlaceBucket;
+  className?: string;
 }) {
   return (
-    <section className="admin-panel">
+    <section className={`admin-panel ${className}`.trim()}>
       <h2 className="admin-panel-title">{title}</h2>
       <p className="admin-panel-sub">{bucket.total} in this window.</p>
       <div className="admin-places-grid">
@@ -142,16 +144,22 @@ export default function AdminPlacesPage() {
 
         {summary ? (
           <div className="admin-places-board">
+            <BucketBlock
+              title="Sign-ins"
+              bucket={summary.signIns}
+              className="admin-places-signins"
+            />
             <section className="admin-panel admin-places-map-panel">
               <PlacesMap countries={mapBucket?.countries ?? []} />
               {mapBucket && mapBucket.total > 0 ? null : (
                 <p className="admin-panel-sub">No sign-ins in this window yet.</p>
               )}
             </section>
-            <div className="admin-places-split">
-              <BucketBlock title="Sign-ins" bucket={summary.signIns} />
-              <BucketBlock title="New accounts" bucket={summary.signups} />
-            </div>
+            <BucketBlock
+              title="New accounts"
+              bucket={summary.signups}
+              className="admin-places-signups"
+            />
           </div>
         ) : null}
       </main>
