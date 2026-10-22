@@ -715,12 +715,12 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
 .fe-spath-finale {
   position: relative;
   margin-top: 0;
-  /* A normal section height: the reveal is tied to its entry, so it must not
-     spend a viewport of empty padding before the content is on screen. */
+  /* A full viewport of its own: the copy sits in the middle of the screen
+     instead of hugging the top of the section while the next one peeks in. */
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 58svh;
+  min-height: 100svh;
   padding: clamp(4.5rem, 9vw, 7rem) 0;
   background: #e4edd4;
   overflow: hidden;
