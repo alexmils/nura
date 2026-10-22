@@ -13,6 +13,8 @@ type PageState = {
   hasQualifyingSession: boolean;
   accountAgeOk: boolean;
   reason: string;
+  /** Staff preview: render the form, save nothing. */
+  preview?: boolean;
 };
 
 function FeedbackPageInner() {
@@ -75,6 +77,14 @@ function FeedbackPageInner() {
       <div className="feedback-page-inner">
         {loadError ? (
           <p className="feedback-nps-error">{loadError}</p>
+        ) : state?.preview ? (
+          <>
+            <p className="feedback-admin-preview" role="status">
+              Admin preview — this is the form a member opens from the review
+              email. Nothing you submit here is saved.
+            </p>
+            <FeedbackSurvey onSubmit={async () => ({ ok: true })} />
+          </>
         ) : state?.submitted ? (
           <div className="feedback-page-card">
             <h1 className="feedback-nps-title">Thank you</h1>

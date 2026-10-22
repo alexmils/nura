@@ -260,7 +260,11 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith("/admin") ||
       pathname.startsWith("/api/admin") ||
       pathname.startsWith("/api/auth/") ||
-      pathname.startsWith("/api/help");
+      pathname.startsWith("/api/help") ||
+      // Staff open the member-facing feedback form to check what an email
+      // links to. Its own API marks staff as a preview, so nothing is saved.
+      pathname === `${APP_BASE}/feedback` ||
+      pathname.startsWith("/api/feedback");
     if (!adminAllowed) {
       if (pathname.startsWith("/api/")) {
         return applyCrawlHeaders(

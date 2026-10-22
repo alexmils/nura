@@ -12,6 +12,9 @@ describe("access gate paths", () => {
     assert.equal(isAccessAllowedPath("/app/billing"), true);
     assert.equal(isAccessAllowedPath("/app"), false);
     assert.equal(isAccessAllowedPath("/app/settings"), true);
+    // The review email opens this even for a member whose access has lapsed.
+    assert.equal(isAccessAllowedPath("/app/feedback"), true);
+    assert.equal(isAccessAllowedPath("/app/feedback/"), true);
   });
 });
 

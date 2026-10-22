@@ -14190,6 +14190,17 @@ a.help-drawer-signin.btn-primary {
   display: inline-flex;
 }
 
+.feedback-admin-preview {
+  margin: 0 0 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(42, 48, 32, 0.14);
+  border-radius: 10px;
+  background: #f3f6ee;
+  color: #4d5a3d;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
 /* Private NPS feedback prompt */
 .feedback-nps-overlay {
   position: fixed;

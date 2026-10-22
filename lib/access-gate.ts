@@ -5,6 +5,7 @@ export const ACCESS_ALLOWED_PREFIXES = [
   `${APP_BASE}/onboarding`,
   `${APP_BASE}/billing`,
   `${APP_BASE}/settings`,
+  `${APP_BASE}/feedback`,
   `${APP_BASE}/login`,
   `${APP_BASE}/forgot-password`,
   `${APP_BASE}/reset-password`,

@@ -15,6 +15,20 @@ export async function GET(request: Request) {
   const auth = await requireAuth();
   if (!isAuthContext(auth)) return auth;
 
+  // Staff open this page from the Automation editor to check what an email
+  // links to. A real submission would attach a review to the admin account,
+  // so the page renders the survey in preview mode and never calls POST.
+  if (auth.user.role === "platform_admin" || auth.user.role === "support") {
+    return NextResponse.json({
+      submitted: false,
+      canSubmit: false,
+      hasQualifyingSession: false,
+      accountAgeOk: true,
+      reason: "admin_preview",
+      preview: true,
+    });
+  }
+
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source");
   const fromEmail =
