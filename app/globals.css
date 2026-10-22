@@ -14167,15 +14167,43 @@ a.help-drawer-signin.btn-primary {
 
 /* Feedback page + legacy modal styles */
 .feedback-page {
-  min-height: 100%;
+  min-height: 100dvh;
   display: flex;
-  align-items: flex-start;
   justify-content: center;
-  padding: 2rem 1rem 3rem;
+  padding: 3rem 1rem;
+  background:
+    radial-gradient(
+      120% 75% at 50% 0%,
+      color-mix(in srgb, #a4eda5 20%, #edf9ed) 0%,
+      transparent 62%
+    );
 }
 
 .feedback-page-inner {
-  width: min(28rem, 100%);
+  width: min(30rem, 100%);
+  margin-block: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-page-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.35rem;
+}
+
+.feedback-page-brand .brand-logo {
+  width: auto;
+  height: 3.25rem;
+  max-width: 15rem;
+}
+
+.feedback-page-foot {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-muted, #6b7160);
 }
 
 .feedback-page-card {
@@ -14192,16 +14220,6 @@ a.help-drawer-signin.btn-primary {
   display: inline-flex;
 }
 
-.feedback-admin-preview {
-  margin: 0 0 0.75rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid rgba(42, 48, 32, 0.14);
-  border-radius: 10px;
-  background: #f3f6ee;
-  color: #4d5a3d;
-  font-size: 0.8125rem;
-  line-height: 1.45;
-}
 
 /* Private NPS feedback prompt */
 .feedback-nps-overlay {

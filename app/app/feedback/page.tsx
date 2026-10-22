@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { BrandLockup } from "@/app/components/BrandLockup";
 import { FeedbackSurvey } from "@/app/components/FeedbackSurvey";
 import { APP_BASE } from "@/lib/app-base";
 import { parseFeedbackSubmitSource } from "@/lib/feedback-eligibility";
@@ -75,16 +76,13 @@ function FeedbackPageInner() {
   return (
     <div className="feedback-page">
       <div className="feedback-page-inner">
+        <div className="feedback-page-brand">
+          <BrandLockup tone="color" />
+        </div>
         {loadError ? (
           <p className="feedback-nps-error">{loadError}</p>
         ) : state?.preview ? (
-          <>
-            <p className="feedback-admin-preview" role="status">
-              Admin preview — this is the form a member opens from the review
-              email. Nothing you submit here is saved.
-            </p>
-            <FeedbackSurvey onSubmit={async () => ({ ok: true })} />
-          </>
+          <FeedbackSurvey onSubmit={async () => ({ ok: true })} />
         ) : state?.submitted ? (
           <div className="feedback-page-card">
             <h1 className="feedback-nps-title">Thank you</h1>
@@ -122,6 +120,9 @@ function FeedbackPageInner() {
         ) : (
           <FeedbackSurvey onSubmit={onSubmit} disabled={!state?.canSubmit} />
         )}
+        <p className="feedback-page-foot">
+          Your feedback stays private and helps shape Nura.
+        </p>
       </div>
     </div>
   );
