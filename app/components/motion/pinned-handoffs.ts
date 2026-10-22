@@ -151,7 +151,8 @@ export function pinnedHandoff(
 
   // Layering: the covering block above the covered one.
   const base = Math.max(1, zOf(prev));
-  const nextOnTop = effect !== "curtain";
+  // curtain and hold reveal the next block from underneath.
+  const nextOnTop = effect !== "curtain" && effect !== "hold";
   gsap.set(prev, { position: relative(prev), zIndex: nextOnTop ? base : base + 1 });
   gsap.set(next, { position: relative(next), zIndex: nextOnTop ? base + 1 : base });
   if (getComputedStyle(next).backgroundColor.match(/rgba\(0, 0, 0, 0\)|transparent/) && getComputedStyle(next).backgroundImage === "none") {
@@ -381,14 +382,14 @@ export function pinnedHandoff(
       break;
     }
     case "hold": {
-      // Pin only: the block stands still for the hold runway, then the next
-      // section scrolls in normally. Used where no visual transition is wanted
-      // (pricing -> FAQ, FAQ -> blog) but the edge should still catch.
-      // No end snap: resetting y at the window end made the section jump back.
-      // The spacer keeps the track one effect-unit long, so the hold tween is
-      // not stretched across the whole window (that made the pin drift). It is
-      // added at 0 because every effect child is shifted by `hold` afterwards.
-      tl.to({}, { duration: 1 }, 0);
+      // Pin only: the block stands still for the hold runway, then, with the
+      // next block already pinned underneath, the outgoing one simply scrolls
+      // away and reveals it. No transition, and the hold margin never shows
+      // as a gap because the next block covers it.
+      const pinned = holdNext();
+      // Keep a one-unit tail even if the incoming block has sticky children
+      // and cannot be pulled up.
+      if (!pinned) tl.to({}, { duration: 1 }, 0);
       break;
     }
     case "focus": {
