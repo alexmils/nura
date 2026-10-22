@@ -9595,6 +9595,60 @@ button.admin-nav-item {
   position: relative;
 }
 
+.admin-places-expand {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  color: #f7fdf7;
+  background: rgba(42, 48, 32, 0.62);
+  border: 1px solid rgba(247, 253, 247, 0.3);
+  border-radius: 0.45rem;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.admin-places-expand:hover {
+  background: rgba(42, 48, 32, 0.9);
+  transform: scale(1.05);
+}
+
+.admin-places-map-wrap.is-expanded {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 4vw, 3rem);
+  background: rgba(10, 14, 8, 0.82);
+  backdrop-filter: blur(4px);
+}
+
+.admin-places-map-wrap.is-expanded .admin-places-expand {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.admin-places-map-wrap.is-expanded .admin-places-map {
+  width: min(92vw, 1700px, calc(84vh * 1010 / 666));
+  height: auto;
+  border: 1px solid rgba(247, 253, 247, 0.16);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+}
+
+.admin-places-map-wrap.is-expanded .admin-places-map.is-compact {
+  height: auto;
+}
+
 .admin-focus-lead {
   margin: 0.35rem 0 0;
   max-width: 42rem;

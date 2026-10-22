@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { largestSubpathCenter } from "@/lib/place-geometry";
 import shapes from "@/lib/world-map.json";
 
@@ -32,6 +33,7 @@ export function PlacesMap({
   compact?: boolean;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
   const [tip, setTip] = useState<{
     name: string;
     users: number;
@@ -39,6 +41,20 @@ export function PlacesMap({
     x: number;
     y: number;
   } | null>(null);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpanded(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previous;
+    };
+  }, [expanded]);
 
   const byId = useMemo(() => {
     const map = new Map<string, MapCountry>();
@@ -88,7 +104,28 @@ export function PlacesMap({
   };
 
   return (
-    <div className="admin-places-map-wrap" ref={wrapRef}>
+    <div
+      className={`admin-places-map-wrap${expanded ? " is-expanded" : ""}`}
+      ref={wrapRef}
+      onMouseDown={(event) => {
+        if (expanded && event.target === event.currentTarget) {
+          setExpanded(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className="admin-places-expand"
+        aria-label={expanded ? "Shrink map" : "Expand map"}
+        aria-expanded={expanded}
+        title={expanded ? "Shrink map" : "Expand map"}
+        onClick={() => {
+          setTip(null);
+          setExpanded((value) => !value);
+        }}
+      >
+        {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+      </button>
       <svg
         className={`admin-places-map${compact ? " is-compact" : ""}`}
         viewBox="0 0 1010 666"
