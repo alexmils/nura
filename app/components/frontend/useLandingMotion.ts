@@ -64,8 +64,8 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       }
       return y;
     };
-    type Edge = { y: number; ms: number };
-    /** A longer beat where the next boundary is a plain gradient seam. */
+    type Edge = { y: number; ms: number; pin: boolean };
+    /** A longer, snapping beat where the next boundary is a plain seam. */
     const edgeHoldMs = (el: HTMLElement) =>
       el.matches(".fe-faq, .fe-blog") ? 620 : 300;
     let edges: Edge[] = [];
@@ -74,7 +74,11 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         document.querySelectorAll<HTMLElement>(".frontend-main section")
       )
         .filter((el) => el.offsetHeight > viewport() * 0.45)
-        .map((el) => ({ y: layoutTop(el), ms: edgeHoldMs(el) }))
+        .map((el) => ({
+          y: layoutTop(el),
+          ms: edgeHoldMs(el),
+          pin: el.matches(".fe-faq, .fe-blog"),
+        }))
         .filter((e) => e.y > 0)
         .sort((a, b) => a.y - b.y)
         .filter((e, i, arr) => i === 0 || Math.abs(e.y - arr[i - 1]!.y) > 24);
@@ -123,7 +127,20 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       ) {
         lastEdgeAt = now;
         catchUntil = now + edge.ms;
-        if (lenis) lenis.options.wheelMultiplier = 0;
+        if (lenis) {
+          lenis.options.wheelMultiplier = 0;
+          // A real pin at the plain seams: ease the last pixels onto the edge
+          // and hold there. The softer brake only ignored new input, so the
+          // existing glide kept moving and the catch could not be felt.
+          if (edge.pin) {
+            lenis.scrollTo(edge.y, {
+              duration: 0.24,
+              easing: (t) => 1 - Math.pow(1 - t, 3),
+              lock: true,
+              force: true,
+            });
+          }
+        }
       }
       previousScroll = y;
     };
