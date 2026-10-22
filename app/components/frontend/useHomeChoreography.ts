@@ -3,7 +3,7 @@
 import type { RefObject } from "react";
 import gsap from "gsap";
 import { MOTION_STAGGER } from "@/lib/motion";
-import { arrive, handoff, scrub, useChoreography, type ChoreoContext } from "@/app/components/motion/choreography";
+import { arrive, handoff, paintedBg, scrub, useChoreography, type ChoreoContext } from "@/app/components/motion/choreography";
 import { following, pinnedHandoff } from "@/app/components/motion/pinned-handoffs";
 
 const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...root.querySelectorAll<T>(sel)];
@@ -39,6 +39,13 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
 export function buildHomeChoreography(ctx: ChoreoContext) {
   const { root, mobile } = ctx;
   const one = (sel: string) => root.querySelector<HTMLElement>(sel);
+  // Pricing -> FAQ has no motion by design, so its soft join is a CSS band
+  // painted in pricing's actual colour (which the editor can change).
+  const faqBox = one(".fe-faq");
+  const pricingBox = one(".v2-pricing");
+  if (faqBox && pricingBox) {
+    gsap.set(faqBox, { "--fe-join-top": paintedBg(pricingBox) });
+  }
   const trustWrap = one(".v2-trust-wrap");
   if (trustWrap) gsap.set(trustWrap, { position: "relative", zIndex: 3 });
 

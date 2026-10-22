@@ -342,19 +342,23 @@ export function pinnedHandoff(
         // A wrapper shell can hold the layout while the visible section lives
         // inside it; `tint` keeps the colour blend on that visible section.
         const from = paintedBg(opts.tint ?? prev);
+        // Read the target from the visible incoming block too: an admin wrapper
+        // can be transparent, and paintedBg(wrapper) would pick the page canvas
+        // (cream) and leave the pricing block the wrong colour.
+        const to = opts.nextTint ? paintedBg(opts.nextTint) : nextBg;
         gsap.set(prev, { backgroundColor: from });
-        tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        tl.fromTo(prev, { backgroundColor: from }, { backgroundColor: to, duration: 0.7 }, 0);
         if (opts.tint && opts.tint !== prev) {
           gsap.set(opts.tint, { backgroundColor: from });
-          tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+          tl.fromTo(opts.tint, { backgroundColor: from }, { backgroundColor: to, duration: 0.7 }, 0);
         }
-        tl.fromTo(next, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+        tl.fromTo(next, { backgroundColor: from }, { backgroundColor: to, duration: 0.7 }, 0);
         // Editor wrappers can leave the visible block painting its own colour
         // above the tweened wrapper; blend that block too so the join never
         // shows a hard yellow-to-green line.
         if (opts.nextTint && opts.nextTint !== next) {
           gsap.set(opts.nextTint, { backgroundColor: from });
-          tl.fromTo(opts.nextTint, { backgroundColor: from }, { backgroundColor: nextBg, duration: 0.7 }, 0);
+          tl.fromTo(opts.nextTint, { backgroundColor: from }, { backgroundColor: to, duration: 0.7 }, 0);
         }
       }
       const content = opts.content ?? next.firstElementChild;

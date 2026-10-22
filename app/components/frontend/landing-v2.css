@@ -2484,7 +2484,9 @@
   inset: 0 0 auto;
   z-index: 0;
   height: clamp(4.5rem, 9vw, 8rem);
-  background: linear-gradient(180deg, #dcefdc 0%, transparent 100%);
+  /* Starts in the pricing section's actual colour (set per render), so a
+     custom background in the editor still meets the FAQ without a seam. */
+  background: linear-gradient(180deg, var(--fe-join-top, #dcefdc) 0%, transparent 100%);
   content: "";
   pointer-events: none;
 }
