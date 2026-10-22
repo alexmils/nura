@@ -64,16 +64,20 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       }
       return y;
     };
-    let edges: number[] = [];
+    type Edge = { y: number; ms: number };
+    /** A longer beat where the next boundary is a plain gradient seam. */
+    const edgeHoldMs = (el: HTMLElement) =>
+      el.matches(".fe-faq, .fe-blog") ? 620 : 300;
+    let edges: Edge[] = [];
     const measureEdges = () => {
       edges = Array.from(
         document.querySelectorAll<HTMLElement>(".frontend-main section")
       )
         .filter((el) => el.offsetHeight > viewport() * 0.45)
-        .map(layoutTop)
-        .filter((y) => y > 0)
-        .sort((a, b) => a - b)
-        .filter((y, i, arr) => i === 0 || Math.abs(y - arr[i - 1]!) > 24);
+        .map((el) => ({ y: layoutTop(el), ms: edgeHoldMs(el) }))
+        .filter((e) => e.y > 0)
+        .sort((a, b) => a.y - b.y)
+        .filter((e, i, arr) => i === 0 || Math.abs(e.y - arr[i - 1]!.y) > 24);
     };
     measureEdges();
     let edgeTimer = 0;
@@ -107,8 +111,8 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       const lo = Math.min(previousScroll, y);
       const hi = Math.max(previousScroll, y);
       const edge = down
-        ? edges.find((value) => value > lo && value <= hi)
-        : [...edges].reverse().find((value) => value < hi && value >= lo);
+        ? edges.find((value) => value.y > lo && value.y <= hi)
+        : [...edges].reverse().find((value) => value.y < hi && value.y >= lo);
       const now = performance.now();
       // One catch per 0.9s: a fast fling must not machine-gun the brake
       // through several sections in a row.
@@ -118,7 +122,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
         now - lastEdgeAt > 900
       ) {
         lastEdgeAt = now;
-        catchUntil = now + 300;
+        catchUntil = now + edge.ms;
         if (lenis) lenis.options.wheelMultiplier = 0;
       }
       previousScroll = y;
