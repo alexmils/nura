@@ -1,8 +1,4 @@
-import {
-  learnReadingPath,
-  type ClusterArticle,
-  type ClusterTopic,
-} from "@/lib/content-cluster";
+import type { ClusterArticle, ClusterTopic } from "@/lib/content-cluster";
 import { listPublishedBlogPosts } from "@/lib/blog-db";
 import {
   LearnHelpCenter,
@@ -29,7 +25,7 @@ const PATH_COPY: Record<
     cardDek: "What EMDR is",
     panelTitle: "Get started with",
     panelAccent: "EMDR.",
-    panelDek: "Three guides. Read in order.",
+    panelDek: "Start here, newest first.",
   },
   practice: {
     cardLabel: "Practice",
@@ -65,9 +61,9 @@ function toHelpArticle(article: {
 }
 
 /**
- * The blog hub. Every published post comes from the database, so an article
- * added in admin shows up here; the curated reading order still comes first
- * in each topic group, with anything new appended after it.
+ * The blog hub. Every topic group is built from published blog posts, so the
+ * page always matches the database: new admin posts appear, deleted posts
+ * disappear, and nothing comes from a static seed list.
  */
 export async function LearnHub({
   posts: postsProp,
@@ -75,18 +71,10 @@ export async function LearnHub({
   posts?: ClusterArticle[];
 } = {}) {
   const posts = postsProp ?? (await listPublishedBlogPosts());
-  const published = new Set(posts.map((post) => post.slug));
   const articles = posts.map(toHelpArticle);
 
   const paths: LearnHelpPath[] = TOPIC_ORDER.map((topic) => {
     const copy = PATH_COPY[topic];
-    const curated = learnReadingPath(topic)
-      .filter((article) => published.has(article.slug))
-      .map(toHelpArticle);
-    const chosen = new Set(curated.map((article) => article.slug));
-    const rest = articles.filter(
-      (article) => article.topic === topic && !chosen.has(article.slug)
-    );
     return {
       topic,
       label: copy.cardLabel,
@@ -96,7 +84,7 @@ export async function LearnHub({
       panelDek: copy.panelDek,
       moreHref: copy.moreHref,
       moreLabel: copy.moreLabel,
-      articles: [...curated, ...rest],
+      articles: articles.filter((article) => article.topic === topic),
     };
   }).filter((path) => path.articles.length > 0);
 
