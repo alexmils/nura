@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AdminMediaField } from "@/app/components/admin/AdminMediaField";
@@ -68,6 +68,52 @@ export default function AdminResourceEditorPage() {
   const [missing, setMissing] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
+
+  function insertAtCursor(snippet: string) {
+    const el = bodyRef.current;
+    const current = form.body;
+    const pos = el?.selectionStart ?? current.length;
+    setForm((f) => ({
+      ...f,
+      body: current.slice(0, pos) + snippet + current.slice(pos),
+    }));
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      const caret = pos + snippet.length;
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  async function insertMedia(file: File, kind: "image" | "video") {
+    setBusy(true);
+    setMsg("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "nura/resources");
+      const res = await fetch("/api/admin/cloudinary/upload", {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Upload failed.");
+      const url = String(data.url ?? "");
+      if (!url) throw new Error("Upload returned no URL.");
+      const alt = file.name
+        .replace(/\.[a-z0-9]+$/i, "")
+        .replace(/[-_]+/g, " ")
+        .trim();
+      insertAtCursor(`\n![${alt || kind}](${url})\n`);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/resources");
@@ -223,9 +269,50 @@ export default function AdminResourceEditorPage() {
             <div className="admin-box">
               <h3 className="admin-box-title">Body</h3>
               <p className="admin-panel-sub">
-                Markdown. Images, bold, and links are allowed.
+                Markdown. Images, bold, and video clips are allowed.
               </p>
+              <div className="admin-body-tools">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() => imageInputRef.current?.click()}
+                >
+                  Insert image
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={busy}
+                  onClick={() => videoInputRef.current?.click()}
+                >
+                  Insert video
+                </button>
+              </div>
+              <input
+                ref={imageInputRef}
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void insertMedia(file, "image");
+                  e.target.value = "";
+                }}
+              />
+              <input
+                ref={videoInputRef}
+                type="file"
+                hidden
+                accept="video/mp4,video/webm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void insertMedia(file, "video");
+                  e.target.value = "";
+                }}
+              />
               <textarea
+                ref={bodyRef}
                 className="field admin-body-textarea"
                 rows={22}
                 value={form.body}
@@ -234,6 +321,10 @@ export default function AdminResourceEditorPage() {
                   setForm((f) => ({ ...f, body: e.target.value }))
                 }
               />
+              <p className="admin-panel-sub">
+                A chip is inserted where the cursor was. MP4 and WebM render as
+                a player inside the guide.
+              </p>
             </div>
           </section>
 

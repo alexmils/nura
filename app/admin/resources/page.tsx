@@ -2,8 +2,21 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FileText, Film, ShieldCheck } from "lucide-react";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import type { ResourcePost } from "@/lib/resources";
+
+const KIND_LABEL: Record<ResourcePost["kind"], string> = {
+  article: "Article",
+  video: "Video",
+  safety: "Safety",
+};
+
+function KindIcon({ kind }: { kind: ResourcePost["kind"] }) {
+  if (kind === "video") return <Film size={18} />;
+  if (kind === "safety") return <ShieldCheck size={18} />;
+  return <FileText size={18} />;
+}
 
 /** Signed-in library at /app/resources. The editor is `/admin/resources/<id>`. */
 
@@ -130,14 +143,22 @@ export default function AdminResourcesPage() {
                   className="admin-content-row"
                   onClick={() => router.push(`/admin/resources/${item.id}`)}
                 >
-                  <span className="admin-content-main">
-                    <span className="admin-content-title">{item.title}</span>
-                    <span className="admin-content-meta">
-                      /app/resources/{item.slug}
+                  <span className="admin-content-lead">
+                    <span
+                      className={`admin-content-kind admin-content-kind--${item.kind}`}
+                      aria-hidden
+                    >
+                      <KindIcon kind={item.kind} />
+                    </span>
+                    <span className="admin-content-main">
+                      <span className="admin-content-title">{item.title}</span>
+                      <span className="admin-content-meta">
+                        /app/resources/{item.slug}
+                      </span>
                     </span>
                   </span>
                   <span className="admin-chips">
-                    <span className="admin-chip">{item.kind}</span>
+                    <span className="admin-chip">{KIND_LABEL[item.kind]}</span>
                     <span
                       className={`admin-chip ${
                         item.enabled ? "admin-chip--ok" : "admin-chip--warn"

@@ -14239,6 +14239,42 @@ html[data-a11y-motion="reduced"] .fe-display-word {
   background: color-mix(in srgb, var(--bg-muted) 55%, transparent);
 }
 
+.admin-content-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-content-kind {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.admin-content-kind--video {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--accent);
+}
+
+.admin-content-kind--safety {
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+  color: var(--destructive);
+}
+
+.admin-body-tools {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .admin-content-main {
   display: grid;
   gap: 0.2rem;
