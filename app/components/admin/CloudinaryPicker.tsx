@@ -230,7 +230,8 @@ export function CloudinaryPicker({
   }
 
   function pageParams(extra?: Record<string, string>) {
-    const params = new URLSearchParams(extra);
+    // Nura's route returns the full Media-page inventory unless `paged=1`.
+    const params = new URLSearchParams({ paged: "1", ...extra });
     if (scope.folder) {
       params.set("folder", scope.folder);
       if (scope.filter) params.set("q", scope.filter);
