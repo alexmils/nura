@@ -629,12 +629,19 @@ export function HomeLandingV2({
             <div className="v2-app-glow" aria-hidden />
             <div className={`v2-video-frame fe-animate${SESSION_VIDEO_URL ? " is-video" : ""}`}>
               {SESSION_VIDEO_URL ? (
-                SESSION_VIDEO_URL.endsWith(".mp4") ? (
+                /\.(mp4|webm|ogg|mov)(\?|$)/i.test(SESSION_VIDEO_URL) ||
+                SESSION_VIDEO_URL.includes("res.cloudinary.com") ? (
                   <video
                     className="v2-video-iframe"
                     src={SESSION_VIDEO_URL}
-                    controls
+                    autoPlay
+                    muted
+                    loop
                     playsInline
+                    onMouseEnter={(event) => event.currentTarget.pause()}
+                    onMouseLeave={(event) => {
+                      void event.currentTarget.play().catch(() => undefined);
+                    }}
                   />
                 ) : (
                   <iframe
@@ -682,11 +689,6 @@ export function HomeLandingV2({
                           <span className="v2-app-dot" />
                         </div>
                         <p className="v2-app-prompt">Follow the light. Pause whenever you need.</p>
-                        <div className="v2-app-controls">
-                          <span className="v2-app-control"><Play size={15} /></span>
-                          <span className="v2-app-track"><span /></span>
-                          <span className="v2-app-control"><Volume2 size={15} /></span>
-                        </div>
                       </div>
                       <aside className="v2-app-chat">
                         <p className="v2-app-chat-label">Session agent</p>

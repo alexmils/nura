@@ -26,6 +26,7 @@ import {
   type SectionConfig,
   type SectionItem,
 } from "@/lib/marketing-sections";
+import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
 import { commitSectionDraft, setSectionDraft, useEditorDraft } from "./section-draft";
@@ -427,6 +428,7 @@ function ScalarControl({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const [videoPicker, setVideoPicker] = useState(false);
   if (field.kind === "image") {
     return (
       <ImageSlot
@@ -442,12 +444,39 @@ function ScalarControl({
   return (
     <label className="fe-editor-field">
       <span>{field.label}</span>
-      {field.kind === "textarea" ? (
+      {field.videoPicker ? (
+        <div className="fe-editor-field-row">
+          <input value={value} onChange={(event) => onChange(event.target.value)} />
+          <button
+            type="button"
+            className="fe-editor-frame-btn"
+            onClick={(event) => {
+              event.preventDefault();
+              setVideoPicker(true);
+            }}
+          >
+            Cloudinary
+          </button>
+        </div>
+      ) : field.kind === "textarea" ? (
         <textarea rows={(field.max ?? 0) > 2400 ? 18 : 4} value={value} onChange={(event) => onChange(event.target.value)} />
       ) : (
         <input value={value} onChange={(event) => onChange(event.target.value)} />
       )}
       {field.hint ? <small>{field.hint}</small> : null}
+      {videoPicker ? (
+        <CloudinaryPicker
+          used={value ? [value] : []}
+          mediaType="video"
+          single
+          current={value}
+          onClose={() => setVideoPicker(false)}
+          onImport={(urls) => {
+            if (urls[0]) onChange(urls[0]);
+            setVideoPicker(false);
+          }}
+        />
+      ) : null}
     </label>
   );
 }

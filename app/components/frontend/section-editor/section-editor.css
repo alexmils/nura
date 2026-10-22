@@ -937,6 +937,17 @@ html[data-editor-open] .frontend-back-to-top {
   flex-basis: 100%;
 }
 
+.fe-editor-field-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fe-editor-field-row input {
+  flex: 1;
+  min-width: 0;
+}
+
 .fe-editor-frame-btn {
   padding: 0.3rem 0.8rem;
   border: 1px solid var(--border, rgb(0 0 0 / 0.15));

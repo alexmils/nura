@@ -44,6 +44,8 @@ export type ScalarField = {
   max?: number;
   /** A fixed choice (stored as its value); the editor shows a picker. */
   options?: readonly FieldOption[];
+  /** URL field with a Cloudinary video picker beside the input. */
+  videoPicker?: boolean;
   /** Hex colour ("#rrggbb" or blank); the editor shows a colour swatch. */
   color?: boolean;
   /** Only shown (and rendered) for these hero templates. */
@@ -1500,7 +1502,10 @@ const V2_SECTIONS: SectionDef[] = [
     name: "Home: inside a session",
     fields: [
       ...sectionHead(),
-      text("videoUrl", "Walkthrough video", "YouTube, Vimeo or .mp4 link. Leave empty for the app preview."),
+      {
+        ...text("videoUrl", "Walkthrough video", "YouTube, Vimeo or .mp4 link, or import one from Cloudinary. Leave empty for the app preview."),
+        videoPicker: true,
+      },
       text("coverTitle", "Preview title"),
       text("coverNote", "Preview note"),
       {
