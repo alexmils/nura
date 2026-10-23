@@ -82,6 +82,14 @@ jobs:
             exit 22
           fi
 
+      - name: Wait for the Coolify rollout
+        run: |
+          # The Coolify deploy API returns when the rollout is queued, not when
+          # the new container serves traffic. Purging now lets Cloudflare cache
+          # the previous build's HTML; its asset hashes disappear with the old
+          # container and visitors get a preloader stuck at 0%.
+          sleep 120
+
       - name: Purge Cloudflare cache
         env:
           CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
