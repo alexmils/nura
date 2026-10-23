@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Play } from "lucide-react";
 import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 
 function isCloudinary(src: string): boolean {
@@ -27,6 +27,7 @@ export function ReplaceableThumb({
   const fileRef = useRef<HTMLInputElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const canImport = Boolean(src) && src.startsWith("/") && !isCloudinary(src);
+  const isEmbed = mediaType === "video" && /youtube|youtu\.be|vimeo/i.test(src);
 
   useEffect(() => {
     if (!menu) return;
@@ -56,7 +57,13 @@ export function ReplaceableThumb({
     <div ref={boxRef} className="fe-replace">
       <button type="button" className={`fe-replace-thumb fe-replace-thumb--${mediaType}`} aria-haspopup="menu" aria-expanded={menu} aria-label={src ? "Change media" : "Upload media"} onClick={() => setMenu((open) => !open)}>
         {src && mediaType === "video" ? (
-          <video src={src} muted playsInline />
+          isEmbed ? (
+            <span className="fe-replace-embed">
+              <Play size={16} aria-hidden /> Video link
+            </span>
+          ) : (
+            <video src={src} muted playsInline />
+          )
         ) : src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={src} alt={alt} />
@@ -103,6 +110,19 @@ export function ReplaceableThumb({
           >
             Upload
           </button>
+          {src ? (
+            <button
+              type="button"
+              role="menuitem"
+              className="fe-replace-remove"
+              onClick={() => {
+                setMenu(false);
+                onReplace("");
+              }}
+            >
+              Remove
+            </button>
+          ) : null}
         </div>
       ) : null}
       <input

@@ -39,6 +39,7 @@ import {
   heroInk,
   heroTemplate,
   closeTemplate,
+  mediaNames,
 } from "@/lib/marketing-sections";
 import { HeroTemplateBody, heroInkStyle, useReducedMotion, type HeroParts } from "./HeroTemplates";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
@@ -138,7 +139,7 @@ function sessionEmbedUrl(url: string): string {
 
 /** Direct-file walkthrough video: plays on its own, with a pause/play button
  *  that only fades in while the pointer is over the frame. */
-function SessionVideo({ src }: { src: string }) {
+function SessionVideo({ src, poster }: { src: string; poster?: string }) {
   const ref = useRef<HTMLVideoElement | null>(null);
   // No autoplay: the walkthrough waits on a big play button.
   const [paused, setPaused] = useState(true);
@@ -148,6 +149,7 @@ function SessionVideo({ src }: { src: string }) {
         ref={ref}
         className="v2-video-iframe"
         src={src}
+        poster={poster || undefined}
         muted
         loop
         playsInline
@@ -327,7 +329,7 @@ export function HomeLandingV2({
     title: mode.title ?? "",
     accent: mode.accent ?? "",
     body: mode.body ?? "",
-    image: mode.image || "/marketing/landing/support-talk.jpg",
+    image: mode.image ?? "",
     alt: mode.alt ?? "",
     chips: linesOf(mode.chips ?? ""),
   }));
@@ -355,7 +357,17 @@ export function HomeLandingV2({
       PLANS.splice(Math.floor(PLANS.length / 2), 0, featured);
     }
   }
-  const SESSION_VIDEO_URL = sectionText(session, "videoUrl").trim();
+  const sessionCover = mediaNames("cover");
+  const SESSION_KIND = sectionText(session, sessionCover.kind);
+  const SESSION_IMAGE = sectionText(session, sessionCover.image).trim();
+  const SESSION_VIDEO_URL = sectionText(session, sessionCover.video).trim();
+  const SESSION_POSTER = sectionText(session, sessionCover.poster).trim();
+  const SESSION_ALT = sectionText(session, sessionCover.alt).trim();
+  const SESSION_MEDIA = SESSION_KIND !== "none";
+  // No URL for the chosen kind = keep the built-in app preview.
+  const SESSION_HAS_CUSTOM =
+    (SESSION_KIND === "image" && Boolean(SESSION_IMAGE)) ||
+    (SESSION_KIND === "video" && Boolean(SESSION_VIDEO_URL));
   // EditablePart adds a wrapper for admins, so the section nodes are rebuilt
   // when the role resolves; the motion hooks must re-attach to the new nodes.
   const isAdmin = useIsPlatformAdmin();
@@ -562,19 +574,23 @@ export function HomeLandingV2({
             </div>
 
             <div
-              className={`v2-modes-stage is-${activeMode}`}
+              className={`v2-modes-stage is-${activeMode}${
+                activeModeData.image ? "" : " is-noimage"
+              }`}
               id="v2-mode-panel"
               role="tabpanel"
               aria-labelledby={`v2-mode-tab-${activeMode}`}
             >
-              <Image
-                src={activeModeData.image}
-                alt={activeModeData.alt}
-                fill
-                sizes="(max-width: 1100px) 100vw, 55vw"
-                className="v2-modes-stage-img"
-                unoptimized={needsUnoptimized(activeModeData.image)}
-              />
+              {activeModeData.image ? (
+                <Image
+                  src={activeModeData.image}
+                  alt={activeModeData.alt}
+                  fill
+                  sizes="(max-width: 1100px) 100vw, 55vw"
+                  className="v2-modes-stage-img"
+                  unoptimized={needsUnoptimized(activeModeData.image)}
+                />
+              ) : null}
               <span className="v2-modes-stage-tint" aria-hidden />
               <div className="v2-modes-stage-content" key={activeMode}>
                 {activeMode === "guided" ? (
@@ -665,85 +681,103 @@ export function HomeLandingV2({
           />
 
           <div className="v2-app-wrap">
-            <div className="v2-app-glow" aria-hidden />
-            <div className={`v2-video-frame fe-animate${SESSION_VIDEO_URL ? " is-video" : ""}`}>
-              {SESSION_VIDEO_URL ? (
-                /\.(mp4|webm|ogg|mov)(\?|$)/i.test(SESSION_VIDEO_URL) ||
-                SESSION_VIDEO_URL.includes("res.cloudinary.com") ? (
-                  <SessionVideo src={SESSION_VIDEO_URL} />
-                ) : (
-                  <iframe
-                    src={sessionEmbedUrl(SESSION_VIDEO_URL)}
-                    title="Nura session walkthrough"
-                    className="v2-video-iframe"
-                    allow="autoplay; fullscreen; picture-in-picture"
-                    allowFullScreen
-                  />
-                )
-              ) : (
-                <>
-                  <div className="v2-app" aria-hidden>
-                    <div className="v2-app-bar">
-                      <span className="v2-app-dots">
-                        <span /><span /><span />
-                      </span>
-                      <span className="v2-app-title">Nura · Session</span>
-                      <span className="v2-app-live"><span />Live</span>
-                    </div>
-                    <div className="v2-app-body">
-                      <aside className="v2-app-rail">
-                        <span className="v2-app-mark">n</span>
-                        <span className="v2-app-rail-item is-active">
-                          <Leaf size={15} /> Ground
-                        </span>
-                        <span className="v2-app-rail-item">
-                          <Play size={15} /> Set
-                        </span>
-                        <span className="v2-app-rail-item">
-                          <MessageCircle size={15} /> Check in
-                        </span>
-                        <span className="v2-app-rail-item">
-                          <ShieldCheck size={15} /> Close
-                        </span>
-                      </aside>
-                      <div className="v2-app-stage">
-                        <div className="v2-app-stage-head">
-                          <span className="v2-app-chip"><Leaf size={13} /> Grounded</span>
-                          <span className="v2-app-clock">12:04</span>
+            {SESSION_MEDIA ? (
+              <>
+                <div className="v2-app-glow" aria-hidden />
+                <div
+                  className={`v2-video-frame fe-animate${
+                    SESSION_HAS_CUSTOM && SESSION_KIND === "video" ? " is-video" : ""
+                  }`}
+                >
+                  {SESSION_HAS_CUSTOM && SESSION_KIND === "video" ? (
+                    /\.(mp4|webm|ogg|mov)(\?|$)/i.test(SESSION_VIDEO_URL) ||
+                    SESSION_VIDEO_URL.includes("res.cloudinary.com") ? (
+                      <SessionVideo
+                        src={SESSION_VIDEO_URL}
+                        poster={SESSION_POSTER || undefined}
+                      />
+                    ) : (
+                      <iframe
+                        src={sessionEmbedUrl(SESSION_VIDEO_URL)}
+                        title="Nura session walkthrough"
+                        className="v2-video-iframe"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                      />
+                    )
+                  ) : SESSION_HAS_CUSTOM && SESSION_KIND === "image" ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      className="v2-session-image"
+                      src={SESSION_IMAGE}
+                      alt={SESSION_ALT || "Nura session preview"}
+                    />
+                  ) : (
+                    <>
+                      <div className="v2-app" aria-hidden>
+                        <div className="v2-app-bar">
+                          <span className="v2-app-dots">
+                            <span /><span /><span />
+                          </span>
+                          <span className="v2-app-title">Nura · Session</span>
+                          <span className="v2-app-live"><span />Live</span>
                         </div>
-                        <div className="v2-app-orb">
-                          <span className="v2-app-orb-glow" />
-                          <span className="v2-app-orb-ring" />
-                          <span className="v2-app-dot" />
+                        <div className="v2-app-body">
+                          <aside className="v2-app-rail">
+                            <span className="v2-app-mark">n</span>
+                            <span className="v2-app-rail-item is-active">
+                              <Leaf size={15} /> Ground
+                            </span>
+                            <span className="v2-app-rail-item">
+                              <Play size={15} /> Set
+                            </span>
+                            <span className="v2-app-rail-item">
+                              <MessageCircle size={15} /> Check in
+                            </span>
+                            <span className="v2-app-rail-item">
+                              <ShieldCheck size={15} /> Close
+                            </span>
+                          </aside>
+                          <div className="v2-app-stage">
+                            <div className="v2-app-stage-head">
+                              <span className="v2-app-chip"><Leaf size={13} /> Grounded</span>
+                              <span className="v2-app-clock">12:04</span>
+                            </div>
+                            <div className="v2-app-orb">
+                              <span className="v2-app-orb-glow" />
+                              <span className="v2-app-orb-ring" />
+                              <span className="v2-app-dot" />
+                            </div>
+                            <p className="v2-app-prompt">Follow the light. Pause whenever you need.</p>
+                          </div>
+                          <aside className="v2-app-chat">
+                            <p className="v2-app-chat-label">Session agent</p>
+                            <p className="v2-app-msg v2-app-msg--agent">
+                              What are you noticing now?
+                            </p>
+                            <p className="v2-app-msg v2-app-msg--user">
+                              My chest is a little tighter.
+                            </p>
+                            <p className="v2-app-msg v2-app-msg--agent">
+                              Stay with it. We can pause after this set.
+                            </p>
+                            <span className="v2-app-composer">Write a note…</span>
+                          </aside>
                         </div>
-                        <p className="v2-app-prompt">Follow the light. Pause whenever you need.</p>
                       </div>
-                      <aside className="v2-app-chat">
-                        <p className="v2-app-chat-label">Session agent</p>
-                        <p className="v2-app-msg v2-app-msg--agent">
-                          What are you noticing now?
-                        </p>
-                        <p className="v2-app-msg v2-app-msg--user">
-                          My chest is a little tighter.
-                        </p>
-                        <p className="v2-app-msg v2-app-msg--agent">
-                          Stay with it. We can pause after this set.
-                        </p>
-                        <span className="v2-app-composer">Write a note…</span>
-                      </aside>
-                    </div>
-                  </div>
-                  <div className="v2-video-shade" aria-hidden />
-                  <div className="v2-video-cover">
-                    <span className="v2-video-play" aria-hidden>
-                      <Play size={22} />
-                    </span>
-                    <p>{sectionText(session, "coverTitle")}</p>
-                    <span>{sectionText(session, "coverNote")}</span>
-                  </div>
-                </>
-              )}
-            </div>
+                      <div className="v2-video-shade" aria-hidden />
+                      <div className="v2-video-cover">
+                        <span className="v2-video-play" aria-hidden>
+                          <Play size={22} />
+                        </span>
+                        <p>{sectionText(session, "coverTitle")}</p>
+                        <span>{sectionText(session, "coverNote")}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </>
+            ) : null}
 
             <ul className="v2-app-features fe-animate">
               {sectionList(session, "features").map((feature, index) => {

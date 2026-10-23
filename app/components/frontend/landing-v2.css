@@ -879,6 +879,12 @@
   object-fit: cover;
 }
 
+.v2-modes-stage.is-noimage {
+  background:
+    radial-gradient(circle at 30% 18%, rgba(198, 214, 126, 0.22), transparent 42%),
+    linear-gradient(160deg, #2b4633, #1f3527 70%);
+}
+
 .v2-modes-stage-tint {
   position: absolute;
   inset: 0;
@@ -1290,6 +1296,15 @@
 
 .v2-video-frame.is-video {
   aspect-ratio: 16 / 9;
+}
+
+.v2-session-image {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .v2-video-iframe {

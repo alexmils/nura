@@ -101,6 +101,7 @@ export function SectionMedia({
     return () => mq.removeEventListener("change", apply);
   }, []);
 
+  if (kind === "none") return null;
   const showVideo = kind === "video" && Boolean(video) && !reduce;
   if (showVideo) {
     const embed = embedSrc(video, autoplay);

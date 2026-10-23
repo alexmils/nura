@@ -1552,10 +1552,11 @@ const V2_SECTIONS: SectionDef[] = [
     name: "Home: inside a session",
     fields: [
       ...sectionHead(),
-      {
-        ...text("videoUrl", "Walkthrough video", "YouTube, Vimeo or .mp4 link, or import one from Cloudinary. Leave empty for the app preview."),
-        videoPicker: true,
-      },
+      media(
+        "cover",
+        "Session preview",
+        "Image or video. Leave both empty to show the app preview; choose None to hide the media."
+      ),
       text("coverTitle", "Preview title"),
       text("coverNote", "Preview note"),
       {
@@ -1573,7 +1574,11 @@ const V2_SECTIONS: SectionDef[] = [
       title: "A calm room for the work.",
       accent: "calm",
       sub: "Grounding, visual sets, and check-ins in one quiet workspace.",
-      videoUrl: "",
+      coverKind: "image",
+      coverImage: "",
+      coverVideo: "",
+      coverPoster: "",
+      coverAlt: "",
       coverTitle: "Session walkthrough",
       coverNote: "Video coming soon",
       features: [
@@ -2297,6 +2302,9 @@ function normalizeScalar(
   fallback: string
 ): string {
   const max = field.max ?? (field.kind === "textarea" ? AREA_MAX : TEXT_MAX);
+  // An explicit empty string is a choice (the editor's Remove button), not a
+  // missing value. Only absent keys fall back to the designed image.
+  if (field.kind === "image" && typeof raw === "string" && !raw.trim()) return "";
   const textValue = clampText(raw, max, fallback);
   if (field.kind === "image") return safeMediaUrl(textValue, fallback.trim());
   if (field.href) {
@@ -2311,6 +2319,24 @@ function readSlotSource(source: Record<string, unknown> | SectionItem, key: stri
   return typeof raw === "string" ? raw : "";
 }
 
+function hasOwnKey(source: Record<string, unknown> | SectionItem, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(source, key);
+}
+
+/**
+ * Explicit "" clears a slot; a missing key keeps the designed media, and an
+ * invalid value still falls back (never store a javascript: or broken URL).
+ */
+function slotMediaUrl(
+  source: Record<string, unknown> | SectionItem,
+  key: string,
+  fallback: string
+): string {
+  const raw = readSlotSource(source, key);
+  if (hasOwnKey(source, key) && !raw.trim()) return "";
+  return safeMediaUrl(raw, fallback);
+}
+
 export function normalizeMediaSlot(
   key: string,
   source: Record<string, unknown> | SectionItem,
@@ -2320,10 +2346,13 @@ export function normalizeMediaSlot(
   const fallbackKind = fallback[names.kind] === "video" ? "video" : "image";
   const rawKind = readSlotSource(source, names.kind);
   const out: SectionItem = {};
-  out[names.kind] = rawKind === "video" || rawKind === "image" ? rawKind : fallbackKind;
-  out[names.image] = safeMediaUrl(readSlotSource(source, names.image), fallback[names.image] ?? "");
-  out[names.video] = safeMediaUrl(readSlotSource(source, names.video), fallback[names.video] ?? "");
-  out[names.poster] = safeMediaUrl(readSlotSource(source, names.poster), fallback[names.poster] ?? "");
+  out[names.kind] =
+    rawKind === "video" || rawKind === "image" || rawKind === "none"
+      ? rawKind
+      : fallbackKind;
+  out[names.image] = slotMediaUrl(source, names.image, fallback[names.image] ?? "");
+  out[names.video] = slotMediaUrl(source, names.video, fallback[names.video] ?? "");
+  out[names.poster] = slotMediaUrl(source, names.poster, fallback[names.poster] ?? "");
   out[names.alt] = clampText(readSlotSource(source, names.alt) || fallback[names.alt] || "", TEXT_MAX, fallback[names.alt] ?? "");
   return out;
 }
@@ -2457,6 +2486,15 @@ export function normalizeSection(id: string, input: unknown): SectionConfig {
         out[field.key] = HEX_COLOR.test(value) ? value : "";
       }
       if (field.kind === "image") keepFramePos(out as SectionItem, source, field.key);
+    }
+  }
+  // Older "Inside a session" configs stored a walkthrough URL in `videoUrl`.
+  // Move it into the new cover slot so existing videos survive.
+  if (id === "home-session") {
+    const legacy = typeof source.videoUrl === "string" ? source.videoUrl.trim() : "";
+    if (legacy && !source.coverKind) {
+      out.coverKind = "video";
+      out.coverVideo = safeMediaUrl(legacy, "");
     }
   }
   if (!def.noHide) {

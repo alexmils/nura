@@ -59,7 +59,7 @@ function MediaPlaceholder({
   poster?: string;
   alt?: string;
 }) {
-  const hasMedia = Boolean(image || video);
+  const hasMedia = kind !== "none" && Boolean(image || video);
   return (
     <div
       className={
@@ -128,7 +128,8 @@ export function SessionPathSticky() {
   const rhythmVideo = sectionText(rhythmCopy, rhythmNames.video);
   const rhythmPoster = sectionText(rhythmCopy, rhythmNames.poster);
   const rhythmAlt = sectionText(rhythmCopy, rhythmNames.alt);
-  const rhythmHasMedia = Boolean(rhythmImage || rhythmVideo);
+  const rhythmHasMedia =
+    rhythmKind !== "none" && Boolean(rhythmImage || rhythmVideo);
   const ground = sectionList(groundCopy, "ground");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);

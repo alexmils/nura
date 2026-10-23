@@ -6,7 +6,7 @@ import { FrameEdit } from "@/app/components/admin/FrameEdit";
 import { flushActiveFrameDrag, parseFrameKey, patchFramePath, readFramePath } from "@/app/components/admin/frame-drag";
 import { frameKey } from "@/lib/image-position";
 import { useRouter } from "next/navigation";
-import { RotateCcw, Undo2, X } from "lucide-react";
+import { ChevronDown, RotateCcw, Undo2, X } from "lucide-react";
 import {
   getSectionDef,
   BG_DECOR_KEY,
@@ -573,11 +573,12 @@ function MediaControls({
 }) {
   const names = mediaNames(field.key);
   const read = (key: string) => (typeof values[key] === "string" ? values[key] : "");
-  const kind = read(names.kind) === "video" ? "video" : "image";
+  const rawKind = read(names.kind);
+  const kind = rawKind === "video" ? "video" : rawKind === "none" ? "none" : "image";
   return (
     <div className="fe-editor-media">
       <div className="fe-editor-media-toggle" role="radiogroup" aria-label={`${field.label}: media type`}>
-        {(["image", "video"] as const).map((mode) => (
+        {(["image", "video", "none"] as const).map((mode) => (
           <button
             key={mode}
             type="button"
@@ -586,11 +587,15 @@ function MediaControls({
             className={kind === mode ? "is-on" : ""}
             onClick={() => onChange({ [names.kind]: mode })}
           >
-            {mode === "image" ? "Image" : "Video"}
+            {mode === "image" ? "Image" : mode === "video" ? "Video" : "None"}
           </button>
         ))}
       </div>
-      {kind === "image" ? (
+      {kind === "none" ? (
+        <p className="fe-editor-note">
+          No media in this slot. Switch back to Image or Video to add one.
+        </p>
+      ) : kind === "image" ? (
         <ImageSlot
           label="Image"
           hint={field.hint}
@@ -608,8 +613,16 @@ function MediaControls({
               onReplace={(url) => onChange({ [names.video]: url })}
             />
           </div>
+          <label className="fe-editor-field">
+            <span>Or paste a video URL</span>
+            <input
+              value={read(names.video)}
+              placeholder="https://youtube.com/…, vimeo.com/… or .mp4"
+              onChange={(event) => onChange({ [names.video]: event.target.value })}
+            />
+          </label>
           <ImageSlot
-            label="Poster image"
+            label="Poster image (optional)"
             hint="Shown before the video starts and when motion is reduced."
             value={read(names.poster)}
             onChange={(url) => onChange({ [names.poster]: url })}
@@ -628,10 +641,12 @@ function MediaControls({
           ) : null}
         </>
       )}
-      <label className="fe-editor-field">
-        <span>Alt text</span>
-        <input value={read(names.alt)} onChange={(event) => onChange({ [names.alt]: event.target.value })} />
-      </label>
+      {kind === "none" ? null : (
+        <label className="fe-editor-field">
+          <span>Alt text</span>
+          <input value={read(names.alt)} onChange={(event) => onChange({ [names.alt]: event.target.value })} />
+        </label>
+      )}
     </div>
   );
 }
@@ -710,16 +725,38 @@ function ListEditor({
   }
 
   const frameParent = useContext(FrameCtx);
+  const [closed, setClosed] = useState<Set<string>>(() => new Set());
+  function toggleOpen(key: string) {
+    setClosed((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
   return (
     <div className="fe-editor-list">
       {items.map((item, index) => {
         const hidden = item[HIDDEN_ITEM_KEY] === "1";
+        const itemKey = item.id || String(index);
+        const open = !closed.has(itemKey);
         return (
-          <article key={item.id || index} className={hidden ? "fe-editor-item is-off" : "fe-editor-item"}>
+          <article key={itemKey} className={hidden ? "fe-editor-item is-off" : "fe-editor-item"}>
             <div className="fe-editor-item-bar">
-              <strong>
-                {field.itemLabel} {index + 1}
-              </strong>
+              <span className="fe-editor-item-title">
+                <button
+                  type="button"
+                  className="fe-editor-item-toggle"
+                  aria-expanded={open}
+                  aria-label={open ? "Collapse" : "Expand"}
+                  onClick={() => toggleOpen(itemKey)}
+                >
+                  <ChevronDown size={15} className={open ? "" : "is-closed"} aria-hidden />
+                </button>
+                <strong>
+                  {field.itemLabel} {index + 1}
+                </strong>
+              </span>
               <div>
                 <label className="fe-editor-check">
                   <input type="checkbox" checked={!hidden} onChange={() => toggleHidden(index)} />
@@ -757,17 +794,19 @@ function ListEditor({
                 )}
               </div>
             </div>
-            <FrameCtx.Provider value={frameParent ? { ...frameParent, prefix: `${field.key}.${index}.` } : null}>
-              {field.fields.map((child) => (
-                <ItemFieldControl
-                  key={child.key}
-                  field={child}
-                  item={item}
-                  onPatch={(key, value) => patch(index, key, value)}
-                  onPatchItem={(next) => patchItem(index, next)}
-                />
-              ))}
-            </FrameCtx.Provider>
+            {open ? (
+              <FrameCtx.Provider value={frameParent ? { ...frameParent, prefix: `${field.key}.${index}.` } : null}>
+                {field.fields.map((child) => (
+                  <ItemFieldControl
+                    key={child.key}
+                    field={child}
+                    item={item}
+                    onPatch={(key, value) => patch(index, key, value)}
+                    onPatchItem={(next) => patchItem(index, next)}
+                  />
+                ))}
+              </FrameCtx.Provider>
+            ) : null}
           </article>
         );
       })}
@@ -826,7 +865,9 @@ function BackgroundControls({
           compact
           label="Image"
           value={read("bgImage")}
-          onChange={(url) => onChange({ bgImage: url }, "image")}
+          onChange={(url) =>
+            onChange(url ? { bgImage: url } : { bgImage: "", bgKind: "" }, "image")
+          }
           hint="Covers the whole section."
           frameField="bgImage"
         />
@@ -835,7 +876,13 @@ function BackgroundControls({
         <>
           <div className="fe-editor-field fe-editor-field--thumb">
             <span>Video</span>
-            <ReplaceableThumb mediaType="video" src={read("bgVideo")} onReplace={(url) => onChange({ bgVideo: url }, "video")} />
+            <ReplaceableThumb
+              mediaType="video"
+              src={read("bgVideo")}
+              onReplace={(url) =>
+                onChange(url ? { bgVideo: url } : { bgVideo: "", bgKind: "" }, "video")
+              }
+            />
             <small>Plays muted, looped, behind the content.</small>
           </div>
           <ImageSlot

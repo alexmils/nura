@@ -72,7 +72,8 @@ html[data-editor-open] .frontend-back-to-top {
   z-index: 100;
   display: flex;
   justify-content: flex-end;
-  background: color-mix(in srgb, var(--ink) 40%, transparent);
+  /* No scrim: the live page is the preview and must stay readable. */
+  background: transparent;
   color: var(--ink);
   font-family: var(--font-sans);
 }
@@ -204,6 +205,36 @@ html[data-editor-open] .frontend-back-to-top {
 .fe-editor-item-bar div {
   display: flex;
   gap: 0.35rem;
+}
+
+.fe-editor-item-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.fe-editor-item-bar .fe-editor-item-toggle {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fe-editor-item-bar .fe-editor-item-toggle:hover {
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+
+.fe-editor-item-toggle svg.is-closed {
+  transform: rotate(-90deg);
 }
 
 .fe-editor-acc {
@@ -350,6 +381,14 @@ html[data-editor-open] .frontend-back-to-top {
   height: 6.75rem;
 }
 
+.fe-replace-thumb--video .fe-replace-embed {
+  gap: 0.35rem;
+  background: color-mix(in srgb, var(--sage, #84b067) 16%, white);
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .fe-replace-thumb--video .fe-replace-hover {
   font-size: 0;
 }
@@ -441,6 +480,18 @@ html[data-editor-open] .frontend-back-to-top {
 
 .fe-replace-menu button:hover {
   background: color-mix(in srgb, var(--sage, #84b067) 18%, white);
+}
+
+.fe-replace-menu .fe-replace-remove {
+  color: #8b3a32;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.fe-editor-note {
+  margin: 0.2rem 0 0.85rem;
+  color: color-mix(in srgb, var(--ink) 62%, transparent);
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .fe-replace small {

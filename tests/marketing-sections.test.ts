@@ -77,6 +77,37 @@ describe("marketing section copy", () => {
     assert.equal(sectionText(config, "clipKind"), "video");
     assert.match(sectionText(config, "clipVideo"), /^https:\/\/www\.youtube\.com\//);
   });
+
+  it("clears an image only when the editor explicitly removes it", () => {
+    const cleared = normalizeSection("home-modes", {
+      modes: [{ id: "guided", image: "" }, { id: "self", image: "" }],
+    });
+    const clearedModes = sectionList(cleared, "modes");
+    assert.equal(clearedModes[0]?.image, "");
+    assert.equal(clearedModes[1]?.image, "");
+
+    // Missing keys still get the designed image.
+    const missing = normalizeSection("home-modes", {});
+    assert.equal(
+      sectionList(missing, "modes")[0]?.image,
+      "/marketing/landing/support-talk.jpg"
+    );
+  });
+
+  it("supports a media slot with no media and migrates the old walkthrough URL", () => {
+    const none = normalizeSection("home-session", {
+      coverKind: "none",
+      coverImage: "",
+      coverVideo: "",
+    });
+    assert.equal(sectionText(none, "coverKind"), "none");
+
+    const legacy = normalizeSection("home-session", {
+      videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    });
+    assert.equal(sectionText(legacy, "coverKind"), "video");
+    assert.match(sectionText(legacy, "coverVideo"), /^https:\/\/www\.youtube\.com\//);
+  });
   it("parses footer link lines", () => {
     const links = parseLinkLines("Blog|/blog\nBad\nOff|javascript:alert(1)");
     assert.deepEqual(links, [{ label: "Blog", href: "/blog" }]);

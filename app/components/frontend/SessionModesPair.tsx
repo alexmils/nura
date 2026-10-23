@@ -128,7 +128,7 @@ export function SessionModesPair() {
             id={`fe-modes-panel-${slide.id}`}
             aria-labelledby={`fe-modes-tab-${slide.id}`}
           >
-            {slide.kind === "video" && slide.video && /youtube|youtu\.be|vimeo/i.test(slide.video) ? (
+            {slide.kind === "none" ? null : slide.kind === "video" && slide.video && /youtube|youtu\.be|vimeo/i.test(slide.video) ? (
               <SectionMedia
                 key={slide.id}
                 className="fe-modes-video"
