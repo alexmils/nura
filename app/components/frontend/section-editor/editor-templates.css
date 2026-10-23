@@ -286,7 +286,7 @@
 .fe-tpl-thumb--typewriter .t-btn { top: 54%; left: 41%; }
 .fe-tpl-thumb--typewriter .t-extra { display: block; left: 0; right: 0; bottom: 10%; height: 12%; border-radius: 0; box-shadow: none; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 14%, transparent 14% 20%); border-block: 1px solid rgba(255, 255, 255, 0.2); background-clip: content-box; padding: 2.5% 0; }
 
-/* Forms · Consultation form: pine intro card left, pistachio form card right. */
+/* Forms · Contact form: pine intro card left, pistachio form card right. */
 .fe-tpl-thumb--consult { background: linear-gradient(160deg, #2b3f2d, #14251a); }
 .fe-tpl-thumb--consult i { background: rgba(29, 51, 35, 0.8); }
 .fe-tpl-thumb--consult .t-media {

@@ -27,7 +27,7 @@ export function BetweenSessionsSection() {
   // The shared CTA looks (also on the closing CTA). The page's section
   // backdrop paints a custom background; Full-bleed paints its photo itself.
   const show = isCtaShowcase(tpl) ? tpl : null;
-  const plan = backdropPlan(between, show === "fullbleed" || show === "consult");
+  const plan = backdropPlan(between, show === "fullbleed" || show === "contact");
   const href = sectionText(between, "betweenCtaHref") || appPath("/create-account");
 
   return (
@@ -61,7 +61,15 @@ export function BetweenSessionsSection() {
               formIntro={sectionText(between, "betweenFormIntro")}
               nameLabel={sectionText(between, "betweenLabelName")}
               emailLabel={sectionText(between, "betweenLabelEmail")}
-              planLabel={sectionText(between, "betweenLabelPlan")}
+              phoneLabel={sectionText(between, "betweenLabelPhone")}
+              serviceLabel={sectionText(between, "betweenLabelService")}
+              messageLabel={sectionText(between, "betweenLabelMessage")}
+              services={sectionText(between, "betweenServices")}
+              submitLabel={sectionText(between, "betweenSubmitLabel")}
+              successMsg={sectionText(between, "betweenSuccessMsg")}
+              contactLabel={sectionText(between, "betweenContactLabel")}
+              contactValue={sectionText(between, "betweenContactValue")}
+              contactHref={sectionText(between, "betweenContactHref")}
               plan={plan}
               paintMedia
             />

@@ -16,7 +16,7 @@ async function buildRawMessage(input: SendEmailInput): Promise<string> {
       "Gmail send-as address is not set. Configure Admin → Email → From address."
     );
   }
-  const replyTo = await getReplyToAddress();
+  const replyTo = input.replyTo?.trim() || (await getReplyToAddress());
   const boundary = `nurahelp_${Date.now()}`;
 
   const lines = [

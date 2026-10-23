@@ -18,7 +18,6 @@ import { APP_BASE, LOGIN_PATH, safeAppNext } from "@/lib/app-base";
 import {
   createAccountPathWithSearch,
   initialCreateAccountStep,
-  takeSignupPrefill,
 } from "@/lib/auth/create-account-ui";
 import { googleAuthErrorMessage } from "@/lib/auth/google-ui";
 import { trackMetaEvent } from "@/lib/meta-pixel";
@@ -41,14 +40,6 @@ function CreateAccountForm() {
   const [loading, setLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileFieldHandle>(null);
-
-  // A marketing CTA may have collected the name and email a moment ago.
-  useEffect(() => {
-    const prefill = takeSignupPrefill();
-    if (!prefill) return;
-    if (prefill.name) setName(prefill.name);
-    if (prefill.email) setEmail(prefill.email);
-  }, []);
 
   useEffect(() => {
     const title = document.getElementById("auth-shell-title");

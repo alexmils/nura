@@ -2,15 +2,12 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ArrowRight, LifeBuoy, Sparkles } from "lucide-react";
-import { appPath } from "@/lib/app-base";
-import { saveSignupPrefill } from "@/lib/auth/create-account-ui";
-import { BILLING_PLANS, BILLING_PLAN_ORDER, type BillingPlanId } from "@/lib/billing-constants";
+import { ArrowRight, CheckCircle2, Mail, Phone, Sparkles } from "lucide-react";
 import {
-  CTA_CONSULT_PHOTO,
+  CTA_CONTACT_PHOTO,
   CTA_SHOWCASE_PHOTO,
-  ctaConsultBullets,
+  ctaContactBullets,
+  ctaContactServices,
   type BackdropPlan,
   type CtaShowcaseTemplate,
 } from "@/lib/marketing-sections";
@@ -18,7 +15,7 @@ import { useReducedMotion } from "./HeroTemplates";
 import "./cta-showcase.css";
 
 /** Light templates use ink copy; the rest sit on a dark surface. */
-const LIGHT: ReadonlySet<CtaShowcaseTemplate> = new Set(["pulse", "quote", "minidemo", "horizon", "stacked", "consult"]);
+const LIGHT: ReadonlySet<CtaShowcaseTemplate> = new Set(["pulse", "quote", "minidemo", "horizon", "stacked", "contact"]);
 
 export function ctaShowcaseTone(template: CtaShowcaseTemplate): "light" | "dark" {
   return LIGHT.has(template) ? "light" : "dark";
@@ -40,12 +37,20 @@ export type CtaShowcaseProps = {
   quote?: string;
   quoteBy?: string;
   words: string[];
-  /** Consultation form: bullet lines, form intro, and the three field labels. */
+  /** Contact form: the intro card's bullets and the form's editable copy. */
   bullets?: string;
   formIntro?: string;
   nameLabel?: string;
   emailLabel?: string;
-  planLabel?: string;
+  phoneLabel?: string;
+  serviceLabel?: string;
+  messageLabel?: string;
+  services?: string;
+  submitLabel?: string;
+  successMsg?: string;
+  contactLabel?: string;
+  contactValue?: string;
+  contactHref?: string;
   /** The section's Background / Gradient settings. */
   plan: BackdropPlan;
   /**
@@ -114,7 +119,7 @@ function useTypewriter(words: string[], enabled: boolean): string {
 /**
  * Eleven shared call-to-action looks (Calm: orb, pulse, quote, minidemo,
  * fullbleed; Creative: aurora, horizon, ripple, stacked, typewriter;
- * Forms: consult).
+ * Forms: contact).
  *
  * Colours: the section's gradient (if switched on) drives `--cta-a`/`--cta-b`,
  * otherwise Nura's greens. A custom background or gradient replaces the
@@ -142,7 +147,15 @@ export function CtaShowcase(props: CtaShowcaseProps) {
     formIntro,
     nameLabel,
     emailLabel,
-    planLabel,
+    phoneLabel,
+    serviceLabel,
+    messageLabel,
+    services,
+    submitLabel,
+    successMsg,
+    contactLabel,
+    contactValue,
+    contactHref,
     plan,
     paintMedia,
   } = props;
@@ -152,31 +165,61 @@ export function CtaShowcase(props: CtaShowcaseProps) {
   const style = plan.gradient
     ? ({ "--cta-a": plan.gradient.from, "--cta-b": plan.gradient.to } as CSSProperties)
     : undefined;
-  const photo = (template === "fullbleed" || template === "consult") && paintMedia && plan.showBuiltIn;
-  const router = useRouter();
-  const [consultName, setConsultName] = useState("");
-  const [consultEmail, setConsultEmail] = useState("");
-  const [consultPlan, setConsultPlan] = useState<BillingPlanId>("monthly");
-  const [consultError, setConsultError] = useState("");
+  const photo = (template === "fullbleed" || template === "contact") && paintMedia && plan.showBuiltIn;
+  const [contactName, setContactName] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactService, setContactService] = useState("");
+  const [contactMessage, setContactMessage] = useState("");
+  // Honeypot: a real person never fills this hidden field.
+  const [contactSite, setContactSite] = useState("");
+  const [contactState, setContactState] = useState<"idle" | "sending" | "sent">("idle");
+  const [contactError, setContactError] = useState("");
 
-  // The form carries the two values into create-account; the plan rides in the
-  // `next` path so onboarding opens with it already chosen.
-  const submitConsult = (event: React.FormEvent<HTMLFormElement>) => {
+  const submitContact = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const name = consultName.trim();
-    const email = consultEmail.trim();
+    if (contactState === "sending") return;
+    const name = contactName.trim();
+    const email = contactEmail.trim();
+    const message = contactMessage.trim();
     if (!name) {
-      setConsultError("Add your name so we know who to greet.");
+      setContactError("Add your name so we know who we're writing back to.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setConsultError("Check the email address — that is where your trial opens.");
+      setContactError("Check the email address — that's where the reply goes.");
       return;
     }
-    setConsultError("");
-    saveSignupPrefill({ name, email });
-    const next = `${appPath("/onboarding")}?plan=${consultPlan}`;
-    router.push(`${appPath("/create-account")}?next=${encodeURIComponent(next)}`);
+    if (!message) {
+      setContactError("Write a short message so we know how to help.");
+      return;
+    }
+    setContactError("");
+    setContactState("sending");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          phone: contactPhone.trim(),
+          service: contactService.trim(),
+          message,
+          website: contactSite,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setContactState("idle");
+        setContactError(data.error || "Could not send the message. Try again in a moment.");
+        return;
+      }
+      setContactState("sent");
+    } catch {
+      setContactState("idle");
+      setContactError("Network error. Try again in a moment.");
+    }
   };
 
   const copy = (
@@ -268,14 +311,14 @@ export function CtaShowcase(props: CtaShowcaseProps) {
     );
   }
 
-  // The Consultation form is a pair of cards on a photo: a dark intro on the
-  // left, a light sign-up card on the right. Every string comes from the
-  // section config, so the whole block stays editable.
-  const consultBody =
-    template === "consult" ? (
-      <div className="cta-consult">
-        <div className="cta-consult-card cta-consult-card--info">
-          <span className="cta-consult-spark" aria-hidden>
+  // The Contact form is a pair of cards on a photo: a dark intro on the left,
+  // a light contact form on the right. Every string comes from the section
+  // config, so the whole block stays editable.
+  const contactBody =
+    template === "contact" ? (
+      <div className="cta-contact">
+        <div className="cta-contact-card cta-contact-card--info">
+          <span className="cta-contact-spark" aria-hidden>
             <i />
             <i />
             <i />
@@ -285,97 +328,138 @@ export function CtaShowcase(props: CtaShowcaseProps) {
             <Accent text={title} accent={accent} />
           </Title>
           {body ? <p className="cta-body">{body}</p> : null}
-          <ul className="cta-consult-list">
-            {ctaConsultBullets(bullets).map((line) => (
+          <ul className="cta-contact-list">
+            {ctaContactBullets(bullets).map((line) => (
               <li key={line}>
-                <span className="cta-consult-dot" aria-hidden>
+                <span className="cta-contact-dot" aria-hidden>
                   <Sparkles size={13} strokeWidth={2.2} />
                 </span>
                 <span>{line}</span>
               </li>
             ))}
           </ul>
-          {secondary?.label ? (
-            <div className="cta-consult-foot">
-              <Link href={secondary.href} className="cta-consult-contact">
-                <LifeBuoy size={17} strokeWidth={1.9} aria-hidden />
-                {secondary.label}
-              </Link>
+          {contactValue ? (
+            <div className="cta-contact-foot">
+              <span className="cta-contact-call-label">{contactLabel || "Call us"}</span>
+              {contactHref ? (
+                <a href={contactHref} className="cta-contact-call">
+                  {contactHref.startsWith("tel:") ? (
+                    <Phone size={17} strokeWidth={1.9} aria-hidden />
+                  ) : (
+                    <Mail size={17} strokeWidth={1.9} aria-hidden />
+                  )}
+                  {contactValue}
+                </a>
+              ) : (
+                <span className="cta-contact-call">{contactValue}</span>
+              )}
             </div>
           ) : null}
         </div>
 
-        <div className="cta-consult-card cta-consult-card--form">
-          <svg className="cta-consult-leaf" viewBox="0 0 140 96" aria-hidden focusable="false">
+        <div className="cta-contact-card cta-contact-card--form">
+          <svg className="cta-contact-leaf" viewBox="0 0 140 96" aria-hidden focusable="false">
             <ellipse cx="70" cy="48" rx="14" ry="31" transform="rotate(-34 70 80)" />
             <ellipse cx="70" cy="41" rx="14" ry="37" />
             <ellipse cx="70" cy="48" rx="14" ry="31" transform="rotate(34 70 80)" />
           </svg>
-          {formIntro ? <p className="cta-consult-intro">{formIntro}</p> : null}
-          <form className="cta-consult-form" onSubmit={submitConsult} noValidate>
-            <label className="cta-consult-field">
-              <span>{nameLabel || "Your name"}</span>
+          {formIntro ? <p className="cta-contact-intro">{formIntro}</p> : null}
+          {contactState === "sent" ? (
+            <div className="cta-contact-sent" role="status">
+              <CheckCircle2 size={26} strokeWidth={2} aria-hidden />
+              <p>{successMsg || "Thanks — your message is in. We'll reply to the email you left."}</p>
+            </div>
+          ) : (
+            <form className="cta-contact-form" onSubmit={submitContact} noValidate>
+              <label className="cta-contact-field">
+                <span>{nameLabel || "Your name"}</span>
+                <input
+                  type="text"
+                  name="name"
+                  autoComplete="name"
+                  maxLength={80}
+                  required
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                />
+              </label>
+              <label className="cta-contact-field">
+                <span>{emailLabel || "Email address"}</span>
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  maxLength={200}
+                  required
+                  value={contactEmail}
+                  onChange={(event) => setContactEmail(event.target.value)}
+                />
+              </label>
+              <label className="cta-contact-field">
+                <span>{phoneLabel || "Phone number (optional)"}</span>
+                <input
+                  type="tel"
+                  name="phone"
+                  autoComplete="tel"
+                  inputMode="tel"
+                  maxLength={40}
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                />
+              </label>
+              <label className="cta-contact-field">
+                <span>{serviceLabel || "What is this about?"}</span>
+                <select
+                  name="service"
+                  value={contactService}
+                  onChange={(event) => setContactService(event.target.value)}
+                >
+                  <option value="">Select a service</option>
+                  {ctaContactServices(services).map((service) => (
+                    <option key={service} value={service}>
+                      {service}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="cta-contact-field cta-contact-field--message">
+                <span>{messageLabel || "Message"}</span>
+                <textarea
+                  name="message"
+                  rows={4}
+                  maxLength={4000}
+                  required
+                  placeholder="Describe what you need"
+                  value={contactMessage}
+                  onChange={(event) => setContactMessage(event.target.value)}
+                />
+              </label>
               <input
+                className="cta-contact-hp"
                 type="text"
-                name="name"
-                autoComplete="name"
-                required
-                value={consultName}
-                onChange={(event) => setConsultName(event.target.value)}
+                name="website"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                value={contactSite}
+                onChange={(event) => setContactSite(event.target.value)}
               />
-            </label>
-            <label className="cta-consult-field">
-              <span>{emailLabel || "Email address"}</span>
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                inputMode="email"
-                required
-                value={consultEmail}
-                onChange={(event) => setConsultEmail(event.target.value)}
-              />
-            </label>
-            <fieldset className="cta-consult-plans">
-              <legend>{planLabel || "Plan"}</legend>
-              <div className="cta-consult-plan-grid">
-                {BILLING_PLAN_ORDER.map((id) => {
-                  const plan = BILLING_PLANS[id];
-                  return (
-                    <label
-                      key={id}
-                      className={`cta-consult-plan${consultPlan === id ? " is-picked" : ""}`}
-                    >
-                      <input
-                        type="radio"
-                        name="plan"
-                        value={id}
-                        checked={consultPlan === id}
-                        onChange={() => setConsultPlan(id)}
-                      />
-                      <span className="cta-consult-plan-name">
-                        {plan.label}
-                        {plan.savingsHint ? <em>{plan.savingsHint}</em> : null}
-                      </span>
-                      <span className="cta-consult-plan-price">
-                        {plan.displayPrice}
-                        <small>{plan.displayPeriod}</small>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
-            <button type="submit" className="cta-btn cta-btn--primary cta-consult-submit">
-              {primary.label}
-              <ArrowRight size={16} aria-hidden />
-            </button>
-            {consultError ? (
-              <p className="cta-consult-error" role="alert">
-                {consultError}
-              </p>
-            ) : null}
-          </form>
+              <button
+                type="submit"
+                className="cta-btn cta-btn--primary cta-contact-submit"
+                disabled={contactState === "sending"}
+              >
+                {contactState === "sending" ? "Sending…" : submitLabel || primary.label || "Send message"}
+                <ArrowRight size={16} aria-hidden />
+              </button>
+              {contactError ? (
+                <p className="cta-contact-error" role="alert">
+                  {contactError}
+                </p>
+              ) : null}
+            </form>
+          )}
           {note ? <p className="cta-note">{note}</p> : null}
         </div>
       </div>
@@ -392,14 +476,14 @@ export function CtaShowcase(props: CtaShowcaseProps) {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             className="cta-photo"
-            src={template === "consult" ? CTA_CONSULT_PHOTO : CTA_SHOWCASE_PHOTO}
+            src={template === "contact" ? CTA_CONTACT_PHOTO : CTA_SHOWCASE_PHOTO}
             alt=""
             loading="lazy"
             decoding="async"
           />
         ) : null}
         {template === "fullbleed" ? <i className="cta-fade" /> : null}
-        {template === "consult" && !custom ? <i className="cta-consult-scrim" /> : null}
+        {template === "contact" && !custom ? <i className="cta-contact-scrim" /> : null}
         {template === "aurora" ? (
           <>
             <i className="cta-aurora cta-aurora--1" />
@@ -422,7 +506,7 @@ export function CtaShowcase(props: CtaShowcaseProps) {
           </>
         ) : null}
       </div>
-      {consultBody ?? (
+      {contactBody ?? (
         <div className="cta-show-inner">
           {copy}
           {aside}

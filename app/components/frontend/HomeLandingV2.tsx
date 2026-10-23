@@ -41,7 +41,7 @@ import {
   closeTemplate,
   ctaShowcaseWords,
   isCtaShowcase,
-  CTA_CONSULT_PHOTO,
+  CTA_CONTACT_PHOTO,
   CTA_SHOWCASE_PHOTO,
   backdropPlan,
   mediaNames,
@@ -353,7 +353,7 @@ export function HomeLandingV2({
     closeTpl === "meadow" ||
     closeTpl === "magazine" ||
     closeTpl === "fullbleed" ||
-    closeTpl === "consult";
+    closeTpl === "contact";
   const closePlan = backdropPlan(close, closeHasPhoto);
   const closeHasMedia = closePlan.showBg || closePlan.showBuiltIn || Boolean(closePlan.gradient);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
@@ -938,8 +938,8 @@ export function HomeLandingV2({
                 src={
                   closeTpl === "fullbleed"
                     ? CTA_SHOWCASE_PHOTO
-                    : closeTpl === "consult"
-                      ? CTA_CONSULT_PHOTO
+                    : closeTpl === "contact"
+                      ? CTA_CONTACT_PHOTO
                       : "/marketing/landing/green-meadow.jpg"
                 }
                 alt=""
@@ -981,7 +981,15 @@ export function HomeLandingV2({
             formIntro={sectionText(close, "formIntro")}
             nameLabel={sectionText(close, "labelName")}
             emailLabel={sectionText(close, "labelEmail")}
-            planLabel={sectionText(close, "labelPlan")}
+            phoneLabel={sectionText(close, "labelPhone")}
+            serviceLabel={sectionText(close, "labelService")}
+            messageLabel={sectionText(close, "labelMessage")}
+            services={sectionText(close, "services")}
+            submitLabel={sectionText(close, "submitLabel")}
+            successMsg={sectionText(close, "successMsg")}
+            contactLabel={sectionText(close, "contactLabel")}
+            contactValue={sectionText(close, "contactValue")}
+            contactHref={sectionText(close, "contactHref")}
             plan={closePlan}
             paintMedia={false}
           />

@@ -29,7 +29,7 @@ export async function sendViaBrevo(
   }
 
   const from = await getFromAddress();
-  const replyTo = await getReplyToAddress();
+  const replyTo = input.replyTo?.trim() || (await getReplyToAddress());
   const payload: Record<string, unknown> = {
     sender: { name: from.name, email: from.email },
     to: [{ email: input.to }],

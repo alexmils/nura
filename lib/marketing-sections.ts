@@ -256,7 +256,7 @@ export const CTA_SHOWCASE_TEMPLATES = [
   { value: "ripple", label: "Ripple", group: "Creative", hint: "Rings ripple out gently from the centre." },
   { value: "stacked", label: "Stacked cards", group: "Creative", hint: "Three fanned cards carry your words." },
   { value: "typewriter", label: "Marquee / Typewriter", group: "Creative", hint: "Your words type out, with a slow marquee below." },
-  { value: "consult", label: "Consultation form", group: "Forms", hint: "A dark intro card beside a light sign-up form, over a soft photo." },
+  { value: "contact", label: "Contact form", group: "Forms", hint: "A dark intro card beside a light contact form, over a soft photo." },
 ] as const satisfies readonly FieldOption[];
 export type CtaShowcaseTemplate = (typeof CTA_SHOWCASE_TEMPLATES)[number]["value"];
 
@@ -267,26 +267,38 @@ export function isCtaShowcase(value: string): value is CtaShowcaseTemplate {
 /** Templates that paint a built-in photo when no background is set. */
 export const CTA_SHOWCASE_PHOTO = "/marketing/landing/calm-water.jpg";
 /**
- * The Consultation form's own photo: a quiet practice space at dusk, so the
- * dark intro card reads as a held pause rather than a sales panel.
+ * The Contact form's own photo: a quiet practice space at dusk, so the dark
+ * intro card reads as a held pause rather than a sales panel.
  */
-export const CTA_CONSULT_PHOTO = "/marketing/landing/practice-space.jpg";
+export const CTA_CONTACT_PHOTO = "/marketing/landing/practice-space.jpg";
 export const CTA_SHOWCASE_DEFAULT_WORDS = "Ground first, Process gently, Close when it's enough";
 export const CTA_SHOWCASE_DEFAULT_QUOTE = "Ground first. Process gently. Close when it's enough.";
 export const CTA_SHOWCASE_DEFAULT_QUOTE_BY = "The Nura rhythm";
-export const CTA_CONSULT_DEFAULT_BULLETS =
-  "7 days free — a card only holds the trial\nAI-guided sessions between therapy\nSelf-guided sets, on your schedule\nCancel anytime in your portal";
-export const CTA_CONSULT_DEFAULT_INTRO =
-  "Tell us where to reach you and we'll open your trial in about a minute.";
+export const CTA_CONTACT_DEFAULT_BULLETS =
+  "Questions before you start\nHelp choosing a plan\nBilling or account questions\nSomething else entirely";
+export const CTA_CONTACT_DEFAULT_INTRO =
+  "Tell us what's on your mind and we'll reply to the email you leave.";
+export const CTA_CONTACT_DEFAULT_SERVICES =
+  "General question\nBilling or account\nPartnership or press\nSomething else";
 
-/** Line-separated bullets for the Consultation form (1-4, defaults when blank). */
-export function ctaConsultBullets(raw: string | undefined): string[] {
+/** Line-separated bullets for the Contact form (1-4, defaults when blank). */
+export function ctaContactBullets(raw: string | undefined): string[] {
   const lines = String(raw ?? "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
     .slice(0, 4);
-  return lines.length ? lines : ctaConsultBullets(CTA_CONSULT_DEFAULT_BULLETS);
+  return lines.length ? lines : ctaContactBullets(CTA_CONTACT_DEFAULT_BULLETS);
+}
+
+/** Line-separated service choices for the form's select (1-8, defaults when blank). */
+export function ctaContactServices(raw: string | undefined): string[] {
+  const lines = String(raw ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  return lines.length ? lines : ctaContactServices(CTA_CONTACT_DEFAULT_SERVICES);
 }
 
 /** Comma or line separated words for Stacked / Typewriter (1-6, defaults when blank). */
@@ -301,7 +313,7 @@ export function ctaShowcaseWords(raw: string | undefined): string[] {
 
 const QUOTE_ONLY = ["quote"] as const;
 const WORDS_ONLY = ["stacked", "typewriter"] as const;
-const CONSULT_ONLY = ["consult"] as const;
+const CONTACT_ONLY = ["contact"] as const;
 
 /* ---------- Closing CTA templates ---------- */
 
@@ -1826,22 +1838,38 @@ const V2_SECTIONS: SectionDef[] = [
       { ...area("quote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
       { ...text("quoteBy", "Quote by"), templates: QUOTE_ONLY },
       { ...text("words", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
-      { ...area("bullets", "Bullets", "One per line, up to 4. Shown on the Consultation form."), templates: CONSULT_ONLY },
-      { ...area("formIntro", "Form intro", "The line above the form fields."), templates: CONSULT_ONLY },
-      { ...text("labelName", "Name label"), templates: CONSULT_ONLY },
-      { ...text("labelEmail", "Email label"), templates: CONSULT_ONLY },
-      { ...text("labelPlan", "Plan label"), templates: CONSULT_ONLY },
+      { ...area("bullets", "Bullets", "One per line, up to 4. Shown on the Contact form."), templates: CONTACT_ONLY },
+      { ...area("formIntro", "Form intro", "The line above the form fields."), templates: CONTACT_ONLY },
+      { ...text("labelName", "Name label"), templates: CONTACT_ONLY },
+      { ...text("labelEmail", "Email label"), templates: CONTACT_ONLY },
+      { ...text("labelPhone", "Phone label"), templates: CONTACT_ONLY },
+      { ...text("labelService", "Service label"), templates: CONTACT_ONLY },
+      { ...text("labelMessage", "Message label"), templates: CONTACT_ONLY },
+      { ...area("services", "Service options", "One per line, up to 8. Shown in the form's select."), templates: CONTACT_ONLY },
+      { ...text("submitLabel", "Submit button"), templates: CONTACT_ONLY },
+      { ...area("successMsg", "Success message"), templates: CONTACT_ONLY },
+      { ...text("contactLabel", "Contact label", "The small line above the contact link."), templates: CONTACT_ONLY },
+      { ...text("contactValue", "Contact value"), templates: CONTACT_ONLY },
+      { ...link("contactHref", "Contact link"), templates: CONTACT_ONLY },
     ],
     defaults: {
       [CLOSE_TEMPLATE_KEY]: "meadow",
       quote: CTA_SHOWCASE_DEFAULT_QUOTE,
       quoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
       words: CTA_SHOWCASE_DEFAULT_WORDS,
-      bullets: CTA_CONSULT_DEFAULT_BULLETS,
-      formIntro: CTA_CONSULT_DEFAULT_INTRO,
+      bullets: CTA_CONTACT_DEFAULT_BULLETS,
+      formIntro: CTA_CONTACT_DEFAULT_INTRO,
       labelName: "Your name",
       labelEmail: "Email address",
-      labelPlan: "Plan",
+      labelPhone: "Phone number (optional)",
+      labelService: "What is this about?",
+      labelMessage: "Message",
+      services: CTA_CONTACT_DEFAULT_SERVICES,
+      submitLabel: "Send message",
+      successMsg: "Thanks — your message is in. We'll reply to the email you left.",
+      contactLabel: "Questions?",
+      contactValue: "support@nurahelp.com",
+      contactHref: "mailto:support@nurahelp.com",
       kicker: "A gentler next step",
       title: "A calmer next step.",
       accent: "calmer",
@@ -1938,22 +1966,38 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
           { ...area("betweenQuote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
           { ...text("betweenQuoteBy", "Quote by"), templates: QUOTE_ONLY },
           { ...text("betweenWords", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
-          { ...area("betweenBullets", "Bullets", "One per line, up to 4. Shown on the Consultation form."), templates: CONSULT_ONLY },
-          { ...area("betweenFormIntro", "Form intro", "The line above the form fields."), templates: CONSULT_ONLY },
-          { ...text("betweenLabelName", "Name label"), templates: CONSULT_ONLY },
-          { ...text("betweenLabelEmail", "Email label"), templates: CONSULT_ONLY },
-          { ...text("betweenLabelPlan", "Plan label"), templates: CONSULT_ONLY },
+          { ...area("betweenBullets", "Bullets", "One per line, up to 4. Shown on the Contact form."), templates: CONTACT_ONLY },
+          { ...area("betweenFormIntro", "Form intro", "The line above the form fields."), templates: CONTACT_ONLY },
+          { ...text("betweenLabelName", "Name label"), templates: CONTACT_ONLY },
+          { ...text("betweenLabelEmail", "Email label"), templates: CONTACT_ONLY },
+          { ...text("betweenLabelPhone", "Phone label"), templates: CONTACT_ONLY },
+          { ...text("betweenLabelService", "Service label"), templates: CONTACT_ONLY },
+          { ...text("betweenLabelMessage", "Message label"), templates: CONTACT_ONLY },
+          { ...area("betweenServices", "Service options", "One per line, up to 8. Shown in the form's select."), templates: CONTACT_ONLY },
+          { ...text("betweenSubmitLabel", "Submit button"), templates: CONTACT_ONLY },
+          { ...area("betweenSuccessMsg", "Success message"), templates: CONTACT_ONLY },
+          { ...text("betweenContactLabel", "Contact label", "The small line above the contact link."), templates: CONTACT_ONLY },
+          { ...text("betweenContactValue", "Contact value"), templates: CONTACT_ONLY },
+          { ...link("betweenContactHref", "Contact link"), templates: CONTACT_ONLY },
         ],
         defaults: {
           [BETWEEN_TEMPLATE_KEY]: "center",
           betweenQuote: CTA_SHOWCASE_DEFAULT_QUOTE,
           betweenQuoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
           betweenWords: CTA_SHOWCASE_DEFAULT_WORDS,
-          betweenBullets: CTA_CONSULT_DEFAULT_BULLETS,
-          betweenFormIntro: "Start with the free trial — no visit, no call, no pressure.",
+          betweenBullets: CTA_CONTACT_DEFAULT_BULLETS,
+          betweenFormIntro: "Write to us and we'll reply to the email you leave.",
           betweenLabelName: "Your name",
           betweenLabelEmail: "Email address",
-          betweenLabelPlan: "Plan",
+          betweenLabelPhone: "Phone number (optional)",
+          betweenLabelService: "What is this about?",
+          betweenLabelMessage: "Message",
+          betweenServices: CTA_CONTACT_DEFAULT_SERVICES,
+          betweenSubmitLabel: "Send message",
+          betweenSuccessMsg: "Thanks — your message is in. We'll reply to the email you left.",
+          betweenContactLabel: "Questions?",
+          betweenContactValue: "support@nurahelp.com",
+          betweenContactHref: "mailto:support@nurahelp.com",
           betweenKicker: "Between sessions",
           betweenTitle: "Self-guided session \u2014 sets without an agent",
           betweenAccent: "Self-guided",

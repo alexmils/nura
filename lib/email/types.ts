@@ -6,6 +6,11 @@ export type SendEmailInput = {
   html: string;
   text: string;
   templateId?: string | null;
+  /**
+   * Override the platform Reply-To (e.g. a contact form should reply to the
+   * visitor). Blank falls back to Admin → Email → Reply-To.
+   */
+  replyTo?: string | null;
   /** Stable key so a retry does not send the same mail twice. */
   dedupKey?: string | null;
 };

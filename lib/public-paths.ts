@@ -71,6 +71,7 @@ const API_PUBLIC_PREFIXES = [
   "/api/marketing/tags",
   "/api/help/chat",
   "/api/help/guest-contact",
+  "/api/contact",
   "/api/cron/help-guest-transcripts",
   "/api/cron/trial-charge-reminders",
   "/api/cron/trial-feedback",
