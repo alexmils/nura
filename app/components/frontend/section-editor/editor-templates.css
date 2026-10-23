@@ -286,6 +286,34 @@
 .fe-tpl-thumb--typewriter .t-btn { top: 54%; left: 41%; }
 .fe-tpl-thumb--typewriter .t-extra { display: block; left: 0; right: 0; bottom: 10%; height: 12%; border-radius: 0; box-shadow: none; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.55) 0 14%, transparent 14% 20%); border-block: 1px solid rgba(255, 255, 255, 0.2); background-clip: content-box; padding: 2.5% 0; }
 
+/* Forms · Consultation form: pine intro card left, pistachio form card right. */
+.fe-tpl-thumb--consult { background: linear-gradient(160deg, #2b3f2d, #14251a); }
+.fe-tpl-thumb--consult i { background: rgba(29, 51, 35, 0.8); }
+.fe-tpl-thumb--consult .t-media {
+  display: block;
+  top: 12%;
+  left: 6%;
+  width: 38%;
+  height: 76%;
+  border-radius: 6px;
+  box-shadow: none;
+  background: linear-gradient(160deg, #1b3a23, #10261a);
+}
+.fe-tpl-thumb--consult .t-extra {
+  display: block;
+  top: 12%;
+  left: 48%;
+  width: 46%;
+  height: 76%;
+  border-radius: 6px;
+  box-shadow: none;
+  background: linear-gradient(160deg, #ccdb87, #b8cd6c);
+}
+.fe-tpl-thumb--consult .t-line--1 { top: 22%; left: 11%; width: 26%; height: 8%; background: rgba(255, 255, 255, 0.9); }
+.fe-tpl-thumb--consult .t-line--2 { top: 36%; left: 11%; width: 20%; height: 4%; opacity: 0.55; background: #c6d67e; }
+.fe-tpl-thumb--consult .t-line--3 { top: 58%; left: 52%; width: 16%; height: 7%; border-radius: 3px; background: #fff; }
+.fe-tpl-thumb--consult .t-btn { bottom: 16%; left: 52%; background: #14301f; }
+
 /* Compact template picker: dropdown + selected preview */
 .fe-editor-tpl--compact .fe-editor-tpl-pick {
   display: flex;

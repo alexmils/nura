@@ -24,10 +24,10 @@ import "./session-path-sticky.css";
 export function BetweenSessionsSection() {
   const between = useSectionConfig("home-how-between");
   const tpl = betweenTemplate(between);
-  // The ten shared CTA looks (also on the closing CTA). The page's section
+  // The shared CTA looks (also on the closing CTA). The page's section
   // backdrop paints a custom background; Full-bleed paints its photo itself.
   const show = isCtaShowcase(tpl) ? tpl : null;
-  const plan = backdropPlan(between, show === "fullbleed");
+  const plan = backdropPlan(between, show === "fullbleed" || show === "consult");
   const href = sectionText(between, "betweenCtaHref") || appPath("/create-account");
 
   return (
@@ -57,6 +57,11 @@ export function BetweenSessionsSection() {
               quote={sectionText(between, "betweenQuote")}
               quoteBy={sectionText(between, "betweenQuoteBy")}
               words={ctaShowcaseWords(sectionText(between, "betweenWords"))}
+              bullets={sectionText(between, "betweenBullets")}
+              formIntro={sectionText(between, "betweenFormIntro")}
+              nameLabel={sectionText(between, "betweenLabelName")}
+              emailLabel={sectionText(between, "betweenLabelEmail")}
+              planLabel={sectionText(between, "betweenLabelPlan")}
               plan={plan}
               paintMedia
             />

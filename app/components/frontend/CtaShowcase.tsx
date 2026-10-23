@@ -2,9 +2,15 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, LifeBuoy, Sparkles } from "lucide-react";
+import { appPath } from "@/lib/app-base";
+import { saveSignupPrefill } from "@/lib/auth/create-account-ui";
+import { BILLING_PLANS, BILLING_PLAN_ORDER, type BillingPlanId } from "@/lib/billing-constants";
 import {
+  CTA_CONSULT_PHOTO,
   CTA_SHOWCASE_PHOTO,
+  ctaConsultBullets,
   type BackdropPlan,
   type CtaShowcaseTemplate,
 } from "@/lib/marketing-sections";
@@ -12,7 +18,7 @@ import { useReducedMotion } from "./HeroTemplates";
 import "./cta-showcase.css";
 
 /** Light templates use ink copy; the rest sit on a dark surface. */
-const LIGHT: ReadonlySet<CtaShowcaseTemplate> = new Set(["pulse", "quote", "minidemo", "horizon", "stacked"]);
+const LIGHT: ReadonlySet<CtaShowcaseTemplate> = new Set(["pulse", "quote", "minidemo", "horizon", "stacked", "consult"]);
 
 export function ctaShowcaseTone(template: CtaShowcaseTemplate): "light" | "dark" {
   return LIGHT.has(template) ? "light" : "dark";
@@ -34,6 +40,12 @@ export type CtaShowcaseProps = {
   quote?: string;
   quoteBy?: string;
   words: string[];
+  /** Consultation form: bullet lines, form intro, and the three field labels. */
+  bullets?: string;
+  formIntro?: string;
+  nameLabel?: string;
+  emailLabel?: string;
+  planLabel?: string;
   /** The section's Background / Gradient settings. */
   plan: BackdropPlan;
   /**
@@ -100,8 +112,9 @@ function useTypewriter(words: string[], enabled: boolean): string {
 }
 
 /**
- * Ten shared call-to-action looks (Calm: orb, pulse, quote, minidemo,
- * fullbleed; Creative: aurora, horizon, ripple, stacked, typewriter).
+ * Eleven shared call-to-action looks (Calm: orb, pulse, quote, minidemo,
+ * fullbleed; Creative: aurora, horizon, ripple, stacked, typewriter;
+ * Forms: consult).
  *
  * Colours: the section's gradient (if switched on) drives `--cta-a`/`--cta-b`,
  * otherwise Nura's greens. A custom background or gradient replaces the
@@ -125,6 +138,11 @@ export function CtaShowcase(props: CtaShowcaseProps) {
     quote,
     quoteBy,
     words,
+    bullets,
+    formIntro,
+    nameLabel,
+    emailLabel,
+    planLabel,
     plan,
     paintMedia,
   } = props;
@@ -134,7 +152,32 @@ export function CtaShowcase(props: CtaShowcaseProps) {
   const style = plan.gradient
     ? ({ "--cta-a": plan.gradient.from, "--cta-b": plan.gradient.to } as CSSProperties)
     : undefined;
-  const photo = template === "fullbleed" && paintMedia && plan.showBuiltIn;
+  const photo = (template === "fullbleed" || template === "consult") && paintMedia && plan.showBuiltIn;
+  const router = useRouter();
+  const [consultName, setConsultName] = useState("");
+  const [consultEmail, setConsultEmail] = useState("");
+  const [consultPlan, setConsultPlan] = useState<BillingPlanId>("monthly");
+  const [consultError, setConsultError] = useState("");
+
+  // The form carries the two values into create-account; the plan rides in the
+  // `next` path so onboarding opens with it already chosen.
+  const submitConsult = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const name = consultName.trim();
+    const email = consultEmail.trim();
+    if (!name) {
+      setConsultError("Add your name so we know who to greet.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setConsultError("Check the email address — that is where your trial opens.");
+      return;
+    }
+    setConsultError("");
+    saveSignupPrefill({ name, email });
+    const next = `${appPath("/onboarding")}?plan=${consultPlan}`;
+    router.push(`${appPath("/create-account")}?next=${encodeURIComponent(next)}`);
+  };
 
   const copy = (
     <div className="cta-show-copy">
@@ -225,6 +268,119 @@ export function CtaShowcase(props: CtaShowcaseProps) {
     );
   }
 
+  // The Consultation form is a pair of cards on a photo: a dark intro on the
+  // left, a light sign-up card on the right. Every string comes from the
+  // section config, so the whole block stays editable.
+  const consultBody =
+    template === "consult" ? (
+      <div className="cta-consult">
+        <div className="cta-consult-card cta-consult-card--info">
+          <span className="cta-consult-spark" aria-hidden>
+            <i />
+            <i />
+            <i />
+          </span>
+          {kicker ? <p className="cta-kicker">{kicker}</p> : null}
+          <Title id={titleId} className="cta-title">
+            <Accent text={title} accent={accent} />
+          </Title>
+          {body ? <p className="cta-body">{body}</p> : null}
+          <ul className="cta-consult-list">
+            {ctaConsultBullets(bullets).map((line) => (
+              <li key={line}>
+                <span className="cta-consult-dot" aria-hidden>
+                  <Sparkles size={13} strokeWidth={2.2} />
+                </span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+          {secondary?.label ? (
+            <div className="cta-consult-foot">
+              <Link href={secondary.href} className="cta-consult-contact">
+                <LifeBuoy size={17} strokeWidth={1.9} aria-hidden />
+                {secondary.label}
+              </Link>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="cta-consult-card cta-consult-card--form">
+          <svg className="cta-consult-leaf" viewBox="0 0 140 96" aria-hidden focusable="false">
+            <ellipse cx="70" cy="48" rx="14" ry="31" transform="rotate(-34 70 80)" />
+            <ellipse cx="70" cy="41" rx="14" ry="37" />
+            <ellipse cx="70" cy="48" rx="14" ry="31" transform="rotate(34 70 80)" />
+          </svg>
+          {formIntro ? <p className="cta-consult-intro">{formIntro}</p> : null}
+          <form className="cta-consult-form" onSubmit={submitConsult} noValidate>
+            <label className="cta-consult-field">
+              <span>{nameLabel || "Your name"}</span>
+              <input
+                type="text"
+                name="name"
+                autoComplete="name"
+                required
+                value={consultName}
+                onChange={(event) => setConsultName(event.target.value)}
+              />
+            </label>
+            <label className="cta-consult-field">
+              <span>{emailLabel || "Email address"}</span>
+              <input
+                type="email"
+                name="email"
+                autoComplete="email"
+                inputMode="email"
+                required
+                value={consultEmail}
+                onChange={(event) => setConsultEmail(event.target.value)}
+              />
+            </label>
+            <fieldset className="cta-consult-plans">
+              <legend>{planLabel || "Plan"}</legend>
+              <div className="cta-consult-plan-grid">
+                {BILLING_PLAN_ORDER.map((id) => {
+                  const plan = BILLING_PLANS[id];
+                  return (
+                    <label
+                      key={id}
+                      className={`cta-consult-plan${consultPlan === id ? " is-picked" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="plan"
+                        value={id}
+                        checked={consultPlan === id}
+                        onChange={() => setConsultPlan(id)}
+                      />
+                      <span className="cta-consult-plan-name">
+                        {plan.label}
+                        {plan.savingsHint ? <em>{plan.savingsHint}</em> : null}
+                      </span>
+                      <span className="cta-consult-plan-price">
+                        {plan.displayPrice}
+                        <small>{plan.displayPeriod}</small>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <button type="submit" className="cta-btn cta-btn--primary cta-consult-submit">
+              {primary.label}
+              <ArrowRight size={16} aria-hidden />
+            </button>
+            {consultError ? (
+              <p className="cta-consult-error" role="alert">
+                {consultError}
+              </p>
+            ) : null}
+          </form>
+          {note ? <p className="cta-note">{note}</p> : null}
+        </div>
+      </div>
+    ) : null;
+
   return (
     <div
       className={`cta-show cta-show--${template} cta-show--${variant} cta-tone--${ctaShowcaseTone(template)}${aside ? " cta-show--aside" : ""}`}
@@ -234,9 +390,16 @@ export function CtaShowcase(props: CtaShowcaseProps) {
       <div className="cta-show-bg" aria-hidden>
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img className="cta-photo" src={CTA_SHOWCASE_PHOTO} alt="" loading="lazy" decoding="async" />
+          <img
+            className="cta-photo"
+            src={template === "consult" ? CTA_CONSULT_PHOTO : CTA_SHOWCASE_PHOTO}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
         ) : null}
         {template === "fullbleed" ? <i className="cta-fade" /> : null}
+        {template === "consult" && !custom ? <i className="cta-consult-scrim" /> : null}
         {template === "aurora" ? (
           <>
             <i className="cta-aurora cta-aurora--1" />
@@ -259,10 +422,12 @@ export function CtaShowcase(props: CtaShowcaseProps) {
           </>
         ) : null}
       </div>
-      <div className="cta-show-inner">
-        {copy}
-        {aside}
-      </div>
+      {consultBody ?? (
+        <div className="cta-show-inner">
+          {copy}
+          {aside}
+        </div>
+      )}
       {template === "typewriter" ? (
         <div className="cta-marquee" aria-hidden>
           <div className="cta-marquee-track">

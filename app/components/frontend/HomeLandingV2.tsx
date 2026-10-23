@@ -41,6 +41,7 @@ import {
   closeTemplate,
   ctaShowcaseWords,
   isCtaShowcase,
+  CTA_CONSULT_PHOTO,
   CTA_SHOWCASE_PHOTO,
   backdropPlan,
   mediaNames,
@@ -346,9 +347,13 @@ export function HomeLandingV2({
   );
   const closeBg = sectionBackground(close);
   const closeTpl = closeTemplate(close);
-  // The ten shared CTA looks (also on Between sessions) render via CtaShowcase.
+  // The shared CTA looks (also on Between sessions) render via CtaShowcase.
   const closeShow = isCtaShowcase(closeTpl) ? closeTpl : null;
-  const closeHasPhoto = closeTpl === "meadow" || closeTpl === "magazine" || closeTpl === "fullbleed";
+  const closeHasPhoto =
+    closeTpl === "meadow" ||
+    closeTpl === "magazine" ||
+    closeTpl === "fullbleed" ||
+    closeTpl === "consult";
   const closePlan = backdropPlan(close, closeHasPhoto);
   const closeHasMedia = closePlan.showBg || closePlan.showBuiltIn || Boolean(closePlan.gradient);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
@@ -930,7 +935,13 @@ export function HomeLandingV2({
               <BandBackground bg={closePlan.bg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
             ) : closePlan.showBuiltIn ? (
               <Image
-                src={closeTpl === "fullbleed" ? CTA_SHOWCASE_PHOTO : "/marketing/landing/green-meadow.jpg"}
+                src={
+                  closeTpl === "fullbleed"
+                    ? CTA_SHOWCASE_PHOTO
+                    : closeTpl === "consult"
+                      ? CTA_CONSULT_PHOTO
+                      : "/marketing/landing/green-meadow.jpg"
+                }
                 alt=""
                 fill
                 sizes="100vw"
@@ -966,6 +977,11 @@ export function HomeLandingV2({
             quote={sectionText(close, "quote")}
             quoteBy={sectionText(close, "quoteBy")}
             words={ctaShowcaseWords(sectionText(close, "words"))}
+            bullets={sectionText(close, "bullets")}
+            formIntro={sectionText(close, "formIntro")}
+            nameLabel={sectionText(close, "labelName")}
+            emailLabel={sectionText(close, "labelEmail")}
+            planLabel={sectionText(close, "labelPlan")}
             plan={closePlan}
             paintMedia={false}
           />

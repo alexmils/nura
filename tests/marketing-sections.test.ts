@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  ctaConsultBullets,
   faqPairs,
   normalizeSection,
   parseLinkLines,
@@ -111,6 +112,29 @@ describe("marketing section copy", () => {
   it("parses footer link lines", () => {
     const links = parseLinkLines("Blog|/blog\nBad\nOff|javascript:alert(1)");
     assert.deepEqual(links, [{ label: "Blog", href: "/blog" }]);
+  });
+
+  it("splits consultation bullets into four tidy lines", () => {
+    assert.deepEqual(ctaConsultBullets("One\nTwo\n\n Three \nFour\nFive"), [
+      "One",
+      "Two",
+      "Three",
+      "Four",
+    ]);
+    assert.equal(ctaConsultBullets("")[0], "7 days free — a card only holds the trial");
+  });
+
+  it("keeps the consultation form's editable copy on home-close", () => {
+    const config = normalizeSection("home-close", {
+      template: "consult",
+      bullets: "Slow start\nShort sets",
+      formIntro: "Where should we send it?",
+      labelName: "First name",
+    });
+    assert.equal(sectionText(config, "bullets"), "Slow start\nShort sets");
+    assert.equal(sectionText(config, "formIntro"), "Where should we send it?");
+    assert.equal(sectionText(config, "labelName"), "First name");
+    assert.equal(sectionText(config, "labelEmail"), "Email address");
   });
 
   it("hides the editor unless the role is platform admin", async () => {

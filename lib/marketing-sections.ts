@@ -240,7 +240,7 @@ export function fieldInTemplate(field: { templates?: readonly string[] }, templa
 /* ---------- Shared CTA showcase templates (closing CTA + Between sessions) ---------- */
 
 /**
- * Ten call-to-action looks shared by `home-close` and `home-how-between`.
+ * Eleven call-to-action looks shared by `home-close` and `home-how-between`.
  * Values are unique across every template list (the editor thumbnail class is
  * `fe-tpl-thumb--{value}`). Each one respects the section's background and
  * gradient (`backdropPlan`), reduced motion, and stacks on phones.
@@ -256,6 +256,7 @@ export const CTA_SHOWCASE_TEMPLATES = [
   { value: "ripple", label: "Ripple", group: "Creative", hint: "Rings ripple out gently from the centre." },
   { value: "stacked", label: "Stacked cards", group: "Creative", hint: "Three fanned cards carry your words." },
   { value: "typewriter", label: "Marquee / Typewriter", group: "Creative", hint: "Your words type out, with a slow marquee below." },
+  { value: "consult", label: "Consultation form", group: "Forms", hint: "A dark intro card beside a light sign-up form, over a soft photo." },
 ] as const satisfies readonly FieldOption[];
 export type CtaShowcaseTemplate = (typeof CTA_SHOWCASE_TEMPLATES)[number]["value"];
 
@@ -265,9 +266,28 @@ export function isCtaShowcase(value: string): value is CtaShowcaseTemplate {
 
 /** Templates that paint a built-in photo when no background is set. */
 export const CTA_SHOWCASE_PHOTO = "/marketing/landing/calm-water.jpg";
+/**
+ * The Consultation form's own photo: a quiet practice space at dusk, so the
+ * dark intro card reads as a held pause rather than a sales panel.
+ */
+export const CTA_CONSULT_PHOTO = "/marketing/landing/practice-space.jpg";
 export const CTA_SHOWCASE_DEFAULT_WORDS = "Ground first, Process gently, Close when it's enough";
 export const CTA_SHOWCASE_DEFAULT_QUOTE = "Ground first. Process gently. Close when it's enough.";
 export const CTA_SHOWCASE_DEFAULT_QUOTE_BY = "The Nura rhythm";
+export const CTA_CONSULT_DEFAULT_BULLETS =
+  "7 days free — a card only holds the trial\nAI-guided sessions between therapy\nSelf-guided sets, on your schedule\nCancel anytime in your portal";
+export const CTA_CONSULT_DEFAULT_INTRO =
+  "Tell us where to reach you and we'll open your trial in about a minute.";
+
+/** Line-separated bullets for the Consultation form (1-4, defaults when blank). */
+export function ctaConsultBullets(raw: string | undefined): string[] {
+  const lines = String(raw ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+  return lines.length ? lines : ctaConsultBullets(CTA_CONSULT_DEFAULT_BULLETS);
+}
 
 /** Comma or line separated words for Stacked / Typewriter (1-6, defaults when blank). */
 export function ctaShowcaseWords(raw: string | undefined): string[] {
@@ -281,6 +301,7 @@ export function ctaShowcaseWords(raw: string | undefined): string[] {
 
 const QUOTE_ONLY = ["quote"] as const;
 const WORDS_ONLY = ["stacked", "typewriter"] as const;
+const CONSULT_ONLY = ["consult"] as const;
 
 /* ---------- Closing CTA templates ---------- */
 
@@ -1805,12 +1826,22 @@ const V2_SECTIONS: SectionDef[] = [
       { ...area("quote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
       { ...text("quoteBy", "Quote by"), templates: QUOTE_ONLY },
       { ...text("words", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
+      { ...area("bullets", "Bullets", "One per line, up to 4. Shown on the Consultation form."), templates: CONSULT_ONLY },
+      { ...area("formIntro", "Form intro", "The line above the form fields."), templates: CONSULT_ONLY },
+      { ...text("labelName", "Name label"), templates: CONSULT_ONLY },
+      { ...text("labelEmail", "Email label"), templates: CONSULT_ONLY },
+      { ...text("labelPlan", "Plan label"), templates: CONSULT_ONLY },
     ],
     defaults: {
       [CLOSE_TEMPLATE_KEY]: "meadow",
       quote: CTA_SHOWCASE_DEFAULT_QUOTE,
       quoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
       words: CTA_SHOWCASE_DEFAULT_WORDS,
+      bullets: CTA_CONSULT_DEFAULT_BULLETS,
+      formIntro: CTA_CONSULT_DEFAULT_INTRO,
+      labelName: "Your name",
+      labelEmail: "Email address",
+      labelPlan: "Plan",
       kicker: "A gentler next step",
       title: "A calmer next step.",
       accent: "calmer",
@@ -1907,12 +1938,22 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
           { ...area("betweenQuote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
           { ...text("betweenQuoteBy", "Quote by"), templates: QUOTE_ONLY },
           { ...text("betweenWords", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
+          { ...area("betweenBullets", "Bullets", "One per line, up to 4. Shown on the Consultation form."), templates: CONSULT_ONLY },
+          { ...area("betweenFormIntro", "Form intro", "The line above the form fields."), templates: CONSULT_ONLY },
+          { ...text("betweenLabelName", "Name label"), templates: CONSULT_ONLY },
+          { ...text("betweenLabelEmail", "Email label"), templates: CONSULT_ONLY },
+          { ...text("betweenLabelPlan", "Plan label"), templates: CONSULT_ONLY },
         ],
         defaults: {
           [BETWEEN_TEMPLATE_KEY]: "center",
           betweenQuote: CTA_SHOWCASE_DEFAULT_QUOTE,
           betweenQuoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
           betweenWords: CTA_SHOWCASE_DEFAULT_WORDS,
+          betweenBullets: CTA_CONSULT_DEFAULT_BULLETS,
+          betweenFormIntro: "Start with the free trial — no visit, no call, no pressure.",
+          betweenLabelName: "Your name",
+          betweenLabelEmail: "Email address",
+          betweenLabelPlan: "Plan",
           betweenKicker: "Between sessions",
           betweenTitle: "Self-guided session \u2014 sets without an agent",
           betweenAccent: "Self-guided",
