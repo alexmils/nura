@@ -354,6 +354,21 @@ export function betweenTemplate(config: SectionConfig | undefined): BetweenTempl
   return BETWEEN_TEMPLATES.some((option) => option.value === raw) ? (raw as BetweenTemplate) : "center";
 }
 
+/* ---------- Stories templates ---------- */
+
+/** How the stories block presents the quotes. */
+export const STORIES_TEMPLATE_KEY = "template";
+export const STORIES_TEMPLATES = [
+  { value: "default", label: "Card strip", hint: "The scrolling row of quote cards." },
+  { value: "review", label: "Review spotlight", hint: "Headline left, an arched photo with the rating, one quote right with arrows." },
+] as const satisfies readonly FieldOption[];
+export type StoriesTemplate = (typeof STORIES_TEMPLATES)[number]["value"];
+
+export function storiesTemplate(config: SectionConfig | undefined): StoriesTemplate {
+  const raw = config?.[STORIES_TEMPLATE_KEY];
+  return STORIES_TEMPLATES.some((option) => option.value === raw) ? (raw as StoriesTemplate) : "default";
+}
+
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
 /** Editable hero text colours; blank = as designed. */
@@ -1725,38 +1740,47 @@ const V2_SECTIONS: SectionDef[] = [
     id: "home-stories",
     name: "Home: stories",
     fields: [
+      { ...text(STORIES_TEMPLATE_KEY, "Template"), options: STORIES_TEMPLATES },
       ...sectionHead(),
       text("rating", "Rating"),
       text("ratingLine", "Rating line"),
+      { ...text("sourceLabel", "Review source"), templates: ["review"] as const },
+      { ...text("reviewsLabel", "Reviews button"), templates: ["review"] as const },
+      { ...link("reviewsHref", "Reviews link"), templates: ["review"] as const },
       {
         key: "stories",
         label: "Stories",
         kind: "list",
         itemLabel: "Story",
         max: 12,
-        fields: [area("quote", "Quote"), text("name", "Name"), text("role", "Role")],
+        fields: [area("quote", "Quote"), text("name", "Name"), text("role", "Role"), image("image", "Photo")],
       },
     ],
     defaults: {
+      [STORIES_TEMPLATE_KEY]: "default",
       kicker: "Stories",
       title: "Their experience, your confidence.",
       accent: "your",
       sub: "Voices from people using Nura between sessions.",
       rating: "4.9",
       ratingLine: "from early members",
+      sourceLabel: "Google Reviews",
+      reviewsLabel: "Read all testimonials",
+      reviewsHref: "/reviews",
       stories: [
         {
           quote: "The interface feels calm enough to actually stay with a difficult memory. Self-guided sessions let me practice without an agent.",
           name: "Maya L.",
           role: "Trial member",
+          image: "/marketing/landing/morning-tea.jpg",
         },
-        { quote: "The session agent walks me through phases instead of dumping me into a blank screen.", name: "James R.", role: "Monthly plan" },
-        { quote: "Resources are short and clear. Finally something that explains EMDR without overwhelming me.", name: "Sophie T.", role: "Resources reader" },
-        { quote: "I use it between sessions. The steps feel structured but never rushed.", name: "Daniel K.", role: "Yearly plan" },
-        { quote: "I like that I can stop in the middle of a set and pick it up later without losing where I was.", name: "Elena P.", role: "Weekly plan" },
-        { quote: "The check-ins keep me honest about how I actually feel before and after a set.", name: "Chris W.", role: "Trial member" },
-        { quote: "Short resources between sessions mean I don't have to wait a week to understand what came up.", name: "Nadia B.", role: "Monthly plan" },
-        { quote: "Self-guided mode is quiet in the best way — no chat, just the steps and my own pace.", name: "Tom H.", role: "Yearly plan" },
+        { quote: "The session agent walks me through phases instead of dumping me into a blank screen.", name: "James R.", role: "Monthly plan", image: "/marketing/landing/warm-sofa.jpg" },
+        { quote: "Resources are short and clear. Finally something that explains EMDR without overwhelming me.", name: "Sophie T.", role: "Resources reader", image: "/marketing/landing/reading.jpg" },
+        { quote: "I use it between sessions. The steps feel structured but never rushed.", name: "Daniel K.", role: "Yearly plan", image: "/marketing/landing/practice-space.jpg" },
+        { quote: "I like that I can stop in the middle of a set and pick it up later without losing where I was.", name: "Elena P.", role: "Weekly plan", image: "/marketing/landing/quiet-hands.jpg" },
+        { quote: "The check-ins keep me honest about how I actually feel before and after a set.", name: "Chris W.", role: "Trial member", image: "/marketing/landing/calm-rest.jpg" },
+        { quote: "Short resources between sessions mean I don't have to wait a week to understand what came up.", name: "Nadia B.", role: "Monthly plan", image: "/marketing/landing/support-talk.jpg" },
+        { quote: "Self-guided mode is quiet in the best way — no chat, just the steps and my own pace.", name: "Tom H.", role: "Yearly plan", image: "/marketing/landing/green-landscape.jpg" },
       ],
     },
   },

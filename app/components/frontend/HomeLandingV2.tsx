@@ -39,6 +39,7 @@ import {
   heroInk,
   heroTemplate,
   closeTemplate,
+  storiesTemplate,
   ctaShowcaseWords,
   isCtaShowcase,
   CTA_CONTACT_PHOTO,
@@ -59,6 +60,7 @@ import { HowIntroSection } from "./HowIntroSection";
 import { BetweenSessionsSection } from "./BetweenSessionsSection";
 import { LanguagesSection } from "./LanguagesSection";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
+import { ReviewSpotlight } from "./ReviewSpotlight";
 import { useLandingMotion } from "./useLandingMotion";
 import { usePlanSpread } from "./usePlanSpread";
 import { useStoryTrack } from "./useStoryTrack";
@@ -94,7 +96,7 @@ type ModeCard = {
   chips: string[];
 };
 
-type Story = { quote: string; name: string; role: string };
+type Story = { quote: string; name: string; role: string; image: string };
 
 /** next/image only optimises local files and the allowed remote hosts. */
 function needsUnoptimized(src: string): boolean {
@@ -307,6 +309,7 @@ export function HomeLandingV2({
   const modesCopy = useSectionConfig("home-modes");
   const session = useSectionConfig("home-session");
   const storiesCopy = useSectionConfig("home-stories");
+  const storiesTpl = storiesTemplate(storiesCopy);
   const pricing = useSectionConfig("home-pricing");
   const close = useSectionConfig("home-close");
   const heroBg = sectionBackground(hero);
@@ -372,6 +375,7 @@ export function HomeLandingV2({
     quote: story.quote ?? "",
     name: story.name ?? "",
     role: story.role ?? "",
+    image: story.image ?? "",
   }));
   const PLANS: PlanCard[] = sectionList(pricing, "plans")
     .filter((plan) => Boolean(plan.id && BILLING_PLANS[plan.id as BillingPlanId]))
@@ -417,7 +421,7 @@ export function HomeLandingV2({
   useStoryTrack(
     storiesRef,
     storyTrackRef,
-    `${STORIES.map((story) => story.name).join("|")}|${isAdmin}|${storiesBackdrop}`
+    `${storiesTpl}|${STORIES.map((story) => story.name).join("|")}|${isAdmin}|${storiesBackdrop}`
   );
   const trustIcons = [Check, Check, ShieldCheck];
   const stripIcons: Record<string, typeof Check> = { trial: Check, cancel: Check, private: Lock, between: Sparkles };
@@ -834,10 +838,25 @@ export function HomeLandingV2({
       <EditablePart id="home-stories" backdrop={false}>
       <section
         ref={storiesRef}
-        className="v2-section v2-stories"
+        className={`v2-section v2-stories${storiesTpl === "review" ? " v2-stories--review" : ""}`}
         id="stories"
         aria-labelledby="v2-stories-title"
       >
+        {storiesTpl === "review" ? (
+          <ReviewSpotlight
+            titleId="v2-stories-title"
+            kicker={sectionText(storiesCopy, "kicker")}
+            title={sectionText(storiesCopy, "title")}
+            accent={sectionText(storiesCopy, "accent")}
+            sub={sectionText(storiesCopy, "sub")}
+            rating={sectionText(storiesCopy, "rating")}
+            ratingLine={sectionText(storiesCopy, "ratingLine")}
+            sourceLabel={sectionText(storiesCopy, "sourceLabel")}
+            reviewsLabel={sectionText(storiesCopy, "reviewsLabel")}
+            reviewsHref={sectionText(storiesCopy, "reviewsHref")}
+            stories={STORIES}
+          />
+        ) : (
         <div className="v2-stories-stage">
           <div className="v2-container">
             <div className="v2-stories-head">
@@ -880,6 +899,7 @@ export function HomeLandingV2({
             </div>
           </div>
         </div>
+        )}
       </section>
       </EditablePart>
       ),

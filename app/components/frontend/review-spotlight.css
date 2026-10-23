@@ -1,0 +1,281 @@
+/*
+ * Home: stories — "Review spotlight" template.
+ * Headline left, an arched photo card with the rating in the middle, and one
+ * quote at a time on the right with prev/next arrows.
+ */
+
+.v2-stories.v2-stories--review {
+  --v2-from: #f7f5e7;
+  background: #f7f5e7;
+}
+
+.v2-review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr) minmax(0, 1.3fr);
+  gap: clamp(2rem, 4.5vw, 4.5rem);
+  align-items: stretch;
+}
+
+/* Left column: the heading, with the reviews button resting at the bottom. */
+.v2-review-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.v2-review-copy .v2-h2 {
+  font-size: clamp(2rem, 3.6vw, 3.15rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.v2-btn.v2-review-all {
+  margin-top: auto;
+  padding-top: 0;
+  background: #2f5a2f;
+  color: #fff;
+  box-shadow: 0 16px 34px -20px rgba(47, 90, 47, 0.9);
+}
+
+.v2-btn.v2-review-all:hover {
+  background: #264a26;
+}
+
+.v2-btn.v2-review-all:focus-visible {
+  outline: 3px solid #1f3527;
+  outline-offset: 3px;
+}
+
+/* Middle: the arched keepsake card. */
+.v2-review-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: clamp(27rem, 38vw, 36rem);
+  padding: clamp(1.6rem, 2.6vw, 2.2rem) clamp(1.4rem, 2.4vw, 2rem) 0;
+  border-radius: 46% 46% 1.4rem 1.4rem / 15% 15% 1.4rem 1.4rem;
+  background: #f5f7e5;
+  box-shadow: 0 36px 70px -48px rgba(31, 53, 39, 0.45);
+  overflow: hidden;
+}
+
+.v2-review-card-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+}
+
+.v2-review-illustration {
+  width: clamp(3.4rem, 5.5vw, 4.4rem);
+  height: auto;
+  color: #244a2c;
+}
+
+.v2-review-badge {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem 0.4rem;
+}
+
+.v2-review-g {
+  grid-row: span 2;
+}
+
+.v2-review-score {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f3527;
+}
+
+.v2-review-badge .v2-stars {
+  color: #1f3527;
+  display: inline-flex;
+  gap: 0.08rem;
+}
+
+.v2-review-source {
+  grid-column: 2 / 3;
+  justify-self: start;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #3e5238;
+}
+
+.v2-review-line {
+  margin: 0;
+  font-size: 0.72rem;
+  color: rgba(31, 53, 39, 0.6);
+}
+
+/* The photo is clipped by three leaf lobes that sit on the card's bottom half. */
+.v2-review-photo {
+  --v2-leaf-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20600%20420'%20preserveAspectRatio='none'%3E%3Cpath%20fill='white'%20d='M0%20245h600v175H0z'/%3E%3Cellipse%20cx='80'%20cy='245'%20rx='130'%20ry='165'%20fill='white'/%3E%3Cellipse%20cx='300'%20cy='235'%20rx='140'%20ry='180'%20fill='white'/%3E%3Cellipse%20cx='520'%20cy='245'%20rx='130'%20ry='165'%20fill='white'/%3E%3C/svg%3E");
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 62%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  -webkit-mask-image: var(--v2-leaf-mask);
+  mask-image: var(--v2-leaf-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+.v2-review-photo--empty {
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 30%, #dce8bd 0%, #c6d67e 55%, #84b067 100%);
+}
+
+/* Right column: one quote, the name, and the arrows. */
+.v2-review-quote {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.v2-review-mark {
+  height: clamp(2.6rem, 4.5vw, 3.6rem);
+  font-family: var(--font-display);
+  font-size: clamp(4.2rem, 7vw, 6rem);
+  line-height: 0.6;
+  color: #1f3527;
+}
+
+.v2-review-blockquote {
+  margin: clamp(1rem, 2vw, 1.6rem) 0 0;
+  animation: v2-review-in 0.45s ease both;
+}
+
+.v2-review-blockquote p {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.55vw, 1.28rem);
+  line-height: 1.62;
+  color: #1f3527;
+  text-wrap: pretty;
+}
+
+.v2-review-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: clamp(1.5rem, 3vw, 2.4rem);
+}
+
+.v2-review-name {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #1f3527;
+}
+
+.v2-review-nav {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.v2-review-nav button {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 50%;
+  background: #eef2d9;
+  color: #1f3527;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.v2-review-nav button:hover {
+  background: #e3ecc4;
+  transform: translateY(-1px);
+}
+
+.v2-review-nav button:focus-visible {
+  outline: 3px solid #1f3527;
+  outline-offset: 3px;
+}
+
+@keyframes v2-review-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Tablets: the card moves under the copy, the quote keeps the right side. */
+@media (max-width: 1100px) {
+  .v2-review {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 4vw, 2.5rem);
+  }
+
+  .v2-review-copy {
+    grid-column: 1 / -1;
+    gap: 0.6rem;
+  }
+
+  .v2-btn.v2-review-all {
+    margin-top: 0.6rem;
+  }
+
+  .v2-review-card {
+    min-height: clamp(24rem, 56vw, 30rem);
+  }
+}
+
+/* Phones: one column, card first after the copy. */
+@media (max-width: 760px) {
+  .v2-review {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v2-review-card {
+    min-height: 24rem;
+    max-width: 22rem;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .v2-review-quote {
+    padding-top: 0.5rem;
+  }
+
+  .v2-review-nav button {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-review-blockquote {
+    animation: none;
+  }
+
+  .v2-review-nav button {
+    transition: none;
+  }
+}

@@ -9,6 +9,7 @@ import {
   safeHref,
   sectionList,
   sectionText,
+  storiesTemplate,
 } from "../lib/marketing-sections.ts";
 
 describe("marketing section copy", () => {
@@ -151,6 +152,12 @@ describe("marketing section copy", () => {
     assert.equal(sectionText(config, "services"), "Sales\nSupport");
     assert.equal(sectionText(config, "submitLabel"), "Send it");
     assert.equal(sectionText(config, "contactHref"), "mailto:hello@nurahelp.com");
+  });
+
+  it("accepts the review spotlight and falls back to the card strip", () => {
+    assert.equal(storiesTemplate(undefined), "default");
+    assert.equal(storiesTemplate({ template: "review" }), "review");
+    assert.equal(storiesTemplate({ template: "nope" }), "default");
   });
 
   it("hides the editor unless the role is platform admin", async () => {
