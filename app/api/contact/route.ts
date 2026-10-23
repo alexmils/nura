@@ -3,6 +3,7 @@ import { clientIp } from "@/lib/audit-log";
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { sendEmail } from "@/lib/email";
 import { getPlatformSettings } from "@/lib/platform-settings";
+import { extractTurnstileToken, verifyTurnstileToken } from "@/lib/turnstile";
 
 /**
  * Public contact form (the Contact CTA template). Sends one mail to the
@@ -82,6 +83,16 @@ export async function POST(request: Request) {
       { error: "Write a short message so we know how to help." },
       { status: 400 }
     );
+  }
+
+  // Turnstile after cheap validation, so obvious junk never reaches siteverify.
+  const gate = await verifyTurnstileToken({
+    token: extractTurnstileToken(body),
+    expectedAction: "contact",
+    remoteip: ip,
+  });
+  if (!gate.ok) {
+    return NextResponse.json({ error: gate.error }, { status: gate.status });
   }
 
   const settings = await getPlatformSettings();

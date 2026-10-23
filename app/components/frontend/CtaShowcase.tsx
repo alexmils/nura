@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Mail, Phone, Sparkles } from "lucide-react";
+import { TurnstileField, type TurnstileFieldHandle } from "@/app/components/TurnstileField";
+import { TURNSTILE_TOKEN_FIELD } from "@/lib/turnstile-shared";
 import {
   CTA_CONTACT_PHOTO,
   CTA_SHOWCASE_PHOTO,
@@ -175,6 +177,8 @@ export function CtaShowcase(props: CtaShowcaseProps) {
   const [contactSite, setContactSite] = useState("");
   const [contactState, setContactState] = useState<"idle" | "sending" | "sent">("idle");
   const [contactError, setContactError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileFieldHandle>(null);
 
   const submitContact = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -194,6 +198,11 @@ export function CtaShowcase(props: CtaShowcaseProps) {
       setContactError("Write a short message so we know how to help.");
       return;
     }
+    const token = turnstileToken || turnstileRef.current?.getToken() || "";
+    if (!token) {
+      setContactError("Complete the verification check, then try again.");
+      return;
+    }
     setContactError("");
     setContactState("sending");
     try {
@@ -207,18 +216,21 @@ export function CtaShowcase(props: CtaShowcaseProps) {
           service: contactService.trim(),
           message,
           website: contactSite,
+          [TURNSTILE_TOKEN_FIELD]: token,
         }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         setContactState("idle");
         setContactError(data.error || "Could not send the message. Try again in a moment.");
+        turnstileRef.current?.reset();
         return;
       }
       setContactState("sent");
     } catch {
       setContactState("idle");
       setContactError("Network error. Try again in a moment.");
+      turnstileRef.current?.reset();
     }
   };
 
@@ -445,6 +457,13 @@ export function CtaShowcase(props: CtaShowcaseProps) {
                 value={contactSite}
                 onChange={(event) => setContactSite(event.target.value)}
               />
+              <div className="cta-contact-turnstile">
+                <TurnstileField
+                  ref={turnstileRef}
+                  action="contact"
+                  onToken={setTurnstileToken}
+                />
+              </div>
               <button
                 type="submit"
                 className="cta-btn cta-btn--primary cta-contact-submit"
