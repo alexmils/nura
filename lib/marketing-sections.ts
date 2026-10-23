@@ -2222,6 +2222,43 @@ export const CUSTOM_SECTION_TEMPLATES: Record<
 };
 
 const BY_ID = new Map(MARKETING_SECTIONS.map((section) => [section.id, section]));
+/**
+ * Admin-added sections promoted to code. Their content is the default when the
+ * database has no row (a fresh or reset DB), they always sit in the page's
+ * built-in slots, and saved edits still override them like any other section.
+ * The ids keep the custom-<type>-<suffix> shape so they render (and the
+ * poster -> film dive pairs up) exactly as the admin-added originals did.
+ */
+const CODE_CUSTOM_SECTIONS: Record<string, { name: string; defaults: SectionConfig }> = {
+  "custom-poster-heal0001": {
+    name: "Home: Heal poster",
+    defaults: {
+      word: "Heal",
+      image: "https://res.cloudinary.com/zdq2rh8t/image/upload/v1792499404/nura/marketing/dmtqkn0drnotsf1pdoug.jpg",
+      alt: "",
+      line: "Healing is not linear",
+      note: "- Find your calm -",
+    },
+  },
+  "custom-video-film0001": {
+    name: "Home: film under the Heal poster",
+    defaults: {
+      mediaKind: "image",
+      mediaImage: "https://res.cloudinary.com/zdq2rh8t/image/upload/v1792499404/nura/marketing/dmtqkn0drnotsf1pdoug.jpg",
+      mediaVideo: "https://res.cloudinary.com/zdq2rh8t/video/upload/v1792501843/nura/marketing/bfslcwafuriry9uas76d.mp4",
+      mediaPoster: "",
+      mediaAlt: "",
+    },
+  },
+};
+
+/** Code-defined custom section ids (never pruned with the page layout). */
+export const CODE_SECTION_IDS: readonly string[] = Object.keys(CODE_CUSTOM_SECTIONS);
+
+export function isCodeSectionId(id: string): boolean {
+  return Object.prototype.hasOwnProperty.call(CODE_CUSTOM_SECTIONS, id);
+}
+
 const CUSTOM_DEFS = new Map<string, SectionDef>();
 
 function customDef(id: string): SectionDef | undefined {
@@ -2230,11 +2267,12 @@ function customDef(id: string): SectionDef | undefined {
   const cached = CUSTOM_DEFS.get(id);
   if (cached) return cached;
   const template = CUSTOM_SECTION_TEMPLATES[type];
+  const code = isCodeSectionId(id) ? CODE_CUSTOM_SECTIONS[id] : undefined;
   const def: SectionDef = {
     id,
-    name: `Added: ${template.label}`,
+    name: code?.name ?? `Added: ${template.label}`,
     fields: template.fields,
-    defaults: template.defaults,
+    defaults: code ? { ...template.defaults, ...code.defaults } : template.defaults,
   };
   if (CUSTOM_DEFS.size < 500) CUSTOM_DEFS.set(id, def);
   return def;

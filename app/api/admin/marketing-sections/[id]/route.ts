@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
+import { purgeMarketingCache } from "@/lib/cloudflare-purge";
 import {
   loadMarketingCopy,
   resetMarketingSection,
@@ -43,6 +44,7 @@ export async function PUT(
   }
   const config = await saveMarketingSection(id, body);
   revalidatePath("/", "layout");
+  await purgeMarketingCache(`section ${id} save`);
   return NextResponse.json({ config });
 }
 
@@ -59,5 +61,6 @@ export async function DELETE(
   }
   const config = await resetMarketingSection(id);
   revalidatePath("/", "layout");
+  await purgeMarketingCache(`section ${id} reset`);
   return NextResponse.json({ config });
 }

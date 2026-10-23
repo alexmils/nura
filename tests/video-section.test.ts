@@ -26,7 +26,8 @@ describe("video screen section", () => {
     assert.equal(t.fields.find((f) => f.key === "media")?.kind, "media");
     const names = mediaNames("media");
     assert.equal(t.defaults[names.kind], "video");
-    assert.equal(normalizeSection("custom-video-film0001", null)[names.kind], "video");
+    // custom-video-film0001 is code-defined (stored as a still image); a fresh id gets the template.
+    assert.equal(normalizeSection("custom-video-abcd1234", null)[names.kind], "video");
   });
 
   it("has its own Edit chip on the screen", () => {

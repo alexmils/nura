@@ -19,7 +19,7 @@ import {
   sectionText,
 } from "../lib/marketing-sections";
 
-const HOME = ["home-hero", "home-trust", "home-how-intro", "home-how", "home-how-between", "home-how-languages", "home-modes", "home-session", "home-topics", "home-stories", "home-pricing", "home-faq", "home-blog", "home-close"];
+const HOME = ["home-hero", "home-trust", "home-how-intro", "custom-poster-heal0001", "custom-video-film0001", "home-how", "home-how-between", "home-how-languages", "home-modes", "home-session", "home-topics", "home-stories", "home-pricing", "home-faq", "home-blog", "home-close"];
 
 describe("new homepage sections", () => {
   it("lays out every band of the new homepage in its live order", () => {

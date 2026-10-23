@@ -13,6 +13,7 @@ import {
   type PageLayout,
 } from "@/lib/marketing-layout";
 import {
+  CODE_SECTION_IDS,
   defaultMarketingCopy,
   isMarketingSectionId,
   localMarketingPaths,
@@ -81,13 +82,17 @@ export const loadPageLayouts = cache(async (): Promise<Partial<Record<MarketingP
   return out;
 });
 
-/** Drops admin-added section rows that no saved layout references any more. */
+/**
+ * Drops admin-added section rows that no saved layout references any more.
+ * Code-defined sections (CODE_SECTION_IDS) are always kept: they belong to the
+ * built-in page slots, so a layout reset or removal never deletes their edits.
+ */
 async function pruneOrphanCustomSections(client: PoolClient): Promise<void> {
   const { rows } = await client.query<Row>(
     "SELECT id, config FROM marketing_sections WHERE id LIKE $1",
     [`${LAYOUT_ROW_PREFIX}%`]
   );
-  const keep = new Set<string>();
+  const keep = new Set<string>(CODE_SECTION_IDS);
   for (const row of rows) {
     const page = row.id.slice(LAYOUT_ROW_PREFIX.length);
     if (!isMarketingPageId(page)) continue;

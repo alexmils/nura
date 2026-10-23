@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
+import { purgeMarketingCache } from "@/lib/cloudflare-purge";
 import { defaultLayout, isMarketingPageId } from "@/lib/marketing-layout";
 import {
   loadPageLayouts,
@@ -45,6 +46,7 @@ export async function PUT(request: Request, { params }: Params) {
   try {
     const layout = await savePageLayout(page, { sections: body.sections }, seeds);
     revalidatePath("/", "layout");
+    await purgeMarketingCache(`layout ${page} save`);
     return NextResponse.json({ layout });
   } catch (err) {
     console.error("[marketing-layout] save failed", err);
@@ -63,6 +65,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   try {
     const layout = await resetPageLayout(page);
     revalidatePath("/", "layout");
+    await purgeMarketingCache(`layout ${page} reset`);
     return NextResponse.json({ layout });
   } catch (err) {
     console.error("[marketing-layout] reset failed", err);

@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
 import { readSiteMedia, rejectUploadSize, sniffMarketingUpload, uploadToCloudinary } from "@/lib/cloudinary";
+import { purgeMarketingCache } from "@/lib/cloudflare-purge";
 import { replaceMarketingMediaPath } from "@/lib/marketing-sections-db";
 
 export const dynamic = "force-dynamic";
@@ -43,7 +44,10 @@ export async function POST(request: Request) {
     const updated = source.startsWith("/marketing/")
       ? await replaceMarketingMediaPath(source, saved.url)
       : 0;
-    if (updated > 0) revalidatePath("/", "layout");
+    if (updated > 0) {
+      revalidatePath("/", "layout");
+      await purgeMarketingCache("marketing media replace");
+    }
     return NextResponse.json({ ...saved, updated });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not upload.";

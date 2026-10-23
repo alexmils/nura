@@ -19,6 +19,8 @@ import {
   CUSTOM_SECTION_TEMPLATES,
   CUSTOM_SECTION_TYPES,
   customSectionType,
+  getSectionDef,
+  isCodeSectionId,
   isCustomSectionId,
   newCustomSectionId,
   normalizeSection,
@@ -169,7 +171,7 @@ export function PageLayoutEditor({
 
   function remove(index: number) {
     const entry = entries[index];
-    if (!entry || !isCustomSectionId(entry.id)) return;
+    if (!entry || !isCustomSectionId(entry.id) || isCodeSectionId(entry.id)) return;
     if (!window.confirm("Delete this added section? Its text is removed when you save.")) return;
     update(entries.filter((_, i) => i !== index));
   }
@@ -340,14 +342,17 @@ export function PageLayoutEditor({
                           >
                             <Copy size={14} />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => remove(index)}
-                            aria-label="Delete section"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {/* Code-defined sections can be hidden, not deleted. */}
+                          {isCodeSectionId(entry.id) ? null : (
+                            <button
+                              type="button"
+                              onClick={() => remove(index)}
+                              aria-label="Delete section"
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </>
                       ) : null}
                     </div>
@@ -415,7 +420,11 @@ export function PageLayoutEditor({
 function CustomRowName({ id }: { id: string }) {
   const copy = useSectionConfig(id);
   const type = customSectionType(id);
-  const label = type ? CUSTOM_SECTION_TEMPLATES[type].label : "Added section";
+  const label = isCodeSectionId(id)
+    ? getSectionDef(id)?.name ?? id
+    : type
+      ? CUSTOM_SECTION_TEMPLATES[type].label
+      : "Added section";
   const title = sectionText(copy, "title");
   return (
     <strong>

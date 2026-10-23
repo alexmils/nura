@@ -24,6 +24,10 @@ export const MARKETING_PAGES = {
       { id: "home-hero" },
       { id: "home-trust" },
       { id: "home-how-intro", label: "Home: how it works intro" },
+      // Code-defined custom sections (lib/marketing-sections.ts CODE_CUSTOM_SECTIONS):
+      // the Heal poster dives into the film screen pulled up under it.
+      { id: "custom-poster-heal0001", label: "Home: Heal poster" },
+      { id: "custom-video-film0001", label: "Home: film under the Heal poster" },
       { id: "home-how" },
       { id: "home-how-between" },
       { id: "home-how-languages" },

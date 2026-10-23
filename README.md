@@ -42,6 +42,15 @@ Full hosting runbook (server, nginx, DNS, Coolify UUIDs, deploy, pitfalls): **[`
 - Manual redeploy: Actions → **Build and Deploy** → Run workflow
 - Docker image `WORKDIR` is `/nura` (not `/app`) — avoids Next standalone path collision with the `/app` console route
 
+#### Cloudflare purge after marketing edits
+
+Public pages are cached by Cloudflare. After an admin saves a marketing section, page layout or replaces marketing media, the app purges the Cloudflare zone (`lib/cloudflare-purge.ts`) so the change is visible immediately. Set these in the production app container (Coolify) — same names as the CI purge step:
+
+- `CF_ZONE_ID` — the nurahelp.com zone id
+- `CF_API_TOKEN` — API token with **Zone → Cache Purge → Purge** on that zone (never commit it)
+
+Unset (local dev) = no-op. A failed purge is logged and never fails the save.
+
 ### Dev tunnel (`dev.nurahelp.com`)
 
 Exposes local **3471** behind Cloudflare Access (email one-time PIN; anyone can request a code). Credentials live in `%USERPROFILE%\.cloudflared\` (not git).

@@ -164,14 +164,48 @@ export function MarketingSectionEditor({
     });
     setSaving(true);
     setError(null);
-    try {
+
+    async function putSection() {
       const res = await fetch(`/api/admin/marketing-sections/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(toSave),
       });
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      if (!res.ok) throw new Error(body?.error || "Could not save.");
+      const body = (await res.json().catch(() => null)) as {
+        config?: SectionConfig;
+        error?: string;
+      } | null;
+      if (res.ok) return body;
+      const error = new Error(body?.error || "Could not save.") as Error & {
+        status?: number;
+      };
+      error.status = res.status;
+      throw error;
+    }
+
+    try {
+      let body: Awaited<ReturnType<typeof putSection>> = null;
+      try {
+        body = await putSection();
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        // A rolling deploy can drop one request at the gateway. Retrying a
+        // PUT is safe; 4xx responses are real validation errors.
+        if (status && status < 500) throw err;
+        await new Promise((resolve) => window.setTimeout(resolve, 1200));
+        body = await putSection();
+      }
+      if (!body?.config) throw new Error("The server did not confirm the save.");
+      const dropped = droppedMedia(toSave, body.config);
+      if (dropped.length > 0) {
+        setError(
+          `The server rejected the new media (${dropped.join(", ")}). Try uploading it again.`
+        );
+        return;
+      }
+      // Keep showing exactly what the server stored until the refreshed page
+      // data matches it (a cached refresh must not snap back to the old copy).
+      setSectionDraft(id, body.config);
       commitSectionDraft(id);
       router.refresh();
       onClose();
@@ -340,6 +374,20 @@ function isPicker(field: Field): field is ScalarField {
 
 function isColor(field: Field): field is ScalarField {
   return field.kind !== "list" && field.kind !== "media" && Boolean(field.color);
+}
+
+/**
+ * Media URLs the save response changed. A valid upload survives normalization;
+ * a rejected URL comes back empty or replaced, which used to close the panel
+ * and quietly show the designed image again.
+ */
+function droppedMedia(before: SectionConfig, after: SectionConfig): string[] {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
+  return [...keys].filter((key) => {
+    if (!/image|video|poster/i.test(key)) return false;
+    const was = before[key];
+    return typeof was === "string" && was.trim() !== "" && after[key] !== was;
+  });
 }
 
 /** One folded group in the drawer: a summary row and its controls. */
