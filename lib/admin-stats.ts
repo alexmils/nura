@@ -82,6 +82,9 @@ export type AdminUserRow = {
 const PURPOSE_LABELS: Record<string, string> = {
   guided_chat: "Guided chat",
   interpreter: "Interpreter",
+  interpreter_cutoff: "Interpreter (cut off)",
+  interpreter_unparsed: "Interpreter (unparsed)",
+  memory_extract: "Memory extract",
   help: "Help",
   voice: "ElevenLabs voice",
 };

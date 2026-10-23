@@ -34,6 +34,7 @@ export {
 } from "@/lib/admin-llm-format";
 
 const ACTION_LABELS: Record<AuditAction, string> = {
+  "reactivation.link_generated": "Win-back link generated",
   "user.login": "Signed in",
   "user.logout": "Signed out",
   "user.invited": "Invited",
@@ -45,6 +46,7 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   "user.disabled": "Disabled",
   "user.enabled": "Enabled",
   "settings.platform_updated": "Platform settings updated",
+  "settings.voice_orb_updated": "Voice orb updated",
   "settings.login_guard_updated": "Sign-in protection updated",
   "settings.seo_updated": "SEO settings updated",
   "settings.meta_ads_updated": "Meta Ads connection updated",

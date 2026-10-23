@@ -175,7 +175,7 @@ export type A11yDockEdge = "left" | "right";
  * Floating button state.
  *
  * Two modes:
- * - `attached` — pinned to a screen edge as the ribbon (30×88 half-pill).
+ * - `attached` — pinned to a screen edge as the ribbon (22×60 half-pill).
  * - free — a circle at `x`/`y` that can be dragged anywhere on screen.
  *
  * `x`/`y`, `edge`, and `centerY` are all nullable so each surface keeps its
@@ -206,8 +206,23 @@ export const DEFAULT_A11Y_FAB: A11yFabState = {
 };
 
 export const A11Y_FAB_SIZE = 52;
-export const A11Y_RIBBON_W = 30;
-export const A11Y_RIBBON_H = 88;
+export const A11Y_RIBBON_W = 22;
+export const A11Y_RIBBON_H = 60;
+
+/**
+ * Below this width there is no floating widget: the site menu (hamburger)
+ * carries an "Accessibility" item that opens the same panel.
+ */
+export const A11Y_MENU_MAX_WIDTH = 860;
+
+/** Window event that opens the accessibility panel (from a menu item). */
+export const A11Y_OPEN_EVENT = "nura:a11y-open";
+
+/** Open the accessibility panel from anywhere (e.g. the mobile menu). */
+export function openAccessibilitySettings(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(A11Y_OPEN_EVENT));
+}
 const A11Y_EDGE_MARGIN = 10;
 
 /** Validate anything from storage; malformed input falls back to defaults. */

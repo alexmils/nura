@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useApp } from "./AppProvider";
 
 export function ThreadEditMenu({
   threadId,
+  focus = "title",
   onClose,
 }: {
   threadId: string;
+  /** Field to focus: "description" for the Edit description action. */
+  focus?: "title" | "description";
   onClose: () => void;
 }) {
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLInputElement>(null);
   const { threads, memoryEnabled, updateThreadLocal, selectThread } = useApp();
   const thread = threads.find((t) => t.id === threadId);
   const [title, setTitle] = useState(thread?.title ?? "");
@@ -25,6 +30,12 @@ export function ThreadEditMenu({
     setDescription(thread?.description ?? "");
   }, [thread?.title, thread?.description, threadId]);
 
+  useEffect(() => {
+    const el = focus === "description" ? descriptionRef.current : titleRef.current;
+    el?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the dialog opens
+  }, [Boolean(thread)]);
+
   if (!thread) return null;
 
   return (
@@ -34,6 +45,9 @@ export function ThreadEditMenu({
     >
       <div
         className="apple-sheet w-full max-w-md p-6"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Edit session"
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-4 text-[length:var(--ui-headline)] font-semibold tracking-[-0.02em]">
@@ -42,6 +56,7 @@ export function ThreadEditMenu({
         <label className="mb-4 block">
           <span className="settings-label mb-2">Title</span>
           <input
+            ref={titleRef}
             className="field"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -50,6 +65,7 @@ export function ThreadEditMenu({
         <label className="mb-4 block">
           <span className="settings-label mb-2">Description</span>
           <input
+            ref={descriptionRef}
             className="field"
             value={description}
             placeholder="Optional note for this session"

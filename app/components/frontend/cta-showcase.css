@@ -1,0 +1,882 @@
+/*
+ * Shared call-to-action showcase (closing CTA + Between sessions).
+ * Ten templates: orb, pulse, quote, minidemo, fullbleed, aurora, horizon,
+ * ripple, stacked, typewriter. Nura palette; `--cta-a`/`--cta-b` come from the
+ * section gradient when it is switched on.
+ */
+
+.cta-show {
+  --cta-ink: #1d3323;
+  --cta-pine: #14301f;
+  --cta-green: #4a7234;
+  --cta-sage: #84b067;
+  --cta-pistachio: #c6d67e;
+  --cta-mint: #a4eda5;
+  --cta-paper: #edf9ed;
+  --cta-cream: #fffaf0;
+  --cta-sun: #f2c94c;
+  --cta-a: var(--cta-pine);
+  --cta-b: var(--cta-pistachio);
+  --cta-fg: #fff;
+  --cta-muted: rgba(255, 255, 255, 0.78);
+  --cta-accent: var(--cta-pistachio);
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  color: var(--cta-fg);
+  font-family: var(--font-sans);
+}
+
+.cta-show--close {
+  min-height: 100svh;
+  padding: clamp(6rem, 11vw, 9rem) clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.cta-show--between {
+  min-height: 100svh;
+  padding: clamp(5rem, 9vw, 7rem) clamp(1.25rem, 4vw, 2.5rem);
+}
+
+.cta-tone--light {
+  --cta-fg: var(--cta-ink);
+  --cta-muted: #4f6145;
+  --cta-accent: var(--cta-green);
+}
+
+/* A custom background / gradient from the editor replaces the own surface. */
+.cta-show[data-surface="custom"] {
+  background: none !important;
+}
+
+.cta-show-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cta-show-bg > i,
+.cta-show-bg > img {
+  position: absolute;
+  display: block;
+}
+
+.cta-show-inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: clamp(2rem, 5vw, 4rem);
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+.cta-show-copy {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  max-width: 42rem;
+  text-align: center;
+}
+
+.cta-show--aside .cta-show-inner {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  align-items: center;
+}
+
+.cta-show--aside .cta-show-copy {
+  justify-items: start;
+  text-align: left;
+}
+
+.cta-show .cta-kicker {
+  margin: 0;
+  font-family: var(--font-alt, var(--font-sans));
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--cta-accent);
+}
+
+.cta-show .cta-title {
+  margin: 0;
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(2.1rem, 5vw, 3.8rem);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -0.045em;
+  color: var(--cta-fg);
+  text-wrap: balance;
+}
+
+.cta-show .cta-em {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  color: var(--cta-accent);
+  font-variation-settings: "SOFT" 45, "WONK" 0.4, "opsz" 144;
+}
+
+.cta-show .cta-body {
+  margin: 0;
+  max-width: 34rem;
+  font-size: clamp(1rem, 1.4vw, 1.1rem);
+  line-height: 1.6;
+  color: var(--cta-muted);
+}
+
+.cta-show .cta-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--cta-muted);
+  opacity: 0.85;
+}
+
+.cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: inherit;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+}
+
+.cta-show-copy .cta-actions {
+  justify-content: center;
+}
+
+.cta-show--aside .cta-actions {
+  justify-content: flex-start;
+}
+
+.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.4rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.cta-btn:hover {
+  transform: translateY(-1px);
+}
+
+.cta-btn:focus-visible {
+  outline: 3px solid var(--cta-sun);
+  outline-offset: 3px;
+}
+
+.cta-btn--primary {
+  background: var(--cta-pistachio);
+  color: var(--cta-ink);
+}
+
+.cta-tone--light .cta-btn--primary {
+  background: var(--cta-ink);
+  color: #fff;
+}
+
+.cta-btn--ghost {
+  border-color: color-mix(in srgb, var(--cta-fg) 32%, transparent);
+  color: var(--cta-fg);
+}
+
+.cta-btn--ghost:hover {
+  background: color-mix(in srgb, var(--cta-fg) 8%, transparent);
+}
+
+.cta-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* —— Calm · Breathing orb —— */
+
+.cta-show--orb {
+  background: radial-gradient(ellipse 80% 70% at 50% 38%, #24452f 0%, var(--cta-a) 70%);
+}
+
+.cta-orb {
+  position: relative;
+  display: block;
+  width: clamp(6.5rem, 16vw, 9rem);
+  aspect-ratio: 1;
+  margin-bottom: 0.75rem;
+}
+
+.cta-orb > i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.cta-orb-core {
+  background: radial-gradient(circle at 38% 32%, #f4fbe0 0%, var(--cta-b) 42%, color-mix(in srgb, var(--cta-b) 40%, var(--cta-a)) 100%);
+  box-shadow: 0 0 60px color-mix(in srgb, var(--cta-b) 45%, transparent);
+  animation: cta-breathe 8s ease-in-out infinite;
+}
+
+.cta-orb-halo {
+  inset: -22% !important;
+  border: 1px solid color-mix(in srgb, var(--cta-b) 40%, transparent);
+  animation: cta-breathe 8s ease-in-out infinite 0.4s;
+}
+
+.cta-orb-halo--2 {
+  inset: -48% !important;
+  border-color: color-mix(in srgb, var(--cta-b) 20%, transparent);
+  animation-delay: 0.8s;
+}
+
+@keyframes cta-breathe {
+  0%, 100% { transform: scale(0.88); opacity: 0.85; }
+  45%, 55% { transform: scale(1.06); opacity: 1; }
+}
+
+/* —— Calm · Left-right pulse —— */
+
+.cta-show--pulse {
+  background: linear-gradient(180deg, var(--cta-paper) 0%, #e0f0d6 100%);
+}
+
+.cta-show--pulse[data-surface="own"] {
+  --cta-a: var(--cta-green);
+  --cta-b: var(--cta-sage);
+}
+
+.cta-pulse {
+  position: relative;
+  display: block;
+  width: min(22rem, 80vw);
+  height: 2.5rem;
+  margin: 1rem 0 0.25rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cta-ink) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cta-ink) 10%, transparent);
+}
+
+.cta-pulse-dot {
+  position: absolute;
+  top: 50%;
+  left: 0.4rem;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-top: -0.85rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff 0%, var(--cta-b) 55%, var(--cta-a) 100%);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cta-b) 60%, transparent);
+  animation: cta-glide 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes cta-glide {
+  from { left: 0.4rem; }
+  to { left: calc(100% - 2.1rem); }
+}
+
+/* —— Calm · Quote card —— */
+
+.cta-show--quote {
+  background: linear-gradient(160deg, var(--cta-cream) 0%, var(--cta-paper) 100%);
+}
+
+.cta-show--quote[data-surface="own"] {
+  --cta-a: var(--cta-ink);
+  --cta-b: var(--cta-pistachio);
+}
+
+.cta-quote {
+  position: relative;
+  margin: 0;
+  width: 100%;
+  max-width: 28rem;
+  padding: clamp(1.75rem, 4vw, 2.5rem);
+  border-radius: 1.5rem;
+  background: linear-gradient(150deg, var(--cta-a), color-mix(in srgb, var(--cta-a) 70%, var(--cta-green)));
+  color: #fff;
+  box-shadow: 0 24px 60px rgba(20, 48, 31, 0.22);
+}
+
+.cta-quote-mark {
+  display: block;
+  height: 2.6rem;
+  font-family: var(--font-display);
+  font-size: 4.5rem;
+  line-height: 1;
+  color: var(--cta-b);
+}
+
+.cta-quote blockquote {
+  margin: 0.5rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-style: italic;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.cta-quote figcaption {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cta-b) 85%, #fff);
+}
+
+/* —— Calm · Split with mini demo —— */
+
+.cta-show--minidemo {
+  background: radial-gradient(ellipse 70% 80% at 80% 50%, #dff3d8 0%, var(--cta-paper) 65%);
+}
+
+.cta-show--minidemo[data-surface="own"] {
+  --cta-a: var(--cta-ink);
+  --cta-b: var(--cta-mint);
+}
+
+.cta-demo {
+  width: 100%;
+  max-width: 26rem;
+  padding: 1rem 1.1rem 1.15rem;
+  border-radius: 1.4rem;
+  background: var(--cta-a);
+  color: #fff;
+  box-shadow: 0 28px 70px rgba(20, 48, 31, 0.25);
+}
+
+.cta-demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cta-demo-bar i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.cta-demo-bar span {
+  margin-left: auto;
+}
+
+.cta-demo-track {
+  position: relative;
+  height: clamp(6rem, 18vw, 8rem);
+  margin: 0.9rem 0;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.cta-demo-ball {
+  position: absolute;
+  top: 50%;
+  left: 8%;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-top: -0.8rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff, var(--cta-b) 60%);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--cta-b) 70%, transparent);
+  animation: cta-ball 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes cta-ball {
+  from { left: 6%; }
+  to { left: calc(94% - 1.6rem); }
+}
+
+.cta-demo-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.cta-demo-progress {
+  position: relative;
+  flex: 1;
+  height: 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.cta-demo-progress i {
+  position: absolute;
+  inset: 0 50% 0 0;
+  border-radius: inherit;
+  background: var(--cta-b);
+}
+
+/* —— Calm · Full-bleed media —— */
+
+.cta-show--fullbleed {
+  justify-content: flex-end;
+  background: var(--cta-pine);
+}
+
+.cta-show--fullbleed .cta-show-inner {
+  justify-items: start;
+}
+
+.cta-show--fullbleed .cta-show-copy {
+  justify-items: start;
+  text-align: left;
+}
+
+.cta-show--fullbleed .cta-actions {
+  justify-content: flex-start;
+}
+
+.cta-photo {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 55%;
+}
+
+.cta-fade {
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 48, 31, 0.05) 0%, rgba(20, 48, 31, 0.35) 45%, rgba(14, 30, 20, 0.9) 100%);
+}
+
+/* —— Creative · Aurora —— */
+
+.cta-show--aurora {
+  background: #0e1f14;
+}
+
+.cta-aurora {
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+.cta-aurora--1 {
+  top: -30vmax;
+  left: -20vmax;
+  background: radial-gradient(circle, var(--cta-b) 0%, transparent 65%);
+  animation: cta-drift-a 22s ease-in-out infinite alternate;
+}
+
+.cta-aurora--2 {
+  right: -25vmax;
+  bottom: -35vmax;
+  background: radial-gradient(circle, var(--cta-mint) 0%, transparent 65%);
+  animation: cta-drift-b 26s ease-in-out infinite alternate;
+}
+
+.cta-aurora--3 {
+  top: 10%;
+  left: 30%;
+  width: 45vmax;
+  height: 45vmax;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cta-a) 40%, #6fb7c9) 0%, transparent 65%);
+  opacity: 0.4;
+  animation: cta-drift-a 30s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes cta-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(12vmax, 8vmax, 0) scale(1.15); }
+}
+
+@keyframes cta-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to { transform: translate3d(-14vmax, -6vmax, 0) scale(0.95); }
+}
+
+/* —— Creative · Horizon —— */
+
+/* The sun sits on the horizon (the top edge of the sea band), both anchored
+   to the bottom so the copy above never meets them. */
+.cta-show--horizon {
+  --hz-sea: 26%;
+  --hz-sun: clamp(10rem, 22vw, 16rem);
+  justify-content: flex-start;
+  background: linear-gradient(180deg, #dff1f7 0%, #f6f1dc 68%, #f3e3b0 100%);
+}
+
+.cta-show--horizon .cta-show-inner {
+  padding-top: clamp(0rem, 4vw, 2rem);
+}
+
+.cta-sun {
+  left: 50%;
+  bottom: var(--hz-sea);
+  width: var(--hz-sun);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6cf 0%, var(--cta-sun) 55%, color-mix(in srgb, var(--cta-sun) 60%, #e9a94a) 100%);
+  box-shadow: 0 0 120px rgba(242, 201, 76, 0.55);
+  transform: translate(-50%, 50%);
+  animation: cta-rise 14s ease-in-out infinite alternate;
+}
+
+.cta-sea {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--hz-sea);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cta-sage) 55%, #cfe2c0) 0%, color-mix(in srgb, var(--cta-green) 70%, #b8d4a8) 100%);
+}
+
+.cta-show--horizon[data-surface="custom"] .cta-sea {
+  opacity: 0.55;
+}
+
+@keyframes cta-rise {
+  from { transform: translate(-50%, 62%); }
+  to { transform: translate(-50%, 38%); }
+}
+
+/* —— Creative · Ripple —— */
+
+.cta-show--ripple {
+  background: radial-gradient(ellipse at 50% 50%, #234a31 0%, var(--cta-a) 70%);
+}
+
+.cta-ring {
+  left: 50%;
+  top: 50%;
+  width: clamp(14rem, 40vw, 30rem);
+  aspect-ratio: 1;
+  border: 1.5px solid color-mix(in srgb, var(--cta-b) 55%, transparent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: cta-ripple 8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.cta-ring--2 { animation-delay: 2s; }
+.cta-ring--3 { animation-delay: 4s; }
+.cta-ring--4 { animation-delay: 6s; }
+
+@keyframes cta-ripple {
+  0% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+
+/* —— Creative · Stacked cards —— */
+
+.cta-show--stacked {
+  background: linear-gradient(140deg, var(--cta-paper) 0%, #f7f3df 100%);
+}
+
+.cta-show--stacked[data-surface="own"] {
+  --cta-a: var(--cta-ink);
+  --cta-b: var(--cta-pistachio);
+}
+
+.cta-stack {
+  position: relative;
+  display: grid;
+  width: 100%;
+  max-width: 22rem;
+  margin: 0 auto;
+  padding: 3.25rem 0;
+  list-style: none;
+}
+
+/* A cascade: each card shows its number and word above the next one. */
+.cta-stack-card {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  min-height: 9.5rem;
+  padding: 1.1rem 1.3rem;
+  border-radius: 1.25rem;
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  box-shadow: 0 20px 50px rgba(20, 48, 31, 0.18);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cta-stack-num {
+  flex: none;
+  font-family: var(--font-alt, var(--font-sans));
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  opacity: 0.7;
+}
+
+.cta-stack-card--1 {
+  z-index: 1;
+  background: var(--cta-b);
+  color: var(--cta-ink);
+  transform: translate(-6%, -3.25rem) rotate(-4deg);
+}
+
+.cta-stack-card--2 {
+  z-index: 2;
+  background: #fff;
+  color: var(--cta-ink);
+  transform: translate(0, 0) rotate(1deg);
+}
+
+.cta-stack-card--3 {
+  z-index: 3;
+  background: var(--cta-a);
+  color: #fff;
+  transform: translate(6%, 3.25rem) rotate(4deg);
+}
+
+.cta-stack:hover .cta-stack-card--1 { transform: translate(-8%, -3.75rem) rotate(-6deg); }
+.cta-stack:hover .cta-stack-card--3 { transform: translate(8%, 3.75rem) rotate(6deg); }
+
+/* —— Creative · Marquee / Typewriter —— */
+
+.cta-show--typewriter {
+  background: linear-gradient(180deg, #102418 0%, var(--cta-a) 100%);
+}
+
+.cta-show--typewriter.cta-show--close,
+.cta-show--typewriter.cta-show--between {
+  padding-bottom: clamp(7rem, 12vw, 9rem);
+}
+
+.cta-show .cta-type {
+  margin: 0;
+  min-height: 1.2em;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-style: italic;
+  line-height: 1.2;
+  color: var(--cta-b);
+}
+
+.cta-caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 0.12em;
+  vertical-align: -0.1em;
+  background: currentColor;
+  animation: cta-caret 1s steps(1) infinite;
+}
+
+@keyframes cta-caret {
+  50% { opacity: 0; }
+}
+
+.cta-marquee {
+  position: absolute;
+  right: 0;
+  bottom: clamp(1.5rem, 4vw, 2.5rem);
+  left: 0;
+  z-index: 1;
+  overflow: hidden;
+  border-block: 1px solid rgba(255, 255, 255, 0.12);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+
+.cta-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: cta-marquee 36s linear infinite;
+}
+
+.cta-marquee-set {
+  display: flex;
+  flex: none;
+}
+
+.cta-marquee-set > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.85rem 0 0.85rem 1.5rem;
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cta-marquee-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--cta-b);
+}
+
+@keyframes cta-marquee {
+  to { transform: translateX(-50%); }
+}
+
+/* —— Phones —— */
+
+@media (max-width: 760px) {
+  .cta-show--close,
+  .cta-show--between {
+    min-height: 0;
+    padding: clamp(4.5rem, 16vw, 6rem) 1.25rem;
+  }
+
+  /* Sized by the copy, with a strip of photo above it (88svh pushed the
+     copy to the bottom under half a screen of picture). */
+  .cta-show--fullbleed {
+    min-height: 0;
+    padding-top: clamp(9rem, 40vw, 12rem);
+  }
+
+  .cta-show--horizon {
+    --hz-sea: 6.5rem;
+    --hz-sun: 10rem;
+    padding-bottom: 13.5rem;
+  }
+
+  .cta-show--aside .cta-show-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cta-show--aside .cta-show-copy {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .cta-show--aside .cta-actions {
+    justify-content: center;
+  }
+
+  .cta-show .cta-title {
+    font-size: clamp(1.9rem, 8.4vw, 2.4rem);
+  }
+
+  .cta-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cta-btn {
+    width: 100%;
+  }
+
+  .cta-stack {
+    max-width: 18rem;
+    padding: 2.75rem 0;
+  }
+
+  .cta-stack-card {
+    min-height: 7.5rem;
+  }
+
+  .cta-stack-card--1 { transform: translate(-5%, -2.75rem) rotate(-3deg); }
+  .cta-stack-card--3 { transform: translate(5%, 2.75rem) rotate(3deg); }
+
+  .cta-show--typewriter.cta-show--close,
+  .cta-show--typewriter.cta-show--between {
+    padding-bottom: 7rem;
+  }
+
+  .cta-aurora {
+    filter: blur(50px);
+  }
+}
+
+/* —— Reduced motion: everything rests in a tidy still frame —— */
+
+@media (prefers-reduced-motion: reduce) {
+  .cta-show *,
+  .cta-show *::before,
+  .cta-show *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .cta-orb-core,
+  .cta-orb-halo {
+    transform: none;
+  }
+
+  .cta-pulse-dot {
+    left: calc(50% - 0.85rem);
+  }
+
+  .cta-demo-ball {
+    left: calc(50% - 0.8rem);
+  }
+
+  .cta-ring {
+    opacity: 0.35;
+  }
+
+  .cta-ring--1 { transform: translate(-50%, -50%) scale(0.7); }
+  .cta-ring--2 { transform: translate(-50%, -50%) scale(1.1); opacity: 0.25; }
+  .cta-ring--3 { transform: translate(-50%, -50%) scale(1.5); opacity: 0.16; }
+  .cta-ring--4 { transform: translate(-50%, -50%) scale(1.9); opacity: 0.08; }
+
+  .cta-sun {
+    transform: translate(-50%, 50%);
+  }
+
+  .cta-caret {
+    display: none;
+  }
+
+  .cta-marquee-track {
+    transform: none;
+  }
+}
+
+/* —— Hosts —— */
+
+/* Closing band: the showcase is the whole band. The band's media layer
+   (custom background, or Full-bleed's built-in photo) sits underneath. */
+.v2-close.v2-close--showcase {
+  display: block;
+  min-height: 0;
+  padding: 0;
+}
+
+.v2-close--showcase .cta-show--fullbleed {
+  background: none;
+}
+
+.v2-close--showcase.v2-close--light::after {
+  content: none;
+}
+
+/* Between sessions: the showcase fills the finale (its choreography wrapper
+   stays, so the hand-offs still target the same boxes). */
+.fe-spath-finale.fe-between--showcase {
+  display: block;
+  min-height: 0;
+  padding: 0;
+}

@@ -15,15 +15,16 @@ const CORE_LOGO = "/brand/nura-circle-variants/O-mint-on-ink.png";
 
 /** Desktop ring: topics emerge from the centre and spread out as you scroll. */
 const EMERGE_QUERY = "(min-width: 861px) and (prefers-reduced-motion: no-preference)";
-/** Phone grid: a short staggered reveal instead of the ring. */
-const STAGGER_QUERY = "(max-width: 860px) and (prefers-reduced-motion: no-preference)";
+/** Phones: the same ring, scaled down; topics fly out once when it comes into view. */
+const PHONE_QUERY = "(max-width: 860px) and (prefers-reduced-motion: no-preference)";
 
 /**
  * Scroll-scrubbed "emerge" (after Insurily's key-features band): the section
  * is a tall track with a sticky frame; one CSS variable, --topics-emerge (0 to 1),
  * drives the radius, scale and fade of every topic on the ring, so only
- * transform and opacity change. Without JS, with reduced motion, or on phones
- * the variable stays at 1: the static final layout.
+ * transform and opacity change. Phones run the same ring at a smaller scale
+ * with a one-off timed emerge. Without JS or with reduced motion the variable
+ * stays at 1: the static final ring.
  */
 function useTopicsEmerge(
   sectionRef: React.RefObject<HTMLElement | null>,
@@ -54,15 +55,17 @@ function useTopicsEmerge(
         }
       );
     });
-    mm.add(STAGGER_QUERY, () => {
-      gsap.from(orbit.querySelectorAll(".fe-topics-link"), {
-        opacity: 0,
-        y: 24,
-        duration: 0.55,
-        ease: "power3.out",
-        stagger: 0.06,
-        scrollTrigger: { trigger: orbit, start: "top 85%", once: true },
-      });
+    mm.add(PHONE_QUERY, () => {
+      gsap.fromTo(
+        orbit,
+        { "--topics-emerge": 0 },
+        {
+          "--topics-emerge": 1,
+          duration: 1.4,
+          ease: "power3.out",
+          scrollTrigger: { trigger: orbit, start: "top 80%", once: true },
+        }
+      );
     });
     ScrollTrigger.refresh();
     return () => mm.revert();

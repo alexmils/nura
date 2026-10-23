@@ -17,6 +17,7 @@ import {
   getLatestCancelFeedbackForUser,
 } from "@/lib/subscription-cancel-feedback";
 import { listRetentionEventsForUser } from "@/lib/subscription-retention";
+import { getUserAgentHealth, type UserAgentHealth } from "@/lib/agent-health";
 
 export type AdminUserLoginEvent = UserAuthEvent;
 
@@ -76,6 +77,8 @@ export type AdminUserDetail = {
     reasonIds: string[];
     comment: string | null;
   }[];
+  /** Guided threads (messages, sets, stuck flag) and interpreter failures. */
+  agentHealth: UserAgentHealth;
 };
 
 function mapPayment(ev: BillingEvent): AdminUserPaymentEvent {
@@ -109,6 +112,7 @@ export async function getAdminUserDetail(
     excluded,
     cancelFeedback,
     retentionEvents,
+    agentHealth,
   ] = await Promise.all([
       pool.query<{ c: number }>(
         "SELECT COUNT(*)::int AS c FROM threads WHERE user_id = $1",
@@ -149,6 +153,7 @@ export async function getAdminUserDetail(
       ),
       getLatestCancelFeedbackForUser(userId),
       listRetentionEventsForUser(userId, 8),
+      getUserAgentHealth(userId),
     ]);
 
   const latestLoginEvent =
@@ -227,5 +232,6 @@ export async function getAdminUserDetail(
         }
       : null,
     retentionEvents,
+    agentHealth,
   };
 }

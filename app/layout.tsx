@@ -74,8 +74,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning (this element's own attributes only): the early
+    // bootstrap script below writes the saved accessibility choices
+    // (data-a11y-*) onto <html> before React hydrates, so for anyone who has
+    // used the Accessibility menu the attributes never match the server HTML
+    // (the dev overlay's "1 Issue").
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${sourceSans.variable} ${fraunces.variable} ${robotoMono.variable} ${instrumentSans.variable}`}
     >
       <head>

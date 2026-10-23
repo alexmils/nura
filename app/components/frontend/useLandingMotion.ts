@@ -31,7 +31,10 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     /** Normal wheel speed. The edge catch drops it to zero, then restores it. */
     const WHEEL_MULTIPLIER = 0.9;
 
-    lenis = new Lenis({
+    // Touch devices scroll natively: Lenis only smooths wheel input, and its
+    // per-frame scroll writes fought iOS momentum (visible judder).
+    const touch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+    lenis = touch ? null : new Lenis({
       lerp: 0.1,
       smoothWheel: true,
       wheelMultiplier: WHEEL_MULTIPLIER,
@@ -46,7 +49,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     });
     setLandingLenis(lenis);
 
-    lenis.on("scroll", ScrollTrigger.update);
+    lenis?.on("scroll", ScrollTrigger.update);
 
     /* —— Section-edge catch ——
        Crossing into a new section stops taking wheel input for a beat
@@ -96,7 +99,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
     // Hand-offs add their hold runway as margins after the first measurement.
     ScrollTrigger.addEventListener("refresh", scheduleEdges);
 
-    let previousScroll = lenis.scroll;
+    let previousScroll = lenis?.scroll ?? window.scrollY;
     let lastEdgeAt = 0;
     let lastEdgeY = Number.NaN;
     let catchUntil = 0;
@@ -151,7 +154,7 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
       previousScroll = y;
     };
     window.addEventListener("wheel", onWheelBump, { passive: true });
-    lenis.on("scroll", onScrollBump);
+    lenis?.on("scroll", onScrollBump);
 
     const raf = (time: number) => {
       if (catchUntil && time >= catchUntil) releaseEdge();
@@ -203,12 +206,17 @@ export function useLandingMotion(rootRef: RefObject<HTMLElement | null>) {
           .from(".v2-hero-actions", { y: 22, opacity: 0, duration: 0.7 }, "-=0.45")
           .from(".v2-hero-trust", { y: 18, opacity: 0, duration: 0.6 }, "-=0.4");
 
+        // Phones: a gentler drift without the 8% zoom (it magnified the photo
+        // and its edges on a narrow portrait crop).
+        const phone = window.matchMedia("(max-width: 760px)").matches;
+        const zoom = phone ? 1.03 : 1.08;
+        const drift = phone ? 2 : 4;
         gsap.fromTo(
           ".v2-hero-photo-img",
-          { yPercent: -4, scale: 1.08 },
+          { yPercent: -drift, scale: zoom },
           {
-            yPercent: 4,
-            scale: 1.08,
+            yPercent: drift,
+            scale: zoom,
             ease: "none",
             scrollTrigger: {
               trigger: v2Hero,

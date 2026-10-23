@@ -1,11 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pencil, Play } from "lucide-react";
+import { Play } from "lucide-react";
 import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 
 function isCloudinary(src: string): boolean {
   return src.includes("res.cloudinary.com");
+}
+
+/** Two circular arrows: "replace this media". Centered on hover/focus. */
+function ReplaceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden focusable="false">
+      <path d="M20 11a8 8 0 0 0-14.3-4.9L4 8" />
+      <path d="M4 3.5V8h4.5" />
+      <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
+      <path d="M20 20.5V16h-4.5" />
+    </svg>
+  );
 }
 
 /** Hover Replace. Local files offer Import to Cloudinary. No pasted URL. */
@@ -55,7 +67,11 @@ export function ReplaceableThumb({
 
   return (
     <div ref={boxRef} className="fe-replace">
-      <button type="button" className={`fe-replace-thumb fe-replace-thumb--${mediaType}`} aria-haspopup="menu" aria-expanded={menu} aria-label={src ? "Change media" : "Upload media"} onClick={() => setMenu((open) => !open)}>
+      <button type="button" className={`fe-replace-thumb fe-replace-thumb--${mediaType}`} aria-haspopup="menu" aria-expanded={menu} aria-label={
+          src
+            ? mediaType === "video" ? "Replace video" : "Replace image"
+            : mediaType === "video" ? "Upload video" : "Upload image"
+        } onClick={() => setMenu((open) => !open)}>
         {src && mediaType === "video" ? (
           isEmbed ? (
             <span className="fe-replace-embed">
@@ -71,7 +87,9 @@ export function ReplaceableThumb({
           <span>Add</span>
         )}
         <span className="fe-replace-hover" aria-hidden>
-          <Pencil size={18} />
+          <span className="fe-replace-hover-icon">
+            <ReplaceIcon />
+          </span>
         </span>
       </button>
       {menu ? (

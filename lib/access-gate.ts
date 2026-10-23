@@ -1,4 +1,5 @@
 import { APP_BASE, LOGIN_PATH, safeAppNext } from "@/lib/app-base";
+import { isUnauthenticatedPublicPath } from "@/lib/public-paths";
 
 /** Paths ordinary users may open before onboarding / payment is finished. */
 export const ACCESS_ALLOWED_PREFIXES = [
@@ -17,6 +18,15 @@ export function isAccessAllowedPath(pathname: string): boolean {
   return ACCESS_ALLOWED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
+}
+
+/**
+ * Paths a signed-in user with no access (trial over, plan ended, payment
+ * failed) can still reach: the /app allow-list plus anything middleware
+ * treats as public, which includes /support and POST /api/auth/logout.
+ */
+export function isReachableWithoutAccess(pathname: string): boolean {
+  return isAccessAllowedPath(pathname) || isUnauthenticatedPublicPath(pathname);
 }
 
 export type AccessRedirectInput = {

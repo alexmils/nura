@@ -4,6 +4,11 @@ import {
   NoColdStartDemo,
   SafePlaceDemo,
 } from "@/app/components/frontend/GroundFirstTutorial";
+import {
+  CheckInDemo,
+  CloseGentlyDemo,
+  RhythmDemo,
+} from "@/app/components/frontend/SessionStageDemos";
 
 export const metadata: Metadata = {
   title: "Ground first demos",
@@ -30,6 +35,24 @@ export default function GroundMockPage() {
         <p className="gft-dev-label">3 · No cold starts (no cursor)</p>
         <div className="gft-dev-frame gft-dev-frame--card">
           <NoColdStartDemo forcePlay />
+        </div>
+      </div>
+      <div className="gft-dev-block">
+        <p className="gft-dev-label">4 - Choose your rhythm</p>
+        <div className="gft-dev-frame gft-dev-frame--stage">
+          <RhythmDemo forcePlay />
+        </div>
+      </div>
+      <div className="gft-dev-block">
+        <p className="gft-dev-label">5 - Check in</p>
+        <div className="gft-dev-frame gft-dev-frame--stage">
+          <CheckInDemo forcePlay />
+        </div>
+      </div>
+      <div className="gft-dev-block">
+        <p className="gft-dev-label">6 - Close gently</p>
+        <div className="gft-dev-frame gft-dev-frame--stage">
+          <CloseGentlyDemo forcePlay />
         </div>
       </div>
     </div>

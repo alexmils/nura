@@ -30,6 +30,7 @@ import { CloudinaryPicker } from "@/app/components/admin/CloudinaryPicker";
 import { EditorLayer } from "./EditorLayer";
 import { ReplaceableThumb } from "./ReplaceableThumb";
 import { commitSectionDraft, setSectionDraft, useEditorDraft } from "./section-draft";
+import type { EditorFocus } from "./editor-focus";
 import "./editor-templates.css";
 
 /**
@@ -48,9 +49,12 @@ const FrameCtx = createContext<FrameScope | null>(null);
 export function MarketingSectionEditor({
   id,
   onClose,
+  focus,
 }: {
   id: string;
   onClose: () => void;
+  /** Open on one list item (e.g. the stage the page is showing). */
+  focus?: EditorFocus | null;
 }) {
   const router = useRouter();
   const def = getSectionDef(id);
@@ -284,6 +288,7 @@ export function MarketingSectionEditor({
                           <legend>{field.label}</legend>
                           <ListEditor
                             field={field}
+                            focusIndex={focus?.list === field.key ? focus.index : undefined}
                             items={(config[field.key] as SectionItem[]) ?? []}
                             onChange={(items, key) =>
                               change(`${field.key}:${key}`, (current) => ({ ...current, [field.key]: items }))
@@ -413,6 +418,16 @@ function EditorAccordion({
   );
 }
 
+/** Options in picker order, bundled by `group` (ungrouped first). */
+function templateGroups(options: readonly FieldOption[]): [string, FieldOption[]][] {
+  const groups = new Map<string, FieldOption[]>();
+  for (const option of options) {
+    const key = option.group ?? "";
+    groups.set(key, [...(groups.get(key) ?? []), option]);
+  }
+  return [...groups.entries()];
+}
+
 /** Compact layout picker: a dropdown plus a schematic preview of the selection. */
 function TemplatePicker({
   field,
@@ -444,11 +459,23 @@ function TemplatePicker({
             value={current}
             onChange={(event) => onChange(event.target.value)}
           >
-            {options.map((option: FieldOption) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            {templateGroups(options).map(([group, items]) =>
+              group ? (
+                <optgroup key={group} label={group}>
+                  {items.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : (
+                items.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))
+              )
+            )}
           </select>
           {active?.hint ? <small>{active.hint}</small> : null}
         </div>
@@ -579,7 +606,7 @@ function ImageSlot({
   onChange: (value: string) => void;
   /** The image's key in the section data: adds Edit (drag to move, scroll to zoom) / Done. */
   frameField?: string;
-  /** Small square preview for icons instead of the wide media preview. */
+  /** Small square preview for icons instead of the compact media preview. */
   compact?: boolean;
 }) {
   const scope = useContext(FrameCtx);
@@ -623,10 +650,15 @@ function MediaControls({
   const read = (key: string) => (typeof values[key] === "string" ? values[key] : "");
   const rawKind = read(names.kind);
   const kind = rawKind === "video" ? "video" : rawKind === "none" ? "none" : "image";
+  // Slots with a built-in animation list it first, as "Animation" (stored as "none").
+  const modes = field.defaultLabel
+    ? (["none", "image", "video"] as const)
+    : (["image", "video", "none"] as const);
+  const noneLabel = field.defaultLabel || "None";
   return (
     <div className="fe-editor-media">
       <div className="fe-editor-media-toggle" role="radiogroup" aria-label={`${field.label}: media type`}>
-        {(["image", "video", "none"] as const).map((mode) => (
+        {modes.map((mode) => (
           <button
             key={mode}
             type="button"
@@ -635,13 +667,15 @@ function MediaControls({
             className={kind === mode ? "is-on" : ""}
             onClick={() => onChange({ [names.kind]: mode })}
           >
-            {mode === "image" ? "Image" : mode === "video" ? "Video" : "None"}
+            {mode === "image" ? "Image" : mode === "video" ? "Video" : noneLabel}
           </button>
         ))}
       </div>
       {kind === "none" ? (
         <p className="fe-editor-note">
-          No media in this slot. Switch back to Image or Video to add one.
+          {field.defaultLabel
+            ? "Shows the built-in animation. Choose Image or Video to replace it."
+            : "No media in this slot. Switch back to Image or Video to add one."}
         </p>
       ) : kind === "image" ? (
         <ImageSlot
@@ -703,10 +737,13 @@ function ListEditor({
   field,
   items,
   onChange,
+  focusIndex,
 }: {
   field: ListField;
   items: SectionItem[];
   onChange: (items: SectionItem[], key: string) => void;
+  /** Item to open on: it stays expanded, the others start collapsed. */
+  focusIndex?: number;
 }) {
   function patch(index: number, key: string, value: string) {
     onChange(
@@ -773,7 +810,25 @@ function ListEditor({
   }
 
   const frameParent = useContext(FrameCtx);
-  const [closed, setClosed] = useState<Set<string>>(() => new Set());
+  const itemKeyAt = (item: SectionItem, index: number) => item.id || String(index);
+  const [closed, setClosed] = useState<Set<string>>(() =>
+    focusIndex !== undefined && items[focusIndex]
+      ? new Set(items.map(itemKeyAt).filter((_, i) => i !== focusIndex))
+      : new Set()
+  );
+  const [flash, setFlash] = useState<number | null>(focusIndex ?? null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (focusIndex === undefined) return;
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-item-index="${focusIndex}"]`);
+    if (!el) return;
+    const t = window.setTimeout(() => el.scrollIntoView({ block: "start", behavior: "smooth" }), 60);
+    const off = window.setTimeout(() => setFlash(null), 2400);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(off);
+    };
+  }, [focusIndex]);
   function toggleOpen(key: string) {
     setClosed((current) => {
       const next = new Set(current);
@@ -783,13 +838,17 @@ function ListEditor({
     });
   }
   return (
-    <div className="fe-editor-list">
+    <div className="fe-editor-list" ref={listRef}>
       {items.map((item, index) => {
         const hidden = item[HIDDEN_ITEM_KEY] === "1";
         const itemKey = item.id || String(index);
         const open = !closed.has(itemKey);
         return (
-          <article key={itemKey} className={hidden ? "fe-editor-item is-off" : "fe-editor-item"}>
+          <article
+            key={itemKey}
+            data-item-index={index}
+            className={`fe-editor-item${hidden ? " is-off" : ""}${flash === index ? " is-focus" : ""}`}
+          >
             <div className="fe-editor-item-bar">
               <span className="fe-editor-item-title">
                 <button
@@ -910,7 +969,6 @@ function BackgroundControls({
       </div>
       {kind === "image" ? (
         <ImageSlot
-          compact
           label="Image"
           value={read("bgImage")}
           onChange={(url) =>
@@ -922,7 +980,7 @@ function BackgroundControls({
       ) : null}
       {kind === "video" ? (
         <>
-          <div className="fe-editor-field fe-editor-field--thumb">
+          <div className="fe-editor-field">
             <span>Video</span>
             <ReplaceableThumb
               mediaType="video"
@@ -934,7 +992,6 @@ function BackgroundControls({
             <small>Plays muted, looped, behind the content.</small>
           </div>
           <ImageSlot
-            compact
             label="Poster (optional)"
             value={read("bgPoster")}
             onChange={(url) => onChange({ bgPoster: url }, "poster")}

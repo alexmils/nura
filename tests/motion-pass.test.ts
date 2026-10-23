@@ -38,10 +38,11 @@ describe("motion pass: scroll choreography", () => {
   });
 
   it("pins the outgoing block for `hold` viewports before the effect", () => {
-    assert.match(lib, /MOBILE_PIN_SCALE = 0\.65/);
     assert.match(lib, /DEFAULT_HANDOFF_HOLD = 0\.35/);
-    // hold is in viewport units, shortened on phones.
-    assert.match(lib, /Math\.max\(0, hold\) \* \(mobile \? MOBILE_PIN_SCALE : 1\)/);
+    // hold is in viewport units on desktop; phones never hold or move the
+    // outgoing block (the first-screen hero was pushed down at scroll 0).
+    assert.match(lib, /const held = mobile \? 0 : Math\.max\(0, hold\);/);
+    assert.match(lib, /const movePrev = !mobile && prev && !pinnedInside\(prev\);/);
     // The hold is a counter-translation, not a sticky/pin spacer.
     assert.match(lib, /y: holdPx, duration: held/);
     assert.match(lib, /start, end: mobile \? "top 30%" : "top top", scrub: 0\.5/);
@@ -77,7 +78,7 @@ describe("motion pass: scroll choreography", () => {
       assert.ok(lib.includes(`"${sel}"`), sel);
     }
     // Pinned sections are never transformed as the outgoing block.
-    assert.match(lib, /const movePrev = prev && !pinnedInside\(prev\)/);
+    assert.match(lib, /const movePrev = !mobile && prev && !pinnedInside\(prev\)/);
   });
 
   it("is wired on home and on every other public page", () => {
@@ -95,4 +96,4 @@ describe("pageGetsChoreography", async () => {
     assert.equal(pageGetsChoreography("/about"), true);
     assert.equal(pageGetsChoreography("/blog/some-post"), true);
   });
-});
+});

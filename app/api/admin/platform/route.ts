@@ -127,6 +127,10 @@ export async function PUT(request: Request) {
       seo: current.seo,
       adminPush: current.adminPush,
       cloudinary: current.cloudinary,
+      // Owned by Admin → Platform → Voice orb (/api/admin/voice-orb), which
+      // saves on its own; a stale copy in this form must not undo it.
+      voiceOrbId: current.voiceOrbId,
+      voiceSounds: current.voiceSounds,
     });
 
     await writeAuditEvent({

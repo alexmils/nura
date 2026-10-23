@@ -1,0 +1,155 @@
+/* Admin Platform — voice orb picker */
+.vo-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 0.5rem 0 1rem;
+}
+.vo-pick-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+.vo-pick-seg {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(42, 48, 32, 0.12));
+  background: var(--bg-elevated, #fff);
+}
+.vo-pick-seg button,
+.vo-pick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.vo-pick-chip {
+  border: 1px solid var(--border, rgba(42, 48, 32, 0.12));
+  background: var(--bg-elevated, #fff);
+}
+.vo-pick-seg button.is-on,
+.vo-pick-chip.is-on {
+  background: #2f4a22;
+  color: #fff;
+}
+.vo-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13.5rem), 1fr));
+  gap: 0.75rem;
+}
+.vo-pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.6rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border, rgba(42, 48, 32, 0.12));
+  background: var(--bg-elevated, #fff);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.vo-pick-card:hover {
+  border-color: rgba(132, 176, 103, 0.55);
+}
+.vo-pick-card.is-current {
+  border-color: rgba(132, 176, 103, 0.9);
+  box-shadow: 0 0 0 2px rgba(132, 176, 103, 0.3);
+}
+/* Same backdrop as the voice stage, so the orb reads as it will live. */
+.vo-pick-stage {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 0.65rem;
+  overflow: hidden;
+  background-color: #f6faef;
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% 40%, rgba(246, 231, 168, 0.45), rgba(246, 231, 168, 0) 70%),
+    linear-gradient(180deg, #fbfcf4 0%, #eef6e4 100%);
+}
+.vo-pick-stage .voice-orb-shdr {
+  --voice-orb-size: 86%;
+}
+.vo-pick-badge {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #2f4a22;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.vo-pick-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+.vo-pick-name {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 650;
+}
+.vo-pick-blurb {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #5b6450);
+}
+.vo-pick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.15rem 0 0;
+}
+.vo-pick-tags span {
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(164, 237, 165, 0.25);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+}
+.vo-pick-sounds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border, rgba(42, 48, 32, 0.12));
+}
+.vo-pick-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.vo-pick-toggle input {
+  margin-top: 0.25rem;
+}
+.vo-pick-toggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.vo-pick-sound-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+.vo-pick-sound-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}

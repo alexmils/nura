@@ -29,6 +29,7 @@ export async function ensureRlsPolicies(client?: SqlClient) {
     "user_settings",
     "client_profiles",
     "consents",
+    "thread_phase_changes",
   ];
 
   for (const table of tables) {
@@ -53,6 +54,19 @@ export async function ensureRlsPolicies(client?: SqlClient) {
       EXISTS (
         SELECT 1 FROM threads t
         WHERE t.id = messages.thread_id AND t.user_id = app_current_user_id()
+      )
+    );
+
+    DROP POLICY IF EXISTS thread_phase_changes_all ON thread_phase_changes;
+    CREATE POLICY thread_phase_changes_all ON thread_phase_changes FOR ALL USING (
+      EXISTS (
+        SELECT 1 FROM threads t
+        WHERE t.id = thread_phase_changes.thread_id AND t.user_id = app_current_user_id()
+      )
+    ) WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM threads t
+        WHERE t.id = thread_phase_changes.thread_id AND t.user_id = app_current_user_id()
       )
     );
 

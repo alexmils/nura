@@ -110,14 +110,34 @@ export interface Thread {
    * something interrupted them) and the phase must not advance from it.
    */
   lastSetOutcome?: "completed" | "stopped";
+  /**
+   * First SUDs (0-10) and VoC (0-7) recorded for the target in this thread.
+   * The closure card shows start -> end from these and `suds` / `voc`.
+   */
+  baselineSuds?: number;
+  baselineVoc?: number;
   incomplete: boolean;
   /**
    * Set when account memory was extracted after guided closure.
    * Server-only for idempotency; may be omitted in older clients.
    */
   memoryExtractedAt?: string;
+  /**
+   * Server-recorded protocol phase changes, oldest first (thread_phase_changes).
+   * Drives the phase badges in the transcript on every device. Owner-only.
+   */
+  phaseChanges?: ThreadPhaseChange[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ThreadPhaseChange {
+  phase: ProtocolPhase;
+  /** Latest message when the phase changed (the badge sits after it); null = before any message. */
+  afterMessageId: string | null;
+  /** Message count at that moment: fallback position if that message is gone. */
+  messageIndex: number;
+  createdAt: string;
 }
 
 export interface Message {

@@ -43,7 +43,8 @@
 /* —— Pinned to the edge: ribbon with a chevron —— */
 
 .a11y-widget[data-attached] .a11y-fab {
-  border: 1px solid var(--border-strong, #84b067);
+  /* Slim edge tab (22×60): hairline border, small chevron. */
+  border: 0.5px solid color-mix(in srgb, var(--border-strong, #84b067) 75%, transparent);
   background: var(--bg-elevated, #f7fdf7);
   color: var(--text-secondary, #5e7048);
 }
@@ -51,13 +52,13 @@
 .a11y-widget[data-attached][data-edge="right"] .a11y-fab {
   border-radius: 999px 0 0 999px;
   border-right: none;
-  box-shadow: -6px 0 18px rgba(42, 48, 32, 0.16);
+  box-shadow: -3px 0 10px rgba(42, 48, 32, 0.12);
 }
 
 .a11y-widget[data-attached][data-edge="left"] .a11y-fab {
   border-radius: 0 999px 999px 0;
   border-left: none;
-  box-shadow: 6px 0 18px rgba(42, 48, 32, 0.16);
+  box-shadow: 3px 0 10px rgba(42, 48, 32, 0.12);
 }
 
 .a11y-widget[data-attached] .a11y-fab:hover {
@@ -555,4 +556,15 @@ body:has(.app-shell.session-immersive) .a11y-widget {
   .a11y-widget:not([data-attached]) .a11y-fab:hover {
     transform: none;
   }
+}
+
+/* Phones/tablets: no floating tab; the empty anchor never takes taps. The
+   panel (a bottom sheet) opens from the site menu's "Accessibility" item. */
+.a11y-widget[data-menu] {
+  pointer-events: none;
+}
+
+.a11y-widget[data-menu] .a11y-panel,
+.a11y-widget[data-menu] .a11y-sheet-backdrop {
+  pointer-events: auto;
 }

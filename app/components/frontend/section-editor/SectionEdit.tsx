@@ -5,20 +5,25 @@ import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { getSectionDef } from "@/lib/marketing-sections";
 import { AdminSectionChip } from "./AdminSectionChip";
+import { readEditorFocus, type EditorFocus } from "./editor-focus";
 import { useIsPlatformAdmin } from "./useIsPlatformAdmin";
 
 const openEditors = new Set<string>();
+const openFocus = new Map<string, EditorFocus>();
 const listeners = new Set<() => void>();
 
-function setEditorOpen(id: string, open: boolean) {
+function setEditorOpen(id: string, open: boolean, focus: EditorFocus | null = null) {
   if (open) openEditors.add(id);
   else openEditors.delete(id);
+  if (open && focus) openFocus.set(id, focus);
+  else openFocus.delete(id);
   listeners.forEach((listener) => listener());
 }
 
 export function closeAllEditors() {
   if (openEditors.size === 0) return;
   openEditors.clear();
+  openFocus.clear();
   listeners.forEach((listener) => listener());
 }
 
@@ -50,7 +55,7 @@ export function SectionEdit({ id, lift = false }: { id: string; lift?: boolean }
       name={def.name}
       id={id}
       lift={lift}
-      onEdit={() => setEditorOpen(id, true)}
+      onEdit={() => setEditorOpen(id, true, readEditorFocus(id))}
     />
   );
 }
@@ -66,7 +71,12 @@ export function SectionEditorHost() {
   return createPortal(
     <>
       {key.split("|").map((id) => (
-        <MarketingSectionEditor key={id} id={id} onClose={() => setEditorOpen(id, false)} />
+        <MarketingSectionEditor
+          key={id}
+          id={id}
+          focus={openFocus.get(id) ?? null}
+          onClose={() => setEditorOpen(id, false)}
+        />
       ))}
     </>,
     document.body

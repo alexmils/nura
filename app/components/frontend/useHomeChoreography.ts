@@ -29,7 +29,9 @@ const q = <T extends Element = HTMLElement>(root: Element, sel: string) => [...r
  * faq -> blog              (none)   plain hand-off; the old mint wave band was removed
  * blog -> close            lens     the closing CTA emerges out of the nearest visible blog card (its rect and aspect) and grows to full screen, copy fades in last (Aperture / lens)
  *
- * Phones: the lighter stack/curve hand-offs (choreography.ts `handoff`).
+ * Phones: the lighter stack/curve hand-offs (choreography.ts `handoff`) for
+ * every boundary, with no hold and no movement of the outgoing block, so
+ * content is never pushed off screen or left faded mid-transition.
  * A pair only animates while its two sections are still neighbours, so editor
  * reorders, hides and inserted sections never produce a wrong hold.
  *
@@ -151,13 +153,20 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
   }
   // Session -> topics on every screen: a focus pull. The held room blurs back
   // while the guides surfaces through a tall feathered mask — no edge, no ring.
-  pinnedHandoff(one(".v2-session"), one(".fe-topics"), "focus", {
-    content: one(".fe-topics-head"),
-  });
+  // Phones: the blur filter on a full-height block and the feathered mask were
+  // costly on iOS and left the guides head faded mid-scroll; a plain stack.
+  if (mobile) handoff(one(".v2-session"), one(".fe-topics"), "stack", true);
+  else
+    pinnedHandoff(one(".v2-session"), one(".fe-topics"), "focus", {
+      content: one(".fe-topics-head"),
+    });
   // Pricing -> FAQ and FAQ -> blog are plain scroll with only a gradient
   // seam (the FAQ/blog top bands); no pin and no transition.
   // Blog -> close on every screen: the CTA comes out of a real post card.
-  pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
+  // Phones: the lens clips the CTA to a card rect while the toolbar resizes the
+  // viewport, which showed a blank band; the CTA simply stacks over the blog.
+  if (mobile) handoff(one(".fe-blog"), one(".v2-close"), "stack", true);
+  else pinnedHandoff(one(".fe-blog"), one(".v2-close"), "lens", {
     image: one(".v2-close-img"),
     content: one(".v2-close-inner"),
     from: () => q<HTMLElement>(root, ".fe-blog .fe-blog-masonry-card"),
@@ -198,4 +207,4 @@ export function buildHomeChoreography(ctx: ChoreoContext) {
 
 export function useHomeChoreography(rootRef: RefObject<HTMLElement | null>) {
   useChoreography(() => rootRef.current, buildHomeChoreography, "home");
-}
+}

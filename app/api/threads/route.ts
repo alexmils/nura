@@ -178,7 +178,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ thread });
     }
     if (body.action === "delete" && body.id) {
-      await deleteThread(body.id);
+      // Owner-only: someone else's (or an unknown) thread id is a 404.
+      const deleted = await deleteThread(body.id);
+      if (!deleted) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });

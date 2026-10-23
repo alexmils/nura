@@ -33,6 +33,7 @@ import type { AdminDashboardStats } from "@/lib/admin-stats";
 import type { AuditEvent } from "@/lib/audit-log";
 import { fetchJson } from "@/lib/fetch-json";
 import { OVERVIEW_LAYOUT_REV } from "@/app/components/admin/overview-flow-rev";
+import { AgentHealthOverviewCard } from "@/app/components/admin/AgentHealthPanels";
 
 export default function AdminOverviewPage() {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -314,6 +315,8 @@ export default function AdminOverviewPage() {
               </div>
             </div>
           </section>
+
+          <AgentHealthOverviewCard />
 
           <section className="admin-panel">
             <div className="admin-panel-head-row">

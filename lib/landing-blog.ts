@@ -35,6 +35,9 @@ export function formatBlogDate(iso: string): string {
     month: "long",
     day: "numeric",
     year: "numeric",
+    // Fixed zone: the server and the visitor's browser must print the same
+    // day (a post at 00:00Z read "October 9" west of UTC and failed hydration).
+    timeZone: "UTC",
   }).format(d);
 }
 

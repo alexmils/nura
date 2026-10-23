@@ -155,10 +155,12 @@ describe("accessibility preferences", () => {
 
   it("clamps the pinned center into the viewport", () => {
     const h = 844;
-    assert.equal(clampA11yCenterY(-500, h), 54);
-    assert.equal(clampA11yCenterY(9999, h), h - 54);
+    // Half the ribbon plus the 10px edge margin.
+    const m = A11Y_RIBBON_H / 2 + 10;
+    assert.equal(clampA11yCenterY(-500, h), m);
+    assert.equal(clampA11yCenterY(9999, h), h - m);
     // A bottom bar reserves room so the widget cannot sit under it.
-    assert.equal(clampA11yCenterY(9999, h, undefined, 120), h - 54 - 120);
+    assert.equal(clampA11yCenterY(9999, h, undefined, 120), h - m - 120);
     // A viewport shorter than the widget stays centered instead of flipping.
     assert.equal(clampA11yCenterY(200, 40), 20);
   });

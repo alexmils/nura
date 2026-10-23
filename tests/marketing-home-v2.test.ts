@@ -43,10 +43,10 @@ describe("new homepage sections", () => {
     assert.equal(getSectionDef("home-close")?.ownBackground, true);
   });
 
-  it("lets the editor pick one of six closing CTA layouts", () => {
-    assert.equal(CLOSE_TEMPLATES.length, 6);
+  it("lets the editor pick one of sixteen closing CTA layouts (6 classic + 10 shared)", () => {
+    assert.equal(CLOSE_TEMPLATES.length, 16);
     const field = getSectionDef("home-close")?.fields.find((f) => f.key === CLOSE_TEMPLATE_KEY);
-    assert.ok(field && "options" in field && field.options?.length === 6);
+    assert.ok(field && "options" in field && field.options?.length === 16);
     assert.equal(closeTemplate(normalizeSection("home-close", null)), "meadow");
     assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "panel" })), "panel");
     assert.equal(closeTemplate(normalizeSection("home-close", { [CLOSE_TEMPLATE_KEY]: "nope" })), "meadow");
@@ -55,9 +55,9 @@ describe("new homepage sections", () => {
   });
 
   it("lets the editor pick the between-sessions layout", () => {
-    assert.equal(BETWEEN_TEMPLATES.length, 5);
+    assert.equal(BETWEEN_TEMPLATES.length, 15);
     const field = getSectionDef("home-how-between")?.fields.find((f) => f.key === BETWEEN_TEMPLATE_KEY);
-    assert.ok(field && "options" in field && field.options?.length === 5);
+    assert.ok(field && "options" in field && field.options?.length === 15);
     assert.equal(betweenTemplate(normalizeSection("home-how-between", null)), "center");
     assert.equal(betweenTemplate(normalizeSection("home-how-between", { [BETWEEN_TEMPLATE_KEY]: "split" })), "split");
     assert.equal(betweenTemplate(normalizeSection("home-how-between", { [BETWEEN_TEMPLATE_KEY]: "nope" })), "center");

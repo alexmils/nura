@@ -52,7 +52,13 @@ export type ScalarField = {
   templates?: readonly string[];
 };
 
-export type FieldOption = { value: string; label: string; hint?: string };
+export type FieldOption = {
+  value: string;
+  label: string;
+  hint?: string;
+  /** Picker group (an <optgroup>), e.g. "Calm" / "Creative". */
+  group?: string;
+};
 
 /** Image or video slot. Stored as `{key}Kind`, `{key}Image`, `{key}Video`, `{key}Poster`, `{key}Alt`. */
 export type MediaFieldDef = {
@@ -62,6 +68,12 @@ export type MediaFieldDef = {
   hint?: string;
   /** Show an Autoplay switch for videos (stored as {key}Autoplay). */
   playback?: boolean;
+  /**
+   * The slot has a built-in default (an animation) instead of an empty box:
+   * the editor shows this label in place of "None" ({key}Kind "none"), and an
+   * Image/Video choice with no file also falls back to it.
+   */
+  defaultLabel?: string;
   /** Only shown (and rendered) for these hero templates. */
   templates?: readonly string[];
 };
@@ -149,6 +161,13 @@ const media = (key: string, label: string, hint?: string): MediaFieldDef => ({
   hint,
 });
 
+/** Media slot whose default is a built-in animation ("Animation" / Image / Video). */
+const ANIMATION_HINT = "Animation keeps the built-in demo. Choose Image or Video to replace it.";
+const demoMedia = (key: string, label: string, hint = ANIMATION_HINT): MediaFieldDef => ({
+  ...media(key, label, hint),
+  defaultLabel: "Animation",
+});
+
 export function mediaNames(key: string) {
   const cap = (part: string) => (key ? key + part[0].toUpperCase() + part.slice(1) : part);
   return {
@@ -157,6 +176,33 @@ export function mediaNames(key: string) {
     video: cap("video"),
     poster: cap("poster"),
     alt: cap("alt"),
+  };
+}
+
+/**
+ * The uploaded media of a slot, or null when the slot should show its default
+ * (kind "none", or Image/Video chosen without a file).
+ */
+export function slotMedia(
+  source: SectionConfig | SectionItem | undefined,
+  key: string
+): { kind: "image" | "video"; image: string; video: string; poster: string; alt: string } | null {
+  const names = mediaNames(key);
+  const read = (k: string) => {
+    const v = source?.[k];
+    return typeof v === "string" ? v.trim() : "";
+  };
+  const kind = read(names.kind);
+  if (kind === "none") return null;
+  const image = read(names.image);
+  const video = read(names.video);
+  if (!image && !video) return null;
+  return {
+    kind: kind === "video" && video ? "video" : image ? "image" : "video",
+    image,
+    video,
+    poster: read(names.poster),
+    alt: read(names.alt),
   };
 }
 
@@ -191,17 +237,63 @@ export function fieldInTemplate(field: { templates?: readonly string[] }, templa
   return !field.templates || field.templates.includes(template);
 }
 
+/* ---------- Shared CTA showcase templates (closing CTA + Between sessions) ---------- */
+
+/**
+ * Ten call-to-action looks shared by `home-close` and `home-how-between`.
+ * Values are unique across every template list (the editor thumbnail class is
+ * `fe-tpl-thumb--{value}`). Each one respects the section's background and
+ * gradient (`backdropPlan`), reduced motion, and stacks on phones.
+ */
+export const CTA_SHOWCASE_TEMPLATES = [
+  { value: "orb", label: "Breathing orb", group: "Calm", hint: "A soft orb breathes slowly behind centred copy." },
+  { value: "pulse", label: "Left-right pulse", group: "Calm", hint: "A dot glides left and right under the copy, like a set." },
+  { value: "quote", label: "Quote card", group: "Calm", hint: "A quiet quote card beside the call to action." },
+  { value: "minidemo", label: "Split with mini demo", group: "Calm", hint: "Copy left, a small live set preview right." },
+  { value: "fullbleed", label: "Full-bleed media", group: "Calm", hint: "Edge-to-edge photo or video, copy low on a soft fade." },
+  { value: "aurora", label: "Aurora", group: "Creative", hint: "Slow animated gradient light behind the copy." },
+  { value: "horizon", label: "Horizon", group: "Creative", hint: "A sun rising over a calm horizon line." },
+  { value: "ripple", label: "Ripple", group: "Creative", hint: "Rings ripple out gently from the centre." },
+  { value: "stacked", label: "Stacked cards", group: "Creative", hint: "Three fanned cards carry your words." },
+  { value: "typewriter", label: "Marquee / Typewriter", group: "Creative", hint: "Your words type out, with a slow marquee below." },
+] as const satisfies readonly FieldOption[];
+export type CtaShowcaseTemplate = (typeof CTA_SHOWCASE_TEMPLATES)[number]["value"];
+
+export function isCtaShowcase(value: string): value is CtaShowcaseTemplate {
+  return CTA_SHOWCASE_TEMPLATES.some((option) => option.value === value);
+}
+
+/** Templates that paint a built-in photo when no background is set. */
+export const CTA_SHOWCASE_PHOTO = "/marketing/landing/calm-water.jpg";
+export const CTA_SHOWCASE_DEFAULT_WORDS = "Ground first, Process gently, Close when it's enough";
+export const CTA_SHOWCASE_DEFAULT_QUOTE = "Ground first. Process gently. Close when it's enough.";
+export const CTA_SHOWCASE_DEFAULT_QUOTE_BY = "The Nura rhythm";
+
+/** Comma or line separated words for Stacked / Typewriter (1-6, defaults when blank). */
+export function ctaShowcaseWords(raw: string | undefined): string[] {
+  const words = String(raw ?? "")
+    .split(/[,\n]/)
+    .map((word) => word.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+  return words.length ? words : ctaShowcaseWords(CTA_SHOWCASE_DEFAULT_WORDS);
+}
+
+const QUOTE_ONLY = ["quote"] as const;
+const WORDS_ONLY = ["stacked", "typewriter"] as const;
+
 /* ---------- Closing CTA templates ---------- */
 
 /** The closing CTA's look. "default" is the original photo + glass card. */
 export const CLOSE_TEMPLATE_KEY = "template";
 export const CLOSE_TEMPLATES = [
-  { value: "meadow", label: "Meadow card", hint: "Photo with the dark glass card." },
-  { value: "minimal", label: "Minimal", hint: "Pale surface, centred copy, no photo." },
-  { value: "panel", label: "Gradient panel", hint: "Bright pistachio panel on ink." },
-  { value: "arches", label: "Arches", hint: "Copy left, soft concentric arches right." },
-  { value: "contour", label: "Contour", hint: "Deep pine with fine contour lines, copy right." },
-  { value: "magazine", label: "Magazine", hint: "Photo half, framed copy half." },
+  { value: "meadow", label: "Meadow card", group: "Classic", hint: "Photo with the dark glass card." },
+  { value: "minimal", label: "Minimal", group: "Classic", hint: "Pale surface, centred copy, no photo." },
+  { value: "panel", label: "Gradient panel", group: "Classic", hint: "Bright pistachio panel on ink." },
+  { value: "arches", label: "Arches", group: "Classic", hint: "Copy left, soft concentric arches right." },
+  { value: "contour", label: "Contour", group: "Classic", hint: "Deep pine with fine contour lines, copy right." },
+  { value: "magazine", label: "Magazine", group: "Classic", hint: "Photo half, framed copy half." },
+  ...CTA_SHOWCASE_TEMPLATES,
 ] as const satisfies readonly FieldOption[];
 export type CloseTemplate = (typeof CLOSE_TEMPLATES)[number]["value"];
 
@@ -215,11 +307,12 @@ export function closeTemplate(config: SectionConfig | undefined): CloseTemplate 
 /** Where the "Between sessions" copy sits. */
 export const BETWEEN_TEMPLATE_KEY = "template";
 export const BETWEEN_TEMPLATES = [
-  { value: "center", label: "Centred", hint: "Kicker, title and button stacked in the middle." },
-  { value: "split", label: "Split", hint: "Copy left, the button alone on the right." },
-  { value: "card", label: "Glass card", hint: "The copy sits in a soft frosted card." },
-  { value: "offset", label: "Offset", hint: "Low-left copy with a wide quiet field." },
-  { value: "banner", label: "Banner", hint: "Title left, button right on one row." },
+  { value: "center", label: "Centred", group: "Classic", hint: "Kicker, title and button stacked in the middle." },
+  { value: "split", label: "Split", group: "Classic", hint: "Copy left, the button alone on the right." },
+  { value: "card", label: "Glass card", group: "Classic", hint: "The copy sits in a soft frosted card." },
+  { value: "offset", label: "Offset", group: "Classic", hint: "Low-left copy with a wide quiet field." },
+  { value: "banner", label: "Banner", group: "Classic", hint: "Title left, button right on one row." },
+  ...CTA_SHOWCASE_TEMPLATES,
 ] as const satisfies readonly FieldOption[];
 export type BetweenTemplate = (typeof BETWEEN_TEMPLATES)[number]["value"];
 
@@ -319,7 +412,7 @@ const BASE_SECTIONS: readonly SectionDef[] = [
           text("nav", "Nav label"),
           text("lead", "Lead"),
           area("line", "Line"),
-          media("media", "Image or video", "Leave blank to keep the stage as it is."),
+          demoMedia("media", "Image or video"),
         ],
       },
       {
@@ -335,7 +428,7 @@ const BASE_SECTIONS: readonly SectionDef[] = [
           text("hint", "Hint"),
         ],
       },
-      media("rhythmMedia", "Image or video", "The large frame below the cards. Leave blank to keep the placeholder."),
+      demoMedia("rhythmMedia", "Image or video", "The large frame below the cards. " + ANIMATION_HINT),
       {
         key: "ground",
         label: "Ground pair",
@@ -343,8 +436,9 @@ const BASE_SECTIONS: readonly SectionDef[] = [
         itemLabel: "Card",
         max: 2,
         fixed: true,
-        fields: [text("title", "Title"), text("line", "Line")],
+        fields: [text("title", "Title"), text("line", "Line"), demoMedia("media", "Card visual")],
       },
+      demoMedia("groundMedia", "Start a session visual", "The app mockup above the cards. " + ANIMATION_HINT),
       media("screen", "Between sessions", "Still or video in the closing frame. Leave blank for the empty frame."),
       text("kitKicker", "Language kicker"),
       text("kitTitle", "Language title"),
@@ -401,9 +495,14 @@ const BASE_SECTIONS: readonly SectionDef[] = [
       rhythmMediaPoster: "",
       rhythmMediaAlt: "",
       ground: [
-        { id: "safe", title: "Safe place first.", line: "Feet on the floor before anything heavy." },
-        { id: "cold", title: "No cold starts.", line: "Intake and breath, then the set." },
+        { id: "safe", title: "Safe place first.", line: "Feet on the floor before anything heavy.", mediaKind: "none" },
+        { id: "cold", title: "No cold starts.", line: "Intake and breath, then the set.", mediaKind: "none" },
       ],
+      groundMediaKind: "none",
+      groundMediaImage: "",
+      groundMediaVideo: "",
+      groundMediaPoster: "",
+      groundMediaAlt: "",
       kitKicker: "Your language",
       kitTitle: "A calm session in many languages.",
       kitSub:
@@ -1397,7 +1496,7 @@ const V2_SECTIONS: SectionDef[] = [
     defaults: {
       kicker: "AI-guided EMDR, between sessions",
       title1: "EMDR therapy online.",
-      title2: "in a calm app.",
+      title2: "In a calm app.",
       accent: "calm",
       sub: "AI agent-guided sessions with visual sets, optional voice, grounding, and short guides for the moments between sessions.",
       primary: `Start your ${TRIAL_DAYS}-day trial`,
@@ -1703,9 +1802,15 @@ const V2_SECTIONS: SectionDef[] = [
       text("secondary", "Second button", "Leave empty to hide."),
       link("secondaryHref", "Second button link"),
       text("note", "Note"),
+      { ...area("quote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
+      { ...text("quoteBy", "Quote by"), templates: QUOTE_ONLY },
+      { ...text("words", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
     ],
     defaults: {
       [CLOSE_TEMPLATE_KEY]: "meadow",
+      quote: CTA_SHOWCASE_DEFAULT_QUOTE,
+      quoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
+      words: CTA_SHOWCASE_DEFAULT_WORDS,
       kicker: "A gentler next step",
       title: "A calmer next step.",
       accent: "calmer",
@@ -1785,7 +1890,7 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
     { id: "home-how", name: "Home: how it works", keys: ["badge", "intro1", "intro2", "intro3"] },
     { id: "home-how-stages", name: "Home: session stages", keys: ["stages"] },
     { id: "home-how-rhythm", name: "Home: rhythm cards", keys: ["rhythm", "rhythmMedia"], labels: { rhythm: "Cards" } },
-    { id: "home-how-ground", name: "Home: grounding cards", keys: ["ground"], labels: { ground: "Cards" } },
+    { id: "home-how-ground", name: "Home: grounding cards", keys: ["groundMedia", "ground"], labels: { ground: "Cards" } },
     {
       id: "home-how-between",
       name: "Home: between sessions",
@@ -1799,9 +1904,15 @@ const COMPONENT_PARTS: Record<string, PartSpec[]> = {
           area("betweenLine", "Line"),
           text("betweenCta", "Button"),
           link("betweenCtaHref", "Button link"),
+          { ...area("betweenQuote", "Quote", "Shown on the Quote card template."), templates: QUOTE_ONLY },
+          { ...text("betweenQuoteBy", "Quote by"), templates: QUOTE_ONLY },
+          { ...text("betweenWords", "Words", "Comma-separated, up to 6. Stacked cards and Typewriter use them."), templates: WORDS_ONLY },
         ],
         defaults: {
           [BETWEEN_TEMPLATE_KEY]: "center",
+          betweenQuote: CTA_SHOWCASE_DEFAULT_QUOTE,
+          betweenQuoteBy: CTA_SHOWCASE_DEFAULT_QUOTE_BY,
+          betweenWords: CTA_SHOWCASE_DEFAULT_WORDS,
           betweenKicker: "Between sessions",
           betweenTitle: "Self-guided session \u2014 sets without an agent",
           betweenAccent: "Self-guided",
@@ -2381,7 +2492,8 @@ export function normalizeMediaSlot(
   fallback: SectionItem
 ): SectionItem {
   const names = mediaNames(key);
-  const fallbackKind = fallback[names.kind] === "video" ? "video" : "image";
+  const fallbackKind =
+    fallback[names.kind] === "video" ? "video" : fallback[names.kind] === "none" ? "none" : "image";
   const rawKind = readSlotSource(source, names.kind);
   const out: SectionItem = {};
   out[names.kind] =
@@ -2679,6 +2791,43 @@ export function gradientCss(g: SectionGradient): string {
 export function gradientIsOverlay(g: SectionGradient, bg: SectionBackground | null, hasMedia = false): boolean {
   if (g.mode !== "overlay") return false;
   return hasMedia || bg?.kind === "image" || bg?.kind === "video";
+}
+
+/** Inline style for a gradient layer: the gradient at the chosen opacity. */
+export function gradientLayerStyle(g: SectionGradient): { backgroundImage: string; opacity: number } {
+  return { backgroundImage: gradientCss(g), opacity: g.opacity / 100 };
+}
+
+export type BackdropPlan = {
+  bg: SectionBackground | null;
+  gradient: SectionGradient | null;
+  /** Paint the colour/image/video background layer. */
+  showBg: boolean;
+  /** Paint the built-in photo (templates with their own picture). */
+  showBuiltIn: boolean;
+  /** "under": the gradient is the background (over a colour, replacing media); "over": on top of the media. */
+  gradientAt: "under" | "over" | null;
+};
+
+/**
+ * Layers for a section that paints its own background (ownBackground), e.g.
+ * home-close. "As the background" paints the gradient over the solid colour
+ * (so it reads as a gradient) and replaces any image/video; "Overlay" lays it
+ * over the image/video, or acts as the background when there is no media.
+ */
+export function backdropPlan(config: SectionConfig | undefined, builtInMedia = false): BackdropPlan {
+  const bg = sectionBackground(config);
+  const gradient = sectionGradient(config);
+  const hasMedia = bg ? bg.kind === "image" || bg.kind === "video" : builtInMedia;
+  const over = gradient ? gradientIsOverlay(gradient, bg, hasMedia) : false;
+  const replacesMedia = Boolean(gradient) && !over;
+  return {
+    bg,
+    gradient,
+    showBg: Boolean(bg) && (bg?.kind === "color" || !replacesMedia),
+    showBuiltIn: !bg && builtInMedia && !replacesMedia,
+    gradientAt: gradient ? (over ? "over" : "under") : null,
+  };
 }
 
 export function replaceSectionMedia(

@@ -52,6 +52,12 @@ import {
   type MetaAdsSettings,
 } from "@/lib/meta-ads-settings";
 import { normalizeBrandAssetUrl } from "@/lib/brand-assets";
+import {
+  DEFAULT_VOICE_ORB_ID,
+  DEFAULT_VOICE_SOUNDS,
+  normalizeVoiceOrbId,
+  normalizeVoiceSounds,
+} from "@/lib/voice-orb-catalog";
 
 export type { HelpSettings };
 export { DEFAULT_HELP_SETTINGS, normalizeHelpSettings };
@@ -149,6 +155,13 @@ export type PlatformSettings = {
    * Picked in Admin → Platform → General.
    */
   freeSessionChromeId: number;
+  /**
+   * Voice-mode orb look (allowlisted id from lib/voice-orb-catalog).
+   * Picked in Admin → Platform → Voice orb. Default "shdr-21".
+   */
+  voiceOrbId: string;
+  /** Soft start / end chimes when voice mode opens and closes. */
+  voiceSounds: boolean;
   /** Web Push VAPID for admin PWA (Help inbox). Env VAPID_* overrides when set. */
   adminPush: {
     publicKey: string;
@@ -200,6 +213,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   appLogoUrl: "",
   guidedChatChromeId: DEFAULT_GUIDED_CHAT_CHROME_ID,
   freeSessionChromeId: DEFAULT_FREE_SESSION_CHROME_ID,
+  voiceOrbId: DEFAULT_VOICE_ORB_ID,
+  voiceSounds: DEFAULT_VOICE_SOUNDS,
   adminPush: { publicKey: "", privateKey: "", subject: "" },
 };
 
@@ -358,6 +373,8 @@ function normalizeSettings(raw: unknown): PlatformSettings {
     appLogoUrl: normalizeBrandAssetUrl(r.appLogoUrl),
     guidedChatChromeId: clampGuidedChatChromeId(r.guidedChatChromeId),
     freeSessionChromeId: clampFreeSessionChromeId(r.freeSessionChromeId),
+    voiceOrbId: normalizeVoiceOrbId(r.voiceOrbId),
+    voiceSounds: normalizeVoiceSounds(r.voiceSounds),
     adminPush: normalizeAdminPush(
       (r as Partial<PlatformSettings>).adminPush
     ),

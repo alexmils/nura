@@ -8,43 +8,12 @@ import {
   SESSION_MODE_GUIDED_LABEL,
   SESSION_MODE_SELF_LABEL,
 } from "@/lib/brand";
+import { reducedMotion, useInViewLoop, wait } from "./demo-loop";
 import "./ground-first-tutorial.css";
 
 const GUIDE_MARK = "/brand/nura-circle-variants/A-white-on-sage-128.png";
 
 const MOCK_RECENT = ["Feet on the floor", "Calm place check-in"];
-
-function wait(ms: number) {
-  return new Promise<void>((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-function useInViewLoop(enabled: boolean) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [inView, setInView] = useState(enabled);
-
-  useEffect(() => {
-    if (enabled) {
-      setInView(true);
-      return;
-    }
-    const el = rootRef.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([entry]) => setInView(Boolean(entry?.isIntersecting)),
-      { threshold: 0.35 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [enabled]);
-
-  return { rootRef, inView };
-}
-
-function reducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 /* ─── 1. Mode pick (cursor click, no zoom) ─── */
 

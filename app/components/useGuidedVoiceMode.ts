@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   browserSpeechUsesContinuous,
   isBrowserSpeechSupported,
   startBrowserSpeech,
+  type BrowserSpeechCallbacks,
   type BrowserSpeechSession,
 } from "@/lib/browser-speech";
+import { startServerSpeech, type ServerSpeechSession } from "@/lib/server-stt";
+import { unlockVoiceAudio, voiceOutputLevel } from "@/lib/voice-audio";
+import { createChimeGate, START_CHIME_MIC_GUARD_MS } from "@/lib/voice-chime";
+import { playVoiceChime } from "./voice/voice-chime-player";
+import { useVoicePrefs } from "./voice/useVoicePrefs";
+import { selectVoiceEngine, type VoiceEngine } from "@/lib/voice-capture";
 import type { SessionMode } from "@/lib/protocol";
 import { shouldAutoStartSet } from "@/lib/session-mode";
 import type { ProtocolPhase, SessionKind } from "@/lib/types";
@@ -41,7 +48,26 @@ type UseGuidedVoiceModeOpts = {
   /** Latest agent message id — used after check-in to speak the new line. */
   lastAgentId: string | null;
   lastAgentContent: string | null;
+  /** Stop the guide's current reply (tap to interrupt). */
+  onStopPlayback?: () => void;
 };
+
+type EngineSession = BrowserSpeechSession & Partial<Pick<ServerSpeechSession, "pause" | "resume" | "level">>;
+
+function readCapabilities(serverStt: boolean) {
+  if (typeof window === "undefined") {
+    return { hasSpeechRecognition: false, hasMediaRecorder: false, serverStt, userAgent: "" };
+  }
+  return {
+    hasSpeechRecognition: isBrowserSpeechSupported(),
+    hasMediaRecorder:
+      typeof window.MediaRecorder !== "undefined" &&
+      Boolean(window.navigator?.mediaDevices?.getUserMedia),
+    serverStt,
+    userAgent: window.navigator?.userAgent ?? "",
+    maxTouchPoints: window.navigator?.maxTouchPoints ?? 0,
+  };
+}
 
 const SILENCE_MS = 1400;
 
@@ -63,8 +89,31 @@ export function useGuidedVoiceMode({
   onBeginBls,
   lastAgentId,
   lastAgentContent,
+  onStopPlayback,
 }: UseGuidedVoiceModeOpts) {
-  const supported = isBrowserSpeechSupported();
+  /** Server STT availability (GET /api/voice/transcribe), learned once. */
+  const [serverStt, setServerStt] = useState(false);
+  const [engineOverride, setEngineOverride] = useState<VoiceEngine | null>(null);
+  useEffect(() => {
+    if (!voiceFeatureOn) return;
+    let cancelled = false;
+    void fetch("/api/voice/transcribe")
+      .then((r) => (r.ok ? r.json() : { available: false }))
+      .then((d: { available?: boolean }) => {
+        if (!cancelled) setServerStt(Boolean(d.available));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [voiceFeatureOn]);
+  const engine: VoiceEngine = useMemo(
+    () => engineOverride ?? selectVoiceEngine(readCapabilities(serverStt)),
+    [engineOverride, serverStt]
+  );
+  const engineRef = useRef(engine);
+  engineRef.current = engine;
+  const supported = engine !== "none";
   const available = voiceFeatureOn && supported;
 
   const [active, setActive] = useState(false);
@@ -73,14 +122,26 @@ export function useGuidedVoiceMode({
   const [error, setError] = useState<string | null>(null);
   /** True when the mic engine really stopped while we meant to be listening. */
   const [stalled, setStalled] = useState(false);
+  /** Mic asked to start but not live yet (permission prompt, engine spin-up). */
+  const [starting, setStarting] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(false);
+  mutedRef.current = muted;
+  /** Last time words arrived (browser engine has no level meter on phones). */
+  const heardAtRef = useRef(0);
 
-  const sessionRef = useRef<BrowserSpeechSession | null>(null);
+  const sessionRef = useRef<EngineSession | null>(null);
   const finalBufRef = useRef("");
   /** Latest interim text; used if the engine dies before it becomes final. */
   const interimBufRef = useRef("");
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Ignore results until this timestamp (the guide's own voice tail). */
   const ignoreUntilRef = useRef(0);
+  /** Start / end chimes: once per entry and exit (lib/voice-chime). */
+  const voicePrefs = useVoicePrefs(voiceFeatureOn);
+  const chimeOnRef = useRef(true);
+  chimeOnRef.current = voicePrefs?.sounds ?? true;
+  const chimeGateRef = useRef(createChimeGate());
   const activeRef = useRef(false);
   const phaseRef = useRef<VoicePhase>("off");
   const turnBusyRef = useRef(false);
@@ -126,7 +187,7 @@ export function useGuidedVoiceMode({
    * has no continuous sessions at all, so it still rebuilds every turn.
    */
   const keepSessionAlive = useCallback(
-    () => browserSpeechUsesContinuous(),
+    () => engineRef.current === "server" || browserSpeechUsesContinuous(),
     []
   );
 
@@ -134,6 +195,9 @@ export function useGuidedVoiceMode({
   const releaseForTurn = useCallback(() => {
     if (keepSessionAlive()) {
       clearSilence();
+      // Server engine: stop listening while the guide thinks and speaks, so
+      // its own voice cannot become the person's next turn.
+      sessionRef.current?.pause?.();
       return;
     }
     stopRecognition();
@@ -213,6 +277,7 @@ export function useGuidedVoiceMode({
       setInterim("");
       setStalled(false);
       setPhaseVoice("listening");
+      if (!mutedRef.current) sessionRef.current.resume?.();
       return;
     }
 
@@ -223,18 +288,30 @@ export function useGuidedVoiceMode({
     setStalled(false);
     setPhaseVoice("listening");
 
-    const session = startBrowserSpeech({
+    const callbacks: BrowserSpeechCallbacks = {
       onInterim: (t) => {
-        if (phaseRef.current !== "listening") return;
+        if (phaseRef.current !== "listening" || mutedRef.current) return;
         if (Date.now() < ignoreUntilRef.current) return;
+        if (engineRef.current === "server") {
+          // Server engine: "…" while an utterance uploads.
+          setInterim(t);
+          return;
+        }
+        heardAtRef.current = Date.now();
         interimBufRef.current = t;
         setInterim(t);
         // Keep the turn open while the person is still talking.
         scheduleSilenceCommit();
       },
       onFinal: (chunk) => {
-        if (phaseRef.current !== "listening") return;
+        if (phaseRef.current !== "listening" || mutedRef.current) return;
         if (Date.now() < ignoreUntilRef.current) return;
+        heardAtRef.current = Date.now();
+        if (engineRef.current === "server") {
+          // One upload is one whole utterance: answer it right away.
+          void finishTurn(chunk);
+          return;
+        }
         interimBufRef.current = "";
         finalBufRef.current = `${finalBufRef.current} ${chunk}`.trim();
         setInterim("");
@@ -242,8 +319,16 @@ export function useGuidedVoiceMode({
       },
       onError: (code, message) => {
         if (code === "aborted" || code === "no-speech") return;
+        // Server STT not configured after all: fall back to the browser engine.
+        if (code === "unsupported" && engineRef.current === "server" && isBrowserSpeechSupported()) {
+          sessionRef.current = null;
+          setEngineOverride("browser");
+          setStarting(false);
+          return;
+        }
         setError(message);
         if (code === "not-allowed" || code === "unsupported") {
+          setStarting(false);
           activeRef.current = false;
           setActive(false);
           setStalled(false);
@@ -252,11 +337,18 @@ export function useGuidedVoiceMode({
         }
       },
       onStatus: (status) => {
+        if (status === "starting") {
+          setStarting(true);
+          return;
+        }
         if (status === "listening") {
+          setStarting(false);
           setStalled(false);
+          setError(null);
           return;
         }
         if (status !== "stopped") return;
+        setStarting(false);
         // Drop the dead session so the reuse path cannot skip a real restart.
         sessionRef.current = null;
         // Only surface it when the person expects to be heard right now.
@@ -264,7 +356,12 @@ export function useGuidedVoiceMode({
           setStalled(true);
         }
       },
-    });
+    };
+    const session: EngineSession | null =
+      engineRef.current === "server"
+        ? startServerSpeech(callbacks, { lang: typeof navigator !== "undefined" ? navigator.language : undefined })
+        : startBrowserSpeech(callbacks);
+    if (session && mutedRef.current) session.pause?.();
 
     if (!session) {
       activeRef.current = false;
@@ -280,6 +377,7 @@ export function useGuidedVoiceMode({
     stopRecognition,
     keepSessionAlive,
     clearSilence,
+    finishTurn,
   ]);
 
   const startListeningRef = useRef(startListening);
@@ -294,8 +392,19 @@ export function useGuidedVoiceMode({
       );
       return;
     }
+    // Inside the tap: unlock audio output (iOS) before anything async.
+    unlockVoiceAudio();
+    // A start that never went live leaves the gate open; resync it silently.
+    if (!activeRef.current && chimeGateRef.current.open) chimeGateRef.current.exit();
+    if (chimeGateRef.current.enter()) {
+      // Before the mic opens (that waits on getUserMedia); words heard while
+      // it rings are dropped so the chime is never transcribed.
+      playVoiceChime("start", chimeOnRef.current);
+      ignoreUntilRef.current = Date.now() + START_CHIME_MIC_GUARD_MS;
+    }
     setError(null);
     setStalled(false);
+    setMuted(false);
     setActive(true);
     activeRef.current = true;
     setPhaseVoice("listening");
@@ -311,16 +420,51 @@ export function useGuidedVoiceMode({
     finalBufRef.current = "";
     interimBufRef.current = "";
     turnBusyRef.current = false;
+    setStarting(false);
+    setMuted(false);
     stopRecognition();
   }, [stopRecognition]);
 
   /** Tap-to-resume after the browser gave the microphone back. */
   const resume = useCallback(() => {
     if (!activeRef.current || !available) return;
+    unlockVoiceAudio();
     setError(null);
     setStalled(false);
+    // A dead session cannot be resumed; drop it so a fresh one starts.
+    if (phaseRef.current === "listening") stopRecognition();
     startListeningRef.current();
-  }, [available]);
+  }, [available, stopRecognition]);
+
+  const toggleMute = useCallback(() => {
+    const next = !mutedRef.current;
+    mutedRef.current = next;
+    setMuted(next);
+    clearSilence();
+    if (next) {
+      finalBufRef.current = "";
+      interimBufRef.current = "";
+      setInterim("");
+      sessionRef.current?.pause?.();
+    } else if (phaseRef.current === "listening") {
+      sessionRef.current?.resume?.();
+    }
+  }, [clearSilence]);
+
+  /** Tap while the guide speaks: stop the reply and listen (barge-in). */
+  const interrupt = useCallback(() => {
+    if (phaseRef.current === "speaking") onStopPlayback?.();
+  }, [onStopPlayback]);
+
+  /** 0..1 mic level for the orb: real meter on the server engine. */
+  const getInputLevel = useCallback(() => {
+    if (!activeRef.current || mutedRef.current || phaseRef.current !== "listening") return 0;
+    const live = sessionRef.current?.level?.();
+    if (typeof live === "number") return live;
+    // Browser engine: no meter on phones, so glow while words are arriving.
+    const since = Date.now() - heardAtRef.current;
+    return since < 900 ? 0.75 * (1 - since / 900) + 0.15 : 0.12;
+  }, []);
 
   // Pause mic while BLS runs; resume after check-in TTS.
   useEffect(() => {
@@ -390,7 +534,24 @@ export function useGuidedVoiceMode({
     startListening();
   }, [active, phaseVoice, running, stalled, startListening]);
 
+  // Engine fallback (server STT turned out unavailable): start the new one.
+  useEffect(() => {
+    if (!engineOverride || !activeRef.current) return;
+    if (phaseRef.current === "listening" && !sessionRef.current) startListeningRef.current();
+  }, [engineOverride]);
+
   useEffect(() => () => stopRecognition(), [stopRecognition]);
+
+  // End chime on every way out: End voice, mic denied, session end, unmount.
+  useEffect(() => {
+    if (!active && chimeGateRef.current.exit()) playVoiceChime("end", chimeOnRef.current);
+  }, [active]);
+  useEffect(
+    () => () => {
+      if (chimeGateRef.current.exit()) playVoiceChime("end", chimeOnRef.current);
+    },
+    []
+  );
 
   return {
     available,
@@ -401,9 +562,17 @@ export function useGuidedVoiceMode({
     error,
     /** Mic engine stopped while voice mode is still on. Offer `resume`. */
     stalled,
+    /** Waiting for the microphone to really open. */
+    starting,
+    muted,
+    engine,
     enter,
     exit,
     resume,
+    toggleMute,
+    interrupt,
+    getInputLevel,
+    getOutputLevel: voiceOutputLevel,
     clearError: () => setError(null),
   };
 }

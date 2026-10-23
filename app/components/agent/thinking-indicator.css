@@ -1,0 +1,103 @@
+/*
+ * Thinking indicator, ported from LiveKit Agents UI (agent-chat-indicator +
+ * the transcript's "Thinking..." marker; Apache-2.0). Same motion as the
+ * original: the dot breathes between 50% / 90% and full size and opacity
+ * (0.5s, mirrored), and the label carries a slow left-to-right shimmer.
+ * Nura palette: selected green dot with a soft yellow halo, green-tinted text.
+ */
+.nura-thinking {
+  --nura-thinking-dot: #3d612b;
+  --nura-thinking-halo: rgba(246, 222, 120, 0.55);
+  --nura-thinking-text: color-mix(in srgb, var(--gc-text, #2a3020) 62%, transparent);
+  --nura-thinking-shine: color-mix(in srgb, var(--gc-text, #2a3020) 55%, #3d612b);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.3;
+  animation: nura-thinking-in 0.18s linear both;
+}
+
+.nura-thinking-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+}
+
+.nura-thinking-dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 999px;
+  background: var(--nura-thinking-dot);
+  box-shadow: 0 0 0 3px var(--nura-thinking-halo);
+  animation: nura-thinking-pulse 0.5s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+  will-change: transform, opacity;
+}
+
+.nura-thinking--md .nura-thinking-icon { width: 1.25rem; height: 1.25rem; }
+.nura-thinking--md .nura-thinking-dot { width: 1rem; height: 1rem; }
+.nura-thinking--lg .nura-thinking-icon { width: 1.75rem; height: 1.75rem; }
+.nura-thinking--lg .nura-thinking-dot { width: 1.5rem; height: 1.5rem; }
+
+.nura-thinking-label {
+  min-width: 0;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: var(--nura-thinking-text);
+  background-image: linear-gradient(
+    100deg,
+    var(--nura-thinking-text) 0%,
+    var(--nura-thinking-text) 35%,
+    var(--nura-thinking-shine) 50%,
+    var(--nura-thinking-text) 65%,
+    var(--nura-thinking-text) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: nura-thinking-shimmer 2s linear infinite;
+}
+
+@keyframes nura-thinking-in {
+  from { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes nura-thinking-pulse {
+  from { opacity: 0.5; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes nura-thinking-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nura-thinking,
+  .nura-thinking-dot,
+  .nura-thinking-label {
+    animation: none;
+  }
+  .nura-thinking-dot { opacity: 0.85; }
+  .nura-thinking-label {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* Windows High Contrast / forced colours: plain dot + text. */
+@media (forced-colors: active) {
+  .nura-thinking-dot { background: CanvasText; box-shadow: none; }
+  .nura-thinking-label {
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    color: CanvasText;
+  }
+}

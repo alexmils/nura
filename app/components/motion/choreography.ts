@@ -135,8 +135,6 @@ function pinnedInside(el: Element): boolean {
 
 export type HandoffKind = "stack" | "curve";
 
-/** Narrow/portrait layouts: the still hold runs shorter so it never feels stuck. */
-export const MOBILE_PIN_SCALE = 0.65;
 
 /** Still viewports held before the effect (SectionHandoff's `hold={0.35}`). */
 export const DEFAULT_HANDOFF_HOLD = 0.35;
@@ -146,8 +144,8 @@ export const DEFAULT_HANDOFF_HOLD = 0.35;
  * next block's entry (its top from the viewport bottom to the top).
  *
  * `hold` is the pin: how many viewport heights the outgoing block stands still
- * before the effect starts (`hold={0.3}` = 0.3 × viewport). On phones it is
- * shortened to `hold × MOBILE_PIN_SCALE`. The hold is made by counter-
+ * before the effect starts (`hold={0.3}` = 0.3 × viewport). Phones skip the
+ * hold and never move the outgoing block. The hold is made by counter-
  * translating the previous block by exactly the scroll it consumes, so it
  * stays put without wrappers, spacers or `position: sticky` that would fight
  * the section editor.
@@ -205,12 +203,17 @@ export function handoff(
   const prevZ = prev ? Math.max(1, zOf(prev)) : 1;
   gsap.set(next, { position: getComputedStyle(next).position === "static" ? "relative" : undefined, zIndex: Math.max(prevZ + 1, zOf(next)) });
   if (!ownsBg(next)) gsap.set(next, { backgroundColor: nextBg });
-  const movePrev = prev && !pinnedInside(prev);
+  // Phones: the outgoing block is never moved, scaled or dimmed. A counter-
+  // translated hold on a short or first-screen block (the hero is exactly one
+  // viewport tall) started mid-window at scroll 0 and pushed it ~190px down,
+  // leaving an empty band under the header; shorter blocks slid over the next
+  // section's copy. The incoming block still gets its rounded edge or dome.
+  const movePrev = !mobile && prev && !pinnedInside(prev);
   if (prev && !zOf(prev)) gsap.set(prev, { position: getComputedStyle(prev).position === "static" ? "relative" : undefined, zIndex: 1 });
 
   // In timeline units one unit is one viewport, so the hold and the effect
   // map 1:1 onto the scroll range (held × vh + effect × vh).
-  const held = Math.max(0, hold) * (mobile ? MOBILE_PIN_SCALE : 1);
+  const held = mobile ? 0 : Math.max(0, hold);
   const holdPx = () => held * window.innerHeight;
   const start = () => (held > 0 ? `top bottom+=${Math.round(holdPx())}` : "top bottom");
   const still = { y: () => holdPx(), scale: 1, filter: "brightness(1)", transformOrigin: "50% 100%" };
@@ -292,15 +295,36 @@ export function useChoreography(
     const root = getRoot();
     if (!root) return;
     gsap.registerPlugin(ScrollTrigger);
+    // The iOS URL bar showing/hiding resizes the viewport height; refreshing
+    // every trigger then re-measures mid-scroll and makes pinned blocks jump.
+    ScrollTrigger.config({ ignoreMobileResize: true });
     const seen = new WeakSet<Element>();
     let gctx: gsap.Context | null = null;
     let timer = 0;
     let signature = "";
+    // Live demos (the session-stage players swap their picker, chat avatars,
+    // etc. as they loop) must not count: each swap used to rebuild every
+    // hand-off and call ScrollTrigger.refresh() mid-scroll, which scrolls to 0
+    // and back to measure. On iOS that cancelled the momentum and pulled the
+    // page back up (the "shaking" while scrolling down).
     const sign = () =>
       [
         [...root.querySelectorAll("[data-section]")].map((el) => el.getAttribute("data-section")).join(","),
-        root.querySelectorAll("h1, h2, h3, img, details").length,
+        [...root.querySelectorAll("h1, h2, h3, img, details")].filter((el) => !el.closest(LIVE_DEMO)).length,
       ].join("|");
+    // Never re-measure while the page is moving (touch momentum included):
+    // wait until scrolling has been idle for a moment.
+    let lastScroll = 0;
+    const onScroll = () => {
+      lastScroll = performance.now();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    const whenIdle = (fn: () => void) => {
+      const wait = 260 - (performance.now() - lastScroll);
+      if (wait > 0) return window.setTimeout(() => whenIdle(fn), wait);
+      fn();
+      return 0;
+    };
 
     const run = () => {
       gctx?.revert();
@@ -328,7 +352,9 @@ export function useChoreography(
     const onMutate = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
-        if (sign() !== signature) run();
+        if (sign() !== signature) timer = whenIdle(() => {
+          if (sign() !== signature) run();
+        });
       }, 450);
     };
     const tree = new MutationObserver(onMutate);
@@ -341,7 +367,9 @@ export function useChoreography(
       if (Math.abs(root.offsetHeight - lastHeight) < 2) return;
       lastHeight = root.offsetHeight;
       window.clearTimeout(sizeTimer);
-      sizeTimer = window.setTimeout(() => ScrollTrigger.refresh(), 200);
+      sizeTimer = window.setTimeout(() => {
+        sizeTimer = whenIdle(() => ScrollTrigger.refresh());
+      }, 200);
     });
     size.observe(root);
     const a11y = new MutationObserver(run);
@@ -353,6 +381,7 @@ export function useChoreography(
     return () => {
       window.clearTimeout(first);
       window.clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
       tree.disconnect();
       size.disconnect();
       window.clearTimeout(sizeTimer);
@@ -364,6 +393,9 @@ export function useChoreography(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, enabled]);
 }
+
+/** Self-animating demo players inside sections (their DOM changes as they loop). */
+const LIVE_DEMO = ".fe-spath-media, .fe-spath-stage-media, [data-live-demo], [data-mo-skip]";
 
 const usable = (el: Element) => !el.closest(CHOREO_EXCLUDE) && !el.querySelector(".fe-animate, .fe-letter-reveal");
 

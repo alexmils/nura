@@ -667,6 +667,37 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   overflow: hidden;
 }
 
+/* Cards drive the built-in rhythm demo (hover / click pins a mode). */
+.fe-spath-rhythm-card {
+  transition:
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.fe-spath-rhythm-card[data-rhythm-mode] {
+  cursor: pointer;
+}
+
+.fe-spath-rhythm-card.is-live {
+  border-color: color-mix(in srgb, var(--fe-accent, #84b067) 70%, transparent);
+  background: color-mix(in srgb, var(--fe-accent, #84b067) 14%, #fff);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--fe-accent, #84b067) 30%, transparent);
+}
+
+.fe-spath-rhythm-icon svg {
+  color: #4a7234;
+}
+
+/* Built-in stage demos are absolutely positioned: give the box a height on
+   mobile, where .fe-spath-media otherwise collapses to its content. */
+@media (max-width: 859px) {
+  .fe-spath-stage-media > .fe-spath-media--live {
+    height: clamp(13rem, 36vh, 17rem);
+    min-height: 13rem;
+  }
+}
+
 .fe-spath-rhythm-icon.has-image {
   background: transparent;
 }
@@ -931,8 +962,10 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
     --spath-below-nav: calc(
       var(--spath-sticky-top) + var(--spath-nav-h, 3.75rem)
     );
+    /* svh, not dvh: the iOS URL bar showing/hiding resized the sticky stage
+       (and everything under it) mid-scroll. */
     --spath-stage-h: calc(
-      100dvh - var(--spath-below-nav) - env(safe-area-inset-bottom, 0px)
+      100svh - var(--spath-below-nav) - env(safe-area-inset-bottom, 0px)
     );
     padding-top: 4.5rem;
   }
@@ -1174,9 +1207,6 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
     font-size: 0.75rem;
   }
 
-  .fe-spath-rhythm > .fe-spath-media {
-    display: none;
-  }
 }
 
 /* Language support is its own section, separate from "Between sessions". */
@@ -1456,5 +1486,118 @@ html[data-a11y-motion="reduced"] .fe-custom--video + .fe-spath .fe-spath-panel:f
   .fe-spath-kit-pill:hover {
     transition: none;
     transform: none;
+  }
+}
+
+/* Stage media (Choose your rhythm, Check in, Close gently): a 16:9 "player"
+   using the content column width, for demos and uploaded image/video alike.
+   Width is capped from the sticky stage height so the whole stage still fits
+   the viewport (reserve = lead copy, plus the mode cards on the rhythm step). */
+@media (min-width: 860px) {
+  .fe-spath-stage-media {
+    --spath-media-reserve: 8.5rem;
+  }
+  .fe-spath-rhythm {
+    --spath-media-reserve: 17.5rem;
+  }
+  .fe-spath-stage-media > .fe-spath-media,
+  .fe-spath-rhythm > .fe-spath-media {
+    flex: none;
+    box-sizing: border-box;
+    aspect-ratio: 16 / 9;
+    width: min(100%, calc((var(--spath-stage-h) - var(--spath-media-reserve)) * 16 / 9));
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    container-type: inline-size;
+  }
+  /* Scale the built-in demo up with the box (zoom keeps layout + hit areas). */
+  @container (min-width: 520px) {
+    .ssd-frame {
+      zoom: 1.15;
+    }
+  }
+  @container (min-width: 640px) {
+    .ssd-frame {
+      zoom: 1.3;
+    }
+  }
+  @container (min-width: 780px) {
+    .ssd-frame {
+      zoom: 1.45;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/* Phones: each stage is "demo on top, compact copy below", filling  */
+/* the sticky stage without blank zones; the tab strip unpins with   */
+/* the stage instead of hanging over the next section.               */
+/* ---------------------------------------------------------------- */
+@media (max-width: 859px) {
+  /* The strip's sticky range ends where the stage's does: the track box ends
+     one stage-height early and the wrapper pads the same height back. */
+  .fe-spath-stage-scroll {
+    margin-bottom: calc(-1 * var(--spath-stage-h));
+  }
+
+  .fe-spath-track-wrap {
+    padding-bottom: var(--spath-stage-h);
+  }
+
+  .fe-spath-panel {
+    justify-content: flex-start;
+    padding: 0.6rem 0.1rem 0.75rem;
+  }
+
+  .fe-spath-panel[data-spath-panel="rhythm"] .fe-spath-panel-inner,
+  .fe-spath-panel[data-spath-panel="checkin"] .fe-spath-panel-inner,
+  .fe-spath-panel[data-spath-panel="close"] .fe-spath-panel-inner {
+    flex: 1 1 auto;
+    height: 100%;
+    gap: 0.9rem;
+  }
+
+  /* Rhythm: the ball/speakers/gamepad demo first, then the line and cards. */
+  .fe-spath-rhythm {
+    display: contents;
+  }
+
+  .fe-spath-rhythm > .fe-spath-media,
+  .fe-spath-stage-media {
+    order: -1;
+  }
+
+  .fe-spath-rhythm > .fe-spath-media,
+  .fe-spath-stage-media > .fe-spath-media,
+  .fe-spath-stage-media > .fe-spath-media--live {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 10.5rem;
+    max-height: min(19rem, 46svh);
+  }
+
+  .fe-spath-stage-media {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+
+  .fe-spath-stage-media > .fe-spath-media,
+  .fe-spath-stage-media > .fe-spath-media--live {
+    height: clamp(10.5rem, 34svh, 17rem);
+  }
+
+  .fe-spath-rhythm-grid {
+    order: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Between sessions: no full extra screen of empty green around the copy. */
+  .fe-spath-finale {
+    min-height: 0;
+    padding: clamp(4.5rem, 16vw, 6rem) 0;
   }
 }

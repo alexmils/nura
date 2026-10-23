@@ -32,9 +32,13 @@ function shouldSkipPreloader(): boolean {
 
 export function FrontendPreloader() {
   const [fill, setFill] = useState(0);
-  const [phase, setPhase] = useState<"run" | "out" | "gone">(() =>
-    shouldSkipPreloader() ? "gone" : "run"
-  );
+  // Always "run" on the first render, on the server and the client alike: a
+  // lazy initial state that read matchMedia / the URL hash rendered nothing on
+  // the client but the overlay on the server (a hydration mismatch, the dev
+  // overlay's "1 Issue", for reduced-motion visitors and /#section links).
+  // The effect below skips it right after hydration; CSS hides it meanwhile
+  // under reduced motion.
+  const [phase, setPhase] = useState<"run" | "out" | "gone">("run");
 
   useEffect(() => {
     if (shouldSkipPreloader()) {

@@ -1,69 +1,30 @@
-"use client";
+import "./session-header.css";
 
-import { useEffect, useRef, useState } from "react";
-import { useApp } from "./AppProvider";
-
+/**
+ * Session title + description in the header: read-only on purpose. A thumb
+ * aiming for the menu icon used to land in the description editor, so
+ * nothing here is tappable; edit from the sidebar (long press, right-click
+ * or the \u22ef button on a Recent item). Both lines are single-line with an
+ * ellipsis; no description means no second line (no placeholder).
+ */
 export function SessionDescription({
-  threadId,
+  title,
   description,
 }: {
-  threadId: string;
+  title: string;
   description?: string;
 }) {
-  const { updateThreadLocal } = useApp();
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(description ?? "");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setDraft(description ?? "");
-  }, [description, threadId]);
-
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
-  const save = async () => {
-    const next = draft.trim();
-    setEditing(false);
-    if (next === (description ?? "").trim()) return;
-    await updateThreadLocal(threadId, {
-      description: next,
-    });
-  };
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        className="workspace-description-input"
-        value={draft}
-        placeholder="Add a description…"
-        maxLength={160}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => void save()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            void save();
-          }
-          if (e.key === "Escape") {
-            setDraft(description ?? "");
-            setEditing(false);
-          }
-        }}
-        aria-label="Session description"
-      />
-    );
-  }
-
+  const note = description?.trim();
   return (
-    <button
-      type="button"
-      className={`workspace-hint workspace-description ${description ? "" : "workspace-description--empty"}`}
-      onClick={() => setEditing(true)}
-    >
-      {description?.trim() || "Add a description…"}
-    </button>
+    <div className="workspace-title-block">
+      <h1 className="workspace-title" title={title}>
+        {title}
+      </h1>
+      {note ? (
+        <p className="workspace-description" title={note}>
+          {note}
+        </p>
+      ) : null}
+    </div>
   );
 }

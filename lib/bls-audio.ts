@@ -31,35 +31,103 @@ export class BlsAudioEngine {
   play(id: BlsSoundId, pan: number) {
     this.ensure();
     if (!this.ctx || !this.master) return;
-    const option = blsSoundOption(id);
+    this.schedule(id, pan, this.master, this.ctx.currentTime);
+  }
+
+  /**
+   * A short stoppable preview: `hits` strikes of one sound on one side.
+   * Must be called from the tap (resumes the context for iOS). `onEnd`
+   * fires once, from the Web Audio ended event or stop(); a timer backs it
+   * up in case the context never resumes.
+   */
+  preview(
+    id: BlsSoundId,
+    pan: number,
+    opts: { hits?: number; gap?: number; onEnd?: () => void } = {}
+  ): { stop: () => void } {
+    this.ensure();
+    const onEnd = opts.onEnd ?? (() => {});
+    let done = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let bus: GainNode | null = null;
+    let marker: OscillatorNode | null = null;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      if (marker) marker.onended = null;
+      try {
+        marker?.stop();
+      } catch {
+        // already stopped
+      }
+      try {
+        bus?.disconnect();
+      } catch {
+        // already gone
+      }
+      onEnd();
+    };
+    if (!this.ctx || !this.master) {
+      timer = setTimeout(finish, 0);
+      return { stop: finish };
+    }
     const ctx = this.ctx;
-    const t = ctx.currentTime;
+    const hits = Math.max(1, Math.round(opts.hits ?? 3));
+    const gap = Math.max(0.15, opts.gap ?? 0.5);
+    bus = ctx.createGain();
+    bus.connect(this.master);
+    const t0 = ctx.currentTime + 0.02;
+    let tail = 0;
+    for (let i = 0; i < hits; i += 1) {
+      tail = this.schedule(id, pan, bus, t0 + i * gap);
+    }
+    const total = (hits - 1) * gap + tail + 0.06;
+    // Silent marker node: its "ended" event is the end of the preview.
+    marker = ctx.createOscillator();
+    const silent = ctx.createGain();
+    silent.gain.value = 0;
+    marker.connect(silent);
+    silent.connect(bus);
+    marker.onended = finish;
+    marker.start(t0);
+    marker.stop(t0 + total);
+    timer = setTimeout(finish, Math.ceil(total * 1000) + 600);
+    return { stop: finish };
+  }
+
+  /** Schedule one strike at `t` into `dest`; returns its length in seconds. */
+  private schedule(id: BlsSoundId, pan: number, dest: AudioNode, t: number): number {
+    const ctx = this.ctx;
+    if (!ctx) return 0;
+    const option = blsSoundOption(id);
     const panner = ctx.createStereoPanner();
     panner.pan.value = Math.max(-1, Math.min(1, pan));
-    panner.connect(this.master);
+    panner.connect(dest);
 
     if (option.kind === "beep" && option.hz) {
       this.tone(ctx, panner, t, option.hz, 0.09, 0.22, "sine");
-      return;
+      return 0.11;
     }
     if (option.kind === "piano" && option.hz) {
       this.piano(ctx, panner, t, option.hz);
-      return;
+      return 0.44;
     }
     if (option.kind === "pink") {
       this.burst(ctx, panner, t, this.pinkBuffer(ctx), 0.2, "lowpass", 1800);
-      return;
+      return 0.22;
     }
     if (option.kind === "sticks") {
       this.burst(ctx, panner, t, this.noiseBurst(ctx, 0.03), 0.03, "bandpass", 2200);
       this.burst(ctx, panner, t + 0.045, this.noiseBurst(ctx, 0.025), 0.025, "bandpass", 2800);
-      return;
+      return 0.09;
     }
     if (option.kind === "hat") {
       this.burst(ctx, panner, t, this.noiseBurst(ctx, 0.07), 0.07, "highpass", 7000);
-      return;
+      return 0.09;
     }
     this.burst(ctx, panner, t, this.noiseBurst(ctx, 0.045), 0.045, "highpass", 1400);
+    return 0.065;
   }
 
   dispose() {

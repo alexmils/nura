@@ -79,6 +79,8 @@ const API_PUBLIC_PREFIXES = [
   "/api/review",
   "/api/newsletter/subscribe",
   "/api/webhooks/brevo",
+  // Win-back link: the token in the body is the credential.
+  "/api/reactivate/checkout",
 ] as const;
 
 /** Exact paths that never require a session. */
@@ -91,6 +93,8 @@ const PUBLIC_EXACT = new Set([
   "/health",
   // Tokenised review landing page: the token in the URL is the credential.
   "/review",
+  // Tokenised win-back offer (30 days free); same model as /review.
+  "/reactivate",
 ]);
 
 const PUBLIC_PREFIXES = ["/brand-assets/"] as const;

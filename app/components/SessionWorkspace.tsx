@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { cancelDeviceVoice, speakWithDeviceVoice, voiceAudioElement } from "@/lib/voice-audio";
 import { useApp } from "./AppProvider";
 import { BallCanvas } from "./BallCanvas";
 import {
@@ -29,6 +30,7 @@ import { getActiveSpeedHz } from "@/lib/bls-speed";
 import { useGamepadConnected } from "@/lib/useGamepadConnected";
 import { useGuideHost, useGuideOptional } from "./guide/ProductGuide";
 import {
+  canManualStartGuidedSet,
   canRepeatGuidedSet,
   canStartBls,
   phaseAllowsBlsSet,
@@ -42,6 +44,9 @@ import { WorkspaceMenuButton } from "./SidebarNavContext";
 import { LearnTeaser } from "./LearnTeaser";
 import { BillingChargeHint } from "./BillingChargeHint";
 import { useGuidedVoiceMode } from "./useGuidedVoiceMode";
+import { GuidedSetReady } from "./agent/GuidedSetReady";
+import { SessionClosureCard } from "./agent/SessionClosureCard";
+import { closureCardData } from "@/lib/session-closure-card";
 import {
   shouldOfferResumeClosure,
   shouldPromptSessionClosure,
@@ -152,6 +157,23 @@ export function SessionWorkspace() {
       phase: thread.phase,
       sessionMode,
     });
+  const setGate =
+    thread != null
+      ? {
+          sessionKind: thread.mode,
+          phase: thread.phase,
+          sessionMode,
+          target: thread.target,
+          suds: thread.suds,
+        }
+      : null;
+  const manualStartAllowed =
+    setGate != null && !running && canManualStartGuidedSet(setGate);
+  const showClosureCard =
+    thread != null &&
+    thread.mode === "guided" &&
+    thread.phase === "closure" &&
+    hasUserMessage;
 
   const stopSetForLeave = useCallback(() => {
     if (freeLeaseTimerRef.current) {
@@ -335,6 +357,23 @@ export function SessionWorkspace() {
     updateThreadLocal,
   ]);
 
+  /**
+   * Safety net: target + SUDs are known but the phase never advanced. Move the
+   * thread into desensitization first so the check-in after the set reads it
+   * as a real processing set, then run the ball.
+   */
+  const startGuidedSetManually = useCallback(async () => {
+    if (!thread || runningRef.current) return;
+    if (!phaseAllowsBlsSet(thread.phase)) {
+      await updateThreadLocal(thread.id, {
+        phase: "desensitization",
+        intakeComplete: true,
+        incomplete: true,
+      });
+    }
+    beginBlsRun();
+  }, [thread, updateThreadLocal, beginBlsRun]);
+
   const toggleRunning = useCallback(() => {
     if (!blsActive || !thread) return;
     if (runningRef.current) {
@@ -435,10 +474,11 @@ export function SessionWorkspace() {
 
   const stopPlayback = useCallback(() => {
     playGenRef.current += 1;
+    cancelDeviceVoice();
     if (audioRef.current) {
       audioRef.current.pause();
       try {
-        URL.revokeObjectURL(audioRef.current.src);
+        if (audioRef.current.src.startsWith("blob:")) URL.revokeObjectURL(audioRef.current.src);
       } catch {
         /* ignore */
       }
@@ -460,12 +500,20 @@ export function SessionWorkspace() {
           body: JSON.stringify({ text }),
         });
         if (gen !== playGenRef.current) return;
-        if (!res.ok) return;
+        if (!res.ok) {
+          // Server voice unavailable: in voice mode the guide still speaks,
+          // with the device's own voice.
+          if (voiceActiveRef.current) await speakWithDeviceVoice(text);
+          return;
+        }
         const buf = await res.arrayBuffer();
         if (gen !== playGenRef.current) return;
         const blob = new Blob([buf], { type: "audio/mpeg" });
         const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        // Reuse the element unlocked by the "Start voice" tap: iOS rejects a
+        // brand-new Audio() that starts seconds after the tap.
+        const audio = voiceAudioElement();
+        audio.src = url;
         audioRef.current = audio;
         await new Promise<void>((resolve) => {
           let settled = false;
@@ -597,6 +645,7 @@ export function SessionWorkspace() {
     onBeginBls: beginBlsRun,
     lastAgentId: lastAgent?.id ?? null,
     lastAgentContent: lastAgent?.content ?? null,
+    onStopPlayback: stopPlayback,
   });
 
   voiceActiveRef.current = voice.active;
@@ -771,29 +820,20 @@ export function SessionWorkspace() {
         } as CSSProperties
       }
     >
-      <header className="workspace-header">
+      {/* One calm row: menu, one-line title + read-only description, quiet
+          help. Editing lives in the sidebar (long press / right-click / ⋯).
+          Phase lives in the transcript as badges. */}
+      <header className="workspace-header workspace-header--calm">
         <div className="workspace-header-row">
           <div className="workspace-header-lead">
             <WorkspaceMenuButton />
-            <div className="min-w-0">
-              <h1 className="workspace-title">{thread.title}</h1>
-              <SessionDescription
-                threadId={thread.id}
-                description={thread.description}
-              />
-            </div>
+            <SessionDescription
+              title={thread.title}
+              description={thread.description}
+            />
           </div>
           <div className="workspace-header-trail">
             <BillingChargeHint />
-            {guided ? (
-              <SessionStatusBar
-                phase={thread.phase}
-                mode={sessionMode}
-                suds={thread.suds}
-                voc={thread.voc}
-                target={thread.target}
-              />
-            ) : null}
             {!running ? <CrisisHelpButton /> : null}
           </div>
         </div>
@@ -860,6 +900,7 @@ export function SessionWorkspace() {
             autoVoice={settings.autoVoice}
             sessionMode={sessionMode}
             phase={thread.phase}
+            phaseChanges={thread.phaseChanges}
             setStopped={thread.lastSetOutcome === "stopped"}
             guideLanguage={thread.agentLanguage}
             agentTyping={agentTyping}
@@ -877,7 +918,33 @@ export function SessionWorkspace() {
             onEnterVoice={voice.enter}
             onExitVoice={exitVoice}
             onResumeVoice={voice.resume}
+            voiceStarting={voice.starting}
+            voiceMuted={voice.muted}
+            onToggleMuteVoice={voice.toggleMute}
+            onInterruptVoice={voice.interrupt}
+            getVoiceInputLevel={voice.getInputLevel}
+            getVoiceOutputLevel={voice.getOutputLevel}
             chromeId={guidedChatChromeId}
+            setReady={
+              guided && manualStartAllowed ? (
+                <GuidedSetReady
+                  compact={voice.active}
+                  onStartSet={
+                    manualStartAllowed
+                      ? () => void startGuidedSetManually()
+                      : undefined
+                  }
+                />
+              ) : null
+            }
+            closureCard={
+              showClosureCard ? (
+                <SessionClosureCard
+                  data={closureCardData(thread)}
+                  onNextSession={() => void createThread()}
+                />
+              ) : null
+            }
           />
         )}
 

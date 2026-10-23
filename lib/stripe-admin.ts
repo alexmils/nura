@@ -21,6 +21,8 @@ export type SyncSubscriptionInput = {
   stripeLivemode?: boolean | null;
   eventCreatedAt?: number | null;
   cancelAtPeriodEnd?: boolean;
+  /** Subscription metadata nura_trial_kind, e.g. "reactivation". */
+  trialKind?: string | null;
 };
 
 function accessTierForStatus(status: string, explicit?: string): string {
@@ -62,6 +64,7 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
         live &&
         (input.status === "canceled" ||
           input.status === "incomplete" ||
+          input.status === "past_due" ||
           input.status === "none" ||
           input.status === "unpaid")
       ) {
@@ -83,8 +86,8 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
     `INSERT INTO subscriptions (
        user_id, plan, status, amount_cents, currency, renews_at, trial_ends_at,
        access_tier, stripe_customer_id, stripe_subscription_id, stripe_price_id,
-       stripe_livemode, last_stripe_event_at, cancel_at_period_end, created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW(),NOW())
+       stripe_livemode, last_stripe_event_at, cancel_at_period_end, trial_kind, created_at, updated_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        plan = EXCLUDED.plan,
        status = EXCLUDED.status,
@@ -94,6 +97,12 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
        trial_ends_at = EXCLUDED.trial_ends_at,
        access_tier = EXCLUDED.access_tier,
        cancel_at_period_end = EXCLUDED.cancel_at_period_end,
+       trial_kind = CASE
+         WHEN EXCLUDED.stripe_subscription_id IS NOT NULL
+           AND EXCLUDED.stripe_subscription_id IS DISTINCT FROM subscriptions.stripe_subscription_id
+         THEN EXCLUDED.trial_kind
+         ELSE COALESCE(EXCLUDED.trial_kind, subscriptions.trial_kind)
+       END,
        stripe_customer_id = CASE
          WHEN EXCLUDED.stripe_livemode IS DISTINCT FROM subscriptions.stripe_livemode
            AND EXCLUDED.stripe_livemode IS NOT NULL
@@ -135,6 +144,7 @@ export async function syncSubscriptionFromStripe(input: SyncSubscriptionInput) {
       typeof input.stripeLivemode === "boolean" ? input.stripeLivemode : null,
       eventAt,
       Boolean(input.cancelAtPeriodEnd),
+      input.trialKind ?? null,
     ]
   );
   return { skipped: (rowCount ?? 0) === 0 ? (true as const) : (false as const) };
@@ -177,6 +187,8 @@ export async function getSubscriptionByUserId(userId: string) {
     stripe_subscription_id: string | null;
     stripe_price_id: string | null;
     stripe_livemode: boolean | null;
+    cancel_at_period_end?: boolean | null;
+    trial_kind?: string | null;
   }>(`SELECT * FROM subscriptions WHERE user_id = $1`, [userId]);
   return rows[0] ?? null;
 }
@@ -209,7 +221,12 @@ export function mapStripeSubscription(
     current_period_end?: number | null;
     trial_end?: number | null;
     cancel_at_period_end?: boolean;
-    metadata?: { user_id?: string; user_email?: string; plan?: string };
+    metadata?: {
+      user_id?: string;
+      user_email?: string;
+      plan?: string;
+      nura_trial_kind?: string;
+    };
   },
   priceIds: StripePriceIds = {}
 ) {
@@ -240,6 +257,7 @@ export function mapStripeSubscription(
     stripeSubscriptionId: sub.id,
     stripePriceId: priceId,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    trialKind: sub.metadata?.nura_trial_kind?.trim() || null,
   };
 }
 

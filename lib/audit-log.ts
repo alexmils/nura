@@ -1,6 +1,7 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
 
 export type AuditAction =
+  | "reactivation.link_generated"
   | "user.login"
   | "user.logout"
   | "user.invited"
@@ -12,6 +13,7 @@ export type AuditAction =
   | "user.disabled"
   | "user.enabled"
   | "settings.platform_updated"
+  | "settings.voice_orb_updated"
   | "settings.login_guard_updated"
   | "settings.seo_updated"
   | "settings.meta_ads_updated"

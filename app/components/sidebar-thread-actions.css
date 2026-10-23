@@ -1,0 +1,55 @@
+/* Recent sessions: tap-and-hold (phones), right-click or the ⋯ button (desktop)
+ * open the session actions menu (Rename / Edit description / Delete). */
+.sidebar-row-wrap {
+  position: relative;
+}
+
+.sidebar-row-wrap .sidebar-row {
+  padding-right: 2.25rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* Long press must not select text or open the iOS callout. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sidebar-row-more {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: var(--radius-sm, 8px);
+  background: transparent;
+  color: var(--sidebar-text);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.sidebar-row-wrap:hover .sidebar-row-more,
+.sidebar-row-more:focus-visible {
+  opacity: 0.75;
+}
+
+.sidebar-row-more:hover {
+  opacity: 1;
+  background: var(--sidebar-hover);
+}
+
+/* Touch screens: no hover, so long press is the way in. */
+@media (hover: none) {
+  .sidebar-row-more {
+    display: none;
+  }
+  .sidebar-row-wrap .sidebar-row {
+    padding-right: 0.75rem;
+  }
+}

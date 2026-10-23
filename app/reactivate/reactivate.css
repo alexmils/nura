@@ -1,0 +1,78 @@
+/* Win-back offer page: Nura palette (brand yellow, pastel, green). */
+.reactivate-page {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  padding: 6rem 1rem 3rem;
+  background:
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, #f6e27a 30%, #f4f7ee) 0%, transparent 60%),
+    #f4f7ee;
+  color: #26351c;
+}
+.reactivate-inner { width: min(30rem, 100%); margin-block: auto; display: flex; flex-direction: column; }
+.reactivate-brand { position: absolute; top: 1.5rem; left: 1.5rem; display: flex; }
+.reactivate-brand .brand-logo { width: auto; height: 2.75rem; max-width: 12rem; }
+.reactivate-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.5rem 1.35rem;
+  border: 1px solid color-mix(in srgb, #84b067 45%, transparent);
+  border-radius: 20px;
+  background: #fbfdf6;
+  box-shadow: 0 10px 30px -18px rgba(61, 97, 43, 0.45);
+}
+.reactivate-eyebrow {
+  margin: 0;
+  align-self: flex-start;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #f6e27a;
+  color: #3d612b;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.reactivate-title { margin: 0; font-size: 1.6rem; line-height: 1.2; color: #2c4a1e; }
+.reactivate-body { margin: 0; line-height: 1.55; color: #4c5e3c; }
+.reactivate-points {
+  margin: 0;
+  padding: 0.85rem 1rem 0.85rem 2rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, #c6d67e 30%, #fbfdf6);
+  line-height: 1.5;
+  color: #3a4c2c;
+}
+.reactivate-points li + li { margin-top: 0.35rem; }
+.reactivate-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.7rem 1.3rem;
+  border: 1px solid #3d612b;
+  border-radius: 999px;
+  background: #3d612b;
+  color: #f4f7ee;
+  font-size: 1rem;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.reactivate-cta:hover:not(:disabled) { background: #2f4c21; }
+.reactivate-cta:focus-visible { outline: 3px solid #f6e27a; outline-offset: 2px; }
+.reactivate-cta:disabled { opacity: 0.7; cursor: progress; }
+.reactivate-cta--quiet { background: transparent; color: #3d612b; }
+.reactivate-note, .reactivate-error, .reactivate-foot { margin: 0; font-size: 0.875rem; line-height: 1.45; }
+.reactivate-note { color: #5e7048; }
+.reactivate-error { color: #9a2f1f; }
+.reactivate-foot { color: #6b7a5c; text-align: center; }
+@media (max-width: 640px) {
+  .reactivate-page { padding-top: 5.5rem; }
+  .reactivate-brand { top: 1.1rem; left: 1.1rem; }
+  .reactivate-title { font-size: 1.4rem; }
+  .reactivate-cta { width: 100%; }
+}

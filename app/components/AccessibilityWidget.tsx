@@ -29,6 +29,8 @@ import {
   type A11yDockEdge,
   type A11yFabState,
   type A11yPreferences,
+  A11Y_MENU_MAX_WIDTH,
+  A11Y_OPEN_EVENT,
 } from "@/lib/a11y-preferences";
 import "./accessibility-widget.css";
 
@@ -191,12 +193,34 @@ export function AccessibilityWidget({
   useEffect(() => {
     const sync = () => {
       setViewport({ width: window.innerWidth, height: window.innerHeight });
-      setSheet(window.innerWidth <= SHEET_MAX_WIDTH);
+      // Under the menu breakpoint there is no button to anchor a popover to.
+      setSheet(window.innerWidth < A11Y_MENU_MAX_WIDTH || window.innerWidth <= SHEET_MAX_WIDTH);
     };
     sync();
     window.addEventListener("resize", sync);
     return () => window.removeEventListener("resize", sync);
   }, []);
+
+  /* The site menu's "Accessibility" item (phones) opens the same panel. */
+  const openerRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const onOpen = () => {
+      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setOpen(true);
+    };
+    window.addEventListener(A11Y_OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(A11Y_OPEN_EVENT, onOpen);
+  }, []);
+  useEffect(() => {
+    if (!open) return;
+    // Move focus into the panel so keyboard and screen-reader users land in it.
+    const id = window.requestAnimationFrame(() => {
+      if (!panelRef.current?.contains(document.activeElement)) {
+        panelRef.current?.querySelector<HTMLElement>("button, input, [tabindex]")?.focus();
+      }
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open]);
 
   /**
    * Bottom bars (cookie consent, future docks) span the full width. Measure the
@@ -537,7 +561,10 @@ export function AccessibilityWidget({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
-        widgetRef.current?.querySelector("button")?.focus();
+        const opener = openerRef.current;
+        openerRef.current = null;
+        if (opener?.isConnected) opener.focus();
+        else widgetRef.current?.querySelector("button")?.focus();
       }
     };
     const onPointer = (event: MouseEvent) => {
@@ -594,6 +621,8 @@ export function AccessibilityWidget({
   // Render nothing for the first client frame instead of flashing the widget
   // at a guessed position.
   if (!hydrated || vw === 0 || vh === 0) return null;
+  // Phones/tablets: no floating tab; the panel opens from the site menu.
+  const inMenu = vw < A11Y_MENU_MAX_WIDTH;
 
   return (
     <div
@@ -602,13 +631,19 @@ export function AccessibilityWidget({
       data-attached={attached ? "" : undefined}
       data-edge={edge}
       data-side={side}
-      style={{
-        left: `${geometry.left}px`,
-        top: `${geometry.top}px`,
-        width: `${geometry.width}px`,
-        height: `${geometry.height}px`,
-      }}
+      data-menu={inMenu ? "" : undefined}
+      style={
+        inMenu
+          ? { left: 0, top: 0, width: 0, height: 0 }
+          : {
+              left: `${geometry.left}px`,
+              top: `${geometry.top}px`,
+              width: `${geometry.width}px`,
+              height: `${geometry.height}px`,
+            }
+      }
     >
+      {inMenu ? null : (
       <button
         type="button"
         className={`a11y-fab${open ? " is-open" : ""}`}
@@ -636,8 +671,8 @@ export function AccessibilityWidget({
           <svg
             className="a11y-ribbon-chevron"
             viewBox="0 0 24 24"
-            width="16"
-            height="16"
+            width="12"
+            height="12"
             fill="none"
             stroke="currentColor"
             strokeWidth="2.2"
@@ -663,8 +698,9 @@ export function AccessibilityWidget({
           </span>
         ) : null}
       </button>
+      )}
 
-      {!attached ? (
+      {!attached && !inMenu ? (
         <button
           type="button"
           className="a11y-attach"

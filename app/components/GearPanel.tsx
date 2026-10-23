@@ -10,7 +10,6 @@ import {
   Circle,
   Infinity as InfinityIcon,
   Palette,
-  Pause,
   Play,
   Repeat2,
   Shuffle,
@@ -68,6 +67,7 @@ import {
   isBlsSoundId,
 } from "@/lib/bls-sounds";
 import { pulseVibration } from "@/lib/bls-vibrate";
+import { previewPan, togglePreview } from "@/lib/gear-preview";
 
 type SectionId =
   | "speed"
@@ -484,16 +484,18 @@ function SoundSelect({
   value,
   onChange,
   onPreview,
+  playing,
 }: {
   id: BlsSoundId;
   label: string;
   value: BlsSoundId;
   onChange: (next: BlsSoundId) => void;
   onPreview: (id: BlsSoundId) => void;
+  playing: boolean;
 }) {
   const groups = ["Tones", "Percussion"] as const;
   return (
-    <div className="gear-sound-row">
+    <div className={`gear-sound-row${playing ? " gear-sound-row-playing" : ""}`}>
       <span className="gear-inline-label">{label}</span>
       <select
         className="gear-sound-select"
@@ -516,10 +518,18 @@ function SoundSelect({
       <button
         type="button"
         className="gear-sound-play"
-        aria-label={`Play ${blsSoundLabel(id)}`}
+        aria-pressed={playing}
+        aria-label={playing ? "Stop preview" : `Play ${label.toLowerCase()} sound: ${blsSoundLabel(id)}`}
         onClick={() => onPreview(id)}
       >
-        <Play size={15} strokeWidth={2.25} className="gear-play-icon" />
+        {playing ? (
+          <>
+            <span className="gear-sound-play-ring" aria-hidden />
+            <Square size={13} strokeWidth={2.5} fill="currentColor" />
+          </>
+        ) : (
+          <Play size={15} strokeWidth={2.25} className="gear-play-icon" />
+        )}
       </button>
     </div>
   );
@@ -538,6 +548,8 @@ export function GearPanel({
   expandSection?: { id: GearSectionId; nonce: number } | null;
 }) {
   const [playing, setPlaying] = useState(false);
+  const [soundPreview, setSoundPreview] = useState<"left" | "right" | null>(null);
+  const soundPreviewRef = useRef<{ side: "left" | "right"; stop: () => void } | null>(null);
   const [openSection, setOpenSection] = useState<SectionId | null>("speed");
   const audioRef = useRef<BlsAudioEngine | null>(null);
   const blsRef = useRef(bls);
@@ -547,6 +559,8 @@ export function GearPanel({
     const engine = new BlsAudioEngine();
     audioRef.current = engine;
     return () => {
+      soundPreviewRef.current?.stop();
+      soundPreviewRef.current = null;
       engine.dispose();
       audioRef.current = null;
     };
@@ -560,9 +574,34 @@ export function GearPanel({
     setOpenSection((current) => (current === id ? null : id));
   };
 
-  const previewSound = (id: BlsSoundId) => {
-    audioRef.current?.resume();
-    audioRef.current?.play(id, 0);
+  const stopSoundPreview = () => {
+    const cur = soundPreviewRef.current;
+    soundPreviewRef.current = null;
+    cur?.stop();
+    setSoundPreview(null);
+  };
+
+  /** Row play button: plays that side a few times; tap again to stop. */
+  const toggleSoundPreview = (side: "left" | "right", id: BlsSoundId) => {
+    const engine = audioRef.current;
+    if (!engine) return;
+    const { start } = togglePreview(soundPreview, side);
+    stopSoundPreview();
+    if (!start) return;
+    // One preview at a time: the live preview pauses.
+    setPlaying(false);
+    engine.resume();
+    const handle = engine.preview(id, previewPan(side, blsRef.current.reverseStereo), {
+      hits: 3,
+      gap: 0.5,
+      onEnd: () => {
+        if (soundPreviewRef.current?.side !== side) return;
+        soundPreviewRef.current = null;
+        setSoundPreview(null);
+      },
+    });
+    soundPreviewRef.current = { side, stop: handle.stop };
+    setSoundPreview(side);
   };
 
   const onPreviewEdge = (side: "left" | "right") => {
@@ -593,6 +632,7 @@ export function GearPanel({
       repeatPresets: [...DEFAULT_BLS.repeatPresets],
     });
     setPlaying(false);
+    stopSoundPreview();
   };
 
   return (
@@ -635,14 +675,16 @@ export function GearPanel({
               <button
                 type="button"
                 className="gear-preview-play"
-                aria-label={playing ? "Pause preview" : "Play preview"}
+                aria-pressed={playing}
+                aria-label={playing ? "Stop preview" : "Play preview"}
                 onClick={() => {
                   audioRef.current?.resume();
+                  if (!playing) stopSoundPreview();
                   setPlaying((p) => !p);
                 }}
               >
                 {playing ? (
-                  <Pause size={18} strokeWidth={2.25} />
+                  <Square size={15} strokeWidth={2.5} fill="currentColor" />
                 ) : (
                   <Play size={18} strokeWidth={2.25} className="gear-play-icon" />
                 )}
@@ -818,14 +860,16 @@ export function GearPanel({
                 label="Left"
                 value={bls.leftSound}
                 onChange={(leftSound) => onChange({ leftSound })}
-                onPreview={previewSound}
+                onPreview={(id) => toggleSoundPreview("left", id)}
+                playing={soundPreview === "left"}
               />
               <SoundSelect
                 id={bls.rightSound}
                 label="Right"
                 value={bls.rightSound}
                 onChange={(rightSound) => onChange({ rightSound })}
-                onPreview={previewSound}
+                onPreview={(id) => toggleSoundPreview("right", id)}
+                playing={soundPreview === "right"}
               />
               <GearSwitch
                 checked={bls.soundMuted}
@@ -917,7 +961,11 @@ export function GearPanel({
                     key={opt.value}
                     selected={bls.vibration === opt.value}
                     ariaLabel={opt.label}
-                    onClick={() => onChange({ vibration: opt.value })}
+                    onClick={() => {
+                      onChange({ vibration: opt.value });
+                      // Feel it right away where the device supports it.
+                      pulseVibration(opt.value);
+                    }}
                   >
                     <span>{opt.label}</span>
                   </ChoiceChip>

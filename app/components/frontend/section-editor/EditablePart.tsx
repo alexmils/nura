@@ -4,7 +4,7 @@ import { frameKey, storedFrameStyle } from "@/lib/image-position";
 import type { ReactNode } from "react";
 import {
   getSectionDef,
-  gradientCss,
+  gradientLayerStyle,
   gradientIsOverlay,
   sectionBackground,
   sectionGradient,
@@ -74,7 +74,7 @@ export function GradientLayer({ gradient, className }: { gradient: SectionGradie
       className={className ? `fe-grad-layer ${className}` : "fe-grad-layer"}
       aria-hidden
       data-grad-mode={gradient.mode}
-      style={{ backgroundImage: gradientCss(gradient), opacity: gradient.opacity / 100 }}
+      style={gradientLayerStyle(gradient)}
     />
   );
 }

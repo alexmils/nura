@@ -11,7 +11,8 @@ import {
   type MouseEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { ArrowRight, Menu, UserRound, X } from "lucide-react";
+import { Accessibility, ArrowRight, Menu, UserRound, X } from "lucide-react";
+import { openAccessibilitySettings } from "@/lib/a11y-preferences";
 import { APP_BASE, LOGIN_PATH, appPath } from "@/lib/app-base";
 import { Avatar } from "@/app/components/Avatar";
 import { BrandLockup } from "@/app/components/BrandLockup";
@@ -446,6 +447,19 @@ export function FrontendHeader({ overlay = false }: { overlay?: boolean }) {
                 </div>
 
                 <div className="frontend-header-mobile-foot">
+                  {/* Phones have no floating accessibility tab; this opens the same panel. */}
+                  <button
+                    type="button"
+                    className="frontend-header-mobile-foot-link"
+                    onClick={() => {
+                      closeMenu();
+                      // After the menu has closed and focus is back on its trigger.
+                      requestAnimationFrame(() => requestAnimationFrame(openAccessibilitySettings));
+                    }}
+                  >
+                    <Accessibility size={18} aria-hidden />
+                    Accessibility
+                  </button>
                   {user === undefined ? (
                     <span className="frontend-header-mobile-foot-muted" aria-hidden>
                       …

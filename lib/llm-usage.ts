@@ -5,6 +5,10 @@ import { sqlRowCountsInStats } from "@/lib/stats-scope";
 export type LlmUsagePurpose =
   | "guided_chat"
   | "interpreter"
+  /** Interpreter reply hit the output cap (finish_reason length). */
+  | "interpreter_cutoff"
+  /** Interpreter reply finished but was empty or not a JSON object. */
+  | "interpreter_unparsed"
   | "help"
   | "voice"
   | "memory_extract";

@@ -169,6 +169,16 @@ export default function AdminSettingsPage() {
           </div>
           {msg ? <p className="admin-invite-msg">{msg}</p> : null}
         </section>
+        <section className="admin-panel admin-form-stack">
+          <h2 className="admin-panel-title">Voice orb</h2>
+          <p className="admin-panel-sub">
+            Pick the orb shown in voice mode and turn the start / end chimes on
+            or off in Platform &rarr; Voice orb.
+          </p>
+          <a className="btn-secondary w-fit" href="/admin/platform?tab=voice-orb">
+            Open the voice orb picker
+          </a>
+        </section>
       </main>
     </div>
   );

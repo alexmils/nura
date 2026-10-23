@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { ArrowUp, AudioLines, Mic, Volume2, X } from "lucide-react";
-import type { Message, ProtocolPhase } from "@/lib/types";
+import type { Message, ProtocolPhase, ThreadPhaseChange } from "@/lib/types";
 import type { SessionMode } from "@/lib/protocol";
 import { checkInQuickReplies, showsSessionQuickReplies } from "@/lib/session-labels";import {
   isBrowserSpeechSupported,
@@ -12,6 +12,10 @@ import { checkInQuickReplies, showsSessionQuickReplies } from "@/lib/session-lab
 import { Avatar } from "./Avatar";
 import type { VoicePhase } from "./useGuidedVoiceMode";
 import { VoiceWave } from "./VoiceWave";
+import { VoiceStage } from "./voice/VoiceStage";
+import { ThinkingIndicator } from "./agent/ThinkingIndicator";
+import { PhaseBadge } from "./agent/PhaseBadge";
+import { usePhaseTimeline } from "./agent/usePhaseTimeline";
 import { useRotatingWelcome } from "./useRotatingWelcome";
 import { composerPlaceholder } from "@/lib/session-placeholders";
 import {
@@ -26,6 +30,8 @@ interface AgentOverlayProps {
   autoVoice: boolean;
   sessionMode: SessionMode;
   phase: ProtocolPhase;
+  /** Server-recorded phase changes for the transcript phase badges. */
+  phaseChanges?: ThreadPhaseChange[];
   /** True when the last set was cut short, so nothing was processed. */
   setStopped?: boolean;
   /** True while the guide is composing a reply. */
@@ -45,29 +51,30 @@ interface AgentOverlayProps {
   onEnterVoice?: () => void;
   onExitVoice?: () => void;
   onResumeVoice?: () => void;
+  /** Mic requested but not live yet. */
+  voiceStarting?: boolean;
+  voiceMuted?: boolean;
+  onToggleMuteVoice?: () => void;
+  /** Stop the guide's reply (tap the orb while it speaks). */
+  onInterruptVoice?: () => void;
+  getVoiceInputLevel?: () => number;
+  getVoiceOutputLevel?: () => number;
   /** Platform chrome theme id (1–20). */
   chromeId?: number;
   /** Language the guide answers in; the composer hint follows it. */
   guideLanguage?: string | null;
+  /** Set availability line / manual Start set (chat and Voice Mode). */
+  setReady?: ReactNode;
+  /** End-of-session summary card, shown above the composer after closure. */
+  closureCard?: ReactNode;
 }
 
-/** Three dots that rise in sequence while the guide is writing. */
-function TypingIndicator({ className = "" }: { className?: string }) {
-  return (
-    <span
-      className={`agent-typing${className ? ` ${className}` : ""}`}
-      role="status"
-      aria-label="Nura is writing"
-    >
-      <span className="agent-typing-dot" aria-hidden="true" />
-      <span className="agent-typing-dot" aria-hidden="true" />
-      <span className="agent-typing-dot" aria-hidden="true" />
-    </span>
-  );
-}
+const zeroLevel = () => 0;
 
-function voiceStatusLabel(phase: VoicePhase, stalled = false): string {
+function voiceStatusLabel(phase: VoicePhase, stalled = false, starting = false, muted = false): string {
   if (stalled) return "Mic paused";
+  if (starting) return "Starting the mic\u2026";
+  if (muted) return "Muted";
   switch (phase) {
     case "listening":
       return "Listening…";
@@ -88,6 +95,7 @@ export function AgentOverlay({
   autoVoice,
   sessionMode,
   phase,
+  phaseChanges,
   setStopped = false,
   agentTyping = false,
   userAvatarUrl,
@@ -104,8 +112,16 @@ export function AgentOverlay({
   onEnterVoice,
   onExitVoice,
   onResumeVoice,
+  voiceStarting = false,
+  voiceMuted = false,
+  onToggleMuteVoice,
+  onInterruptVoice,
+  getVoiceInputLevel,
+  getVoiceOutputLevel,
   chromeId = DEFAULT_GUIDED_CHAT_CHROME_ID,
   guideLanguage = null,
+  setReady = null,
+  closureCard = null,
 }: AgentOverlayProps) {
   const chrome = resolveGuidedChatChrome(chromeId);
   const chromeVars = guidedChatChromeCssVars(chrome.theme);
@@ -123,6 +139,7 @@ export function AgentOverlay({
   const dictationRef = useRef<BrowserSpeechSession | null>(null);
   const dictationBaseRef = useRef("");
   const lastAgent = [...messages].reverse().find((m) => m.role === "agent");
+  const phaseBadges = usePhaseTimeline(messages, phase, phaseChanges);
   const prevId = useRef<string | null>(null);
   const checkIn = sessionMode === "check_in";
   const intake = phase === "intake";
@@ -153,6 +170,15 @@ export function AgentOverlay({
   const showDictationMic = isBrowserSpeechSupported();
   const showVoiceMode = Boolean(voiceAvailable && onEnterVoice);
   const voiceChrome = voiceActive || voiceExiting;
+  /**
+   * The guide is composing a reply: typed sessions use agentTyping, voice text
+   * mode (landscape) uses the voice phase. Drives the ThinkingIndicator row.
+   */
+  const showThinking = voiceChrome
+    ? voiceActive && !voiceExiting && !voiceStalled && voicePhase === "thinking"
+    : agentTyping;
+  const voiceThinkingLabel =
+    voiceActive && !voiceExiting && !voiceStalled && !voiceStarting && !voiceMuted && voicePhase === "thinking";
   /** Opening line only: cycles languages until the person writes. */
   const welcome = useRotatingWelcome({
     text: lastAgent?.content ?? "",
@@ -240,9 +266,29 @@ export function AgentOverlay({
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, hidden, conversationStarted, voiceInterim, agentTyping]);
+  }, [messages.length, hidden, conversationStarted, voiceInterim, agentTyping, showThinking]);
 
   if (hidden) return null;
+
+  // Desktop, tablets, portrait phones: full-screen orb stage only (it covers
+  // the dock). Phone held sideways: VoiceStage shows just the bottom glow and
+  // the dock + messages below are the text mode. Same session either way.
+  const voiceStage = voiceChrome ? (
+    <VoiceStage
+      phase={voicePhase}
+      starting={voiceStarting}
+      stalled={voiceStalled}
+      muted={voiceMuted}
+      exiting={voiceExiting}
+      error={voiceError}
+      getInputLevel={getVoiceInputLevel ?? zeroLevel}
+      getOutputLevel={getVoiceOutputLevel ?? zeroLevel}
+      onEnd={() => onExitVoice?.()}
+      onToggleMute={() => onToggleMuteVoice?.()}
+      onResume={onResumeVoice}
+      onInterrupt={onInterruptVoice}
+    />
+  ) : null;
 
   const voiceDock = voiceChrome ? (
     <div
@@ -262,9 +308,17 @@ export function AgentOverlay({
         />
         <div className="agent-voice-meta">
           <p className="agent-voice-status">
-            {voiceExiting
-              ? "Ending…"
-              : voiceStatusLabel(voicePhase, voiceStalled)}
+            {voiceExiting ? (
+              "Ending…"
+            ) : voiceThinkingLabel ? (
+              <ThinkingIndicator
+                showDot={false}
+                announce={false}
+                className="agent-voice-thinking"
+              />
+            ) : (
+              voiceStatusLabel(voicePhase, voiceStalled, voiceStarting, voiceMuted)
+            )}
           </p>
           {!voiceExiting && !voiceStalled && voiceInterim ? (
             <p className="agent-voice-interim">{voiceInterim}</p>
@@ -443,14 +497,17 @@ export function AgentOverlay({
                   </button>
                 )}
               </div>
-            ) : agentTyping && !voiceChrome ? (
-              <div className="agent-overlay-line">
-                <TypingIndicator className="agent-typing--prompt" />
+            ) : showThinking ? (
+              <div className="agent-overlay-line agent-overlay-line--thinking">
+                <ThinkingIndicator />
               </div>
             ) : null}
           </div>
+          {closureCard}
+          {setReady}
           {quickReplyRow}
           {composer}
+          {voiceStage}
         </div>
       </div>
     );
@@ -465,11 +522,14 @@ export function AgentOverlay({
         {checkInBanner}
 
         <div ref={listRef} className="agent-chat-messages">
-          {messages.map((m) => {
+          {messages.map((m, i) => {
             const isUser = m.role === "user";
             return (
+              <Fragment key={m.id}>
+              {phaseBadges.before.get(i)?.map((p) => (
+                <PhaseBadge key={`phase-${p}-${m.id}`} phase={p} />
+              ))}
               <div
-                key={m.id}
                 className={`agent-chat-row ${isUser ? "agent-chat-row--user" : "agent-chat-row--agent"}`}
               >
                 {!isUser && (
@@ -504,25 +564,32 @@ export function AgentOverlay({
                   />
                 )}
               </div>
+              </Fragment>
             );
           })}
-          {agentTyping && !voiceChrome ? (
-            <div className="agent-chat-row agent-chat-row--agent">
+          {phaseBadges.end.map((p) => (
+            <PhaseBadge key={`phase-${p}-end`} phase={p} />
+          ))}
+          {showThinking ? (
+            <div className="agent-chat-row agent-chat-row--agent agent-chat-row--thinking">
               <Avatar
                 src={guideAvatar}
                 alt="Nura"
                 fallback="N"
                 className="avatar-sm avatar-guide"
               />
-              <div className="agent-chat-bubble agent-chat-bubble--agent agent-chat-bubble--typing">
-                <TypingIndicator />
+              <div className="agent-chat-thinking">
+                <ThinkingIndicator />
               </div>
             </div>
           ) : null}
         </div>
 
+        {closureCard}
+        {setReady}
         {quickReplyRow}
         {composer}
+        {voiceStage}
       </div>
     </div>
   );

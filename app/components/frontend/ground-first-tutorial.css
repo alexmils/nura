@@ -423,7 +423,12 @@
   overflow: hidden;
 }
 
-.gft-avatar--guide img {
+/* Scoped under .gft: section-editor.css `.fe-spath-media img` (same specificity,
+   later in the bundle) otherwise makes this avatar an absolute, full-bleed cover image. */
+.gft .gft-avatar--guide img {
+  position: static;
+  inset: auto;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -644,6 +649,11 @@
 
 .gft-dev-frame--card {
   height: 8.5rem;
+}
+
+.gft-dev-frame--stage {
+  position: relative;
+  height: 18rem;
 }
 
 @keyframes gft-in {

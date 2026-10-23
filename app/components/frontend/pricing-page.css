@@ -146,18 +146,23 @@
   gap: 0.5rem 0.75rem;
 }
 
+/* Plan names use the headline's sans display face ("Plans tailored to…"):
+   bold, slightly tight, 26–30px. Never the serif display font. */
 .fe-pricing-section--page .fe-price-card-name {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.625rem, 2.3vw, 1.875rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variation-settings: normal;
   color: #2a3020;
 }
 
 .frontend-home .fe-pricing-section--page .fe-price-card-name {
   font-family: var(--font-sans) !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
+  font-variation-settings: normal !important;
 }
 
 .fe-pricing-section--page .fe-price-card-hint {

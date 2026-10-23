@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { Eye, Gamepad2, Volume2 } from "lucide-react";
 import {
   getLandingLenis,
   scrollToLandingSection,
@@ -11,11 +19,21 @@ import {
   SafePlaceDemo,
 } from "./GroundFirstTutorial";
 import {
+  CheckInDemo,
+  CloseGentlyDemo,
+  RHYTHM_MODES,
+  RhythmDemo,
+  type RhythmMode,
+} from "./SessionStageDemos";
+import {
   HIDDEN_ITEM_KEY,
   mediaNames,
   sectionList,
   sectionText,
+  slotMedia,
+  type SectionItem,
 } from "@/lib/marketing-sections";
+import { setEditorFocusGetter } from "./section-editor/editor-focus";
 import { frameKey, storedFrameStyle } from "@/lib/image-position";
 import { SectionMedia } from "./SectionMedia";
 import { LetterRevealHeading } from "./LetterRevealHeading";
@@ -50,6 +68,8 @@ function MediaPlaceholder({
   video,
   poster,
   alt,
+  demo,
+  demoLabel,
 }: {
   label: string;
   compact?: boolean;
@@ -58,8 +78,22 @@ function MediaPlaceholder({
   video?: string;
   poster?: string;
   alt?: string;
+  /** Built-in animation shown while no image/video is set in the editor. */
+  demo?: ReactNode;
+  demoLabel?: string;
 }) {
   const hasMedia = kind !== "none" && Boolean(image || video);
+  if (!hasMedia && demo !== undefined) {
+    return (
+      <div
+        className="fe-spath-media fe-spath-media--live"
+        role="img"
+        aria-label={demoLabel || label}
+      >
+        {demo}
+      </div>
+    );
+  }
   return (
     <div
       className={
@@ -131,11 +165,18 @@ export function SessionPathSticky() {
   const rhythmHasMedia =
     rhythmKind !== "none" && Boolean(rhythmImage || rhythmVideo);
   const ground = sectionList(groundCopy, "ground");
+  // Admin-uploaded media replaces a Ground first animation; empty = animation.
+  const groundMedia = slotMedia(groundCopy, "groundMedia");
   const baseId = useId();
   const rootRef = useRef<HTMLElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
   const [active, setActive] = useState<StageId>("ground");
   const [compactNav, setCompactNav] = useState(true);
+  // Rhythm demo: a hovered/clicked card pins its mode; otherwise it auto-cycles.
+  const [rhythmHover, setRhythmHover] = useState<RhythmMode | null>(null);
+  const [rhythmPick, setRhythmPick] = useState<RhythmMode | null>(null);
+  const [rhythmShown, setRhythmShown] = useState<RhythmMode>("eyes");
+  const rhythmPinned = rhythmHover ?? rhythmPick;
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 859px)");
@@ -145,6 +186,17 @@ export function SessionPathSticky() {
     return () => mq.removeEventListener("change", apply);
   }, []);
   const activeRef = useRef<StageId>("ground");
+
+  // The stages Edit chip opens the editor on the stage being shown.
+  const stagesRaw = stagesCopy.stages;
+  useEffect(() => {
+    setEditorFocusGetter("home-how-stages", () => {
+      const list = Array.isArray(stagesRaw) ? (stagesRaw as SectionItem[]) : [];
+      const index = list.findIndex((item) => item.id === activeRef.current);
+      return index >= 0 ? { list: "stages", index } : null;
+    });
+    return () => setEditorFocusGetter("home-how-stages", null);
+  }, [stagesRaw]);
   const lockUntilRef = useRef(0);
 
   const syncActive = useCallback(() => {
@@ -375,8 +427,30 @@ export function SessionPathSticky() {
                     >
                       <SectionEdit id="home-how-rhythm" />
                       <ul className="fe-spath-rhythm-grid">
-                        {rhythm.map(({ card, at }) => (
-                          <li key={card.label || at} className="fe-spath-rhythm-card">
+                        {rhythm.map(({ card, at }) => {
+                          const mode = RHYTHM_MODES[at];
+                          const DefaultIcon =
+                            mode === "ears" ? Volume2 : mode === "hands" ? Gamepad2 : Eye;
+                          const rhythmMediaSet =
+                            rhythmHasMedia ||
+                            (stage.mediaKind !== "none" &&
+                              Boolean(stage.mediaImage || stage.mediaVideo));
+                          const live = Boolean(mode) && !rhythmMediaSet;
+                          const toggle = () =>
+                            setRhythmPick((p) => (p === mode ? null : mode));
+                          return (
+                          <li
+                            key={card.label || at}
+                            className={
+                              live && !compactNav && rhythmShown === mode && active === "rhythm"
+                                ? "fe-spath-rhythm-card is-live"
+                                : "fe-spath-rhythm-card"
+                            }
+                            onMouseEnter={live ? () => setRhythmHover(mode) : undefined}
+                            onMouseLeave={live ? () => setRhythmHover(null) : undefined}
+                            onClick={live ? toggle : undefined}
+                            data-rhythm-mode={live ? mode : undefined}
+                          >
                             <span
                               className={`fe-spath-rhythm-icon${card.icon ? " has-image" : ""}`}
                               aria-hidden
@@ -391,6 +465,8 @@ export function SessionPathSticky() {
                                   data-frame-key={frameKey("home-how-rhythm", `rhythm.${at}.icon`)}
                                   style={storedFrameStyle(card.iconPos)}
                                 />
+                              ) : mode ? (
+                                <DefaultIcon size={16} strokeWidth={2.1} />
                               ) : null}
                             </span>
                             {active === "rhythm" ? (
@@ -410,7 +486,8 @@ export function SessionPathSticky() {
                               {card.hint}
                             </span>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                       <MediaPlaceholder
                         label={stage.mediaLabel}
@@ -419,6 +496,15 @@ export function SessionPathSticky() {
                         video={rhythmHasMedia ? rhythmVideo : stage.mediaVideo}
                         poster={rhythmHasMedia ? rhythmPoster : stage.mediaPoster}
                         alt={rhythmHasMedia ? rhythmAlt : stage.mediaAlt}
+                        demoLabel="A ball moving left and right, felt with eyes, ears, or hands"
+                        demo={
+                          active === "rhythm" ? (
+                            <RhythmDemo
+                              pinned={rhythmPinned}
+                              onModeChange={setRhythmShown}
+                            />
+                          ) : null
+                        }
                       />
                     </div>
                   ) : stage.id === "ground" ? (
@@ -430,12 +516,24 @@ export function SessionPathSticky() {
                       <div
                         className="fe-spath-media fe-spath-media--live"
                         role="img"
-                        aria-label="Choose AI agent-guided or Self-guided"
+                        aria-label={groundMedia?.alt || "Choose AI agent-guided or Self-guided"}
                       >
-                        {active === "ground" ? <ModePickDemo /> : null}
+                        {groundMedia ? (
+                          <SectionMedia
+                            kind={groundMedia.kind}
+                            image={groundMedia.image}
+                            video={groundMedia.video}
+                            poster={groundMedia.poster}
+                            alt={groundMedia.alt}
+                          />
+                        ) : active === "ground" ? (
+                          <ModePickDemo />
+                        ) : null}
                       </div>
                       <ul className="fe-spath-pair" data-spath-pair>
-                        {ground.map((card) => (
+                        {ground.map((card) => {
+                          const cardMedia = slotMedia(card, "media");
+                          return (
                           <li
                             key={card.id}
                             className={
@@ -461,9 +559,17 @@ export function SessionPathSticky() {
                             <div
                               className="fe-spath-media fe-spath-media--card fe-spath-media--live"
                               role="img"
-                              aria-label={card.title}
+                              aria-label={cardMedia?.alt || card.title}
                             >
-                              {active === "ground" ? (
+                              {cardMedia ? (
+                                <SectionMedia
+                                  kind={cardMedia.kind}
+                                  image={cardMedia.image}
+                                  video={cardMedia.video}
+                                  poster={cardMedia.poster}
+                                  alt={cardMedia.alt}
+                                />
+                              ) : active === "ground" ? (
                                 card.id === "safe" ? (
                                   <SafePlaceDemo />
                                 ) : (
@@ -472,7 +578,8 @@ export function SessionPathSticky() {
                               ) : null}
                             </div>
                           </li>
-                        ))}
+                          );
+                        })}
                       </ul>
                     </div>
                   ) : (
@@ -485,6 +592,20 @@ export function SessionPathSticky() {
                         video={stage.mediaVideo}
                         poster={stage.mediaPoster}
                         alt={stage.mediaAlt}
+                        demoLabel={
+                          stage.id === "checkin"
+                            ? "Check-in after a set: SUD rating and a body scan"
+                            : stage.id === "close"
+                              ? "Closing a session with a grounding step"
+                              : undefined
+                        }
+                        demo={
+                          stage.id === "checkin" ? (
+                            active === "checkin" ? <CheckInDemo /> : null
+                          ) : stage.id === "close" ? (
+                            active === "close" ? <CloseGentlyDemo /> : null
+                          ) : undefined
+                        }
                       />
                     </div>
                   )}

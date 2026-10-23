@@ -23,7 +23,10 @@ export type BrowserSpeechErrorCode =
   | "other";
 
 /** Real state of the microphone engine, not the UI's optimistic guess. */
-export type BrowserSpeechStatus = "listening" | "restarting" | "stopped";
+export type BrowserSpeechStatus = "starting" | "listening" | "restarting" | "stopped";
+
+/** The engine must report it started within this long, or we say so. */
+export const SPEECH_START_TIMEOUT_MS = 8000;
 
 export type BrowserSpeechCallbacks = {
   onInterim?: (text: string) => void;
@@ -41,6 +44,7 @@ type SpeechRecognitionLike = {
   onresult: ((ev: SpeechRecognitionEventLike) => void) | null;
   onerror: ((ev: { error?: string; message?: string }) => void) | null;
   onend: (() => void) | null;
+  onstart?: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -165,7 +169,7 @@ export type BrowserSpeechSession = {
  */
 export function startBrowserSpeech(
   callbacks: BrowserSpeechCallbacks,
-  options?: { lang?: string }
+  options?: { lang?: string; startTimeoutMs?: number }
 ): BrowserSpeechSession | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) {
@@ -185,6 +189,15 @@ export function startBrowserSpeech(
   let restartTimer: ReturnType<typeof setTimeout> | null = null;
   let startFailures = 0;
   let pendingInterim = "";
+  let startTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set once the engine really opened the mic; restarts after that are quiet. */
+  let everStarted = false;
+  const clearStartTimer = () => {
+    if (startTimer) {
+      clearTimeout(startTimer);
+      startTimer = null;
+    }
+  };
 
   const clearRestart = () => {
     if (restartTimer) {
@@ -205,6 +218,7 @@ export function startBrowserSpeech(
     rec.onresult = null;
     rec.onerror = null;
     rec.onend = null;
+    rec.onstart = null;
     try {
       rec.abort();
     } catch {
@@ -218,6 +232,7 @@ export function startBrowserSpeech(
   ) => {
     active = false;
     clearRestart();
+    clearStartTimer();
     const rec = current;
     current = null;
     release(rec);
@@ -302,10 +317,33 @@ export function startBrowserSpeech(
       scheduleRestart(0);
     };
 
+    // "Listening" only once the engine says the mic is open. iOS can take
+    // seconds here (permission prompts, Siri dictation spin-up) or never
+    // start at all; the old code claimed "Listening" right away and then sat
+    // there silently.
+    rec.onstart = () => {
+      clearStartTimer();
+      everStarted = true;
+      startFailures = 0;
+      callbacks.onStatus?.("listening");
+    };
+    clearStartTimer();
+    startTimer = setTimeout(() => {
+      startTimer = null;
+      if (!active || current !== rec) return;
+      finishFatal(
+        "other",
+        everStarted
+          ? "The microphone stopped responding. Tap Resume to continue."
+          : "The microphone did not start. Tap Resume to try again."
+      );
+    }, options?.startTimeoutMs ?? SPEECH_START_TIMEOUT_MS);
+
     try {
       rec.start();
-      callbacks.onStatus?.("listening");
+      if (!everStarted) callbacks.onStatus?.("starting");
     } catch {
+      clearStartTimer();
       // start() throws if called too soon after the previous instance ended.
       startFailures += 1;
       if (startFailures > MAX_SPEECH_START_FAILURES) {
@@ -321,6 +359,7 @@ export function startBrowserSpeech(
     if (!active) return;
     active = false;
     clearRestart();
+    clearStartTimer();
     const rec = current;
     current = null;
     if (flush) flushInterim();

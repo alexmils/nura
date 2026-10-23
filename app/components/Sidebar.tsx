@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  MoreHorizontal,
   BookOpen,
   ChevronDown,
   ChevronRight,
@@ -15,19 +16,21 @@ import {
 import { useApp } from "./AppProvider";
 import { ThreadEditMenu } from "./ThreadEditMenu";
 import { ThreadContextMenu } from "./ThreadContextMenu";
+import { useLongPress } from "./useLongPress";
+import "./sidebar-thread-actions.css";
 import { Avatar } from "./Avatar";
 import { BrandLockup } from "./BrandLockup";
 import { displayNameFor, useCurrentUser } from "./useCurrentUser";
 import { useSidebarNav } from "./SidebarNavContext";
 import { useGuideHost, useGuideOptional } from "./guide/ProductGuide";
 import { APP_BASE, appPath } from "@/lib/app-base";
+import { openAccessibilitySettings } from "@/lib/a11y-preferences";
 
 const SIDEBAR_NAV = [
   { href: APP_BASE, label: "Home", icon: Home, exact: true },
   { href: appPath("/resources"), label: "Resources", icon: BookOpen, exact: false },
 ] as const;
 
-const LONG_PRESS_MS = 480;
 const UPGRADE_DISMISS_KEY = "nura-sidebar-upgrade-dismissed";
 
 type CtxMenu = { threadId: string; x: number; y: number };
@@ -55,17 +58,10 @@ export function Sidebar() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [upgradeDismissed, setUpgradeDismissed] = useState(false);
-  const [editThreadId, setEditThreadId] = useState<string | null>(null);
+  const [editThread, setEditThread] = useState<{ id: string; focus: "title" | "description" } | null>(null);
   const [ctxMenu, setCtxMenu] = useState<CtxMenu | null>(null);
   const accountFootRef = useRef<HTMLDivElement>(null);
   const helpCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suppressClickRef = useRef(false);
-  const longPressRef = useRef<{
-    timer: ReturnType<typeof setTimeout>;
-    threadId: string;
-    x: number;
-    y: number;
-  } | null>(null);
 
   useEffect(() => {
     try {
@@ -190,23 +186,16 @@ export function Sidebar() {
     },
   });
 
-  const clearLongPress = useCallback(() => {
-    if (longPressRef.current) {
-      clearTimeout(longPressRef.current.timer);
-      longPressRef.current = null;
-    }
-  }, []);
-
   const openCtxMenu = useCallback((threadId: string, x: number, y: number) => {
     setAccountOpen(false);
     setCtxMenu({ threadId, x, y });
   }, []);
 
+  // Tap-and-hold a Recent item (phones), right-click or the ⋯ button (desktop).
+  const longPress = useLongPress<string>((threadId, p) => openCtxMenu(threadId, p.x, p.y));
+
   const onSelectThread = (id: string) => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return;
-    }
+    if (longPress.consumeClick()) return;
     void selectThread(id);
     closeSidebarDrawer();
   };
@@ -214,28 +203,6 @@ export function Sidebar() {
   const onNewChat = () => {
     void createThread();
     closeSidebarDrawer();
-  };
-
-  const onThreadPointerDown = (
-    e: ReactPointerEvent<HTMLButtonElement>,
-    threadId: string
-  ) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    clearLongPress();
-    const x = e.clientX;
-    const y = e.clientY;
-    longPressRef.current = {
-      threadId,
-      x,
-      y,
-      timer: setTimeout(() => {
-        const cur = longPressRef.current;
-        longPressRef.current = null;
-        if (!cur) return;
-        suppressClickRef.current = true;
-        openCtxMenu(cur.threadId, cur.x, cur.y);
-      }, LONG_PRESS_MS),
-    };
   };
 
   return (
@@ -312,32 +279,33 @@ export function Sidebar() {
           </p>
         )}
         {threads.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => onSelectThread(t.id)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              clearLongPress();
-              openCtxMenu(t.id, e.clientX, e.clientY);
-            }}
-            onPointerDown={(e) => onThreadPointerDown(e, t.id)}
-            onPointerUp={clearLongPress}
-            onPointerCancel={clearLongPress}
-            onPointerLeave={clearLongPress}
-            onPointerMove={(e) => {
-              const cur = longPressRef.current;
-              if (!cur) return;
-              const dx = e.clientX - cur.x;
-              const dy = e.clientY - cur.y;
-              if (dx * dx + dy * dy > 64) {
-                clearLongPress();
-              }
-            }}
-            className={`sidebar-row ${activeThreadId === t.id ? "sidebar-row-active" : ""}`}
-          >
-            {t.title}
-          </button>
+          <div key={t.id} className="sidebar-row-wrap" data-thread-id={t.id}>
+            <button
+              type="button"
+              onClick={() => onSelectThread(t.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                longPress.cancel();
+                openCtxMenu(t.id, e.clientX, e.clientY);
+              }}
+              {...longPress.bind(t.id)}
+              className={`sidebar-row ${activeThreadId === t.id ? "sidebar-row-active" : ""}`}
+            >
+              {t.title}
+            </button>
+            <button
+              type="button"
+              className="sidebar-row-more"
+              aria-label={`Actions for ${t.title}`}
+              aria-haspopup="menu"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                openCtxMenu(t.id, r.right - 4, r.bottom + 2);
+              }}
+            >
+              <MoreHorizontal size={16} strokeWidth={2} aria-hidden />
+            </button>
+          </div>
         ))}
       </nav>
 
@@ -423,6 +391,19 @@ export function Sidebar() {
               }}
             >
               Guide
+            </button>
+            {/* Phones have no floating accessibility tab; this opens the same panel. */}
+            <button
+              type="button"
+              className="dropdown-item w-full text-left"
+              role="menuitem"
+              onClick={() => {
+                closeAccountMenus();
+                closeSidebarDrawer();
+                requestAnimationFrame(() => requestAnimationFrame(openAccessibilitySettings));
+              }}
+            >
+              Accessibility
             </button>
             <div
               className="sidebar-help-wrap"
@@ -534,7 +515,12 @@ export function Sidebar() {
           onRename={() => {
             const id = ctxMenu.threadId;
             setCtxMenu(null);
-            setEditThreadId(id);
+            setEditThread({ id, focus: "title" });
+          }}
+          onEditDescription={() => {
+            const id = ctxMenu.threadId;
+            setCtxMenu(null);
+            setEditThread({ id, focus: "description" });
           }}
           onDelete={() => {
             const id = ctxMenu.threadId;
@@ -553,10 +539,11 @@ export function Sidebar() {
         />
       )}
 
-      {editThreadId && (
+      {editThread && (
         <ThreadEditMenu
-          threadId={editThreadId}
-          onClose={() => setEditThreadId(null)}
+          threadId={editThread.id}
+          focus={editThread.focus}
+          onClose={() => setEditThread(null)}
         />
       )}
     </aside>

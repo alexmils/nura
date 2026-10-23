@@ -9,6 +9,7 @@ import {
 } from "@/app/components/admin/AdminSettingToggle";
 import { GuidedChatChromePicker } from "@/app/components/admin/GuidedChatChromePicker";
 import { FreeSessionChromePicker } from "@/app/components/admin/FreeSessionChromePicker";
+import { VoiceOrbPicker } from "@/app/components/admin/VoiceOrbPicker";
 import type { PlatformSettings } from "@/lib/platform-settings";
 import { DEFAULT_GUIDED_CHAT_CHROME_ID } from "@/lib/guided-chat-chrome";
 import { DEFAULT_FREE_SESSION_CHROME_ID } from "@/lib/free-session-chrome";
@@ -22,6 +23,7 @@ const TABS = [
   "brand",
   "guided-chat",
   "free-session",
+  "voice-orb",
   "access",
   "features",
   "ads",
@@ -32,6 +34,7 @@ const TAB_ITEMS = [
   { id: "brand", label: "Brand" },
   { id: "guided-chat", label: "Guided chat" },
   { id: "free-session", label: "Self-guided" },
+  { id: "voice-orb", label: "Voice orb" },
   { id: "access", label: "Access" },
   { id: "features", label: "Features" },
   { id: "ads", label: "Ads" },
@@ -314,6 +317,18 @@ function AdminPlatformPageInner() {
                 }
                 disabled={busy || assetBusy}
               />
+            </>
+          )}
+
+          {tab === "voice-orb" && (
+            <>
+              <h2 className="admin-panel-title">Voice orb</h2>
+              <p className="admin-panel-sub">
+                The orb shown full screen in voice mode. Preview each one in
+                every state, then pick with &ldquo;Use this orb&rdquo;; it saves
+                right away.
+              </p>
+              <VoiceOrbPicker />
             </>
           )}
 
@@ -681,6 +696,7 @@ function AdminPlatformPageInner() {
             type="submit"
             disabled={busy || assetBusy}
             className="btn-primary w-fit"
+            hidden={tab === "voice-orb"}
           >
             {busy ? "Saving…" : "Save platform settings"}
           </button>

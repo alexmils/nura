@@ -2080,14 +2080,15 @@
   gap: 1rem;
 }
 
+/* Same sans display treatment as the /pricing plan names. */
 .fe-v2 .v2-price-name {
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-family: var(--font-sans);
+  font-size: clamp(1.625rem, 2.3vw, 1.875rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
   color: var(--v2-ink);
-  font-optical-sizing: auto;
-  font-variation-settings: "SOFT" 45, "WONK" 0.4;
+  font-variation-settings: normal;
 }
 
 .v2-price-badge {
@@ -3091,5 +3092,35 @@
 
   .v2-hero-trust-slot .v2-trust-chips li {
     flex: none;
+  }
+}
+
+/* Phones: the closing band is sized by its card. 110svh with a centred card
+   left about half a screen of empty photo above it (and the blog's tail plus
+   the band's blue blend read as a stray strip under the header). */
+@media (max-width: 760px) {
+  .v2-close:not(.v2-close--showcase) {
+    min-height: 0;
+    padding: clamp(3.5rem, 14vw, 4.5rem) 1.25rem;
+  }
+
+  /* The blend from the blog's blue only made sense over a plain surface;
+     over a photo, video or gradient it is a pale band across the top. */
+  .v2-close--media::before {
+    content: none;
+  }
+
+  .fe-v2 .fe-blog {
+    padding-bottom: clamp(3rem, 12vw, 4rem);
+  }
+
+  /* Editorial: a photo strip on top, the copy below it (no 24vh spacer). */
+  .v2-close--tpl-magazine .v2-close-media {
+    inset: 0 0 auto;
+    height: 14rem;
+  }
+
+  .v2-close--tpl-magazine .v2-close-inner {
+    margin: 11rem 0 0;
   }
 }

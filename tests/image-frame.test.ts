@@ -44,7 +44,7 @@ describe("per-image position/zoom (ported from alexandermils)", () => {
     assert.match(ed, /frameField=\{names\.image\}/);
     assert.match(ed, /frameField=\{field\.key\}/);
     assert.match(ed, /prefix: `\$\{field\.key\}\.\$\{index\}\.`/);
-    assert.match(src("app/components/frontend/HomeLandingV2.tsx"), /data-frame-key=\{frame\} style=\{\{ \.\.\.fill, \.\.\.storedFrameStyle\(bg\.imagePos\) \}\}/);
+    assert.match(src("app/components/frontend/HomeLandingV2.tsx"), /data-frame-key=\{frame\}\s+style=\{\{ \.\.\.fill, \.\.\.storedFrameStyle\(bg\.imagePos\) \}\}/);
     assert.match(src("app/components/frontend/section-editor/EditablePart.tsx"), /data-frame-key=\{frameKey\(id, "bgImage"\)\}/);
     assert.match(src("app/components/frontend/section-editor/PosterSection.tsx"), /data-frame-key=\{id \? frameKey\(id, "image"\) : undefined\}/);
     const cs = src("app/components/frontend/section-editor/CustomSection.tsx");

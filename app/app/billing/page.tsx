@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BILLING_PLANS,
   orderedBillingPlans,
@@ -11,6 +11,11 @@ import {
 } from "@/lib/billing-constants";
 import { shouldOfferBillingPortal } from "@/lib/checkout-rules";
 import { billingSummaryStatusLabel } from "@/lib/billing-status-display";
+import {
+  deriveBillingState,
+  type BillingState,
+} from "@/lib/billing-access-state";
+import { BillingPaywall } from "@/app/components/billing/BillingPaywall";
 import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
@@ -45,6 +50,7 @@ type Status = {
   isTrialLimited: boolean;
   stripeConfigured: boolean;
   plans?: Record<BillingPlanId, BillingPlanMeta>;
+  billingState?: BillingState;
 };
 
 function prefersReducedMotion(): boolean {
@@ -58,6 +64,9 @@ function prefersReducedMotion(): boolean {
 
 function BillingPageInner() {
   const params = useSearchParams();
+  const router = useRouter();
+  const [email, setEmail] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const { toast } = useToast();
   const sessionId = params.get("session_id");
   const checkout = params.get("checkout");
@@ -157,6 +166,39 @@ function BillingPageInner() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { user?: { email?: string | null } | null } | null) => {
+        if (!cancelled) setEmail(d?.user?.email ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    setSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Still leave: the login page clears any half state.
+    }
+    router.replace("/app/login");
+    router.refresh();
+  }, [router]);
+
+  const billingState: BillingState | null = status
+    ? status.billingState ??
+      deriveBillingState({
+        ...status,
+        cancelAtPeriodEnd: Boolean(status.cancelAtPeriodEnd),
+        accessEndsAt: status.accessEndsAt ?? null,
+      })
+    : null;
+
   const openUpgrade = useCallback(() => {
     setCardFlipping(false);
     setUpgradeOpen(true);
@@ -236,12 +278,35 @@ function BillingPageInner() {
     }
   };
 
+  if (status && billingState?.gated) {
+    return (
+      <>
+        <ConversionTags />
+        <BillingPaywall
+          state={billingState}
+          plans={status.plans ?? BILLING_PLANS}
+          selected={plan}
+          onSelect={setPlan}
+          onCheckout={() => void checkoutStart()}
+          onSignOut={() => void signOut()}
+          busy={busy}
+          signingOut={signingOut}
+          stripeConfigured={status.stripeConfigured}
+          email={email}
+          message={msg}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="billing-page">
       <ConversionTags />
+      {status?.canUseApp ? (
       <Link href="/app" className="billing-back">
         ← Back to session
       </Link>
+      ) : null}
 
       <div className="billing-page-stage">
         <div
@@ -266,9 +331,9 @@ function BillingPageInner() {
                 <div className="settings-row settings-kv">
                   <span>Plan</span>
                   <strong className="capitalize">
-                    {status.status === "canceled" || status.plan === "free"
-                      ? "None"
-                      : status.plan}
+                    {status.canUseApp && status.plan !== "free"
+                      ? status.plan
+                      : "None"}
                   </strong>
                 </div>
                 <div className="settings-row settings-kv">

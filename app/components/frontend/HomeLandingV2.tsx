@@ -39,9 +39,14 @@ import {
   heroInk,
   heroTemplate,
   closeTemplate,
+  ctaShowcaseWords,
+  isCtaShowcase,
+  CTA_SHOWCASE_PHOTO,
+  backdropPlan,
   mediaNames,
 } from "@/lib/marketing-sections";
 import { HeroTemplateBody, heroInkStyle, useReducedMotion, type HeroParts } from "./HeroTemplates";
+import { CtaShowcase, ctaShowcaseTone } from "./CtaShowcase";
 import { EditablePart, GradientLayer } from "./section-editor/EditablePart";
 import { useSectionConfig, usePageLayout } from "./section-editor/MarketingCopy";
 import { useIsPlatformAdmin } from "./section-editor/useIsPlatformAdmin";
@@ -95,6 +100,20 @@ function needsUnoptimized(src: string): boolean {
   return !src.startsWith("/") && !src.includes("res.cloudinary.com");
 }
 
+/**
+ * Responsive widths for an untransformed Cloudinary image URL, so phones get a
+ * properly sized file instead of the multi-megapixel original (same crop,
+ * no quality loss at the rendered size). Other URLs: no srcset.
+ */
+const CLOUDINARY_PLAIN = /^(https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\/)(v\d+\/.+)$/;
+function cloudinarySrcSet(src: string): string | undefined {
+  const match = CLOUDINARY_PLAIN.exec(src);
+  if (!match) return undefined;
+  return [750, 1080, 1440, 1920, 2560, 3840]
+    .map((w) => `${match[1]}f_auto,q_auto:good,c_limit,w_${w}/${match[2]} ${w}w`)
+    .join(", ");
+}
+
 /** Admin-chosen background in place of a band's built-in photo. */
 function BandBackground({ bg, className, frame }: { bg: SectionBackground; className: string; frame?: string }) {
   const fill = { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } as const;
@@ -104,7 +123,15 @@ function BandBackground({ bg, className, frame }: { bg: SectionBackground; class
         <video className={className} src={bg.video} poster={bg.poster || undefined} autoPlay muted loop playsInline style={fill} />
       ) : bg.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img className={className} src={bg.image} alt="" data-frame-key={frame} style={{ ...fill, ...storedFrameStyle(bg.imagePos) }} />
+        <img
+          className={className}
+          src={bg.image}
+          srcSet={cloudinarySrcSet(bg.image)}
+          sizes={cloudinarySrcSet(bg.image) ? "100vw" : undefined}
+          alt=""
+          data-frame-key={frame}
+          style={{ ...fill, ...storedFrameStyle(bg.imagePos) }}
+        />
       ) : (
         <span className={className} style={{ ...fill, background: bg.color }} />
       )}
@@ -319,8 +346,11 @@ export function HomeLandingV2({
   );
   const closeBg = sectionBackground(close);
   const closeTpl = closeTemplate(close);
-  const closeHasPhoto = closeTpl === "meadow" || closeTpl === "magazine";
-  const closeHasMedia = closeHasPhoto || Boolean(closeBg);
+  // The ten shared CTA looks (also on Between sessions) render via CtaShowcase.
+  const closeShow = isCtaShowcase(closeTpl) ? closeTpl : null;
+  const closeHasPhoto = closeTpl === "meadow" || closeTpl === "magazine" || closeTpl === "fullbleed";
+  const closePlan = backdropPlan(close, closeHasPhoto);
+  const closeHasMedia = closePlan.showBg || closePlan.showBuiltIn || Boolean(closePlan.gradient);
   const MODES: ModeCard[] = sectionList(modesCopy, "modes").map((mode) => ({
     id: mode.id || "guided",
     label: mode.label ?? "",
@@ -888,30 +918,58 @@ export function HomeLandingV2({
       "home-close": (
       <EditablePart id="home-close" backdrop={false}>
       <section
-        className={`v2-close v2-close--tpl-${closeTpl}${closeBg ? " v2-close--custom-bg" : ""}`}
+        className={`v2-close v2-close--tpl-${closeTpl}${closeBg ? " v2-close--custom-bg" : ""}${closeHasMedia ? " v2-close--media" : ""}${
+          closeShow ? ` v2-close--showcase v2-close--${ctaShowcaseTone(closeShow)}` : ""
+        }`}
         id="start"
         aria-labelledby="v2-close-title"
       >
         {closeHasMedia ? (
           <div className="v2-close-media">
-            {closeBg ? (
-              <BandBackground bg={closeBg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
-            ) : (
+            {closePlan.bg && closePlan.showBg ? (
+              <BandBackground bg={closePlan.bg} className="v2-close-img" frame={frameKey("home-close", "bgImage")} />
+            ) : closePlan.showBuiltIn ? (
               <Image
-                src="/marketing/landing/green-meadow.jpg"
+                src={closeTpl === "fullbleed" ? CTA_SHOWCASE_PHOTO : "/marketing/landing/green-meadow.jpg"}
                 alt=""
                 fill
                 sizes="100vw"
                 className="v2-close-img"
               />
-            )}
+            ) : null}
+            {closePlan.gradient ? (
+              <GradientLayer gradient={closePlan.gradient} className={`v2-close-grad v2-close-grad--${closePlan.gradientAt}`} />
+            ) : null}
           </div>
         ) : null}
         {/* Built-in tint only over the default photo; a custom background uses the editor overlay. */}
-        {closeHasPhoto && !closeBg ? <span className="v2-close-tint" aria-hidden /> : null}
-        {closeHasPhoto ? null : (
+        {closePlan.showBuiltIn && !closeShow ? <span className="v2-close-tint" aria-hidden /> : null}
+        {closeHasPhoto || closeShow ? null : (
           <div className={`v2-close-deco v2-close-deco--${closeTpl}`} aria-hidden />
         )}
+        {closeShow ? (
+          <CtaShowcase
+            template={closeShow}
+            variant="close"
+            titleId="v2-close-title"
+            kicker={sectionText(close, "kicker")}
+            title={sectionText(close, "title")}
+            accent={sectionText(close, "accent")}
+            body={sectionText(close, "body")}
+            primary={{ label: sectionText(close, "primary"), href: sectionText(close, "primaryHref") }}
+            secondary={
+              sectionText(close, "secondary")
+                ? { label: sectionText(close, "secondary"), href: sectionText(close, "secondaryHref") || "/safety" }
+                : null
+            }
+            note={sectionText(close, "note")}
+            quote={sectionText(close, "quote")}
+            quoteBy={sectionText(close, "quoteBy")}
+            words={ctaShowcaseWords(sectionText(close, "words"))}
+            plan={closePlan}
+            paintMedia={false}
+          />
+        ) : (
         <div className="v2-close-inner">
           <div className={`v2-glass v2-glass--dark v2-close-card v2-close-card--${closeTpl} fe-animate`}>
             <p className="v2-kicker">{sectionText(close, "kicker")}</p>
@@ -933,6 +991,7 @@ export function HomeLandingV2({
             <p className="v2-close-note">{sectionText(close, "note")}</p>
           </div>
         </div>
+        )}
       </section>
       </EditablePart>
       ),

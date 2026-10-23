@@ -4,6 +4,7 @@ import type {
   Memory,
   Message,
   Thread,
+  ThreadPhaseChange,
 } from "./types";
 import { DEFAULT_SETTINGS } from "./types";
 import {
@@ -235,6 +236,26 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_feedback_sent_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_notice_sent_at TIMESTAMPTZ;
     ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN NOT NULL DEFAULT FALSE;
+    -- 2026-10-23 win-back reactivation (docs/migrations/2026-10-23-reactivation-offers.sql)
+    ALTER TABLE subscriptions ADD COLUMN IF NOT EXISTS trial_kind TEXT;
+    CREATE TABLE IF NOT EXISTS reactivation_offers (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      plan TEXT NOT NULL,
+      created_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMPTZ NOT NULL,
+      sent_at TIMESTAMPTZ,
+      opened_at TIMESTAMPTZ,
+      checkout_session_id TEXT,
+      used_at TIMESTAMPTZ,
+      new_subscription_id TEXT,
+      old_subscription_id TEXT,
+      old_status TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_reactivation_offers_user
+      ON reactivation_offers(user_id, created_at DESC);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS brevo_contact_synced_at TIMESTAMPTZ;
@@ -561,8 +582,26 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS set_count INTEGER NOT NULL DEFAULT 0;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS last_set_outcome TEXT;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS memory_extracted_at TIMESTAMPTZ;
+    -- 2026-10-23 closure card: start values for SUDs / VoC (docs/migrations/2026-10-23-thread-baselines.sql)
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS baseline_suds INTEGER;
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS baseline_voc INTEGER;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user';
+  `);
+
+  // 2026-10-23 phase timeline: one row per protocol phase change
+  // (docs/migrations/2026-10-23-thread-phase-changes.sql).
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS thread_phase_changes (
+      id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+      phase TEXT NOT NULL,
+      after_message_id TEXT,
+      message_index INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS idx_thread_phase_changes_thread
+      ON thread_phase_changes(thread_id, created_at);
   `);
 
   await db.query(`
@@ -643,6 +682,9 @@ function rowToThread(row: QueryResultRow): Thread {
       row.last_set_outcome === "completed" || row.last_set_outcome === "stopped"
         ? (row.last_set_outcome as Thread["lastSetOutcome"])
         : undefined,
+    baselineSuds:
+      row.baseline_suds != null ? Number(row.baseline_suds) : undefined,
+    baselineVoc: row.baseline_voc != null ? Number(row.baseline_voc) : undefined,
     incomplete: Boolean(row.incomplete),
     memoryExtractedAt: row.memory_extracted_at
       ? new Date(row.memory_extracted_at as string).toISOString()
@@ -786,18 +828,104 @@ export function clientProfileContextBlock(
   return lines.length ? lines.join("\n") : "";
 }
 
+function phaseChangeFromRow(r: QueryResultRow): ThreadPhaseChange {
+  return {
+    phase: r.phase as ThreadPhaseChange["phase"],
+    afterMessageId: (r.after_message_id as string | null) ?? null,
+    messageIndex: r.message_index != null ? Number(r.message_index) : 0,
+    createdAt: new Date(r.created_at as string).toISOString(),
+  };
+}
+
+function currentUserIdOrNull(): string | null {
+  try {
+    return getRlsContext().userId;
+  } catch {
+    return null;
+  }
+}
+
+function isMissingTable(err: unknown): boolean {
+  return (err as { code?: string } | null)?.code === "42P01";
+}
+
+/**
+ * Phase changes for the given threads, owner-only: joined on threads.user_id
+ * so a thread id alone never exposes someone else's timeline.
+ */
+export async function listPhaseChanges(
+  threadIds: string[],
+  userId: string
+): Promise<Map<string, ThreadPhaseChange[]>> {
+  const byThread = new Map<string, ThreadPhaseChange[]>();
+  if (!threadIds.length) return byThread;
+  try {
+    const { rows } = await dbQuery(
+      `SELECT p.thread_id, p.phase, p.after_message_id, p.message_index, p.created_at
+       FROM thread_phase_changes p
+       JOIN threads t ON t.id = p.thread_id
+       WHERE p.thread_id = ANY($1::text[]) AND t.user_id = $2
+       ORDER BY p.created_at ASC, p.message_index ASC`,
+      [threadIds, userId]
+    );
+    for (const r of rows) {
+      const list = byThread.get(r.thread_id as string) ?? [];
+      list.push(phaseChangeFromRow(r));
+      byThread.set(r.thread_id as string, list);
+    }
+  } catch (err) {
+    // Table not created yet (schema runs once per process): no badges, no crash.
+    if (!isMissingTable(err)) throw err;
+  }
+  return byThread;
+}
+
+/**
+ * Record a protocol phase change, anchored to the thread's latest message
+ * (in the chat turn that is the user's message, so the badge lands right
+ * before the guide reply that comes with the new phase). Never throws: the
+ * timeline is display-only and must not break a session update.
+ */
+export async function recordPhaseChange(
+  threadId: string,
+  phase: Thread["phase"]
+): Promise<void> {
+  try {
+    await dbQuery(
+      `INSERT INTO thread_phase_changes (id, thread_id, phase, after_message_id, message_index, created_at)
+       SELECT $1, $2, $3,
+         (SELECT m.id FROM messages m WHERE m.thread_id = $2 ORDER BY m.created_at DESC, m.id DESC LIMIT 1),
+         (SELECT COUNT(*)::int FROM messages m WHERE m.thread_id = $2),
+         now()
+       WHERE EXISTS (SELECT 1 FROM threads t WHERE t.id = $2)`,
+      [crypto.randomUUID(), threadId, phase]
+    );
+  } catch (err) {
+    console.error("recordPhaseChange failed:", err);
+  }
+}
+
 export async function listThreads(): Promise<Thread[]> {
   const { userId } = getRlsContext();
   const { rows } = await dbQuery(
     "SELECT * FROM threads WHERE user_id = $1 ORDER BY updated_at DESC",
     [userId]
   );
-  return rows.map(rowToThread);
+  const threads = rows.map(rowToThread);
+  const phases = await listPhaseChanges(threads.map((t) => t.id), userId);
+  return threads.map((t) => (phases.has(t.id) ? { ...t, phaseChanges: phases.get(t.id) } : t));
 }
 
 export async function getThread(id: string): Promise<Thread | null> {
   const { rows } = await dbQuery("SELECT * FROM threads WHERE id = $1", [id]);
-  return rows[0] ? rowToThread(rows[0]) : null;
+  if (!rows[0]) return null;
+  const thread = rowToThread(rows[0]);
+  const userId = currentUserIdOrNull();
+  if (userId && rows[0].user_id === userId) {
+    const phases = await listPhaseChanges([id], userId);
+    if (phases.has(id)) thread.phaseChanges = phases.get(id);
+  }
+  return thread;
 }
 
 export async function createThread(title: string): Promise<Thread> {
@@ -819,10 +947,12 @@ export async function updateThread(
   const existing = await getThread(id);
   if (!existing) return null;
   const merged = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+  delete merged.phaseChanges;
   await dbQuery(
     `UPDATE threads SET title=$1, phase=$2, target=$3, negative_cognition=$4, positive_cognition=$5,
      suds=$6, voc=$7, summary=$8, incomplete=$9, mode=$10, description=$11, intake_complete=$12,
-     agent_language=$13, set_count=$14, last_set_outcome=$15, updated_at=$16 WHERE id=$17`,
+     agent_language=$13, set_count=$14, last_set_outcome=$15, updated_at=$16,
+     baseline_suds=$18, baseline_voc=$19 WHERE id=$17`,
     [
       merged.title,
       merged.phase,
@@ -841,14 +971,28 @@ export async function updateThread(
       merged.lastSetOutcome ?? null,
       merged.updatedAt,
       id,
+      merged.baselineSuds ?? null,
+      merged.baselineVoc ?? null,
     ]
   );
+  // Same rule as shouldRecordPhaseChange (lib/phase-timeline): only real changes.
+  if (merged.phase && merged.phase !== existing.phase) {
+    await recordPhaseChange(id, merged.phase);
+  }
   return getThread(id);
 }
 
-export async function deleteThread(id: string) {
+/** Delete one of the signed-in user's threads (never anyone else's). */
+export async function deleteThread(id: string): Promise<boolean> {
+  const { userId } = getRlsContext();
+  const { rows } = await dbQuery<{ id: string }>(
+    "SELECT id FROM threads WHERE id = $1 AND user_id = $2",
+    [id, userId]
+  );
+  if (!rows.length) return false;
   await dbQuery("DELETE FROM messages WHERE thread_id = $1", [id]);
-  await dbQuery("DELETE FROM threads WHERE id = $1", [id]);
+  await dbQuery("DELETE FROM threads WHERE id = $1 AND user_id = $2", [id, userId]);
+  return true;
 }
 
 /**

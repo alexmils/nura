@@ -7,6 +7,7 @@ import {
 } from "@/lib/stripe";
 import {
   findUserIdByStripeCustomer,
+  getSubscriptionByUserId,
   mapStripeSubscription,
   markStripeEventProcessed,
   releaseStripeEvent,
@@ -31,6 +32,7 @@ import {
   sendSubscriptionCanceledEmail,
 } from "@/lib/email/billing-customer";
 import { syncBrevoContactForUser } from "@/lib/email/brevo-contacts";
+import { finalizeReactivationCheckout } from "@/lib/reactivation-stripe";
 
 function verifyStripeEvent(
   body: string,
@@ -120,7 +122,12 @@ export async function POST(request: Request) {
         subscription?: string | null;
         amount_total?: number | null;
         currency?: string | null;
-        metadata?: { user_id?: string; user_email?: string; plan?: string };
+        metadata?: {
+          user_id?: string;
+          user_email?: string;
+          plan?: string;
+          reactivation_offer_id?: string;
+        };
       };
       const userId = await resolveUserId(
         {
@@ -147,7 +154,26 @@ export async function POST(request: Request) {
 
       const amountCents = session.amount_total ?? mapped.amountCents ?? 0;
       const isTrial = mapped.status === "trialing" || amountCents === 0;
-      if (isTrial) {
+      const isReactivation = Boolean(session.metadata?.reactivation_offer_id);
+      if (isReactivation) {
+        // Win-back trial: consume the one-use link, retire the old (past due /
+        // scheduled-cancel) subscription. No StartTrial conversion and no
+        // "7-day trial" email, this is a returning member.
+        const result = await finalizeReactivationCheckout({
+          stripe,
+          session: {
+            id: session.id ?? event.id,
+            status: "complete",
+            customer: session.customer ?? null,
+            subscription: session.subscription,
+            metadata: session.metadata as Stripe.Metadata,
+          },
+          livemode: event.livemode,
+          eventCreatedAt: event.created,
+          stripeEventId: event.id,
+        });
+        console.log("[webhooks/stripe] reactivation", JSON.stringify(result));
+      } else if (isTrial) {
         await runCheckoutTrialEffects({
           userId,
           checkoutSessionId: session.id ?? event.id,
@@ -209,6 +235,17 @@ export async function POST(request: Request) {
       }
 
       if (event.type === "customer.subscription.deleted") {
+        // A subscription retired by a newer one (win-back trial replacing a
+        // past-due plan): nothing ended for the member, so no "canceled"
+        // email and no cancel ping.
+        const current = await getSubscriptionByUserId(userId);
+        if (
+          current?.stripe_subscription_id &&
+          current.stripe_subscription_id !== sub.id &&
+          (current.status === "trialing" || current.status === "active")
+        ) {
+          return NextResponse.json({ received: true, superseded: true });
+        }
         await syncSubscriptionFromStripe({
           userId,
           plan: "free",

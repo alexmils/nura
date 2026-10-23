@@ -2,6 +2,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
+import { AdminReactivationPanel } from "@/app/components/admin/AdminReactivationPanel";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { AdminSettingToggle } from "@/app/components/admin/AdminSettingToggle";
 import { formatDateTime, formatMoney } from "@/lib/admin-format";
@@ -32,12 +33,13 @@ const EMPTY_STRIPE: StripeAdminView = {
   live: emptyEnvView(),
 };
 type EnvKey = "sandbox" | "live";
-const TABS = ["overview", "stripe", "subscriptions", "usage"] as const;
+const TABS = ["overview", "stripe", "subscriptions", "winback", "usage"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_ITEMS = [
   { id: "overview", label: "Overview" },
   { id: "stripe", label: "Stripe" },
   { id: "subscriptions", label: "Subscriptions" },
+  { id: "winback", label: "Win-back" },
   { id: "usage", label: "Usage" },
 ] as const;
 function AdminBillingPageInner() {
@@ -558,7 +560,8 @@ function AdminBillingPageInner() {
             ) : null}
           </form>
         )}
-        {tab === "subscriptions" && (
+        {tab === "winback" && <AdminReactivationPanel />}
+      {tab === "subscriptions" && (
           <section className="admin-panel">
             <h2 className="admin-panel-title">Subscriptions</h2>
             <div className="admin-table-wrap">

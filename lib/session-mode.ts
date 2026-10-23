@@ -67,6 +67,25 @@ export function canStartBls(opts: {
   return phaseAllowsBlsSet(opts.phase);
 }
 
+/**
+ * Safety net: in a guided chat phase (intake / grounding / assessment) the
+ * person may start the first set themselves once a target and a SUDs rating
+ * are known, so a missed phase advance never strands them without a ball.
+ * Starting moves the thread to desensitization.
+ */
+export function canManualStartGuidedSet(opts: {
+  sessionKind: SessionKind;
+  phase: ProtocolPhase;
+  sessionMode: SessionMode;
+  target?: string | null;
+  suds?: number | null;
+}): boolean {
+  if (opts.sessionKind !== "guided") return false;
+  if (opts.sessionMode !== "idle") return false;
+  if (phaseAllowsBlsSet(opts.phase) || opts.phase === "closure") return false;
+  return Boolean(opts.target?.trim()) && opts.suds != null;
+}
+
 /** Redo a set after it finished without answering check-in (missed / interrupted). */
 export function canRepeatGuidedSet(opts: {
   sessionKind: SessionKind;

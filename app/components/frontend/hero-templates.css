@@ -696,3 +696,78 @@
 .fe-media-video-toggle:hover {
   transform: translate(-50%, -50%) scale(1.06);
 }
+
+/* ---------------------------------------------------------------- */
+/* Phones (every template): the hero fits one iPhone screen with the */
+/* floating header over the photo, a compact H1 and the CTA + trust  */
+/* row above the fold. Desktop is untouched.                         */
+/* ---------------------------------------------------------------- */
+@media (max-width: 640px) {
+  .fe-v2 .v2-hero,
+  .fe-v2 .v2-hero.v2-hero--tpl,
+  .fe-v2 .v2-hero.v2-hero--trust {
+    min-height: 100svh;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-inner,
+  .fe-v2 .v2-hero .v2-tpl {
+    min-height: 100svh;
+    /* Header pill (~4.6rem incl. its top offset) + air. */
+    padding: calc(5.75rem + env(safe-area-inset-top, 0px)) 1.25rem 2rem;
+  }
+
+  .fe-v2 .v2-hero.v2-hero--trust .v2-hero-inner,
+  .fe-v2 .v2-hero.v2-hero--trust .v2-tpl {
+    min-height: 0;
+    padding-bottom: 1rem;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-title {
+    font-size: clamp(2.125rem, 9.6vw, 2.375rem);
+    line-height: 1.04;
+    letter-spacing: -0.04em;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-kicker {
+    margin-bottom: 1.1rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.66rem;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-sub {
+    margin-top: 0.9rem;
+    font-size: 0.98rem;
+    line-height: 1.5;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-actions {
+    margin-top: 1.25rem;
+    gap: 0.6rem;
+  }
+
+  .fe-v2 .v2-hero .v2-hero-trust {
+    margin-top: 0.9rem;
+  }
+
+  /* Cinema / billboard bar: compact and lighter so the photo still reads. */
+  .fe-v2 .v2-hero .v2-tpl-bar {
+    gap: 0.9rem;
+    padding: 1rem 1.05rem 1.1rem;
+    border-radius: 1.25rem;
+    background: rgba(10, 22, 14, 0.34);
+  }
+
+  .fe-v2 .v2-hero .v2-tpl-bar-label {
+    margin-bottom: 0.6rem;
+  }
+
+  /* A custom photo: frame the middle of the picture, not its bottom edge
+     (a saved focal point from the editor still wins via the inline style). */
+  .v2-hero--plain .v2-hero-photo-img {
+    object-position: 50% 45%;
+  }
+
+  .v2-hero-trust-slot {
+    padding: 0 0 max(0.75rem, env(safe-area-inset-bottom, 0px));
+  }
+}

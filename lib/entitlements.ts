@@ -4,6 +4,7 @@ import {
   TRIAL_GUIDED_SESSIONS,
 } from "@/lib/billing-constants";
 import type { UserRole } from "@/lib/roles";
+import { deriveBillingState } from "@/lib/billing-access-state";
 
 export type AccessTier = "none" | "legacy" | "trialing" | "active" | "blocked";
 
@@ -45,6 +46,7 @@ type SubRow = {
   trial_ends_at: string | null;
   access_tier: string | null;
   cancel_at_period_end: boolean;
+  trial_kind: string | null;
 };
 
 type UsageRow = {
@@ -78,6 +80,8 @@ export function resolveAccessTier(input: {
   accessTier: string | null | undefined;
   status: string | null | undefined;
   trialEndsAt: string | null | undefined;
+  renewsAt?: string | null;
+  cancelAtPeriodEnd?: boolean;
   now?: Date;
 }): AccessTier {
   if (input.role === "platform_admin" || input.role === "support") {
@@ -94,6 +98,13 @@ export function resolveAccessTier(input: {
     const ends = input.trialEndsAt ? new Date(input.trialEndsAt) : null;
     if (ends && ends.getTime() < now.getTime()) return "blocked";
     return "trialing";
+  }
+
+  // Canceled at period end but the paid period is still running (e.g. the
+  // webhook wrote "canceled" early): keep access until the real end date.
+  if (status === "canceled" && input.cancelAtPeriodEnd && input.renewsAt) {
+    const end = new Date(input.renewsAt).getTime();
+    if (Number.isFinite(end) && end > now.getTime()) return "active";
   }
 
   if (
@@ -120,10 +131,13 @@ export function buildEntitlementSnapshot(input: {
   cancelAtPeriodEnd?: boolean;
   guidedUsed: number;
   blsSecondsUsed: number;
+  /** "reactivation" = 30-day win-back trial: full access, no trial caps. */
+  trialKind?: string | null;
   now?: Date;
 }): EntitlementSnapshot {
   const accessTier = resolveAccessTier(input);
-  const isTrialLimited = accessTier === "trialing";
+  const isTrialLimited =
+    accessTier === "trialing" && input.trialKind !== "reactivation";
   const guidedLimit = isTrialLimited ? TRIAL_GUIDED_SESSIONS : Number.POSITIVE_INFINITY;
   const blsLimit = isTrialLimited ? TRIAL_BLS_SECONDS : Number.POSITIVE_INFINITY;
   const guidedUsed = Math.max(0, input.guidedUsed);
@@ -144,8 +158,16 @@ export function buildEntitlementSnapshot(input: {
     accessTier === "trialing" ||
     accessTier === "active";
   const needsPayment = accessTier === "blocked" || accessTier === "none";
-  const cancelAtPeriodEnd = Boolean(input.cancelAtPeriodEnd);
   const renewsAt = asIso(input.renewsAt);
+  const nowMs = (input.now ?? new Date()).getTime();
+  // "Canceling" only means something while access is live and the period
+  // end is still ahead. A leftover flag on an ended / unpaid subscription is
+  // just "ended", so the UI never shows "Plan: None" next to "Canceling".
+  const cancelAtPeriodEnd =
+    Boolean(input.cancelAtPeriodEnd) &&
+    (accessTier === "active" || accessTier === "trialing") &&
+    renewsAt !== null &&
+    new Date(renewsAt).getTime() > nowMs;
   const accessEndsAt = cancelAtPeriodEnd ? renewsAt : null;
 
   return {
@@ -181,7 +203,8 @@ export async function getEntitlementForUser(input: {
   const [{ rows: subRows }, { rows: usageRows }] = await Promise.all([
     pool.query<SubRow>(
       `SELECT plan, status, renews_at, trial_ends_at, access_tier,
-              COALESCE(cancel_at_period_end, FALSE) AS cancel_at_period_end
+              COALESCE(cancel_at_period_end, FALSE) AS cancel_at_period_end,
+              trial_kind
        FROM subscriptions WHERE user_id = $1`,
       [input.userId]
     ),
@@ -206,6 +229,7 @@ export async function getEntitlementForUser(input: {
     cancelAtPeriodEnd: Boolean(sub?.cancel_at_period_end),
     guidedUsed: Number(usage?.guided_sessions_used ?? 0),
     blsSecondsUsed: Number(usage?.bls_seconds_used ?? 0),
+    trialKind: sub?.trial_kind ?? null,
   });
 }
 
@@ -229,5 +253,6 @@ export function publicEntitlement(snapshot: EntitlementSnapshot) {
     blsSecondsRemaining: snapshot.blsSecondsRemaining,
     isTrialLimited: snapshot.isTrialLimited,
     onboardingCompletedAt: snapshot.onboardingCompletedAt,
+    billingState: deriveBillingState(snapshot),
   };
 }

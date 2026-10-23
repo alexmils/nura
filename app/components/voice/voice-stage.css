@@ -1,0 +1,147 @@
+/*
+ * Voice mode (desktop, tablets, portrait phones): a quiet, opaque full-viewport stage with just the
+ * orb, a status line and the controls. Portalled to <body>, so it sits
+ * above the session header, transcript and cards; nothing shows through.
+ */
+.voice-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  width: 100vw;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  justify-items: center;
+  align-items: center;
+  gap: 1rem;
+  box-sizing: border-box;
+  padding:
+    max(1.5rem, env(safe-area-inset-top))
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.75rem, calc(env(safe-area-inset-bottom) + 1rem))
+    max(1.5rem, env(safe-area-inset-left));
+  overflow: hidden;
+  overscroll-behavior: contain;
+  touch-action: none;
+  /* Solid base first, so nothing behind can ever bleed through. */
+  background-color: #f6faef;
+  background-image:
+    radial-gradient(ellipse 85% 55% at 50% 40%, rgba(246, 231, 168, 0.45), rgba(246, 231, 168, 0) 70%),
+    linear-gradient(180deg, #fbfcf4 0%, #eef6e4 100%);
+  color: var(--text, #2a3020);
+  animation: voice-stage-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.voice-stage--exit {
+  animation: voice-stage-out 0.45s ease both;
+  pointer-events: none;
+}
+@keyframes voice-stage-in {
+  from { opacity: 0; }
+}
+@keyframes voice-stage-out {
+  to { opacity: 0; }
+}
+
+/* Only a phone held sideways is text mode (+ bottom glow); the stage never
+ * shows there. Keep in sync with PHONE_LANDSCAPE_QUERY (voice-orb-env.ts). */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .voice-stage { display: none; }
+}
+
+/* Keep floating helpers out of the way while voice mode is up. */
+html.voice-stage-open .a11y-widget,
+html.voice-stage-open .help-fab,
+body:has(.voice-stage) .a11y-widget,
+body:has(.voice-stage) .help-fab {
+  display: none !important;
+}
+
+.voice-stage-orb {
+  position: relative;
+  width: min(72vw, 44svh, 24rem);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.voice-stage--speaking .voice-stage-orb { cursor: pointer; }
+.voice-stage-orb:focus-visible {
+  outline: 3px solid var(--accent, #4a7234);
+  outline-offset: 6px;
+}
+
+.voice-stage-status {
+  min-height: 2.6rem;
+  text-align: center;
+}
+.voice-stage-label {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-secondary, #5e7048);
+}
+.voice-stage-error {
+  margin: 0.4rem auto 0;
+  max-width: 22rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #8a2f1f;
+}
+
+.voice-stage-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.voice-stage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 3.5rem;
+  height: 3.5rem;
+  padding: 0 1.25rem;
+  border: 1px solid rgba(42, 48, 32, 0.12);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text, #2a3020);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(42, 48, 32, 0.1);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background-color 0.2s ease;
+}
+.voice-stage-btn--round { padding: 0; width: 3.5rem; }
+.voice-stage-btn:active { transform: scale(0.94); }
+.voice-stage-btn.is-on {
+  background: #2a3020;
+  color: #f4f7ee;
+}
+.voice-stage-btn--end {
+  background: #2f4a22;
+  border-color: transparent;
+  color: #fff;
+}
+.voice-stage-btn--resume {
+  background: var(--accent, #4a7234);
+  color: #f4f7ee;
+}
+.voice-stage-btn:focus-visible {
+  outline: 3px solid var(--accent, #4a7234);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-stage,
+  .voice-stage--exit {
+    animation: none;
+  }
+}

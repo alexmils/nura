@@ -73,10 +73,15 @@ export function LetterRevealHeading({
       id={id}
       className={`fe-letter-reveal${className ? ` ${className}` : ""}`}
     >
-      {/* Full text for SEO and screen readers; the animated copy is decorative. */}
+      {/* Full text for SEO and screen readers (read once); not selectable, so
+          copy/paste takes the visible sentence below instead of both. */}
       <span className="fe-letter-reveal-sr">{children}</span>
+      {/* Decorative letters: inline-block glyphs inside inline-block words with
+          real text-node spaces between words, so a selection copies as the
+          normal sentence ("Eyes, ears, or hands") and highlights like text. */}
       <span aria-hidden="true" className="fe-letter-reveal-inner">
-        {words.map((word, wi) => (
+        {words.map((word, wi) => [
+          wi > 0 ? " " : null,
           <span key={`w-${wi}`} className="fe-letter-word">
             {Array.from(word).map((ch) => {
               const delay = letterIndex / 50;
@@ -92,8 +97,8 @@ export function LetterRevealHeading({
                 </span>
               );
             })}
-          </span>
-        ))}
+          </span>,
+        ])}
       </span>
     </Tag>
   );

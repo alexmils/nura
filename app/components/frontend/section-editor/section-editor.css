@@ -22,6 +22,12 @@
   box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 12%, transparent);
 }
 
+/* Hidden while its section is off screen or covered (see AdminSectionChip). */
+.fe-section-chip[data-offscreen] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .fe-section-chip--lift {
   top: 5.5rem;
 }
@@ -393,11 +399,23 @@ html[data-editor-open] .frontend-back-to-top {
   font-size: 0;
 }
 
-/* Image/video fields fill the panel; icon fields are a small square. The
-   wrapper used to shrink to the "Add" label, making a tall narrow pill. */
+/* Image/video fields are a compact 240px preview (16:9); icon fields are a
+   small square. The wrapper used to shrink to the "Add" label, making a tall
+   narrow pill. */
 .fe-editor-field > .fe-replace {
   display: block;
-  width: 100%;
+  width: min(100%, 15rem);
+}
+
+.fe-editor-field > .fe-replace .fe-replace-thumb {
+  max-width: none;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+}
+
+.fe-editor-field > .fe-replace .fe-replace-thumb img,
+.fe-editor-field > .fe-replace .fe-replace-thumb video {
+  height: 100%;
 }
 
 .fe-editor-field--thumb > .fe-replace {
@@ -872,21 +890,59 @@ html[data-editor-open] .frontend-back-to-top {
   margin: 0;
 }
 
-/* Thumb hover: pencil + Change */
+/* Thumb hover/focus: a subtle dark wash and a centered "replace" glyph
+   (two circular arrows) on a semi-transparent dark circle. */
 .fe-replace-hover {
   position: absolute;
   inset: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(10, 20, 14, 0.28);
   color: #fff;
-  font-size: 13px;
-  font-weight: 600;
   opacity: 0;
   transition: opacity 0.15s ease;
   pointer-events: none;
+}
+
+.fe-replace-hover-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(10, 20, 14, 0.62);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* `.fe-editor-field span` (the field label style: block, uppercase, margin)
+   used to win here and dropped the glyph into the top-left corner. */
+.fe-replace .fe-replace-thumb .fe-replace-hover {
+  display: flex;
+  margin: 0;
+}
+
+.fe-replace .fe-replace-thumb .fe-replace-hover-icon {
+  display: inline-flex;
+  margin: 0;
+}
+
+.fe-editor-field--thumb .fe-replace-hover-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.fe-editor-field--thumb .fe-replace-hover-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fe-replace-hover {
+    transition: none;
+  }
 }
 
 .fe-replace-thumb:hover .fe-replace-hover,
@@ -1085,4 +1141,10 @@ html[data-frame-drag] [data-frame-key] {
   display: grid;
   gap: 0.9rem;
   padding: 0.95rem 1rem 1.05rem;
+}
+
+/* The list item an editor was opened on (e.g. the stage on screen). */
+.fe-editor-item.is-focus {
+  box-shadow: 0 0 0 2px var(--fe-accent, #84b067);
+  transition: box-shadow 0.6s ease;
 }

@@ -6,6 +6,7 @@ type Props = {
   x: number;
   y: number;
   onRename: () => void;
+  onEditDescription: () => void;
   onDelete: () => void;
   onClose: () => void;
 };
@@ -14,6 +15,7 @@ export function ThreadContextMenu({
   x,
   y,
   onRename,
+  onEditDescription,
   onDelete,
   onClose,
 }: Props) {
@@ -35,7 +37,10 @@ export function ThreadContextMenu({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
+    // Ignore the release of the long press that opened the menu.
+    const openedAt = performance.now();
     const onPointer = (e: PointerEvent) => {
+      if (performance.now() - openedAt < 120) return;
       if (ref.current?.contains(e.target as Node)) return;
       onClose();
     };
@@ -62,6 +67,14 @@ export function ThreadContextMenu({
         onClick={onRename}
       >
         Rename
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="dropdown-item w-full text-left"
+        onClick={onEditDescription}
+      >
+        Edit description
       </button>
       <div className="dropdown-divider" role="separator" />
       <button

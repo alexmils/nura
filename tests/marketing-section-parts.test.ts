@@ -19,6 +19,7 @@ import {
   sectionBackground,
   sectionList,
   sectionText,
+  slotMedia,
 } from "../lib/marketing-sections.ts";
 import { parseArticle } from "../lib/rich-article.ts";
 
@@ -76,6 +77,73 @@ describe("one panel per visual section", () => {
     assert.equal(cards.length, 3);
     assert.equal(cards[0]?.label, "Eyes");
     assert.equal(cards[0]?.icon, "");
+  });
+
+  it("Ground first: all three visuals take an Animation / Image / Video slot", () => {
+    const def = getSectionDef("home-how-ground");
+    assert.ok(def);
+    assert.deepEqual(def.fields.map((field) => field.key), ["groundMedia", "ground"]);
+    const top = def.fields.find((field) => field.key === "groundMedia");
+    assert.equal(top?.kind, "media");
+    assert.equal(top?.kind === "media" ? top.defaultLabel : "", "Animation");
+    const list = def.fields.find((field) => field.key === "ground");
+    const children = list?.kind === "list" ? list.fields : [];
+    assert.deepEqual(children.map((field) => field.key), ["title", "line", "media"]);
+    const cardMediaField = children.find((field) => field.key === "media");
+    assert.equal(cardMediaField?.kind === "media" ? cardMediaField.defaultLabel : "", "Animation");
+
+    // Default (and old saved configs without the keys): animation everywhere.
+    const plain = normalizeSection("home-how-ground", null);
+    assert.equal(sectionText(plain, "groundMediaKind"), "none");
+    assert.equal(slotMedia(plain, "groundMedia"), null);
+    const legacy = normalizeSection("home-how-ground", {
+      ground: [
+        { id: "safe", title: "Safe place first.", line: "Feet on the floor." },
+        { id: "cold", title: "No cold starts.", line: "Intake first." },
+      ],
+    });
+    for (const card of sectionList(legacy, "ground")) {
+      assert.equal(card.mediaKind, "none");
+      assert.equal(slotMedia(card, "media"), null);
+    }
+
+    // Saved media survives normalizing (what the save route stores).
+    const saved = normalizeSection("home-how-ground", {
+      groundMediaKind: "image",
+      groundMediaImage: "/media/start.png",
+      groundMediaAlt: "Start a session",
+      ground: [
+        { id: "safe", title: "Safe place first.", line: "Feet.", mediaKind: "video", mediaVideo: "/media/safe.mp4" },
+        { id: "cold", title: "No cold starts.", line: "Intake.", mediaKind: "image", mediaImage: "" },
+      ],
+    });
+    assert.deepEqual(slotMedia(saved, "groundMedia"), {
+      kind: "image",
+      image: "/media/start.png",
+      video: "",
+      poster: "",
+      alt: "Start a session",
+    });
+    const [safe, cold] = sectionList(saved, "ground");
+    assert.equal(slotMedia(safe, "media")?.kind, "video");
+    assert.equal(slotMedia(safe, "media")?.video, "/media/safe.mp4");
+    // Image chosen but no file: falls back to the animation.
+    assert.equal(slotMedia(cold, "media"), null);
+  });
+
+  it("stage and rhythm media offer the built-in animation as the default", () => {
+    const stagesDef = getSectionDef("home-how-stages");
+    const stagesField = stagesDef?.fields.find((field) => field.key === "stages");
+    const stageMedia = stagesField?.kind === "list" ? stagesField.fields.find((field) => field.key === "media") : undefined;
+    assert.equal(stageMedia?.kind === "media" ? stageMedia.defaultLabel : "", "Animation");
+    const rhythmMedia = getSectionDef("home-how-rhythm")?.fields.find((field) => field.key === "rhythmMedia");
+    assert.equal(rhythmMedia?.kind === "media" ? rhythmMedia.defaultLabel : "", "Animation");
+    // A saved stage image keeps rendering (Close gently's photo).
+    const stages = normalizeSection("home-how-stages", {
+      stages: [{ id: "close", nav: "Close gently", mediaKind: "image", mediaImage: "/media/meadow.jpg" }],
+    });
+    const close = sectionList(stages, "stages").find((stage) => stage.id === "close");
+    assert.equal(slotMedia(close, "media")?.image, "/media/meadow.jpg");
   });
 
   it("every section id is unique", () => {

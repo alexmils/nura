@@ -91,6 +91,8 @@ describe("browser-speech", () => {
 class AndroidLikeRecognition {
   static instances: AndroidLikeRecognition[] = [];
   static failStart = false;
+  /** Simulates iOS when the speech service never spins up. */
+  static silentStart = false;
 
   continuous = true;
   interimResults = false;
@@ -98,6 +100,7 @@ class AndroidLikeRecognition {
   onresult: ((ev: unknown) => void) | null = null;
   onerror: ((ev: { error?: string; message?: string }) => void) | null = null;
   onend: (() => void) | null = null;
+  onstart: (() => void) | null = null;
 
   ended = false;
 
@@ -110,6 +113,8 @@ class AndroidLikeRecognition {
       throw new Error("InvalidStateError: recognition already started");
     }
     if (this.ended) throw new Error("InvalidStateError: recognition has ended");
+    // Real engines report onstart once the mic is open.
+    if (!AndroidLikeRecognition.silentStart) queueMicrotask(() => this.onstart?.());
   }
 
   stop() {
@@ -212,6 +217,37 @@ describe("browser-speech continuous listening", () => {
       assert.deepEqual(finals, ["I feel tense", "in my shoulders"]);
       assert.ok(statuses.includes("listening"));
     } finally {
+      session?.abort();
+      removeWindow();
+    }
+  });
+
+  it("does not claim Listening until the engine starts, and surfaces a stuck start", async () => {
+    installAndroidWindow();
+    AndroidLikeRecognition.silentStart = true;
+    const statuses: string[] = [];
+    const errors: string[] = [];
+    let ended = false;
+    const session = startBrowserSpeech(
+      {
+        onStatus: (s) => statuses.push(s),
+        onError: (code) => errors.push(code),
+        onEnd: () => {
+          ended = true;
+        },
+      },
+      { startTimeoutMs: 80 }
+    );
+    try {
+      assert.ok(session);
+      assert.deepEqual(statuses, ["starting"]);
+      await sleep(150);
+      assert.ok(!statuses.includes("listening"));
+      assert.equal(statuses.at(-1), "stopped");
+      assert.deepEqual(errors, ["other"]);
+      assert.equal(ended, true);
+    } finally {
+      AndroidLikeRecognition.silentStart = false;
       session?.abort();
       removeWindow();
     }

@@ -15,33 +15,33 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+  /* Copy comes from the visible letters; keep this out of selections. */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .fe-letter-reveal-inner {
   display: block;
+  /* Real spaces are narrower than the old 0.24em word margin; top them up so
+     the layout matches the previous design. */
+  word-spacing: 0.065em;
 }
 
+/* inline-block (not inline-flex): flex items serialise as separate lines, so
+   copying used to paste one letter per line. Words keep together; the real
+   space text nodes between them wrap and copy as single spaces. */
 .fe-letter-word {
-  display: inline-flex;
-  align-items: flex-start;
+  display: inline-block;
+  white-space: nowrap;
   clip-path: inset(-0.15em -0.1em);
   vertical-align: top;
 }
 
-/* Word spacing is CSS, not a literal space in the animated copy. */
-.fe-letter-word + .fe-letter-word {
-  margin-left: 0.24em;
-}
-
 .fe-letter {
-  display: inline-flex;
+  display: inline-block;
   opacity: 0;
   transform: translateY(120%);
   will-change: transform, opacity;
-}
-
-.fe-letter-space {
-  display: inline-flex;
 }
 
 .fe-letter-reveal.is-in .fe-letter {

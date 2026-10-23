@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { LifeBuoy } from "lucide-react";
 import { BRAND_SPOKEN } from "@/lib/brand";
 import {
   FIND_A_HELPLINE_URL,
@@ -82,10 +83,12 @@ export function CrisisHelpButton() {
         ref={btnRef}
         type="button"
         className="crisis-help-btn"
+        aria-label="I need help now"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
       >
+        <LifeBuoy className="crisis-help-btn-icon" size={15} strokeWidth={2} aria-hidden />
         <span className="crisis-help-btn-label crisis-help-btn-label--full">
           I need help now
         </span>

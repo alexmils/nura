@@ -1,0 +1,94 @@
+/* VoiceOrb: fills its (square) parent. Swap the internals freely. */
+.voice-orb {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+/*
+ * Orbkit SHDR-21 canvas. ~420px max, but always inside a portrait phone
+ * (78vw) and short screens (52svh). Centred on the orb button, so it may
+ * overhang that square a little; the glass halo is meant to breathe.
+ * Orbkit sizes the backing store from this box via ResizeObserver.
+ */
+.voice-orb-shdr {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  --voice-orb-size: min(420px, 78vw, 52svh);
+  width: var(--voice-orb-size);
+  height: var(--voice-orb-size);
+  transform: translate(-50%, -50%);
+}
+
+/*
+ * CSS blob: layered soft radial gradients, yellow -> pastel cream -> green,
+ * no hard edges. The outer span follows the live level; the core breathes
+ * at a pace per state.
+ */
+.voice-orb-blob {
+  --voice-level: 0;
+  position: absolute;
+  inset: 8%;
+  display: block;
+  border-radius: 50%;
+  transform: scale(calc(0.94 + var(--voice-level) * 0.14));
+  transition: transform 0.12s linear;
+}
+.voice-orb-blob::before {
+  /* halo */
+  content: "";
+  position: absolute;
+  inset: -14%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--orb-halo, rgba(230, 200, 94, 0.28)) 0%, rgba(230, 200, 94, 0) 68%);
+  filter: blur(18px);
+  opacity: calc(0.55 + var(--voice-level) * 0.45);
+  transition: background 0.8s ease;
+}
+.voice-orb-blob-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 34%, rgba(255, 253, 240, 0.95) 0%, rgba(255, 253, 240, 0) 38%),
+    radial-gradient(circle at 64% 66%, var(--orb-c, #9cc97a) 0%, rgba(156, 201, 122, 0) 58%),
+    radial-gradient(circle at 50% 50%, var(--orb-a, #f6e7a8) 0%, var(--orb-b, #eaf4d6) 58%, var(--orb-c, #9cc97a) 100%);
+  box-shadow: 0 28px 70px -24px var(--orb-shadow, rgba(132, 176, 103, 0.55));
+  filter: saturate(1.05);
+  animation: voice-orb-breathe var(--orb-pace, 6s) ease-in-out infinite;
+  transition: background 0.8s ease, box-shadow 0.8s ease;
+}
+.voice-orb-blob--idle {
+  --orb-a: #f8efc6; --orb-b: #eef5e2; --orb-c: #b9d79a; --orb-pace: 6.5s;
+  --orb-halo: rgba(198, 220, 174, 0.35); --orb-shadow: rgba(132, 176, 103, 0.4);
+}
+.voice-orb-blob--listening {
+  --orb-a: #e6f8c0; --orb-b: #def7c0; --orb-c: #7fc44f; --orb-pace: 3.4s;
+  --orb-halo: rgba(140, 210, 100, 0.42); --orb-shadow: rgba(70, 130, 50, 0.45);
+}
+.voice-orb-blob--thinking {
+  --orb-a: #e4f6e2; --orb-b: #d6efd8; --orb-c: #5fb07a; --orb-pace: 2.4s;
+  --orb-halo: rgba(110, 190, 130, 0.4); --orb-shadow: rgba(47, 122, 69, 0.42);
+}
+.voice-orb-blob--thinking .voice-orb-blob-core {
+  animation-name: voice-orb-think;
+}
+.voice-orb-blob--speaking {
+  --orb-a: #d4f79a; --orb-b: #e6fbcc; --orb-c: #6ad83a; --orb-pace: 1.8s;
+  --orb-halo: rgba(110, 232, 58, 0.45); --orb-shadow: rgba(63, 154, 42, 0.48);
+}
+@keyframes voice-orb-breathe {
+  0%, 100% { transform: scale(0.97); }
+  50% { transform: scale(1.03); }
+}
+@keyframes voice-orb-think {
+  0%, 100% { transform: scale(0.98) rotate(0deg); border-radius: 50%; }
+  33% { transform: scale(1.02) rotate(120deg); border-radius: 48% 52% 50% 50%; }
+  66% { transform: scale(0.99) rotate(240deg); border-radius: 52% 48% 51% 49%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-orb-blob { transform: none; transition: none; }
+  .voice-orb-blob-core { animation: none; }
+}

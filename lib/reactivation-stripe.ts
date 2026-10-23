@@ -1,0 +1,274 @@
+/**
+ * Stripe side of the win-back offer: build the trial Checkout, then finish it
+ * (webhook or success page, whichever lands first; both are idempotent).
+ */
+import type Stripe from "stripe";
+import {
+  activeStripeLivemode,
+  getStripe,
+  getStripeConfig,
+  priceIdForPlan,
+  resolveStripeClient,
+  stripePriceIdsFromConfig,
+} from "@/lib/stripe";
+import {
+  getSubscriptionByUserId,
+  mapStripeSubscription,
+  syncSubscriptionFromStripe,
+} from "@/lib/stripe-admin";
+import { getUserById, markOnboardingCompleted } from "@/lib/users";
+import { getPublicAppUrl } from "@/lib/platform-settings";
+import {
+  buildReactivationCheckoutParams,
+  oldSubscriptionAction,
+  reactivationState,
+  type ReactivationState,
+} from "@/lib/reactivation-rules";
+import {
+  consumeReactivationOffer,
+  markReactivationOpened,
+  reactivationOfferById,
+  reactivationOfferByToken,
+  recordReactivationCheckout,
+  type ReactivationOffer,
+} from "@/lib/reactivation";
+import { recordBillingEvent } from "@/lib/billing-events";
+
+export type ReactivationView = {
+  state: ReactivationState;
+  offer: ReactivationOffer | null;
+  email: string | null;
+};
+
+/** Resolve a token to what the page should show. Marks the link opened. */
+export async function loadReactivation(token: string): Promise<ReactivationView> {
+  const offer = await reactivationOfferByToken(token).catch(() => null);
+  if (!offer) return { state: "invalid", offer: null, email: null };
+  const sub = await getSubscriptionByUserId(offer.userId);
+  const state = reactivationState({
+    offer,
+    subscription: sub
+      ? { status: sub.status, cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end) }
+      : null,
+  });
+  if (state === "valid") await markReactivationOpened(offer.id).catch(() => {});
+  const user = await getUserById(offer.userId);
+  return { state, offer, email: user?.email ?? null };
+}
+
+export class ReactivationError extends Error {
+  constructor(
+    public code: ReactivationState | "not_configured" | "wrong_account" | "no_price",
+    public status: number
+  ) {
+    super(code);
+  }
+}
+
+/** Create the 30-day-trial Checkout Session for an offer token. */
+export async function createReactivationCheckout(input: {
+  token: string;
+  sessionUserId?: string | null;
+}): Promise<{ url: string; sessionId: string }> {
+  const view = await loadReactivation(input.token);
+  if (view.state !== "valid" || !view.offer) {
+    throw new ReactivationError(view.state, view.state === "invalid" ? 404 : 409);
+  }
+  const offer = view.offer;
+  if (input.sessionUserId && input.sessionUserId !== offer.userId) {
+    throw new ReactivationError("wrong_account", 403);
+  }
+  const user = await getUserById(offer.userId);
+  if (!user) throw new ReactivationError("invalid", 404);
+
+  const stripe = await getStripe();
+  if (!stripe) throw new ReactivationError("not_configured", 503);
+  const priceId = await priceIdForPlan(offer.plan);
+  if (!priceId) throw new ReactivationError("no_price", 503);
+
+  const activeLivemode = await activeStripeLivemode();
+  const existing = await getSubscriptionByUserId(user.id);
+  const storedLivemode = existing?.stripe_livemode ?? null;
+
+  // Reuse the customer (card on file, invoice history) when it lives on the
+  // Stripe account Checkout runs on; otherwise make one there.
+  let customerId: string | null = null;
+  if (existing?.stripe_customer_id) {
+    if (typeof storedLivemode === "boolean") {
+      if (storedLivemode === activeLivemode) customerId = existing.stripe_customer_id;
+    } else {
+      const resolved = await resolveStripeClient({ objectId: existing.stripe_customer_id });
+      if (resolved && resolved.livemode === activeLivemode) customerId = existing.stripe_customer_id;
+    }
+  }
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name ?? undefined,
+      metadata: { user_id: user.id },
+    });
+    customerId = customer.id;
+    await syncSubscriptionFromStripe({
+      userId: user.id,
+      plan: existing?.plan ?? "free",
+      status: existing?.status ?? "incomplete",
+      amountCents: existing?.amount_cents ?? 0,
+      currency: existing?.currency ?? "USD",
+      accessTier: existing?.access_tier ?? "none",
+      stripeCustomerId: customerId,
+      stripeSubscriptionId:
+        storedLivemode === activeLivemode ? existing?.stripe_subscription_id : null,
+      stripeLivemode: activeLivemode,
+    });
+  }
+
+  const sameEnvOldSub =
+    existing?.stripe_subscription_id &&
+    (storedLivemode === null || storedLivemode === activeLivemode)
+      ? existing.stripe_subscription_id
+      : null;
+
+  const session = await stripe.checkout.sessions.create(
+    buildReactivationCheckoutParams({
+      userId: user.id,
+      email: user.email,
+      plan: offer.plan,
+      priceId,
+      customerId,
+      offerId: offer.id,
+      token: input.token,
+      baseUrl: await getPublicAppUrl(),
+    })
+  );
+  await recordReactivationCheckout({
+    id: offer.id,
+    checkoutSessionId: session.id,
+    oldSubscriptionId: sameEnvOldSub,
+    oldStatus: existing?.status ?? null,
+  });
+  if (!session.url) throw new ReactivationError("not_configured", 500);
+  return { url: session.url, sessionId: session.id };
+}
+
+type CheckoutSessionLike = {
+  id: string;
+  status?: string | null;
+  mode?: string | null;
+  customer?: string | Stripe.Customer | Stripe.DeletedCustomer | null;
+  subscription?: string | Stripe.Subscription | null;
+  metadata?: Stripe.Metadata | null;
+};
+
+export type FinalizeResult =
+  | { ok: false; reason: "not_reactivation" | "not_complete" | "offer_missing" | "no_subscription" }
+  | {
+      ok: true;
+      claimed: boolean;
+      userId: string;
+      subscriptionId: string;
+      trialEnd: number | null;
+      oldSubscriptionCanceled: string | null;
+    };
+
+/**
+ * Finish a completed reactivation Checkout: sync the new trial (full access),
+ * consume the offer, and retire the old subscription. Safe to call twice.
+ */
+export async function finalizeReactivationCheckout(input: {
+  stripe: Stripe;
+  session: CheckoutSessionLike;
+  livemode: boolean;
+  eventCreatedAt?: number | null;
+  stripeEventId?: string | null;
+}): Promise<FinalizeResult> {
+  const offerId = input.session.metadata?.reactivation_offer_id;
+  if (!offerId) return { ok: false, reason: "not_reactivation" };
+  if (input.session.status && input.session.status !== "complete") {
+    return { ok: false, reason: "not_complete" };
+  }
+  const offer = await reactivationOfferById(offerId);
+  if (!offer) return { ok: false, reason: "offer_missing" };
+  const subId =
+    typeof input.session.subscription === "string"
+      ? input.session.subscription
+      : input.session.subscription?.id;
+  if (!subId) return { ok: false, reason: "no_subscription" };
+
+  const cfg = await getStripeConfig();
+  const priceIds = stripePriceIdsFromConfig(input.livemode ? cfg.live : cfg.sandbox);
+  const sub = await input.stripe.subscriptions.retrieve(subId);
+  const mapped = mapStripeSubscription(sub, priceIds);
+  await syncSubscriptionFromStripe({
+    userId: offer.userId,
+    ...mapped,
+    stripeLivemode: input.livemode,
+    eventCreatedAt: input.eventCreatedAt ?? null,
+  });
+  await markOnboardingCompleted(offer.userId);
+
+  const { claimed } = await consumeReactivationOffer({
+    id: offer.id,
+    checkoutSessionId: input.session.id,
+    newSubscriptionId: subId,
+  });
+
+  let oldSubscriptionCanceled: string | null = null;
+  const oldId = offer.oldSubscriptionId;
+  if (claimed && oldId && oldId !== subId) {
+    try {
+      const old = await input.stripe.subscriptions.retrieve(oldId);
+      if (oldSubscriptionAction(old.status) === "cancel_and_void") {
+        await input.stripe.subscriptions.cancel(oldId, { invoice_now: false, prorate: false });
+        const open = await input.stripe.invoices.list({ subscription: oldId, status: "open", limit: 20 });
+        for (const inv of open.data) {
+          if (inv.id) await input.stripe.invoices.voidInvoice(inv.id);
+        }
+        oldSubscriptionCanceled = oldId;
+      }
+    } catch (err) {
+      console.error("[reactivation] retire old subscription", oldId, err);
+    }
+  }
+
+  if (claimed) {
+    await recordBillingEvent({
+      userId: offer.userId,
+      stripeEventId: `reactivation:${input.session.id}`,
+      eventType: "reactivation.trial_started",
+      status: "checkout",
+      amountCents: 0,
+      currency: mapped.currency,
+      description: `Win-back trial (30 days) - ${mapped.plan}`,
+      subscriptionId: subId,
+      livemode: input.livemode,
+      occurredAt: input.eventCreatedAt ?? Math.floor(Date.now() / 1000),
+    }).catch((err) => console.error("[reactivation] billing event", err));
+  }
+
+  return {
+    ok: true,
+    claimed,
+    userId: offer.userId,
+    subscriptionId: subId,
+    trialEnd: sub.trial_end ?? null,
+    oldSubscriptionCanceled,
+  };
+}
+
+/** Success page: confirm with Stripe directly (works before the webhook). */
+export async function finalizeFromSuccessRedirect(input: {
+  token: string;
+  sessionId: string;
+}): Promise<FinalizeResult | null> {
+  const offer = await reactivationOfferByToken(input.token);
+  if (!offer || !input.sessionId.startsWith("cs_")) return null;
+  const resolved = await resolveStripeClient({ objectId: input.sessionId });
+  if (!resolved) return null;
+  const session = await resolved.stripe.checkout.sessions.retrieve(input.sessionId);
+  if (session.metadata?.reactivation_offer_id !== offer.id) return null;
+  return finalizeReactivationCheckout({
+    stripe: resolved.stripe,
+    session,
+    livemode: resolved.livemode,
+  });
+}
