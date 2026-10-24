@@ -62,6 +62,7 @@ import { BetweenSessionsSection } from "./BetweenSessionsSection";
 import { LanguagesSection } from "./LanguagesSection";
 import { SessionTopicsGrid } from "./SessionTopicsGrid";
 import { ReviewSpotlight } from "./ReviewSpotlight";
+import { FeatureBand } from "./FeatureBand";
 import { useLandingMotion } from "./useLandingMotion";
 import { usePlanSpread } from "./usePlanSpread";
 import { useStoryTrack } from "./useStoryTrack";
@@ -833,6 +834,8 @@ export function HomeLandingV2({
       </section>
       </EditablePart>
       ),
+
+      "home-feature-band": <FeatureBand />,
 
       "home-topics": <SessionTopicsGrid id="topics" className="v2-section v2-topics" />,
 

@@ -6,6 +6,7 @@ import {
   faqPairs,
   normalizeSection,
   parseLinkLines,
+  isSectionOn,
   safeHref,
   sectionList,
   sectionText,
@@ -152,6 +153,17 @@ describe("marketing section copy", () => {
     assert.equal(sectionText(config, "services"), "Sales\nSupport");
     assert.equal(sectionText(config, "submitLabel"), "Send it");
     assert.equal(sectionText(config, "contactHref"), "mailto:hello@nurahelp.com");
+  });
+
+  it("ships the feature band switched off with placeholder copy", () => {
+    const off = normalizeSection("home-feature-band", {});
+    assert.equal(isSectionOn(off), false);
+    assert.match(sectionText(off, "title"), /feature band/i);
+    assert.equal(sectionText(off, "cta"), "Learn more");
+    assert.match(sectionText(off, "imageLeft"), /^\/marketing\//);
+
+    const on = normalizeSection("home-feature-band", { _off: "0" });
+    assert.equal(isSectionOn(on), true);
   });
 
   it("accepts the review spotlight and falls back to the card strip", () => {

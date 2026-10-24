@@ -1,0 +1,146 @@
+/*
+ * Home: feature band — photo, centred announcement card, photo.
+ * Switched off by default (the section's own "Show this section" switch).
+ */
+
+.v2-feature-band {
+  background: #fbfaf5;
+  min-height: 0;
+  padding: clamp(3.5rem, 7vw, 6.5rem) 0;
+}
+
+.v2-fb-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.82fr) minmax(0, 1fr);
+  gap: clamp(1rem, 2vw, 1.6rem);
+  align-items: stretch;
+}
+
+.v2-fb-media {
+  position: relative;
+  min-width: 0;
+  min-height: clamp(25rem, 38vw, 34rem);
+  margin: 0;
+  overflow: hidden;
+  border-radius: clamp(1rem, 1.8vw, 1.6rem);
+  background: #e8ebdf;
+}
+
+.v2-fb-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Empty slot while the real photo is being prepared. */
+.v2-fb-media-empty {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 30% 20%, #f1f4e6 0%, transparent 60%),
+    linear-gradient(160deg, #dfe7cd 0%, #c6d67e 100%);
+}
+
+.v2-fb-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  min-width: 0;
+  padding: clamp(2rem, 4vw, 3.4rem) clamp(1.5rem, 3vw, 2.4rem);
+  border-radius: clamp(1rem, 1.8vw, 1.6rem);
+  background: #f2f1eb;
+  text-align: center;
+}
+
+.v2-fb-badge {
+  padding: 0.32rem 0.65rem;
+  border-radius: 0.35rem;
+  background: var(--v2-green-300, #c6d67e);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #17301f;
+}
+
+.v2-fb-title {
+  max-width: 18ch;
+  margin: 0.25rem 0 0;
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(1.55rem, 2.4vw, 2.05rem);
+  font-weight: 650;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: #17301f;
+}
+
+.v2-fb-body {
+  max-width: 30rem;
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: #3d4a39;
+}
+
+.v2-fb-note {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #5e6a58;
+}
+
+.v2-fb-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.85rem;
+  margin-top: 0.5rem;
+  padding: 0 1.25rem;
+  border: 2px solid #1f3527;
+  border-radius: 0.3rem;
+  background: var(--v2-green-300, #c6d67e);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #17301f;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.v2-fb-cta:hover {
+  background: #b7cc66;
+  transform: translateY(-1px);
+}
+
+.v2-fb-cta:focus-visible {
+  outline: 3px solid #1f3527;
+  outline-offset: 3px;
+}
+
+@media (max-width: 960px) {
+  .v2-fb-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .v2-fb-media {
+    min-height: 18rem;
+  }
+
+  .v2-fb-card {
+    padding-block: clamp(1.8rem, 6vw, 2.6rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v2-fb-cta {
+    transition: none;
+  }
+}

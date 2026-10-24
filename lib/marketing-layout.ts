@@ -33,6 +33,7 @@ export const MARKETING_PAGES = {
       { id: "home-how-languages" },
       { id: "home-modes" },
       { id: "home-session" },
+      { id: "home-feature-band", label: "Home: feature band (off by default)" },
       { id: "home-topics" },
       { id: "home-stories" },
       { id: "home-pricing" },

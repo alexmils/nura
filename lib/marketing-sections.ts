@@ -1737,6 +1737,37 @@ const V2_SECTIONS: SectionDef[] = [
     },
   },
   {
+    id: "home-feature-band",
+    name: "Home: feature band",
+    fields: [
+      image("imageLeft", "Left image"),
+      text("imageLeftAlt", "Left image alt text"),
+      image("imageRight", "Right image"),
+      text("imageRightAlt", "Right image alt text"),
+      text("badge", "Badge"),
+      text("title", "Title"),
+      area("body", "Text"),
+      area("note", "Second line", "A short line under the text, e.g. dates or a schedule."),
+      text("cta", "Button"),
+      link("ctaHref", "Button link"),
+    ],
+    defaults: {
+      // Ships switched off: pick it in the layout, add the real copy and photos,
+      // then tick "Show this section".
+      _off: "1",
+      imageLeft: "/marketing/landing/green-landscape.jpg",
+      imageLeftAlt: "Placeholder image — replace with your own",
+      imageRight: "/marketing/landing/warm-sofa.jpg",
+      imageRightAlt: "Placeholder image — replace with your own",
+      badge: "New",
+      title: "A new feature band lands here.",
+      body: "Replace this paragraph with the announcement. Two images, a short middle card, and one clear button.",
+      note: "A second line for dates or a schedule.",
+      cta: "Learn more",
+      ctaHref: "/learn",
+    },
+  },
+  {
     id: "home-stories",
     name: "Home: stories",
     fields: [
