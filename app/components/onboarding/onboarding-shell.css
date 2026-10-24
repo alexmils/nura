@@ -131,8 +131,16 @@
   text-align: center;
 }
 
+/* Last step ("You're ready"): just the button, no nested card. */
+.ob-shell:has(.ob-tutorial) .ob-panel {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
 .ob-tutorial .ob-cta {
-  margin-top: 0.25rem;
+  margin: 0 auto;
+  max-width: 20rem;
 }
 
 /* Age confirm — first post-signup step (large tap target, not a tiny footer gate) */
@@ -173,52 +181,6 @@
   margin-top: 0.85rem;
 }
 
-
-/* Signature: quiet moving-ball preview (Nura, not generic checklist) */
-.ob-ball-preview {
-  margin: 0 0 1.15rem;
-}
-
-.ob-ball-track {
-  position: relative;
-  height: 2.75rem;
-  margin: 0 auto;
-  max-width: 14rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--fe-fg) 6%, #fff);
-  border: 1px solid var(--fe-line);
-  overflow: hidden;
-}
-
-.ob-ball-dot {
-  position: absolute;
-  top: 50%;
-  left: 0.55rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-top: -0.575rem;
-  border-radius: 50%;
-  background: var(--fe-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--fe-accent) 22%, transparent);
-  animation: ob-ball-travel 2.4s ease-in-out infinite alternate;
-}
-
-@keyframes ob-ball-travel {
-  from {
-    left: 0.55rem;
-  }
-  to {
-    left: calc(100% - 1.7rem);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ob-ball-dot {
-    animation: none;
-    left: 50%;
-    margin-left: -0.575rem;
-  }
-}
 
 .ob-shell-footer {
   text-align: center;

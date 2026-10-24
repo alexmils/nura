@@ -371,9 +371,11 @@ function OnboardingFlow() {
       lead={shellCopy.lead}
       leadLines={shellCopy.leadLines}
       footer={
-        <p>
-          <HelpChatLink>Need help?</HelpChatLink>
-        </p>
+        step === "tutorial" ? undefined : (
+          <p>
+            <HelpChatLink>Need help?</HelpChatLink>
+          </p>
+        )
       }
     >
       {error && <AuthError message={error} />}
@@ -486,11 +488,6 @@ function OnboardingFlow() {
 
       {step === "tutorial" && (
         <div className="ob-tutorial">
-          <div className="ob-ball-preview" aria-hidden="true">
-            <div className="ob-ball-track">
-              <span className="ob-ball-dot" />
-            </div>
-          </div>
           <button
             type="button"
             className="frontend-btn-primary ob-cta"
