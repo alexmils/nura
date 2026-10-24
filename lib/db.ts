@@ -311,6 +311,8 @@ async function runSchemaMigrations(db: PoolClient) {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS brevo_contact_synced_at TIMESTAMPTZ;
+    -- A hard bounce suppresses marketing mail without touching the opt-in flag.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_bounced_at TIMESTAMPTZ;
     -- First app use after a trial ended: the anchor for the post-trial check-in.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS post_trial_seen_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS post_trial_email_sent_at TIMESTAMPTZ;
@@ -328,8 +330,10 @@ async function runSchemaMigrations(db: PoolClient) {
       opted_out_at TIMESTAMPTZ,
       ip_hash TEXT,
       source TEXT NOT NULL DEFAULT 'footer',
-      brevo_synced_at TIMESTAMPTZ
+      brevo_synced_at TIMESTAMPTZ,
+      bounced_at TIMESTAMPTZ
     );
+    ALTER TABLE newsletter_leads ADD COLUMN IF NOT EXISTS bounced_at TIMESTAMPTZ;
     CREATE TABLE IF NOT EXISTS newsletter_attempts (
       id TEXT PRIMARY KEY,
       ip_hash TEXT NOT NULL,

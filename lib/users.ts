@@ -19,6 +19,8 @@ export type User = {
   guideSeenAt: string | null;
   marketingEmailOptIn: boolean;
   marketingEmailOptInAt: string | null;
+  /** Set by a Brevo hard bounce; suppresses marketing mail until a new opt-in. */
+  marketingEmailBouncedAt: string | null;
   brevoContactSyncedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -52,6 +54,9 @@ function rowToUser(row: Record<string, unknown>): User {
     marketingEmailOptIn: Boolean(row.marketing_email_opt_in),
     marketingEmailOptInAt: row.marketing_email_opt_in_at
       ? new Date(row.marketing_email_opt_in_at as string).toISOString()
+      : null,
+    marketingEmailBouncedAt: row.marketing_email_bounced_at
+      ? new Date(row.marketing_email_bounced_at as string).toISOString()
       : null,
     brevoContactSyncedAt: row.brevo_contact_synced_at
       ? new Date(row.brevo_contact_synced_at as string).toISOString()

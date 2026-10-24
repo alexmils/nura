@@ -5,6 +5,7 @@ import { parseBrevoListId } from "../lib/email/brevo-contacts.ts";
 import {
   brevoEventsFromBody,
   brevoWebhookAuthorized,
+  isBrevoBounceEvent,
   isBrevoOptOutEvent,
 } from "../lib/brevo-webhook.ts";
 
@@ -69,8 +70,16 @@ describe("brevo webhook helpers", () => {
       1
     );
     assert.equal(isBrevoOptOutEvent("unsubscribed"), true);
+    assert.equal(isBrevoOptOutEvent("spam"), true);
     assert.equal(isBrevoOptOutEvent("delivered"), false);
     assert.equal(isBrevoOptOutEvent("hard_bounce"), false);
-    assert.equal(isBrevoOptOutEvent("spam"), false);
+    assert.equal(isBrevoBounceEvent("hard_bounce"), true);
+  });
+
+  it("normalizes the event name before matching", () => {
+    assert.equal(isBrevoOptOutEvent("Unsubscribed"), true);
+    assert.equal(isBrevoOptOutEvent(" contact_deleted "), true);
+    assert.equal(isBrevoBounceEvent("HARD-BOUNCE"), true);
+    assert.equal(isBrevoBounceEvent("soft_bounce"), false);
   });
 });

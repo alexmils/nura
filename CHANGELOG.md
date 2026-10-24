@@ -164,6 +164,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sign-in locks after repeated failed attempts from the same network or email
 - [internal] Admin and support sign in only on a private address set under Admin, Sign-in. Public sign-in rejects those accounts. The page shows attempts, locks, a whitelist, and a block list
 - [internal] On a phone, the admin menu sits off-screen and opens from the top bar
+- [internal] Brevo webhook also handles `spam` (opt-out) and `hard_bounce` (suppresses the address and unlinks it from the list; a new opt-in clears it)
 
 ### Changed
 - Recent no longer keeps a Self-guided session: there is no conversation to come back to, and your set settings are remembered anyway

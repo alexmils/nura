@@ -72,6 +72,24 @@ export async function syncBrevoContactForUser(userId: string): Promise<void> {
     return;
   }
 
+  if (user.marketingEmailBouncedAt) {
+    // The address is dead; re-adding it on every Stripe event would keep the
+    // list dirty. Unlink it once so Brevo stops sending.
+    if (!user.brevoContactSyncedAt || !listIds.length) return;
+    await upsertBrevoMarketingContact({
+      email: user.email,
+      name: user.name,
+      attributes: {
+        NURA_USER_ID: user.id,
+        MARKETING_OPT_IN: true,
+        EMAIL_BOUNCED: true,
+      },
+      listIds: [],
+      unlinkListIds: listIds,
+    });
+    return;
+  }
+
   const sub = await getSubscriptionByUserId(userId);
   await upsertBrevoMarketingContact({
     email: user.email,
@@ -81,6 +99,7 @@ export async function syncBrevoContactForUser(userId: string): Promise<void> {
       NURA_USER_ID: user.id,
       NURA_ACCOUNT: true,
       MARKETING_OPT_IN: true,
+      EMAIL_BOUNCED: false,
       PLAN: sub?.plan ?? "",
       SUB_STATUS: sub?.status ?? "",
       TRIAL_ENDS_AT: sub?.trial_ends_at

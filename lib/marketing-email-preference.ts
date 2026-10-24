@@ -20,6 +20,8 @@ export async function setMarketingEmailPreference(input: {
     `UPDATE users SET
        marketing_email_opt_in = $2,
        marketing_email_opt_in_at = CASE WHEN $2 THEN NOW() ELSE NULL END,
+       -- A fresh opt-in is the user overriding an earlier hard bounce.
+       marketing_email_bounced_at = CASE WHEN $2 THEN NULL ELSE marketing_email_bounced_at END,
        updated_at = NOW()
      WHERE id = $1`,
     [input.userId, input.optedIn]

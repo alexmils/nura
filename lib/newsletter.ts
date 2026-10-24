@@ -52,11 +52,17 @@ export async function subscribeNewsletter(input: {
   const existing = await getPool().query<{
     opted_out_at: Date | null;
     brevo_synced_at: Date | null;
+    bounced_at: Date | null;
   }>(
-    `SELECT opted_out_at, brevo_synced_at FROM newsletter_leads WHERE email = $1`,
+    `SELECT opted_out_at, brevo_synced_at, bounced_at FROM newsletter_leads WHERE email = $1`,
     [email]
   );
-  if (existing.rows[0] && !existing.rows[0].opted_out_at && existing.rows[0].brevo_synced_at) {
+  if (
+    existing.rows[0] &&
+    !existing.rows[0].opted_out_at &&
+    !existing.rows[0].bounced_at &&
+    existing.rows[0].brevo_synced_at
+  ) {
     return { ok: true };
   }
 
@@ -66,6 +72,8 @@ export async function subscribeNewsletter(input: {
      ON CONFLICT (email) DO UPDATE SET
        opted_in_at = NOW(),
        opted_out_at = NULL,
+       -- Submitting the form again is an explicit opt-in after a bounce.
+       bounced_at = NULL,
        ip_hash = EXCLUDED.ip_hash,
        source = 'footer'`,
     [email, ipHash]

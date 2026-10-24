@@ -11,7 +11,17 @@ const OPT_OUT_EVENTS = new Set([
   "unsubscribed",
   "contact_deleted",
   "unsubscribe",
+  // A spam complaint is a withdrawal of consent even without the link click.
+  "spam",
 ]);
+
+// A hard bounce means the mailbox does not exist. Keep mailing it and the
+// sender reputation takes the hit, so suppress the address instead.
+const BOUNCE_EVENTS = new Set(["hard_bounce"]);
+
+function normalizeEvent(event: string | undefined): string {
+  return (event ?? "").trim().toLowerCase().replace(/-/g, "_");
+}
 
 export function brevoWebhookAuthorized(
   request: Request,
@@ -34,7 +44,11 @@ export function brevoEventsFromBody(body: unknown): BrevoWebhookEvent[] {
 }
 
 export function isBrevoOptOutEvent(event: string | undefined): boolean {
-  return OPT_OUT_EVENTS.has((event ?? "").toLowerCase());
+  return OPT_OUT_EVENTS.has(normalizeEvent(event));
+}
+
+export function isBrevoBounceEvent(event: string | undefined): boolean {
+  return BOUNCE_EVENTS.has(normalizeEvent(event));
 }
 
 export async function applyBrevoOptOut(email: string): Promise<void> {
@@ -51,6 +65,29 @@ export async function applyBrevoOptOut(email: string): Promise<void> {
   }
   await getPool().query(
     `UPDATE newsletter_leads SET opted_out_at = NOW() WHERE email = $1`,
+    [normalized]
+  );
+}
+
+/**
+ * Records a hard bounce. The opt-in flag stays as the user set it; the bounce
+ * timestamp is what suppresses the address and keeps it out of the Brevo list
+ * on the next sync. An explicit opt-in clears it again.
+ */
+export async function applyBrevoBounce(email: string): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return;
+  await ensureSchemaReady();
+  const user = await getUserByEmail(normalized);
+  if (user) {
+    await getPool().query(
+      `UPDATE users SET marketing_email_bounced_at = NOW(), updated_at = NOW()
+       WHERE id = $1`,
+      [user.id]
+    );
+  }
+  await getPool().query(
+    `UPDATE newsletter_leads SET bounced_at = NOW() WHERE email = $1`,
     [normalized]
   );
 }
