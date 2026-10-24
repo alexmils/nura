@@ -14,6 +14,7 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { APP_BASE } from "@/lib/app-base";
+import { isAccessAllowedPath } from "@/lib/access-gate";
 import { GuideVoiceDemo } from "./GuideVoiceDemo";
 import {
   GUIDE_STEPS,
@@ -633,19 +634,22 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id);
   }, [active, held, stepIndex]);
 
-  /* First visit after onboarding: run once, resume where a reload left off. */
+  /* First visit after onboarding: run once, resume where a reload left off.
+     Only inside the app itself (not login, onboarding, billing, settings),
+     only once the account and its tour state are known, and decided when the
+     timer fires: a hold (consent screen) or a route change in between
+     cancels the timer without using up the one autostart. */
   useEffect(() => {
     if (active || autoStartRef.current || held) return;
-    if (!pathname?.startsWith(APP_BASE)) return;
+    if (!pathname?.startsWith(APP_BASE) || isAccessAllowedPath(pathname)) return;
     if (!userId || !meChecked) return;
-    const local = localStore();
-    if (!local) return;
-    const decision = resolveGuideAutostart(local, sessionStore(), userId, seenOnServer);
-    if (!decision.start) return;
-    autoStartRef.current = true;
     const id = window.setTimeout(() => {
-      if (!mountedRef.current) return;
-      start(decision.resumeIndex);
+      if (!mountedRef.current || autoStartRef.current) return;
+      const local = localStore();
+      if (!local) return;
+      autoStartRef.current = true;
+      const decision = resolveGuideAutostart(local, sessionStore(), userId, seenOnServer);
+      if (decision.start) start(decision.resumeIndex);
     }, 1200);
     return () => window.clearTimeout(id);
   }, [active, held, meChecked, pathname, seenOnServer, start, userId]);

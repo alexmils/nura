@@ -708,11 +708,14 @@ export function SessionWorkspace() {
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
   const showConsent = consentOk === false;
+  // Hold the tour until consent is known: holding only once it turned out to
+  // be missing let the tour card flash before the consent screen.
+  const holdGuide = consentOk !== true;
   useEffect(() => {
     if (!guide) return;
-    guide.setHeld(showConsent);
+    guide.setHeld(holdGuide);
     return () => guide.setHeld(false);
-  }, [guide, showConsent]);
+  }, [guide, holdGuide]);
   const showResume =
     Boolean(thread) &&
     shouldOfferResumeClosure(thread) &&
