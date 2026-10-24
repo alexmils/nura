@@ -1,11 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { Activity, Eye, Gamepad2, Volume2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Eye, Gamepad2, Volume2 } from "lucide-react";
 import { reducedMotion, useInViewLoop, wait } from "./demo-loop";
 import "./ground-first-tutorial.css";
 import "./session-stage-demos.css";
+import "./check-in-demo.css";
 
 /* Built-in default media for the "How it works" stages that have no uploaded
    image or video: Choose your rhythm, Check in, Close gently. Same mini-app
@@ -122,78 +123,48 @@ export function RhythmDemo({
   );
 }
 
-/* ─── Check in: the set winds down, SUD + body scan ─── */
+/* --- Check in: the real set screen, then the guide asks --- */
 
-type CheckScene = {
-  stopped: boolean;
-  ask: boolean;
-  sud: number | null;
-  scan: boolean;
-  chips: boolean;
-};
-
-const CHECK_START: CheckScene = { stopped: false, ask: false, sud: null, scan: false, chips: false };
-const CHECK_END: CheckScene = { stopped: true, ask: true, sud: 5, scan: true, chips: true };
-
-/** Ball eases to a stop in the middle (rAF; amplitude and speed decay together). */
-function useWindDownBall(ref: RefObject<HTMLSpanElement | null>, running: boolean) {
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (!running) {
-      el.style.transform = "translateX(0)";
-      return;
-    }
-    let raf = 0;
-    let phase = 0;
-    let last = performance.now();
-    const start = last;
-    const tick = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      const t = (now - start) / 1000;
-      // Full speed for ~1.6s, then slow to a stop over ~1.8s.
-      const k = t < 1.6 ? 1 : Math.max(0, 1 - (t - 1.6) / 1.8);
-      phase += dt * Math.PI * 1.25 * (0.25 + 0.75 * k);
-      const amp = k;
-      el.style.transform = `translateX(calc(${Math.sin(phase) * amp} * var(--ssd-travel)))`;
-      if (k > 0) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [ref, running]);
-}
+/**
+ * Mirrors the app: screen 1 is the set surface (BallCanvas defaults: white
+ * background, near-black ball with a soft shadow) with the ball sweeping
+ * left-right ease-in-out; screen 2 is the guide's check-in in the chat
+ * (typing dots, then the question). Loops while in view. Timing:
+ * set 4.4s (4 passes of 1.1s), typing dots 1.2s, question 3.4s, then
+ * back to the set (about 9s per loop).
+ * Reduced motion: the check-in screen, static.
+ */
+export type CheckPhase = "set" | "typing" | "ask";
+export const CHECK_PASS_MS = 1100;
+export const CHECK_SET_PASSES = 4;
+export const CHECK_SET_MS = CHECK_PASS_MS * CHECK_SET_PASSES;
+export const CHECK_TYPING_MS = 1200;
+export const CHECK_ASK_MS = 3400;
+export const CHECK_QUESTION = "What did you notice?";
 
 export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
   const { rootRef, inView } = useInViewLoop(forcePlay);
-  const [scene, setScene] = useState<CheckScene>(CHECK_START);
-  const ballRef = useRef<HTMLSpanElement | null>(null);
-  useWindDownBall(ballRef, inView && !scene.stopped);
+  const [phase, setPhase] = useState<CheckPhase>("set");
+  const [loop, setLoop] = useState(0);
 
   useEffect(() => {
     if (!inView) return;
     if (reducedMotion()) {
-      setScene(CHECK_END);
+      setPhase("ask");
       return;
     }
     let cancelled = false;
-    const step = async (ms: number, next: Partial<CheckScene>) => {
-      await wait(ms);
-      if (cancelled) return false;
-      setScene((s) => ({ ...s, ...next }));
-      return true;
-    };
     const run = async () => {
       while (!cancelled) {
-        setScene(CHECK_START);
-        if (!(await step(3500, { stopped: true }))) return;
-        if (!(await step(450, { ask: true }))) return;
-        if (!(await step(800, { sud: 7 }))) return;
-        if (!(await step(700, { sud: 6 }))) return;
-        if (!(await step(450, { sud: 5 }))) return;
-        if (!(await step(600, { scan: true }))) return;
-        if (!(await step(800, { chips: true }))) return;
-        await wait(3200);
+        setPhase("set");
+        setLoop((n) => n + 1);
+        await wait(CHECK_SET_MS);
+        if (cancelled) return;
+        setPhase("typing");
+        await wait(CHECK_TYPING_MS);
+        if (cancelled) return;
+        setPhase("ask");
+        await wait(CHECK_ASK_MS);
       }
     };
     void run();
@@ -203,45 +174,36 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
   }, [inView]);
 
   return (
-    <div ref={rootRef} className="gft ssd ssd--check" aria-hidden>
-      <div className="ssd-frame ssd-frame--chat">
-        <div className={scene.stopped ? "ssd-set is-done" : "ssd-set"}>
-          <span className="ssd-set-label">{scene.stopped ? "Set 3 · paused" : "Set 3"}</span>
-          <div className="ssd-lane ssd-lane--mini">
-            <span className="ssd-rail" />
-            <span ref={ballRef} className="ssd-ball ssd-ball--js" />
-          </div>
+    <div
+      ref={rootRef}
+      className={`gft ssd ssd--check is-${phase}${inView ? " is-playing" : ""}`}
+      data-phase={phase}
+      aria-hidden
+    >
+      <div className="ssd-frame ssd-checkin">
+        <div className="ssd-setscreen">
+          <span
+            key={loop}
+            className="ssd-setball"
+            style={{ ["--ssd-pass" as string]: `${CHECK_PASS_MS}ms` }}
+          />
         </div>
-        <div className="ssd-chat">
-          {scene.ask ? <AgentRow>What do you notice now?</AgentRow> : null}
-          {scene.sud !== null ? (
-            <div className="ssd-sud gft-row">
-              <div className="ssd-sud-head">
-                <span>SUD</span>
-                <strong>{scene.sud}</strong>
+        <div className="ssd-guide">
+          <div className="ssd-chat">
+            {phase === "typing" ? (
+              <div className="gft-row gft-row--agent">
+                <span className="gft-avatar gft-avatar--guide">
+                  <Image src={GUIDE_MARK} alt="" width={28} height={28} />
+                </span>
+                <div className="gft-bubble gft-bubble--agent ssd-typing">
+                  <span />
+                  <span />
+                  <span />
+                </div>
               </div>
-              <div className="ssd-sud-bar">
-                <span className="ssd-sud-fill" style={{ width: `${scene.sud * 10}%` }} />
-                <span className="ssd-sud-thumb" style={{ left: `${scene.sud * 10}%` }} />
-              </div>
-              <div className="ssd-sud-scale">
-                <span>0</span>
-                <span>10</span>
-              </div>
-            </div>
-          ) : null}
-          {scene.scan ? (
-            <p className="ssd-hint gft-row">
-              <Activity size={12} strokeWidth={2.2} aria-hidden />
-              Body scan: chest a little lighter
-            </p>
-          ) : null}
-          {scene.chips ? (
-            <div className="gft-chips ssd-chips">
-              <span className="gft-chip">Another set</span>
-              <span className="gft-chip">I&apos;d like to stop</span>
-            </div>
-          ) : null}
+            ) : null}
+            {phase === "ask" ? <AgentRow>{CHECK_QUESTION}</AgentRow> : null}
+          </div>
         </div>
       </div>
     </div>
