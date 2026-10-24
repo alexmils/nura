@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  min-height: clamp(3.25rem, 5.5vw, 5rem);
+  min-height: 150px;
   background: var(--v2-green-300, #c6d67e);
 }
 
@@ -63,6 +63,13 @@
 @keyframes v2-ticker-scroll {
   to {
     transform: translateX(-50%);
+  }
+}
+
+/* Phones: the same band reads too tall; keep it slimmer. */
+@media (max-width: 760px) {
+  .v2-ticker-band {
+    min-height: 110px;
   }
 }
 
