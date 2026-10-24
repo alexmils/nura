@@ -80,6 +80,8 @@ type GuideContextValue = {
   previous: () => void;
   /** Hide the tour while safety consent is on screen. The step is kept. */
   setHeld: (held: boolean) => void;
+  /** `?tour=frost1` preview: shown regardless of consent, persists nothing. */
+  preview: boolean;
   registerHost: (actions: GuideHostActions) => void;
 };
 
@@ -139,6 +141,9 @@ function isFullyVisible(el: Element): boolean {  const r = el.getBoundingClientR
   return true;
 }
 
+const PREVIEW_PARAM = "tour";
+const PREVIEW_VALUE = "frost1";
+
 export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -152,7 +157,11 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const [seenOnServer, setSeenOnServer] = useState(false);
   const [meChecked, setMeChecked] = useState(false);
   const [active, setActive] = useState(false);
-  const [held, setHeld] = useState(false);
+  const [heldRaw, setHeld] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const previewRef = useRef(false);
+  // The preview ignores the consent hold (display only, consent not recorded).
+  const held = heldRaw && !preview;
   const [stepIndex, setStepIndex] = useState(0);
   const [rect, setRect] = useState<GuideRect | null>(null);
   const [anchorSettled, setAnchorSettled] = useState(false);
@@ -198,6 +207,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const goTo = useCallback((index: number) => {
     const clamped = Math.min(Math.max(0, index), GUIDE_STEPS.length - 1);
     setStepIndex(clamped);
+    if (previewRef.current) return;
     const storage = sessionStore();
     if (storage) writeGuideStepIndex(storage, clamped);
   }, []);
@@ -215,6 +225,19 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       hostRef.current.cleanupSession?.();
     } catch {
       /* a failing host action must not trap the exit */
+    }
+    if (previewRef.current) {
+      // Preview: nothing is marked seen or consumed, locally or on the account.
+      previewRef.current = false;
+      setPreview(false);
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get(PREVIEW_PARAM) === PREVIEW_VALUE) {
+          url.searchParams.delete(PREVIEW_PARAM);
+          window.history.replaceState(window.history.state, "", url.toString());
+        }
+      }
+      return;
     }
     const session = sessionStore();
     if (session) clearGuideStepIndex(session);
@@ -240,6 +263,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     setRect(null);
     setPos(null);
     setActive(true);
+    if (previewRef.current) return;
     const storage = sessionStore();
     if (storage) writeGuideStepIndex(storage, next);
   }, []);
@@ -654,6 +678,22 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id);
   }, [active, held, meChecked, pathname, seenOnServer, start, userId]);
 
+  /* Preview: /app?tour=frost1 opens the intro for any signed-in account
+     (tour already seen, consent missing, admin) without persisting anything. */
+  useEffect(() => {
+    if (!pathname?.startsWith(APP_BASE) || isAccessAllowedPath(pathname)) return;
+    if (previewRef.current || active) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(PREVIEW_PARAM) !== PREVIEW_VALUE) return;
+    previewRef.current = true;
+    autoStartRef.current = true;
+    setPreview(true);
+    const id = window.setTimeout(() => {
+      if (mountedRef.current && previewRef.current) start(0);
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [active, pathname, start]);
+
   /* "Start a session" on the last step: open a thread once we are home. */
   useEffect(() => {
     if (pathname !== APP_BASE) return;
@@ -674,9 +714,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       next,
       previous,
       setHeld,
+      preview,
       registerHost,
     }),
-    [active, next, previous, registerHost, setHeld, start, stepIndex, stop]
+    [active, next, preview, previous, registerHost, setHeld, start, stepIndex, stop]
   );
 
   const current = active && !held ? GUIDE_STEPS[stepIndex] ?? null : null;

@@ -707,7 +707,9 @@ export function SessionWorkspace() {
 
   useEffect(() => () => stopPlayback(), [stopPlayback]);
 
-  const showConsent = consentOk === false;
+  // `?tour=frost1` preview shows the tour over the app without the consent
+  // screen; consent is not recorded and the gate is back once the preview ends.
+  const showConsent = consentOk === false && !guide?.preview;
   // Hold the tour until consent is known: holding only once it turned out to
   // be missing let the tour card flash before the consent screen.
   const holdGuide = consentOk !== true;
