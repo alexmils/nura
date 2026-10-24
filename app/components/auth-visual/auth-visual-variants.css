@@ -325,10 +325,14 @@
 }
 
 .auth-shell--card .btn-secondary,
-.auth-shell--card .auth-method-btn {
+.auth-shell--card .auth-method-btn--muted {
   border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.6);
   border-color: rgba(42, 48, 32, 0.12);
+}
+
+.auth-shell--card .auth-method-btn {
+  border-radius: 0.8rem;
 }
 
 @media (min-width: 960px) {
@@ -358,7 +362,7 @@
   }
 
   .auth-shell--card .auth-shell-chrome,
-  .auth-shell--card .auth-shell-brand--stack {
+  .auth-shell.auth-shell--card .auth-shell-main--center .auth-shell-brand--stack {
     display: none;
   }
 }
