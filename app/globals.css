@@ -12045,6 +12045,20 @@ select.field option:disabled {
   }
 }
 
+/* Centered auth screens (sign up / sign in method pickers): the logo sits on
+   the same axis as the heading and buttons, with 24px above the title. The
+   desktop chrome rule left-aligns .auth-shell-brand, hence the specificity. */
+.auth-shell .auth-shell-main--center .auth-shell-brand--stack {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.5rem;
+}
+.auth-shell .auth-shell-main--center .auth-shell-brand--stack .brand-logo {
+  height: 2rem;
+  max-width: min(10rem, 60vw);
+  object-position: center;
+}
+
 .auth-shell-card {
   background: transparent;
   border: none;
