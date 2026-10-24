@@ -101,6 +101,12 @@ export interface Thread {
    */
   agentLanguage?: string;
   /**
+   * Dissociation screening result for this thread (lib/dissociation-screen.ts):
+   * "screening" = follow-up pending, "cautious" = proceed carefully,
+   * "severe" = no reprocessing sets, grounding + therapist referral only.
+   */
+  dissociation?: "screening" | "cautious" | "severe";
+  /**
    * Sets that ran to completion in this thread. A set stopped early does not
    * count: the guide uses this to know a set really happened.
    */

@@ -79,9 +79,12 @@ export function canManualStartGuidedSet(opts: {
   sessionMode: SessionMode;
   target?: string | null;
   suds?: number | null;
+  /** "severe" dissociation: no reprocessing sets in this session. */
+  dissociation?: string | null;
 }): boolean {
   if (opts.sessionKind !== "guided") return false;
   if (opts.sessionMode !== "idle") return false;
+  if (opts.dissociation === "severe") return false;
   if (phaseAllowsBlsSet(opts.phase) || opts.phase === "closure") return false;
   return Boolean(opts.target?.trim()) && opts.suds != null;
 }
