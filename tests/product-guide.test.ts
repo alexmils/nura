@@ -337,6 +337,23 @@ describe("guide storage", () => {
     });
   });
 
+  it("an account-level dismissal suppresses autostart on a fresh browser", () => {
+    const local = fakeStorage();
+    const session = fakeStorage();
+    // Another device dismissed it, so this browser has no local flag yet and
+    // onboarding may have queued a start.
+    requestGuideAutostart(local, "user-e");
+
+    assert.deepEqual(resolveGuideAutostart(local, session, "user-e", true), {
+      start: false,
+    });
+    // The local flag mirrors the account, so the next visit stays quiet even
+    // if the profile request fails.
+    assert.equal(hasSeenGuideForUser(local, "user-e"), true);
+    assert.equal(hasPendingGuideAutostart(local, "user-e"), false);
+    assert.equal(hasGuideAutoStarted(session), false);
+  });
+
   it("resetGuideState makes a dismissed tour start again", () => {
     const local = fakeStorage();
     const session = fakeStorage();

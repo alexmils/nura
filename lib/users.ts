@@ -15,6 +15,8 @@ export type User = {
   status: UserStatus;
   lastLoginAt: string | null;
   onboardingCompletedAt: string | null;
+  /** When the product tour was finished or dismissed; null = never. */
+  guideSeenAt: string | null;
   marketingEmailOptIn: boolean;
   marketingEmailOptInAt: string | null;
   brevoContactSyncedAt: string | null;
@@ -44,6 +46,9 @@ function rowToUser(row: Record<string, unknown>): User {
     onboardingCompletedAt: row.onboarding_completed_at
       ? new Date(row.onboarding_completed_at as string).toISOString()
       : null,
+    guideSeenAt: row.guide_seen_at
+      ? new Date(row.guide_seen_at as string).toISOString()
+      : null,
     marketingEmailOptIn: Boolean(row.marketing_email_opt_in),
     marketingEmailOptInAt: row.marketing_email_opt_in_at
       ? new Date(row.marketing_email_opt_in_at as string).toISOString()
@@ -67,8 +72,24 @@ export function publicUser(user: User) {
     status: user.status,
     hasPassword: Boolean(user.passwordHash),
     onboardingCompletedAt: user.onboardingCompletedAt,
+    guideSeenAt: user.guideSeenAt,
     marketingEmailOptIn: user.marketingEmailOptIn,
   };
+}
+
+/**
+ * Remember that the tour was finished or dismissed, so it does not auto-start
+ * again on another device or after browser storage is cleared.
+ */
+export async function markGuideSeen(userId: string): Promise<void> {
+  await ensureSchemaReady();
+  await getPool().query(
+    `UPDATE users
+     SET guide_seen_at = COALESCE(guide_seen_at, NOW()),
+         updated_at = NOW()
+     WHERE id = $1`,
+    [userId]
+  );
 }
 
 export async function markOnboardingCompleted(userId: string): Promise<User | null> {

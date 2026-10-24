@@ -491,9 +491,12 @@ export type GuideAutostartDecision =
 export function resolveGuideAutostart(
   storage: GuideStorageLike,
   session: GuideStorageLike | null,
-  userId: string | null | undefined
+  userId: string | null | undefined,
+  /** The account already dismissed the tour somewhere else (another device). */
+  seenOnServer = false
 ): GuideAutostartDecision {
-  if (hasSeenGuideForUser(storage, userId)) {
+  if (seenOnServer || hasSeenGuideForUser(storage, userId)) {
+    if (seenOnServer) markGuideSeenForUser(storage, userId);
     consumeGuideAutostart(storage, userId);
     return { start: false };
   }

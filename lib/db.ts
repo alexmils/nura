@@ -314,6 +314,8 @@ async function runSchemaMigrations(db: PoolClient) {
     -- First app use after a trial ended: the anchor for the post-trial check-in.
     ALTER TABLE users ADD COLUMN IF NOT EXISTS post_trial_seen_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS post_trial_email_sent_at TIMESTAMPTZ;
+    -- The tour stays dismissed across devices and cleared browser storage.
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS guide_seen_at TIMESTAMPTZ;
     CREATE INDEX IF NOT EXISTS idx_users_post_trial_checkin
       ON users(post_trial_seen_at)
       WHERE post_trial_email_sent_at IS NULL;

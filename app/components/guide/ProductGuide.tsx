@@ -148,6 +148,8 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const mountedRef = useRef(true);
 
   const [userId, setUserId] = useState<string | null>(null);
+  const [seenOnServer, setSeenOnServer] = useState(false);
+  const [meChecked, setMeChecked] = useState(false);
   const [active, setActive] = useState(false);
   const [held, setHeld] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -169,8 +171,16 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/auth/me");
         if (!res.ok || cancelled) return;
-        const data = (await res.json()) as { user?: { id?: string } };
-        if (!cancelled) setUserId(data.user?.id ?? null);
+        const data = (await res.json()) as {
+          user?: { id?: string; guideSeenAt?: string | null };
+        };
+        if (!cancelled) {
+          setUserId(data.user?.id ?? null);
+          // A dismissal on another device lives on the account, not on this
+          // browser's localStorage.
+          setSeenOnServer(Boolean(data.user?.guideSeenAt));
+          setMeChecked(true);
+        }
       } catch {
         /* tour can still run manually */
       }
@@ -212,6 +222,13 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       markGuideSeenForUser(local, userId);
       // Onboarding may have queued an autostart; dismissing must cancel it.
       consumeGuideAutostart(local, userId);
+    }
+    // Persist on the account so a new device (or cleared storage) stays quiet.
+    setSeenOnServer(true);
+    if (userId) {
+      void fetch("/api/guide/seen", { method: "POST" }).catch(() => {
+        /* the local flag still holds for this browser */
+      });
     }
   }, [userId]);
 
@@ -620,10 +637,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (active || autoStartRef.current || held) return;
     if (!pathname?.startsWith(APP_BASE)) return;
-    if (!userId) return;
+    if (!userId || !meChecked) return;
     const local = localStore();
     if (!local) return;
-    const decision = resolveGuideAutostart(local, sessionStore(), userId);
+    const decision = resolveGuideAutostart(local, sessionStore(), userId, seenOnServer);
     if (!decision.start) return;
     autoStartRef.current = true;
     const id = window.setTimeout(() => {
@@ -631,7 +648,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       start(decision.resumeIndex);
     }, 1200);
     return () => window.clearTimeout(id);
-  }, [active, held, pathname, start, userId]);
+  }, [active, held, meChecked, pathname, seenOnServer, start, userId]);
 
   /* "Start a session" on the last step: open a thread once we are home. */
   useEffect(() => {
