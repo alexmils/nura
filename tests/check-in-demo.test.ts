@@ -11,9 +11,9 @@ describe("How it works > Check in demo replicates the app", () => {
   const bar = tsx.slice(tsx.indexOf("function DemoBlsGroup"), tsx.indexOf("function ChatAvatar"));
   const num = (name: string) => Number((tsx.match(new RegExp(`export const ${name} = (\\d+);`)) ?? [])[1]);
 
-  it("set screen is a scaled virtual desktop screen (1600px) with one transform", () => {
-    assert.equal(num("CHECK_VIRTUAL_W"), 1600);
-    assert.match(css, /\.ssd-app \{[^}]*width: 1600px;[^}]*transform: scale\(var\(--ssd-scale/);
+  it("set screen is a scaled virtual desktop screen (1280px) with one transform", () => {
+    assert.equal(num("CHECK_VIRTUAL_W"), 1280);
+    assert.match(css, /\.ssd-app \{[^}]*width: 1280px;[^}]*transform: scale\(var\(--ssd-scale/);
     assert.match(tsx, /setProperty\("--ssd-scale"/);
     assert.match(css, /\.ssd-frame\.ssd-checkin \{\s*zoom: 1;/);
   });
@@ -63,6 +63,20 @@ describe("How it works > Check in demo replicates the app", () => {
     const agents = (tsx.match(/\{ role: "agent"/g) ?? []).length;
     const total = set + num("CHECK_FADE_MS") + holds.reduce((a, b) => a + b, 0) + agents * num("CHECK_TYPING_MS");
     assert.ok(total >= 11000 && total <= 14000, `loop ${total}ms`);
+  });
+
+  it("agent avatar is not stretched by .fe-spath-media img (the green bars)", () => {
+    assert.match(read("app/components/frontend/section-editor/section-editor.css"), /\.fe-spath-media img,[^{]*\{\s*position: absolute;\s*inset: 0;/);
+    assert.match(css, /\.ssd--check \.agent-chat-row img\.ssd-chat-avatar \{[^}]*position: static;[^}]*inset: auto;[^}]*width: 44px;[^}]*height: 44px;/);
+    assert.match(check, /<div key=\{i\} className="agent-chat-row agent-chat-row--agent">\s*<ChatAvatar \/>/);
+    assert.match(tsx, /className="avatar-img avatar-sm avatar-guide ssd-chat-avatar"/);
+    assert.doesNotMatch(css + check, /shimmer|glow|streaming/i);
+  });
+
+  it("chat uses the replica's scale (legibility floor on narrow cards); toolbar hidden during chat", () => {
+    assert.match(tsx, /const chat = Math\.max\(scale, /);
+    assert.match(css, /\.ssd--check:not\(\.is-set\) \.ssd-app-dock \{[^}]*opacity: 0;[^}]*visibility: hidden/);
+    assert.match(css, /\.ssd-chat-messages\.agent-chat-messages \{[^}]*overflow: hidden;[^}]*justify-content: flex-end/);
   });
 
   it("chat sits above the set screen and becomes visible after the set", () => {

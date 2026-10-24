@@ -137,7 +137,7 @@ export function RhythmDemo({
 
 /**
  * A scaled-down replica of the real session screen. The set surface and the
- * BLS control bar are rendered at a fixed virtual desktop size (1600px wide,
+ * BLS control bar are rendered at a fixed virtual desktop size (1280px wide,
  * the card's aspect) with the app's own .bls-* classes from globals.css, then
  * scaled with one transform so every proportion matches the app. The chat
  * uses the app's .agent-chat-* classes, scaled separately so it stays legible.
@@ -146,7 +146,7 @@ export function RhythmDemo({
  * conversation (agent lines get 0.6s typing dots first), then back to the set.
  * Reduced motion: the full conversation, static.
  */
-export const CHECK_VIRTUAL_W = 1600;
+export const CHECK_VIRTUAL_W = 1280;
 export const CHECK_CHAT_VIRTUAL_W = 768;
 export const CHECK_PASS_MS = 1100;
 export const CHECK_SET_PASSES = 2;
@@ -255,7 +255,9 @@ function useCheckScale(ref: { current: HTMLDivElement | null }) {
       const h = el.clientHeight;
       if (!w || !h) return;
       const scale = w / CHECK_VIRTUAL_W;
-      const chat = Math.min(1, (w * 0.9) / CHECK_CHAT_VIRTUAL_W);
+      // Chat uses the same scale as the replica; narrow cards get a legibility
+      // floor so the column fills most of the card instead of 60%.
+      const chat = Math.max(scale, Math.min(1, (Math.min(w, 560) * 0.92) / CHECK_CHAT_VIRTUAL_W));
       el.style.setProperty("--ssd-scale", String(scale));
       el.style.setProperty("--ssd-vh", `${Math.round(h / scale)}px`);
       el.style.setProperty("--ssd-chat-scale", String(chat));

@@ -1,7 +1,7 @@
 /*
  * How it works > Check in demo (CheckInDemo in SessionStageDemos.tsx).
  * A scaled-down replica of the real session screen: the set surface and the
- * BLS control bar are laid out at a fixed virtual desktop width (1600px) with
+ * BLS control bar are laid out at a fixed virtual desktop width (1280px) with
  * the app's own .bls-* classes (globals.css) and scaled with one transform,
  * so proportions match the app. The check-in chat uses the app's
  * .agent-chat-* classes, scaled separately so it stays legible in the card.
@@ -20,12 +20,12 @@
   background: #ffffff;
 }
 
-/* Virtual app (1600px wide, card aspect) scaled to the card. */
+/* Virtual app (1280px wide, card aspect) scaled to the card. */
 .ssd-app {
   position: absolute;
   top: 0;
   left: 0;
-  width: 1600px;
+  width: 1280px;
   height: var(--ssd-vh, 900px);
   transform: scale(var(--ssd-scale, 0.48));
   transform-origin: 0 0;
@@ -73,7 +73,7 @@
     transform: translate(0, -50%);
   }
   50% {
-    transform: translate(calc(1600px - 48px - 4rem), -50%);
+    transform: translate(calc(1280px - 48px - 4rem), -50%);
   }
 }
 
@@ -86,6 +86,18 @@
   bottom: 0;
   z-index: 20;
   padding: 0 0.75rem 0.9rem;
+  transition:
+    opacity 0.4s ease,
+    visibility 0s;
+}
+
+/* The toolbar belongs to the set screen; the check-in chat is not the BLS screen. */
+.ssd--check:not(.is-set) .ssd-app-dock {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.4s ease,
+    visibility 0s linear 0.4s;
 }
 
 /* The app switches the bar to its phone layout below 767px viewport width.
@@ -171,7 +183,7 @@
   justify-content: flex-end;
   align-items: center;
   /* Keep clear of the docked control bar, like the app overlay. */
-  padding: 1rem 1rem calc(var(--bls-dock-height, 5.5rem) * var(--ssd-scale, 0.48) / var(--ssd-chat-scale, 1) + 0.75rem);
+  padding: 2rem 1.5rem;
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
@@ -183,11 +195,25 @@
   scroll-behavior: auto;
 }
 
-.ssd-chat-avatar {
+/* section-editor.css `.fe-spath-media img` (position: absolute; inset: 0;
+   100% x 100%; object-fit: cover) also matches this avatar, since the demo
+   renders inside .fe-spath-media. The animated row becomes its
+   containing block, so the logo was stretched across the whole row behind the
+   bubble (the blurred green bars) and no avatar showed. Pin it back to 44px. */
+.ssd--check .agent-chat-row img.ssd-chat-avatar {
+  position: static;
+  inset: auto;
+  display: block;
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
   border-radius: 999px;
   object-fit: cover;
+}
+
+/* No voice button in the demo, so no room reserved for it. */
+.ssd--check .agent-chat-bubble--agent .agent-chat-text {
+  padding-right: 0;
 }
 
 .ssd--check .agent-chat-row {
