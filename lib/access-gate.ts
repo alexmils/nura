@@ -5,6 +5,8 @@ import { isUnauthenticatedPublicPath } from "@/lib/public-paths";
 export const ACCESS_ALLOWED_PREFIXES = [
   `${APP_BASE}/onboarding`,
   `${APP_BASE}/billing`,
+  // Post-Google-sign-in hop back to the on-site checkout (/checkout).
+  `${APP_BASE}/checkout`,
   `${APP_BASE}/settings`,
   `${APP_BASE}/feedback`,
   `${APP_BASE}/login`,

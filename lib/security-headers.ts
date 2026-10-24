@@ -1,7 +1,8 @@
 /**
  * Response headers for every document and asset.
  * CSP allows the tags the product actually loads (Turnstile, GA/GTM, Clarity,
- * AdSense, Meta via GTM, YouTube/Vimeo embeds) and blocks everything else.
+ * AdSense, Meta via GTM, YouTube/Vimeo embeds, Stripe.js on /checkout) and
+ * blocks everything else.
  * Inline scripts stay allowed because the early bootstrap and Next hydration
  * scripts are not nonce-tagged.
  */
@@ -20,6 +21,9 @@ const SCRIPT_HOSTS = [
   "https://www.google.com",
   "https://www.gstatic.com",
   "https://connect.facebook.net",
+  // Stripe Checkout Elements (/checkout).
+  "https://js.stripe.com",
+  "https://*.js.stripe.com",
 ];
 
 const CONNECT_HOSTS = [
@@ -35,6 +39,9 @@ const CONNECT_HOSTS = [
   "https://googleads.g.doubleclick.net",
   "https://www.facebook.com",
   "https://connect.facebook.net",
+  "https://api.stripe.com",
+  "https://merchant-ui-api.stripe.com",
+  "https://checkout.stripe.com",
 ];
 
 const FRAME_HOSTS = [
@@ -45,6 +52,10 @@ const FRAME_HOSTS = [
   "https://www.googletagmanager.com",
   "https://td.doubleclick.net",
   "https://www.google.com",
+  // Stripe card fields and 3D Secure challenges.
+  "https://js.stripe.com",
+  "https://*.js.stripe.com",
+  "https://hooks.stripe.com",
 ];
 
 function contentSecurityPolicy(env: string): string {
@@ -87,7 +98,8 @@ export function securityHeaders(env: string = process.env.NODE_ENV ?? "developme
         "camera=()",
         "microphone=(self)",
         "geolocation=()",
-        "payment=()",
+        // Wallet buttons (Apple Pay / Google Pay) inside the Stripe iframe.
+        `payment=(self "https://js.stripe.com")`,
         "usb=()",
         "autoplay=(self)",
         `fullscreen=(self "https://www.youtube-nocookie.com" "https://www.youtube.com" "https://player.vimeo.com")`,

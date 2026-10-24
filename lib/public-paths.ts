@@ -96,6 +96,8 @@ const PUBLIC_EXACT = new Set([
   "/review",
   // Tokenised win-back offer (30 days free); same model as /review.
   "/reactivate",
+  // On-site checkout: signs people in or up inline, then takes payment.
+  "/checkout",
 ]);
 
 const PUBLIC_PREFIXES = ["/brand-assets/"] as const;
@@ -141,11 +143,10 @@ export function shouldRedirectToLoginOn401(pathname: string): boolean {
 
 /**
  * Short public URLs people type. Registration is `/app/create-account`.
- * Stripe Checkout is not a page — plans live on `/pricing`.
+ * `/checkout` is a real page (on-site checkout), not an alias.
  */
 const PUBLIC_PATH_ALIASES: Record<string, string> = {
   "/signup": `${APP_BASE}/create-account`,
-  "/checkout": "/pricing",
 };
 
 /** Legacy console bookmarks before the /app prefix. */

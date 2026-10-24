@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { requireAuth, isAuthContext } from "@/lib/api-auth";
 import { persistAttributionFromCookie } from "@/lib/attribution-server";
 import { getPublicAppUrl } from "@/lib/platform-settings";
@@ -7,6 +8,11 @@ import {
   TRIAL_DAYS,
   type BillingPlanId,
 } from "@/lib/billing-constants";
+import { activeStripeCredentials } from "@/lib/stripe-config";
+import {
+  CHECKOUT_ELEMENTS_API_VERSION,
+  checkoutReturnPath,
+} from "@/lib/checkout-page";
 import {
   activeStripeLivemode,
   getStripe,
@@ -50,11 +56,15 @@ export async function POST(request: Request) {
 
   let plan: BillingPlanId = "yearly";
   let source = "billing";
+  // "elements" = on-site checkout page (/checkout); default = Stripe-hosted.
+  let elements = false;
   try {
     const body = (await request.json().catch(() => ({}))) as {
       plan?: unknown;
       source?: unknown;
+      ui?: unknown;
     };
+    elements = body.ui === "elements";
     if (body.plan !== undefined) {
       if (!isBillingPlanId(body.plan)) {
         return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
@@ -74,7 +84,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const plans = resolveBillingPlans(await getStripeConfig());
+  const stripeConfig = await getStripeConfig();
+  const plans = resolveBillingPlans(stripeConfig);
+  const publishableKey = activeStripeCredentials(stripeConfig).publishableKey.trim();
+  if (elements && !publishableKey) {
+    // The page falls back to Stripe-hosted Checkout on this code.
+    return NextResponse.json(
+      {
+        error: "On-site checkout is not configured",
+        code: "elements_unavailable",
+      },
+      { status: 503 }
+    );
+  }
   const activeLivemode = await activeStripeLivemode();
   const existing = await getSubscriptionByUserId(auth.user.id);
   const storedLivemode = existing?.stripe_livemode ?? null;
@@ -167,22 +189,23 @@ export async function POST(request: Request) {
       });
     }
 
-    const successPath =
-      source === "onboarding"
-        ? `/app/onboarding?checkout=success&session_id={CHECKOUT_SESSION_ID}`
-        : `/app/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+    // Members who have not finished onboarding (new accounts made on the
+    // checkout page) land on onboarding, which shows the trial welcome.
+    const toOnboarding =
+      source === "onboarding" || (elements && !auth.user.onboardingCompletedAt);
+    const successPath = checkoutReturnPath(
+      toOnboarding ? "onboarding" : "billing",
+      "success"
+    );
     const cancelPath =
-      source === "onboarding"
-        ? `/app/onboarding?checkout=canceled&plan=${plan}`
-        : `/app/billing?checkout=canceled&plan=${plan}`;
+      checkoutReturnPath(toOnboarding ? "onboarding" : "billing", "canceled") +
+      `&plan=${plan}`;
 
-    const session = await stripe.checkout.sessions.create({
+    const shared: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       customer: customerId,
       client_reference_id: auth.user.id,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}${successPath}`,
-      cancel_url: `${baseUrl}${cancelPath}`,
       subscription_data: {
         ...(includeTrial ? { trial_period_days: TRIAL_DAYS } : {}),
         metadata: {
@@ -197,6 +220,38 @@ export async function POST(request: Request) {
         user_id: auth.user.id,
         plan,
       },
+    };
+
+    if (elements) {
+      // Checkout Elements: same subscription session (same webhook, trial and
+      // entitlement path), rendered on our page. ui_mode "elements" only
+      // exists on newer API versions, so this one call overrides the pinned
+      // version; stripe-node 17 types predate it, hence the cast.
+      const params = {
+        ...shared,
+        ui_mode: "elements",
+        return_url: `${baseUrl}${successPath}`,
+      } as unknown as Stripe.Checkout.SessionCreateParams;
+      const session = await stripe.checkout.sessions.create(params, {
+        apiVersion: CHECKOUT_ELEMENTS_API_VERSION,
+      });
+      if (!session.client_secret) {
+        return NextResponse.json({ error: "Checkout failed" }, { status: 500 });
+      }
+      return NextResponse.json({
+        clientSecret: session.client_secret,
+        publishableKey,
+        plan,
+        planMeta: plans[plan],
+        trialDays: includeTrial ? TRIAL_DAYS : 0,
+        returnTo: toOnboarding ? "onboarding" : "billing",
+      });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      ...shared,
+      success_url: `${baseUrl}${successPath}`,
+      cancel_url: `${baseUrl}${cancelPath}`,
     });
 
     return NextResponse.json({

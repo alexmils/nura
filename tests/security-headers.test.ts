@@ -44,6 +44,10 @@ describe("security headers", () => {
     assert.match(csp, /https:\/\/www\.googletagmanager\.com/);
     assert.match(csp, /upgrade-insecure-requests/);
     assert.doesNotMatch(csp, /unsafe-eval/);
+    // Stripe Checkout Elements on /checkout (script, API, card + 3DS frames).
+    assert.match(csp, /script-src[^;]*https:\/\/js\.stripe\.com/);
+    assert.match(csp, /connect-src[^;]*https:\/\/api\.stripe\.com/);
+    assert.match(csp, /frame-src[^;]*https:\/\/hooks\.stripe\.com/);
 
     const policy = header("production", "Permissions-Policy");
     assert.match(policy, /camera=\(\)/);
