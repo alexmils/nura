@@ -1,0 +1,90 @@
+/*
+ * Home: values ticker — a full-bleed lime band, uppercase words scrolling
+ * horizontally, alternating solid and faded. Ships switched off.
+ */
+
+.v2-ticker {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--v2-green-300, #c6d67e);
+}
+
+.v2-ticker-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  min-height: clamp(6.5rem, 11vw, 10rem);
+  background: var(--v2-green-300, #c6d67e);
+}
+
+.v2-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: v2-ticker-scroll 38s linear infinite;
+  will-change: transform;
+}
+
+/* Reading it is easier if it holds still while the pointer is over the band. */
+.v2-ticker-band:hover .v2-ticker-track,
+.v2-ticker-band:focus-within .v2-ticker-track {
+  animation-play-state: paused;
+}
+
+.v2-ticker-set {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: clamp(1.1rem, 2.4vw, 2.2rem);
+  padding-right: clamp(1.1rem, 2.4vw, 2.2rem);
+}
+
+.v2-ticker-word {
+  font-family: var(--font-instrument), var(--font-sans);
+  font-size: clamp(1.45rem, 3.2vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #17301f;
+}
+
+.v2-ticker-word.is-muted {
+  color: rgba(23, 48, 31, 0.32);
+}
+
+.v2-ticker-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@keyframes v2-ticker-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Reduced motion: the words wrap in place, no scrolling duplicate. */
+@media (prefers-reduced-motion: reduce) {
+  .v2-ticker-track {
+    width: 100%;
+    flex-wrap: wrap;
+    animation: none;
+  }
+
+  .v2-ticker-set {
+    flex-wrap: wrap;
+    row-gap: 0.7rem;
+    padding: clamp(1.4rem, 4vw, 2.2rem);
+  }
+
+  .v2-ticker-set:nth-child(2) {
+    display: none;
+  }
+}

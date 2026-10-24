@@ -166,6 +166,16 @@ describe("marketing section copy", () => {
     assert.equal(isSectionOn(on), true);
   });
 
+  it("ships the values ticker off with editable words", () => {
+    const off = normalizeSection("home-values-ticker", {});
+    assert.equal(isSectionOn(off), false);
+    assert.match(sectionText(off, "words"), /Ground first/);
+
+    const on = normalizeSection("home-values-ticker", { _off: "0", words: "One\nTwo" });
+    assert.equal(isSectionOn(on), true);
+    assert.equal(sectionText(on, "words"), "One\nTwo");
+  });
+
   it("accepts the review spotlight and falls back to the card strip", () => {
     assert.equal(storiesTemplate(undefined), "default");
     assert.equal(storiesTemplate({ template: "review" }), "review");

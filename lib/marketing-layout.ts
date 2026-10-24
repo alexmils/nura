@@ -35,6 +35,7 @@ export const MARKETING_PAGES = {
       { id: "home-session" },
       { id: "home-feature-band", label: "Home: feature band (off by default)" },
       { id: "home-topics" },
+      { id: "home-values-ticker", label: "Home: values ticker (off by default)" },
       { id: "home-stories" },
       { id: "home-pricing" },
       { id: "home-faq" },
