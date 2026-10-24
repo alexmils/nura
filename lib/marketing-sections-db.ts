@@ -7,7 +7,6 @@ import {
   isMarketingPageId,
   LAYOUT_ROW_PREFIX,
   layoutRowId,
-  MAX_CUSTOM_SECTIONS_PER_PAGE,
   normalizeLayout,
   type MarketingPageId,
   type PageLayout,
@@ -122,12 +121,17 @@ export async function savePageLayout(
          SET config = EXCLUDED.config, updated_at = NOW()`,
       [layoutRowId(page), JSON.stringify(layout)]
     );
-    for (const [id, config] of Object.entries(seeds).slice(0, MAX_CUSTOM_SECTIONS_PER_PAGE)) {
-      if (!customs.has(id)) continue;
+    // Seeds carry the "Show this section" switch when the layout's eye is used,
+    // so built-ins can be switched on/off in the same save as the order.
+    const liveIds = new Set(layout.sections.map((entry) => entry.id));
+    for (const [id, config] of Object.entries(seeds)) {
+      if (!liveIds.has(id)) continue;
+      if (!customs.has(id) && !isMarketingSectionId(id)) continue;
       await client.query(
         `INSERT INTO marketing_sections (id, config, updated_at)
          VALUES ($1, $2::jsonb, NOW())
-         ON CONFLICT (id) DO NOTHING`,
+         ON CONFLICT (id) DO UPDATE
+           SET config = EXCLUDED.config, updated_at = NOW()`,
         [id, JSON.stringify(normalizeSection(id, config))]
       );
     }

@@ -25,6 +25,7 @@ import {
   newCustomSectionId,
   normalizeSection,
   sectionText,
+  SECTION_OFF_KEY,
   type CustomSectionType,
   type SectionConfig,
 } from "@/lib/marketing-sections";
@@ -123,10 +124,40 @@ export function PageLayoutEditor({
     setEntries(previous);
   }
 
+  /** A built-in section is effectively off when its own switch is off too. */
+  function offFor(id: string): boolean {
+    return (
+      !isCustomSectionId(id) &&
+      slotIsEditable(id) &&
+      sourceConfig(id)[SECTION_OFF_KEY] === "1"
+    );
+  }
+
+  /**
+   * One eye controls the whole card: hiding sets the layout flag and the
+   * section's own "Show this section" switch, so the copy and the layout can
+   * never disagree.
+   */
   function toggle(index: number) {
+    const entry = entries[index];
+    if (!entry) return;
+    const nextHidden = !(entry.hidden || offFor(entry.id));
+    if (!isCustomSectionId(entry.id) && slotIsEditable(entry.id)) {
+      const seeded: SectionConfig = {
+        ...sourceConfig(entry.id),
+        [SECTION_OFF_KEY]: nextHidden ? "1" : "0",
+      };
+      setSeeds((current) => ({ ...current, [entry.id]: seeded }));
+      setSectionDraft(entry.id, seeded);
+      if (!seedIds.current.includes(entry.id)) seedIds.current.push(entry.id);
+    }
     update(
-      entries.map((entry, i) =>
-        i === index ? (entry.hidden ? { id: entry.id } : { id: entry.id, hidden: true }) : entry
+      entries.map((item, i) =>
+        i === index
+          ? nextHidden
+            ? { id: item.id, hidden: true }
+            : { id: item.id }
+          : item
       )
     );
   }
@@ -250,18 +281,21 @@ export function PageLayoutEditor({
           </header>
           <div className="fe-editor-body">
             <p className="fe-layout-help">
-              Drag or use the arrows to reorder. Hidden sections stay saved but visitors do not
-              see them. Changes preview live; nothing is public until you save.
+              Drag or use the arrows to reorder. The eye hides or shows the whole section —
+              including its own &ldquo;Show this section&rdquo; switch — and the page preview follows
+              live. Nothing is public until you save.
             </p>
             <ol className="fe-layout-list">
               {entries.map((entry, index) => {
                 const custom = isCustomSectionId(entry.id);
                 const editable = custom || slotIsEditable(entry.id);
-                const unsavedCopy = Boolean(seeds[entry.id]);
+                const off = offFor(entry.id);
+                const hiddenNow = entry.hidden || off;
+                const unsavedCopy = custom && Boolean(seeds[entry.id]);
                 return (
                   <li
                     key={entry.id}
-                    className={`fe-layout-row${entry.hidden ? " is-hidden" : ""}${
+                    className={`fe-layout-row${hiddenNow ? " is-hidden" : ""}${
                       dragFrom === index ? " is-dragging" : ""
                     }`}
                     draggable
@@ -291,7 +325,7 @@ export function PageLayoutEditor({
                         <strong>{slotLabel(page, entry.id)}</strong>
                       )}
                       <code>{entry.id}</code>
-                      {entry.hidden ? <em>Hidden</em> : null}
+                      {hiddenNow ? <em>Hidden</em> : null}
                     </div>
                     <div className="fe-layout-actions">
                       <button
@@ -315,11 +349,11 @@ export function PageLayoutEditor({
                       <button
                         type="button"
                         onClick={() => toggle(index)}
-                        aria-pressed={!entry.hidden}
-                        aria-label={entry.hidden ? "Show section" : "Hide section"}
-                        title={entry.hidden ? "Show" : "Hide"}
+                        aria-pressed={!hiddenNow}
+                        aria-label={hiddenNow ? "Show section" : "Hide section"}
+                        title={hiddenNow ? "Show" : "Hide"}
                       >
-                        {entry.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                        {hiddenNow ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                       {editable ? (
                         <button
