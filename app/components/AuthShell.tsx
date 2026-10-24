@@ -78,6 +78,12 @@ function AuthShellInner({
     >
       <ConversionTags />
       <div className="auth-shell-pane auth-shell-pane--form">
+        {editableVisual && !hideVisual ? (
+          // Phones hide the right panel, so its Edit chip also sits here.
+          <div className="auth-shell-edit-mobile">
+            <SectionEdit id="auth-login" />
+          </div>
+        ) : null}
         {!isCenter ? (
           <header className="auth-shell-chrome">
             <div className="auth-shell-brand">

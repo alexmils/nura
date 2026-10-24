@@ -372,3 +372,35 @@
 
   .av-social-link { transition: none; }
 }
+
+/* Admin Edit chip for the sign-in panel. On phones the panel is hidden, so a
+   copy of the chip sits at the top of the form pane instead. */
+.auth-shell-edit-mobile {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 2.2rem;
+  margin: 0 0 0.75rem;
+}
+
+/* Visitors get no chip, so the empty slot takes no space. */
+.auth-shell-edit-mobile:empty {
+  display: none;
+}
+
+.auth-shell-edit-mobile > .fe-section-chip {
+  top: 0;
+  right: 0;
+}
+
+@media (min-width: 960px) {
+  .auth-shell-edit-mobile {
+    display: none;
+  }
+
+  /* Keep the desktop chip inside the rounded card corner. */
+  .auth-shell--card .auth-shell-pane--visual > .fe-section-chip {
+    top: 2.5rem;
+    right: 2.5rem;
+  }
+}
