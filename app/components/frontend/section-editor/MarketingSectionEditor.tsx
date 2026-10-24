@@ -74,7 +74,7 @@ export function MarketingSectionEditor({
   // Hero templates: only the chosen (previewed) template's own fields are shown.
   const template = String(config?.[HERO_TEMPLATE_KEY] || "default");
   const pickerFields = def ? def.fields.filter(isPicker) : [];
-  const colorFields = def ? def.fields.filter(isColor) : [];
+  const colorFields = def ? def.fields.filter(isColor).filter((field) => fieldInTemplate(field, template)) : [];
   const contentFields = def
     ? def.fields.filter((field) => !isPicker(field) && !isColor(field) && fieldInTemplate(field, template))
     : [];
@@ -333,7 +333,7 @@ export function MarketingSectionEditor({
                 />
               </EditorAccordion>
               {colorFields.length ? (
-                <EditorAccordion title="Text colours" hint="Blank keeps the design.">
+                <EditorAccordion title={id === "auth-login" ? "Colours" : "Text colours"} hint="Blank keeps the design.">
                   {colorFields.map((field) => (
                     <ColorControl
                       key={field.key}
@@ -374,7 +374,7 @@ export function MarketingSectionEditor({
 }
 
 function isPicker(field: Field): field is ScalarField {
-  return field.kind !== "list" && field.kind !== "media" && Boolean(field.options?.length);
+  return field.kind !== "list" && field.kind !== "media" && Boolean(field.options?.length) && !field.select;
 }
 
 function isColor(field: Field): field is ScalarField {
@@ -569,6 +569,14 @@ function ScalarControl({
             Cloudinary
           </button>
         </div>
+      ) : field.options?.length ? (
+        <select value={value} onChange={(event) => onChange(event.target.value)}>
+          {field.options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       ) : field.kind === "textarea" ? (
         <textarea rows={(field.max ?? 0) > 2400 ? 18 : 4} value={value} onChange={(event) => onChange(event.target.value)} />
       ) : (

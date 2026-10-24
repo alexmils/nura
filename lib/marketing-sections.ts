@@ -2,6 +2,7 @@ import { TRIAL_DAYS } from "@/lib/billing-constants";
 import { formatImagePosition, framePosKey } from "@/lib/image-position";
 import { BLOG_CATEGORIES } from "@/lib/blog-categories";
 import {
+  BRAND_SOCIAL,
   BRAND_SPOKEN,
   BRAND_TAGLINE,
   SESSION_MODE_GUIDED_LABEL,
@@ -44,6 +45,8 @@ export type ScalarField = {
   max?: number;
   /** A fixed choice (stored as its value); the editor shows a picker. */
   options?: readonly FieldOption[];
+  /** Render `options` as a plain dropdown in Content (not the Layout template picker). */
+  select?: boolean;
   /** URL field with a Cloudinary video picker beside the input. */
   videoPicker?: boolean;
   /** Hex colour ("#rrggbb" or blank); the editor shows a colour swatch. */
@@ -388,6 +391,184 @@ function faqDefaults(
 ): SectionItem[] {
   return items.map((item) => ({ q: item.q, a: item.a }));
 }
+
+/* ---------- Sign-in / sign-up right panel ---------- */
+
+export const AUTH_PANEL_ID = "auth-login";
+export const AUTH_PANEL_TEMPLATE_KEY = "template";
+export const AUTH_PANEL_TEMPLATES = [
+  { value: "forest", label: "Forest value", hint: "Deep forest, slow light, trial badge and three cards." },
+  { value: "breath", label: "Breathing light", hint: "A large orb that slowly breathes, one calm line, a glass card." },
+  { value: "press", label: "Editorial split", hint: "Big type, an oversized trial number, numbered notes, optional photo." },
+] as const satisfies readonly FieldOption[];
+export type AuthPanelTemplate = (typeof AUTH_PANEL_TEMPLATES)[number]["value"];
+
+export const AUTH_SOCIAL_POSITIONS = [
+  { value: "bottom-left", label: "Bottom left" },
+  { value: "bottom-right", label: "Bottom right" },
+  { value: "top-right", label: "Top right" },
+  { value: "top-left", label: "Top left" },
+  { value: "inline", label: "Under the content" },
+  { value: "none", label: "Hidden" },
+] as const satisfies readonly FieldOption[];
+export type AuthSocialPosition = (typeof AUTH_SOCIAL_POSITIONS)[number]["value"];
+
+export function authPanelTemplate(
+  config: SectionConfig | undefined,
+  override?: string | null
+): AuthPanelTemplate {
+  const pick = (raw: unknown) =>
+    AUTH_PANEL_TEMPLATES.some((option) => option.value === raw) ? (raw as AuthPanelTemplate) : null;
+  return pick(override) ?? pick(config?.[AUTH_PANEL_TEMPLATE_KEY]) ?? "forest";
+}
+
+export function authSocialPosition(config: SectionConfig | undefined): AuthSocialPosition {
+  const raw = config?.socialPosition;
+  return AUTH_SOCIAL_POSITIONS.some((option) => option.value === raw)
+    ? (raw as AuthSocialPosition)
+    : "bottom-left";
+}
+
+const authOnly = <T extends object>(field: T, template: AuthPanelTemplate): T => ({
+  ...field,
+  templates: [template],
+});
+const authColor = (key: string, label: string, template: AuthPanelTemplate): ScalarField =>
+  authOnly({ ...text(key, label, COLOR_HINT), color: true }, template);
+const LINE_HINT = "A new line starts a new line on the page.";
+
+const AUTH_PANEL_SECTION: SectionDef = {
+  id: AUTH_PANEL_ID,
+  name: "Sign-in: right panel",
+  noHide: true,
+  fields: [
+    { ...text(AUTH_PANEL_TEMPLATE_KEY, "Preset"), options: AUTH_PANEL_TEMPLATES },
+    { ...text("socialPosition", "Social icons"), options: AUTH_SOCIAL_POSITIONS, select: true },
+    { ...link("socialInstagram", "Instagram link"), hint: "Blank restores the default link." },
+    { ...link("socialFacebook", "Facebook link"), hint: "Blank restores the default link." },
+
+    authOnly(text("forestBadge", "Badge"), "forest"),
+    authOnly(area("forestTitle", "Headline", LINE_HINT), "forest"),
+    authOnly(area("forestLead", "Subhead"), "forest"),
+    authOnly(
+      {
+        key: "forestCards",
+        label: "Cards",
+        kind: "list",
+        itemLabel: "Card",
+        max: 3,
+        fixed: true,
+        fields: [text("title", "Title"), area("text", "Description")],
+      } satisfies ListField,
+      "forest"
+    ),
+    authColor("forestBg", "Background colour", "forest"),
+    authColor("forestGlow", "Glow colour", "forest"),
+    authColor("forestGlow2", "Second glow colour", "forest"),
+    authColor("forestText", "Text colour", "forest"),
+    authColor("forestCard", "Card colour", "forest"),
+    authColor("forestBadgeBg", "Badge colour", "forest"),
+
+    authOnly(text("breathIn", "Inhale word"), "breath"),
+    authOnly(text("breathOut", "Exhale word"), "breath"),
+    authOnly(area("breathTitle", "Headline", LINE_HINT), "breath"),
+    authOnly(area("breathLead", "Subhead"), "breath"),
+    authOnly(text("breathNote", "Trial note"), "breath"),
+    authColor("breathBg", "Background colour", "breath"),
+    authColor("breathOrb", "Orb colour", "breath"),
+    authColor("breathText", "Text colour", "breath"),
+    authColor("breathCard", "Card colour", "breath"),
+
+    authOnly(text("editKicker", "Label"), "press"),
+    authOnly(area("editTitle", "Headline", LINE_HINT), "press"),
+    authOnly(text("editNumber", "Big number"), "press"),
+    authOnly(text("editNumberLabel", "Big number label"), "press"),
+    authOnly(area("editNumberText", "Under the number"), "press"),
+    authOnly(
+      {
+        key: "editNotes",
+        label: "Numbered notes",
+        kind: "list",
+        itemLabel: "Note",
+        max: 3,
+        fixed: true,
+        fields: [text("title", "Title"), area("text", "Description")],
+      } satisfies ListField,
+      "press"
+    ),
+    authOnly(text("editSnippetGuide", "App card: guide line"), "press"),
+    authOnly(text("editSnippetMe", "App card: reply"), "press"),
+    authOnly(media("editPhoto", "Photo or video", "Optional. Shown in the arch on the right."), "press"),
+    authColor("editBg", "Background colour", "press"),
+    authColor("editInk", "Text colour", "press"),
+    authColor("editAccent", "Accent colour", "press"),
+  ],
+  defaults: {
+    [AUTH_PANEL_TEMPLATE_KEY]: "forest",
+    socialPosition: "bottom-left",
+    socialInstagram: BRAND_SOCIAL.instagram,
+    socialFacebook: BRAND_SOCIAL.facebook,
+
+    forestBadge: `${TRIAL_DAYS}-day free trial`,
+    forestTitle: "Go at your own pace.\nCome back whenever you need.",
+    forestLead:
+      "EMDR-style sessions you can run at home, with a guide when you want one and quiet when you don't.",
+    forestCards: [
+      {
+        id: "guided",
+        title: "Guided or on your own",
+        text: "Talk it through with the AI agent, or run self-guided sets.",
+      },
+      {
+        id: "safety",
+        title: "Safety built in",
+        text: "Grounding and a calm place first, and a pause at any moment.",
+      },
+      {
+        id: "plan",
+        title: "Full app on every plan",
+        text: `Try everything free for ${TRIAL_DAYS} days, cancel anytime.`,
+      },
+    ],
+    forestBg: "",
+    forestGlow: "",
+    forestGlow2: "",
+    forestText: "",
+    forestCard: "",
+    forestBadgeBg: "",
+
+    breathIn: "Breathe in",
+    breathOut: "Breathe out",
+    breathTitle: "You're in a safe place.",
+    breathLead: "Take one slow breath with the light. When you're ready, sign in and pick up where you left off.",
+    breathNote: `${TRIAL_DAYS}-day free trial, cancel anytime`,
+    breathBg: "",
+    breathOrb: "",
+    breathText: "",
+    breathCard: "",
+
+    editKicker: "Self-help EMDR",
+    editTitle: "Calm is a practice.\nStart yours here.",
+    editNumber: String(TRIAL_DAYS),
+    editNumberLabel: "days free",
+    editNumberText: "The full app on every plan. Cancel anytime.",
+    editNotes: [
+      { id: "guide", title: "A guide, when you want one", text: "The AI agent checks in before and after every set." },
+      { id: "control", title: "Your pace, your settings", text: "Visuals, sound and speed, set the way you like." },
+      { id: "safety", title: "Safety first", text: "Grounding, a calm place and a pause at any moment." },
+    ],
+    editSnippetGuide: "How calm do you feel right now, from 0 to 10?",
+    editSnippetMe: "About a 6 today.",
+    editPhotoKind: "none",
+    editPhotoImage: "",
+    editPhotoVideo: "",
+    editPhotoPoster: "",
+    editPhotoAlt: "",
+    editBg: "",
+    editInk: "",
+    editAccent: "",
+  },
+};
 
 const BASE_SECTIONS: readonly SectionDef[] = [
   {
@@ -2235,15 +2416,9 @@ export const MARKETING_SECTIONS: readonly SectionDef[] = [
     ...V2_SECTIONS,
     ...PAGE_CTA_SECTIONS,
   ]),
-  // Not a marketing page section: the visual pane on the sign-in screen. It has
-  // no copy of its own — the editor only exposes the shared Background panel.
-  {
-    id: "auth-login",
-    name: "Sign-in: background",
-    fields: [],
-    defaults: {},
-    noHide: true,
-  },
+  // Not a marketing page section: the right pane on the sign-in / sign-up
+  // screens. A preset picker plus each preset's own copy and colours.
+  AUTH_PANEL_SECTION,
 ];
 
 /** Page-layout slot ids for a long article (one per "## " piece). */
