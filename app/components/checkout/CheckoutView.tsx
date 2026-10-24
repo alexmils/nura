@@ -392,6 +392,7 @@ export function CheckoutView({
         </aside>
 
         <main className="nco-main">
+          <div className="nco-main__scroll">
           <div className="nco-main__inner">
             {user ? (
               <>
@@ -425,6 +426,7 @@ export function CheckoutView({
                 onAuthed={setUser}
               />
             )}
+          </div>
           </div>
         </main>
       </div>
