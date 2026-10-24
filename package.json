@@ -19,6 +19,8 @@
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@simplewebauthn/browser": "^14.0.0",
     "@simplewebauthn/server": "^14.0.0",
+    "@stripe/react-stripe-js": "^7.0.0",
+    "@stripe/stripe-js": "^10.1.0",
     "bcryptjs": "^3.0.3",
     "fflate": "^0.8.3",
     "googleapis": "^178.0.0",
