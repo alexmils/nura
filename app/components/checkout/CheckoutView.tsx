@@ -1,13 +1,22 @@
 "use client";
 
+/**
+ * Full-screen split checkout, ported from the hubcast checkout layout:
+ * dark order summary on the left (plan, price, features, plan cards, totals),
+ * light "Your details" + payment panel on the right with a bottom order card
+ * and one big pay button. Mobile stacks the summary on top (collapsible) and
+ * keeps the pay button sticky. Users never see the payment processor's name.
+ */
+
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, Lock } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ArrowLeft, Check, ChevronDown, Eye, EyeOff, Lock, Sparkles } from "lucide-react";
 import {
   CheckoutElementsProvider,
   PaymentElement,
   useCheckoutElements,
 } from "@stripe/react-stripe-js/checkout";
+import { BrandLockup } from "@/app/components/BrandLockup";
 import { GoogleAuthButton } from "@/app/components/GoogleAuthButton";
 import {
   TurnstileField,
@@ -23,6 +32,16 @@ import {
   checkoutConflictRedirect,
   type CheckoutSource,
 } from "@/lib/checkout-page";
+import {
+  CHECKOUT_FEATURES,
+  CHECKOUT_PLAN_SUMMARY,
+  checkoutUpsell,
+  passwordOk,
+  passwordRules,
+  payButtonLabel,
+  trialBillingStart,
+  yearlySavingBadge,
+} from "@/lib/checkout-summary";
 import { metaMoneyFromPlanPrice, trackMetaEvent } from "@/lib/meta-pixel";
 import { TURNSTILE_TOKEN_FIELD } from "@/lib/turnstile-shared";
 import { PAYMENT_APPEARANCE, paymentClientFor } from "./payment-client";
@@ -46,9 +65,6 @@ type SessionState =
   | { kind: "redirecting"; message: string }
   | { kind: "error"; message: string };
 
-const APPEARANCE = PAYMENT_APPEARANCE;
-const stripeFor = paymentClientFor;
-
 async function postJson(url: string, body: unknown) {
   const res = await fetch(url, {
     method: "POST",
@@ -71,6 +87,7 @@ export function CheckoutView({
   const [user, setUser] = useState<SignedIn | null>(signedIn);
   const [session, setSession] = useState<SessionState>({ kind: "idle" });
   const [ageOk, setAgeOk] = useState<boolean | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const startedFor = useRef<string>("");
 
   const meta = plans[plan];
@@ -98,7 +115,7 @@ export function CheckoutView({
         return;
       }
       if (res.status === 503 && data.code === "elements_unavailable") {
-        // Fallback: Stripe-hosted Checkout with the same session settings.
+        // Fallback: hosted checkout page with the same session settings.
         const hosted = await postJson("/api/billing/checkout", { plan: forPlan, source });
         if (hosted.res.ok && typeof hosted.data.url === "string") {
           setSession({ kind: "redirecting", message: "Opening secure checkout\u2026" });
@@ -173,152 +190,284 @@ export function CheckoutView({
   };
 
   const stripePromise = useMemo(
-    () => (session.kind === "ready" ? stripeFor(session.publishableKey) : null),
+    () => (session.kind === "ready" ? paymentClientFor(session.publishableKey) : null),
     [session]
   );
 
   const shownTrial = session.kind === "ready" ? session.trialDays : trialDays;
+  const billingStart = shownTrial > 0 ? trialBillingStart(shownTrial) : null;
+  const upsell = checkoutUpsell(plans, plan);
+  const saveBadge = yearlySavingBadge(plans);
+  const busyPlans = session.kind === "loading" || session.kind === "redirecting";
+  const priceLine = meta ? `${meta.displayPrice}${meta.displayPeriod}` : "";
+  const dueTodayFallback = shownTrial > 0 ? "$0.00" : (meta?.displayPrice ?? "");
+
+  const order = {
+    meta,
+    trialDays: shownTrial,
+    billingStart,
+  };
+
+  let paymentArea: ReactNode;
+  if (!stripeConfigured) {
+    paymentArea = (
+      <p className="nco-error" role="alert">
+        Checkout is not available right now. Please try again later.
+      </p>
+    );
+  } else if (!user) {
+    paymentArea = null;
+  } else if (user.role !== "user") {
+    paymentArea = (
+      <p className="nco-error" role="alert">
+        This is a staff account. Sign in with a member account to subscribe.
+      </p>
+    );
+  } else if (session.kind === "error") {
+    paymentArea = (
+      <div className="nco-stack">
+        <p className="nco-error" role="alert">{session.message}</p>
+        <button type="button" className="nco-btn-ghost" onClick={() => void startSession(plan)}>
+          Try again
+        </button>
+      </div>
+    );
+  } else if (session.kind === "redirecting") {
+    paymentArea = <p className="nco-muted" role="status">{session.message}</p>;
+  } else if (session.kind === "ready" && stripePromise) {
+    paymentArea = (
+      <CheckoutElementsProvider
+        key={session.clientSecret}
+        stripe={stripePromise}
+        options={{
+          clientSecret: session.clientSecret,
+          elementsOptions: { appearance: PAYMENT_APPEARANCE },
+        }}
+      >
+        <PaymentStep
+          order={order}
+          ageOk={ageOk}
+          onAgeConfirmed={() => setAgeOk(true)}
+        />
+      </CheckoutElementsProvider>
+    );
+  } else {
+    paymentArea = <p className="nco-muted" role="status">Preparing secure payment…</p>;
+  }
 
   return (
-    <main className="nura-checkout">
-      <div className="nura-checkout__inner">
-        <Link href={backHref} className="nura-checkout__back">
-          <ArrowLeft size={16} aria-hidden /> Back
+    <div className="nco">
+      <header className="nco-bar">
+        <Link href="/" className="nco-bar__logo" aria-label="Nura home">
+          <BrandLockup tone="white" />
         </Link>
-        <header className="nura-checkout__head">
-          <h1 className="nura-checkout__title">Checkout</h1>
-          <p className="nura-checkout__sub">
-            Your account and payment, all on this page.
-          </p>
-        </header>
+        <div className="nco-bar__right">
+          <span className="nco-bar__secure">
+            <Lock size={14} aria-hidden /> Secure checkout
+          </span>
+          <Link href={backHref} className="nco-bar__back">
+            <ArrowLeft size={15} aria-hidden /> Back
+          </Link>
+        </div>
+      </header>
 
-        <div className="nura-checkout__grid">
-          <div className="nura-checkout__main">
-            <section className="nura-checkout__card" aria-labelledby="co-account">
-              <h2 id="co-account" className="nura-checkout__step">
-                <span className="nura-checkout__step-num">1</span> Account
-              </h2>
-              {user ? (
-                <SignedInRow user={user} />
-              ) : (
-                <AccountStep plan={plan} source={source} onAuthed={setUser} />
-              )}
-            </section>
+      <div className="nco-split">
+        <aside className={`nco-summary${summaryOpen ? " is-open" : ""}`} aria-label="Order summary">
+          <div className="nco-summary__glow" aria-hidden />
+          <div className="nco-summary__inner">
+            <p className="nco-kicker">Checkout</p>
+            <h1 className="nco-summary__title">Nura {meta?.label ?? ""}</h1>
+            {meta ? (
+              <p className="nco-summary__price">
+                {meta.displayPrice}
+                <span>{meta.displayPeriod}</span>
+              </p>
+            ) : null}
+            {shownTrial > 0 ? (
+              <p className="nco-summary__trial">
+                $0 today · {shownTrial}-day free trial
+              </p>
+            ) : plan === "yearly" && saveBadge ? (
+              <p className="nco-summary__trial">{saveBadge} a year vs Monthly</p>
+            ) : null}
+            <p className="nco-summary__tagline">{CHECKOUT_PLAN_SUMMARY[plan]}</p>
 
-            <section
-              className={`nura-checkout__card${user ? "" : " nura-checkout__card--locked"}`}
-              aria-labelledby="co-pay"
+            <button
+              type="button"
+              className="nco-summary__toggle"
+              aria-expanded={summaryOpen}
+              onClick={() => setSummaryOpen((v) => !v)}
             >
-              <h2 id="co-pay" className="nura-checkout__step">
-                <span className="nura-checkout__step-num">2</span> Payment
-              </h2>
-              {!stripeConfigured ? (
-                <p className="nura-checkout__error" role="alert">
-                  Checkout is not available right now. Please try again later.
-                </p>
-              ) : !user ? (
-                <p className="nura-checkout__muted">
-                  Create an account or sign in above to continue to payment.
-                </p>
-              ) : user.role !== "user" ? (
-                <p className="nura-checkout__error" role="alert">
-                  This is a staff account. Sign in with a member account to subscribe.
-                </p>
-              ) : session.kind === "error" ? (
-                <div>
-                  <p className="nura-checkout__error" role="alert">{session.message}</p>
+              {summaryOpen ? "Hide details" : "Show details"}
+              <ChevronDown size={16} aria-hidden />
+            </button>
+
+            <div className="nco-summary__details">
+              {upsell ? (
+                upsell.kind === "switch" ? (
                   <button
                     type="button"
-                    className="nura-checkout__btn nura-checkout__btn--ghost"
-                    onClick={() => void startSession(plan)}
+                    className="nco-chip"
+                    onClick={() => choosePlan("yearly")}
+                    disabled={busyPlans}
                   >
-                    Try again
+                    <Sparkles size={15} aria-hidden />
+                    <span>
+                      <strong>Switch to Yearly</strong> and save {upsell.save} a year
+                    </span>
                   </button>
-                </div>
-              ) : session.kind === "redirecting" ? (
-                <p className="nura-checkout__muted" role="status">{session.message}</p>
-              ) : session.kind === "ready" && stripePromise ? (
-                <CheckoutElementsProvider
-                  key={session.clientSecret}
-                  stripe={stripePromise}
-                  options={{
-                    clientSecret: session.clientSecret,
-                    elementsOptions: { appearance: APPEARANCE },
-                  }}
-                >
-                  <PaymentStep
-                    trialDays={session.trialDays}
-                    ageOk={ageOk}
-                    onAgeConfirmed={() => setAgeOk(true)}
-                  />
-                </CheckoutElementsProvider>
-              ) : (
-                <p className="nura-checkout__muted" role="status">Preparing secure payment…</p>
-              )}
-            </section>
-          </div>
+                ) : (
+                  <p className="nco-chip nco-chip--static">
+                    <Sparkles size={15} aria-hidden />
+                    <span>
+                      <strong>Best value</strong> · works out to {upsell.perMonth} a month
+                    </span>
+                  </p>
+                )
+              ) : null}
 
-          <aside className="nura-checkout__summary" aria-label="Order summary">
-            <h2 className="nura-checkout__summary-title">Your plan</h2>
+              <ul className="nco-features">
+                {CHECKOUT_FEATURES.map((f) => (
+                  <li key={f}>
+                    <Check size={16} strokeWidth={2.5} aria-hidden />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             {planIds.length > 1 ? (
-              <div className="nura-checkout__plans" role="radiogroup" aria-label="Plan">
-                {planIds.map((id) => {
-                  const p = plans[id]!;
-                  const selected = id === plan;
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      className={`nura-checkout__plan${selected ? " is-selected" : ""}`}
-                      onClick={() => choosePlan(id)}
-                      disabled={session.kind === "loading" || session.kind === "redirecting"}
-                    >
-                      <span className="nura-checkout__plan-name">{p.label}</span>
-                      <span className="nura-checkout__plan-price">
-                        {p.displayPrice}
-                        <span>{p.displayPeriod}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+              <div className="nco-plans-block">
+                <p className="nco-kicker">Choose a plan</p>
+                <div className="nco-plans" role="radiogroup" aria-label="Plan">
+                  {planIds.map((id) => {
+                    const p = plans[id]!;
+                    const selected = id === plan;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        className={`nco-plan${selected ? " is-selected" : ""}${p.highlight ? " is-featured" : ""}`}
+                        onClick={() => choosePlan(id)}
+                        disabled={busyPlans}
+                      >
+                        {p.highlight ? <span className="nco-plan__tag">Popular</span> : null}
+                        <span className="nco-plan__name">{p.label}</span>
+                        <span className="nco-plan__price">{p.displayPrice}</span>
+                        <span className="nco-plan__period">{p.displayPeriod.replace(/^\//, "per ")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             ) : null}
-            {meta ? (
-              <dl className="nura-checkout__totals">
-                <div>
-                  <dt>Nura {meta.label}</dt>
-                  <dd>
-                    {meta.displayPrice}
-                    {meta.displayPeriod}
-                  </dd>
-                </div>
-                {shownTrial > 0 ? (
-                  <div>
-                    <dt>Free trial</dt>
-                    <dd>{shownTrial} days</dd>
-                  </div>
-                ) : null}
-              </dl>
-            ) : null}
-            <ul className="nura-checkout__perks">
+
+            <dl className="nco-totals">
+              <div>
+                <dt>Subtotal</dt>
+                <dd>{priceLine}</dd>
+              </div>
               {shownTrial > 0 ? (
-                <li>
-                  <Check size={15} aria-hidden /> Nothing charged today. Your plan starts after the {shownTrial}-day trial.
-                </li>
+                <div>
+                  <dt>{shownTrial}-day free trial</dt>
+                  <dd>−{meta?.displayPrice ?? ""}</dd>
+                </div>
               ) : null}
-              <li>
-                <Check size={15} aria-hidden /> Cancel anytime from Manage billing.
-              </li>
-              <li>
-                <Lock size={15} aria-hidden /> Secure payment. Your card details are encrypted.
-              </li>
-            </ul>
-          </aside>
-        </div>
+              <div className="nco-totals__due">
+                <dt>Total due today</dt>
+                <dd>{dueTodayFallback}</dd>
+              </div>
+              {billingStart ? (
+                <p className="nco-totals__note">
+                  Then {priceLine} from {billingStart}. Cancel anytime before then.
+                </p>
+              ) : null}
+            </dl>
+          </div>
+        </aside>
+
+        <main className="nco-main">
+          <div className="nco-main__inner">
+            {user ? (
+              <>
+                <header className="nco-head">
+                  <h2 className="nco-head__title">{session.kind === "ready" ? "Payment" : "Your details"}</h2>
+                  <p className="nco-head__sub">
+                    {shownTrial > 0
+                      ? `Add a payment method to start your ${shownTrial}-day free trial.`
+                      : `Add a payment method to pay for Nura ${meta?.label ?? ""}.`}
+                  </p>
+                </header>
+                <SignedInRow user={user} />
+                {paymentArea}
+                {session.kind !== "ready" ? (
+                  <OrderCard order={order}>
+                    <button type="button" className="nco-pay" disabled>
+                      <span className="nco-pay__main">
+                        <Lock size={16} aria-hidden /> {payButtonLabel(meta, shownTrial)}
+                      </span>
+                    </button>
+                  </OrderCard>
+                ) : null}
+              </>
+            ) : (
+              <AccountStep
+                plan={plan}
+                source={source}
+                order={order}
+                disabled={!stripeConfigured}
+                notice={paymentArea}
+                onAuthed={setUser}
+              />
+            )}
+          </div>
+        </main>
       </div>
-    </main>
+    </div>
+  );
+}
+
+type OrderInfo = {
+  meta: BillingPlanMeta | undefined;
+  trialDays: number;
+  billingStart: string | null;
+};
+
+/** Bottom order card + the one big button (sticky on mobile). */
+function OrderCard({
+  order,
+  dueToday,
+  children,
+}: {
+  order: OrderInfo;
+  dueToday?: string | null;
+  children: ReactNode;
+}) {
+  const { meta, trialDays, billingStart } = order;
+  const due = dueToday ?? (trialDays > 0 ? "$0.00" : meta?.displayPrice ?? "");
+  return (
+    <div className="nco-order">
+      <div className="nco-order__card">
+        <div className="nco-order__row">
+          <span>
+            Nura {meta?.label ?? ""}
+            <span className="nco-order__period"> · {trialDays > 0 ? `${trialDays}-day free trial` : meta?.displayPeriod.replace(/^\//, "per ")}</span>
+          </span>
+          <strong>{due} today</strong>
+        </div>
+        {billingStart && meta ? (
+          <p className="nco-order__note">
+            Then {meta.displayPrice}{meta.displayPeriod} from {billingStart}.
+          </p>
+        ) : null}
+        {children}
+      </div>
+      <p className="nco-order__secure">
+        <Lock size={13} aria-hidden /> Payments are secure and encrypted
+      </p>
+    </div>
   );
 }
 
@@ -328,13 +477,61 @@ function SignedInRow({ user }: { user: SignedIn }) {
     window.location.reload();
   };
   return (
-    <div className="nura-checkout__signed-in">
+    <div className="nco-signed-in">
       <span>
         Signed in as <strong>{user.email}</strong>
       </span>
-      <button type="button" className="nura-checkout__link" onClick={() => void signOut()}>
+      <button type="button" className="nco-link" onClick={() => void signOut()}>
         Not you?
       </button>
+    </div>
+  );
+}
+
+function PasswordField({
+  value,
+  onChange,
+  mode,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  mode: "signup" | "signin";
+}) {
+  const [show, setShow] = useState(false);
+  const rules = passwordRules(value);
+  return (
+    <div className="nco-field">
+      <label htmlFor="nco-password">Password</label>
+      <div className="nco-password">
+        <input
+          id="nco-password"
+          type={show ? "text" : "password"}
+          required
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          placeholder={mode === "signup" ? "Create a password" : "Your password"}
+        />
+        <button
+          type="button"
+          className="nco-password__eye"
+          onClick={() => setShow((v) => !v)}
+          aria-label={show ? "Hide password" : "Show password"}
+          aria-pressed={show}
+        >
+          {show ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+        </button>
+      </div>
+      {mode === "signup" ? (
+        <ul className="nco-rules" aria-live="polite">
+          {rules.map((r) => (
+            <li key={r.id} className={r.ok ? "is-ok" : ""}>
+              <Check size={13} strokeWidth={3} aria-hidden />
+              {r.label}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -342,10 +539,16 @@ function SignedInRow({ user }: { user: SignedIn }) {
 function AccountStep({
   plan,
   source,
+  order,
+  disabled,
+  notice,
   onAuthed,
 }: {
   plan: BillingPlanId;
   source: CheckoutSource;
+  order: OrderInfo;
+  disabled: boolean;
+  notice: ReactNode;
   onAuthed: (user: SignedIn) => void;
 }) {
   const [mode, setMode] = useState<"signup" | "signin">("signup");
@@ -372,6 +575,14 @@ function AccountStep({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
+      return;
+    }
+    if (mode === "signup" && !passwordOk(password)) {
+      setError("Password must be at least 8 characters with a letter and a number.");
+      return;
+    }
     if (mode === "signup" && !age) {
       setError("Please confirm you are 18 or older.");
       return;
@@ -426,112 +637,123 @@ function AccountStep({
     }
   };
 
+  const what = order.trialDays > 0
+    ? `start your ${order.trialDays}-day free trial`
+    : `pay for Nura ${order.meta?.label ?? ""}`;
+
   return (
-    <div>
-      <div className="nura-checkout__tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "signup"}
-          className={mode === "signup" ? "is-active" : ""}
-          onClick={() => switchMode("signup")}
-        >
-          New to Nura
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={mode === "signin"}
-          className={mode === "signin" ? "is-active" : ""}
-          onClick={() => switchMode("signin")}
-        >
-          I have an account
-        </button>
-      </div>
+    <form onSubmit={submit} className="nco-form" noValidate>
+      <header className="nco-head">
+        <h2 className="nco-head__title">{mode === "signup" ? "Your details" : "Welcome back"}</h2>
+        <p className="nco-head__sub">
+          {mode === "signup"
+            ? `Create your account, then ${what}.`
+            : `Sign in, then ${what}.`}
+        </p>
+      </header>
+
+      {notice}
 
       <GoogleAuthButton
         next={next}
         from={mode === "signup" ? "create-account" : "login"}
-        className="nura-checkout__google"
+        className="nco-google"
+        disabled={disabled}
       />
-      <p className="nura-checkout__or"><span>or with email</span></p>
+      <p className="nco-or"><span>or</span></p>
 
-      <form onSubmit={submit} className="nura-checkout__form" noValidate>
-        {error ? <p className="nura-checkout__error" role="alert">{error}</p> : null}
-        {mode === "signup" ? (
-          <label className="nura-checkout__field">
-            <span>Name <em>(optional)</em></span>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
-          </label>
-        ) : null}
-        <label className="nura-checkout__field">
-          <span>Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            placeholder="you@example.com"
-          />
-        </label>
-        <label className="nura-checkout__field">
-          <span>Password</span>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder={mode === "signup" ? "At least 8 characters, a letter and a number" : ""}
-          />
-        </label>
-        {mode === "signin" ? (
-          <Link href="/app/forgot-password" className="nura-checkout__link nura-checkout__forgot">
-            Forgot password?
-          </Link>
-        ) : (
-          <label className="nura-checkout__check">
-            <input type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} />
-            <span>I confirm I am 18 or older.</span>
-          </label>
-        )}
-        <TurnstileField
-          key={mode}
-          ref={turnstileRef}
-          action={mode === "signup" ? "signup" : "login"}
-          onToken={setToken}
+      {error ? <p className="nco-error" role="alert">{error}</p> : null}
+
+      <div className="nco-field">
+        <label htmlFor="nco-email">Email</label>
+        <input
+          id="nco-email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          placeholder="you@example.com"
         />
-        <button
-          type="submit"
-          disabled={busy || !token}
-          className="nura-checkout__btn"
-        >
-          {busy
-            ? mode === "signup"
-              ? "Creating account\u2026"
-              : "Signing in\u2026"
-            : mode === "signup"
-              ? "Create account and continue"
-              : "Sign in and continue"}
-        </button>
+      </div>
+      <PasswordField value={password} onChange={setPassword} mode={mode} />
+      {mode === "signup" ? (
+        <div className="nco-field">
+          <label htmlFor="nco-name">
+            First name <em>(optional)</em>
+          </label>
+          <input
+            id="nco-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="given-name"
+            placeholder="What should Nura call you?"
+          />
+        </div>
+      ) : (
+        <Link href="/app/forgot-password" className="nco-link nco-forgot">
+          Forgot password?
+        </Link>
+      )}
+      {mode === "signup" ? (
+        <label className="nco-check">
+          <input type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} />
+          <span>I confirm I am 18 or older.</span>
+        </label>
+      ) : null}
+      <TurnstileField
+        key={mode}
+        ref={turnstileRef}
+        action={mode === "signup" ? "signup" : "login"}
+        onToken={setToken}
+      />
+
+      <p className="nco-switch">
         {mode === "signup" ? (
-          <p className="nura-checkout__fine">
-            By continuing you agree to the <Link href="/terms">Terms</Link> and{" "}
-            <Link href="/privacy">Privacy Policy</Link>.
-          </p>
-        ) : null}
-      </form>
-    </div>
+          <>
+            Already have an account?{" "}
+            <button type="button" className="nco-link" onClick={() => switchMode("signin")}>
+              Sign in
+            </button>
+          </>
+        ) : (
+          <>
+            New to Nura?{" "}
+            <button type="button" className="nco-link" onClick={() => switchMode("signup")}>
+              Create an account
+            </button>
+          </>
+        )}
+      </p>
+
+      <OrderCard order={order}>
+        <button type="submit" className="nco-pay" disabled={busy || disabled}>
+          <span className="nco-pay__main">
+            {busy
+              ? mode === "signup"
+                ? "Creating account\u2026"
+                : "Signing in\u2026"
+              : "Continue to payment"}
+          </span>
+          <span className="nco-pay__sub">
+            {mode === "signup" ? "Create account" : "Sign in"} · then {payButtonLabel(order.meta, order.trialDays).toLowerCase()}
+          </span>
+        </button>
+      </OrderCard>
+      <p className="nco-fine">
+        By continuing you agree to the <Link href="/terms">Terms</Link> and{" "}
+        <Link href="/privacy">Privacy Policy</Link>.
+      </p>
+    </form>
   );
 }
 
 function PaymentStep({
-  trialDays,
+  order,
   ageOk,
   onAgeConfirmed,
 }: {
-  trialDays: number;
+  order: OrderInfo;
   ageOk: boolean | null;
   onAgeConfirmed: () => void;
 }) {
@@ -539,21 +761,22 @@ function PaymentStep({
   const [age, setAge] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
   const [promo, setPromo] = useState("");
   const [promoMsg, setPromoMsg] = useState("");
 
   if (state.type === "loading") {
-    return <p className="nura-checkout__muted" role="status">Loading secure payment form…</p>;
+    return <p className="nco-muted" role="status">Loading secure payment form…</p>;
   }
   if (state.type === "error") {
     return (
-      <p className="nura-checkout__error" role="alert">
+      <p className="nco-error" role="alert">
         {state.error.message || "Could not load the payment form. Refresh and try again."}
       </p>
     );
   }
   const { checkout } = state;
-  const dueToday = checkout.total?.total?.amount;
+  const dueToday = checkout.total?.total?.amount ?? null;
   const needAge = ageOk === false;
 
   const applyPromo = async () => {
@@ -598,46 +821,53 @@ function PaymentStep({
   };
 
   return (
-    <div className="nura-checkout__pay">
+    <div className="nco-payment">
       <PaymentElement options={{ layout: "tabs" }} />
 
-      <div className="nura-checkout__promo">
-        <input
-          value={promo}
-          onChange={(e) => setPromo(e.target.value)}
-          placeholder="Promo code"
-          aria-label="Promo code"
-        />
-        <button type="button" className="nura-checkout__btn nura-checkout__btn--ghost" onClick={() => void applyPromo()}>
-          Apply
+      {promoOpen ? (
+        <div className="nco-promo">
+          <input
+            value={promo}
+            onChange={(e) => setPromo(e.target.value)}
+            placeholder="Promo code"
+            aria-label="Promo code"
+          />
+          <button type="button" className="nco-btn-ghost" onClick={() => void applyPromo()}>
+            Apply
+          </button>
+        </div>
+      ) : (
+        <button type="button" className="nco-link nco-promo-toggle" onClick={() => setPromoOpen(true)}>
+          Have a promo code?
         </button>
-      </div>
-      {promoMsg ? <p className="nura-checkout__muted">{promoMsg}</p> : null}
+      )}
+      {promoMsg ? <p className="nco-muted">{promoMsg}</p> : null}
 
       {needAge ? (
-        <label className="nura-checkout__check">
+        <label className="nco-check">
           <input type="checkbox" checked={age} onChange={(e) => setAge(e.target.checked)} />
           <span>I confirm I am 18 or older.</span>
         </label>
       ) : null}
 
-      {error ? <p className="nura-checkout__error" role="alert">{error}</p> : null}
+      {error ? <p className="nco-error" role="alert">{error}</p> : null}
 
-      {dueToday ? (
-        <p className="nura-checkout__due">
-          Due today <strong>{dueToday}</strong>
-        </p>
-      ) : null}
-
-      <button
-        type="button"
-        className="nura-checkout__btn nura-checkout__btn--pay"
-        disabled={busy || ageOk === null}
-        onClick={() => void pay()}
-      >
-        <Lock size={16} aria-hidden />
-        {busy ? "Processing\u2026" : trialDays > 0 ? `Start ${trialDays}-day free trial` : "Subscribe"}
-      </button>
+      <OrderCard order={order} dueToday={dueToday}>
+        <button
+          type="button"
+          className="nco-pay"
+          disabled={busy || ageOk === null}
+          onClick={() => void pay()}
+        >
+          <span className="nco-pay__main">
+            <Lock size={16} aria-hidden />
+            {busy ? "Processing\u2026" : payButtonLabel(order.meta, order.trialDays)}
+          </span>
+          <span className="nco-pay__sub">
+            Nura {order.meta?.label ?? ""} · {dueToday ?? (order.trialDays > 0 ? "$0.00" : order.meta?.displayPrice)} today
+          </span>
+        </button>
+      </OrderCard>
     </div>
   );
 }

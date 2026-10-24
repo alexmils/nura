@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FrontendShell } from "@/app/components/frontend/FrontendShell";
+import { MarketingExtras } from "@/app/components/frontend/MarketingExtras";
 import { CheckoutView } from "@/app/components/checkout/CheckoutView";
 import { getSession } from "@/lib/auth/session";
 import { getUserById } from "@/lib/users";
@@ -38,7 +38,9 @@ export default async function CheckoutPage({
   }
 
   return (
-    <FrontendShell>
+    <>
+      {/* Full-screen split checkout: no marketing header/footer, only the
+          minimal top bar inside CheckoutView. Consent banner + tags stay. */}
       <CheckoutView
         initialPlan={plans[plan] ? plan : "yearly"}
         plans={plans}
@@ -47,6 +49,7 @@ export default async function CheckoutPage({
         stripeConfigured={configured}
         signedIn={signedIn}
       />
-    </FrontendShell>
+      <MarketingExtras />
+    </>
   );
 }
