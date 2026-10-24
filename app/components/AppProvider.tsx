@@ -57,6 +57,11 @@ import { AdInterstitial } from "./AdInterstitial";
 import { AdSenseLoader } from "./AdSenseLoader";
 import { useGuideHost } from "./guide/ProductGuide";
 
+/** 403 = staff previewing the member app (/app?tour=frost1): expected, not an error. */
+function isForbidden(err: unknown): boolean {
+  return err instanceof FetchJsonError && err.status === 403;
+}
+
 export type EntitlementPublic = {
   accessTier: string;
   canUseApp: boolean;
@@ -311,7 +316,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setAdsReady(true);
       return data;
     } catch (err) {
-      console.error("refreshEntitlement failed:", err);
+      if (!isForbidden(err)) console.error("refreshEntitlement failed:", err);
       setAdsConfig({ adsActive: false });
       setAdsReady(true);
       return null;
@@ -380,7 +385,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setConsentOk(ok);
       return ok;
     } catch (err) {
-      console.error("refreshConsent failed:", err);
+      if (!isForbidden(err)) console.error("refreshConsent failed:", err);
       setConsentOk(false);
       return false;
     }
@@ -413,6 +418,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setThreads(data.threads ?? []);
       setThreadsLoaded(true);
     } catch (err) {
+      if (isForbidden(err)) {
+        // Staff previewing the app have no member sessions: show an empty list.
+        setThreads([]);
+        setThreadsLoaded(true);
+        return;
+      }
       console.error("refreshThreads failed:", err);
     }
   }, [activeThreadId]);
@@ -962,7 +973,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setFreeSessionChromeId(data.freeSessionChromeId);
       }
     } catch (err) {
-      console.error("refreshSettings failed:", err);
+      if (!isForbidden(err)) console.error("refreshSettings failed:", err);
     }
   }, []);
 

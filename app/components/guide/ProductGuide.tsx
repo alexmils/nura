@@ -162,6 +162,12 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const [heldRaw, setHeld] = useState(false);
   const [preview, setPreview] = useState(false);
   const previewRef = useRef(false);
+  const previewStartedRef = useRef(false);
+  // Read once, before anything can touch the URL.
+  const previewRequestedRef = useRef<boolean | null>(null);
+  if (previewRequestedRef.current === null && typeof window !== "undefined") {
+    previewRequestedRef.current = isGuidePreviewSearch(window.location.search);
+  }
   // The preview ignores the consent hold (display only, consent not recorded).
   const held = heldRaw && !preview;
   const [stepIndex, setStepIndex] = useState(0);
@@ -684,13 +690,20 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
      (tour already seen, consent missing, admin) without persisting anything. */
   useEffect(() => {
     if (!pathname?.startsWith(APP_BASE) || isAccessAllowedPath(pathname)) return;
-    if (previewRef.current || active) return;
-    if (!isGuidePreviewSearch(window.location.search)) return;
+    // React dev (Strict Mode) runs this effect twice and clears the first
+    // timer, so the guard is "started", not "seen the param".
+    if (previewStartedRef.current || active) return;
+    if (!previewRequestedRef.current && !isGuidePreviewSearch(window.location.search)) {
+      return;
+    }
     previewRef.current = true;
     autoStartRef.current = true;
     setPreview(true);
     const id = window.setTimeout(() => {
-      if (mountedRef.current && previewRef.current) start(0);
+      if (!mountedRef.current || previewStartedRef.current) return;
+      previewStartedRef.current = true;
+      previewRef.current = true;
+      start(0);
     }, 400);
     return () => window.clearTimeout(id);
   }, [active, pathname, start]);
