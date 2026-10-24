@@ -56,6 +56,8 @@ type Props = {
   trialDays: number;
   stripeConfigured: boolean;
   signedIn: SignedIn | null;
+  /** Left panel colour variant 1..5 (?panel=N) while picking a theme; 0 = default mint. */
+  panel?: number;
 };
 
 type SessionState =
@@ -82,6 +84,7 @@ export function CheckoutView({
   trialDays,
   stripeConfigured,
   signedIn,
+  panel = 0,
 }: Props) {
   const [plan, setPlan] = useState<BillingPlanId>(initialPlan);
   const [user, setUser] = useState<SignedIn | null>(signedIn);
@@ -256,10 +259,10 @@ export function CheckoutView({
   }
 
   return (
-    <div className="nco">
+    <div className="nco" data-panel={panel || undefined}>
       <header className="nco-bar">
         <Link href="/" className="nco-bar__logo" aria-label="Nura home">
-          <BrandLockup tone="color" />
+          <BrandLockup tone={panel === 3 || panel === 4 ? "white" : "color"} />
         </Link>
         <div className="nco-bar__right">
           <span className="nco-bar__secure">

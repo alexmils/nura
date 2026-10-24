@@ -16,6 +16,21 @@
   --nco-sum-deep: #174520;
   --nco-sum-line: color-mix(in srgb, #13261a 22%, transparent);
   --nco-on-forest: #f2fbf1;
+  /* Summary theme slots (default = mint). /checkout?panel=1..5 swaps them. */
+  --nco-sum-image: none;
+  --nco-sum-glow:
+    radial-gradient(ellipse 80% 55% at 20% 0%, rgb(255 255 255 / 0.42), transparent 60%),
+    radial-gradient(ellipse 65% 45% at 90% 100%, rgb(23 69 32 / 0.07), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.55);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.8);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.7);
+  --nco-sum-featured: color-mix(in srgb, var(--nco-sum-deep) 55%, transparent);
+  --nco-sum-sel-bg: var(--nco-forest);
+  --nco-sum-sel-ink: var(--nco-on-forest);
+  --nco-sum-tag-bg: var(--nco-forest);
+  --nco-sum-tag-ink: var(--nco-sum-bg);
+  --nco-sum-seltag-bg: var(--nco-sum-bg);
+  --nco-sum-seltag-ink: var(--nco-forest);
   --nco-pistachio: #c6d67e;
   --nco-mint: #a4eda5;
   --nco-ink: #2a3020;
@@ -68,15 +83,16 @@
   position: relative;
   overflow: hidden;
   color: var(--nco-sum-ink);
-  background: var(--nco-sum-bg);
+  background-color: var(--nco-sum-bg);
+  background-image: var(--nco-sum-image);
+  background-size: cover;
+  background-position: center;
 }
 .nco-summary__glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(38rem 28rem at 10% -10%, rgb(255 255 255 / 0.35), transparent 70%),
-    radial-gradient(30rem 24rem at 110% 110%, rgb(255 255 255 / 0.22), transparent 70%);
+  background: var(--nco-sum-glow);
 }
 .nco-summary__inner {
   position: relative;
@@ -144,7 +160,7 @@
   padding: 0.6rem 0.95rem;
   border: 1px solid var(--nco-sum-line);
   border-radius: 0.75rem;
-  background: rgb(255 255 255 / 0.55);
+  background: var(--nco-sum-chip-bg);
   color: var(--nco-sum-ink);
   font: inherit;
   font-size: 0.95rem;
@@ -153,7 +169,7 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 .nco-chip svg { flex: none; color: var(--nco-sum-deep); }
-.nco-chip:hover:not(:disabled):not(.nco-chip--static) { background: rgb(255 255 255 / 0.8); border-color: var(--nco-sum-deep); }
+.nco-chip:hover:not(:disabled):not(.nco-chip--static) { background: var(--nco-sum-chip-hover); border-color: var(--nco-sum-deep); }
 .nco-chip--static { cursor: default; }
 
 .nco-features { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 0.65rem; }
@@ -172,7 +188,7 @@
   padding: 0.95rem 0.8rem 0.85rem;
   border: 2px solid var(--nco-sum-line);
   border-radius: 0.85rem;
-  background: rgb(255 255 255 / 0.7);
+  background: var(--nco-sum-card-bg);
   color: var(--nco-sum-ink);
   font: inherit;
   text-align: left;
@@ -181,11 +197,11 @@
 }
 .nco-plan:hover:not(:disabled) { border-color: var(--nco-sum-deep); }
 .nco-plan:disabled { cursor: progress; }
-.nco-plan.is-featured { border-color: color-mix(in srgb, var(--nco-sum-deep) 55%, transparent); }
+.nco-plan.is-featured { border-color: var(--nco-sum-featured); }
 .nco-plan.is-selected {
-  border-color: var(--nco-forest);
-  background: var(--nco-forest);
-  color: var(--nco-on-forest);
+  border-color: var(--nco-sum-sel-bg);
+  background: var(--nco-sum-sel-bg);
+  color: var(--nco-sum-sel-ink);
 }
 .nco-plan:focus-visible { outline: 3px solid var(--nco-sum-ink); outline-offset: 2px; }
 .nco-plan__tag {
@@ -194,17 +210,17 @@
   right: 0.6rem;
   padding: 0.12rem 0.45rem;
   border-radius: 999px;
-  background: var(--nco-forest);
-  color: var(--nco-sum-bg);
+  background: var(--nco-sum-tag-bg);
+  color: var(--nco-sum-tag-ink);
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.nco-plan.is-selected .nco-plan__tag { background: var(--nco-sum-bg); color: var(--nco-forest); box-shadow: 0 0 0 2px var(--nco-forest); }
+.nco-plan.is-selected .nco-plan__tag { background: var(--nco-sum-seltag-bg); color: var(--nco-sum-seltag-ink); box-shadow: 0 0 0 2px var(--nco-sum-sel-bg); }
 .nco-plan__name { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
 .nco-plan__price { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.nco-plan__period { font-size: 0.78rem; opacity: 0.75; }
+.nco-plan__period { font-size: 0.78rem; opacity: 0.85; }
 
 .nco-totals { margin: 1.9rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--nco-sum-line); display: grid; gap: 0.5rem; }
 .nco-totals > div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.95rem; color: var(--nco-sum-ink); }
@@ -383,6 +399,118 @@
 .nco-fine { margin: 0.25rem 0 0; text-align: center; font-size: 0.82rem; color: var(--nco-muted); }
 .nco-fine a { color: inherit; }
 
+/* ---- Left panel colour variants (/checkout?panel=1..5), for picking ----
+   Every text/background pair is AA or better (ratios in the comments). */
+/* 1. Warm sand: cream with deep forest text and olive accents. */
+.nco[data-panel="1"] {
+  --nco-sum-bg: #f3ebdd;
+  --nco-sum-ink: #1f3324;
+  --nco-sum-muted: #4a4d2a;
+  --nco-sum-deep: #3d612b;
+  --nco-sum-line: color-mix(in srgb, #1f3324 18%, transparent);
+  --nco-sum-glow:
+    radial-gradient(ellipse 80% 55% at 20% 0%, rgb(255 255 255 / 0.5), transparent 60%),
+    radial-gradient(ellipse 65% 45% at 90% 100%, rgb(132 104 52 / 0.08), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.6);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.85);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.65);
+  --nco-sum-featured: color-mix(in srgb, #5a5c2b 60%, transparent);
+  --nco-sum-sel-bg: #1f3324;
+  --nco-sum-sel-ink: #f7f1e6;
+  --nco-sum-tag-bg: #5a5c2b;
+  --nco-sum-tag-ink: #f7f1e6;
+  --nco-sum-seltag-bg: #c6d67e;
+  --nco-sum-seltag-ink: #1f3324;
+}
+/* 2. Sage: soft greyish green, softer than mint. */
+.nco[data-panel="2"] {
+  --nco-sum-bg: #c3d4be;
+  --nco-sum-ink: #15241a;
+  --nco-sum-muted: #2f4236;
+  --nco-sum-deep: #2a4d25;
+  --nco-sum-line: color-mix(in srgb, #15241a 20%, transparent);
+  --nco-sum-image: linear-gradient(160deg, #cfdecb 0%, #b7cbb2 100%);
+  --nco-sum-glow:
+    radial-gradient(ellipse 80% 55% at 20% 0%, rgb(255 255 255 / 0.35), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.5);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.75);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.6);
+  --nco-sum-featured: color-mix(in srgb, #2a4d25 55%, transparent);
+  --nco-sum-sel-bg: #22402a;
+  --nco-sum-sel-ink: #f1f6ef;
+  --nco-sum-tag-bg: #22402a;
+  --nco-sum-tag-ink: #e3ecdf;
+  --nco-sum-seltag-bg: #c6d67e;
+  --nco-sum-seltag-ink: #15241a;
+}
+/* 3. Photo: green meadow full-bleed under a soft dark-green overlay.
+   Measured over the photo pixels: white 6.8, muted 5.5, accent 4.9, white on cards 5.3. */
+.nco[data-panel="3"] {
+  --nco-sum-bg: #0f2a1a;
+  --nco-sum-ink: #ffffff;
+  --nco-sum-muted: #ddeadb;
+  --nco-sum-deep: #d6e294;
+  --nco-sum-line: rgb(255 255 255 / 0.24);
+  --nco-sum-image:
+    linear-gradient(170deg, rgb(9 32 19 / 0.68) 0%, rgb(9 32 19 / 0.74) 50%, rgb(9 32 19 / 0.88) 100%),
+    url("/marketing/landing/green-meadow.jpg");
+  --nco-sum-glow: radial-gradient(ellipse 70% 45% at 15% 0%, rgb(198 214 126 / 0.10), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.1);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.16);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.1);
+  --nco-sum-featured: color-mix(in srgb, #c6d67e 65%, transparent);
+  --nco-sum-sel-bg: #c6d67e;
+  --nco-sum-sel-ink: #12261a;
+  --nco-sum-tag-bg: #c6d67e;
+  --nco-sum-tag-ink: #12261a;
+  --nco-sum-seltag-bg: #12261a;
+  --nco-sum-seltag-ink: #c6d67e;
+}
+/* 4. Emerald: rich deep-to-lively green gradient, cream text, gold accent. */
+.nco[data-panel="4"] {
+  --nco-sum-bg: #0f4c3a;
+  --nco-sum-ink: #fbf6ea;
+  --nco-sum-muted: #d6e8dc;
+  --nco-sum-deep: #eedc9a;
+  --nco-sum-line: rgb(251 246 234 / 0.22);
+  --nco-sum-image: linear-gradient(155deg, #0f4c3a 0%, #125240 55%, #145841 100%);
+  --nco-sum-glow:
+    radial-gradient(ellipse 80% 55% at 20% 0%, rgb(232 212 138 / 0.12), transparent 60%),
+    radial-gradient(ellipse 65% 45% at 90% 100%, rgb(0 0 0 / 0.18), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.09);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.15);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.08);
+  --nco-sum-featured: color-mix(in srgb, #e8d48a 60%, transparent);
+  --nco-sum-sel-bg: #e8d48a;
+  --nco-sum-sel-ink: #0d3426;
+  --nco-sum-tag-bg: #e8d48a;
+  --nco-sum-tag-ink: #0d3426;
+  --nco-sum-seltag-bg: #0d3426;
+  --nco-sum-seltag-ink: #e8d48a;
+}
+/* 5. Soft gradient: pale mint into warm cream, Nura wave colours as accents. */
+.nco[data-panel="5"] {
+  --nco-sum-bg: #e6f4dc;
+  --nco-sum-ink: #1d2f20;
+  --nco-sum-muted: #3f4a2c;
+  --nco-sum-deep: #3d612b;
+  --nco-sum-line: color-mix(in srgb, #1d2f20 18%, transparent);
+  --nco-sum-image: linear-gradient(135deg, #c9f0c9 0%, #e6f4dc 48%, #f6eedc 100%);
+  --nco-sum-glow:
+    radial-gradient(ellipse 70% 45% at 85% 10%, rgb(198 214 126 / 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 10% 100%, rgb(132 176 103 / 0.14), transparent 60%);
+  --nco-sum-chip-bg: rgb(255 255 255 / 0.6);
+  --nco-sum-chip-hover: rgb(255 255 255 / 0.85);
+  --nco-sum-card-bg: rgb(255 255 255 / 0.62);
+  --nco-sum-featured: color-mix(in srgb, #84b067 80%, transparent);
+  --nco-sum-sel-bg: #3d612b;
+  --nco-sum-sel-ink: #ffffff;
+  --nco-sum-tag-bg: #3d612b;
+  --nco-sum-tag-ink: #ffffff;
+  --nco-sum-seltag-bg: #c6d67e;
+  --nco-sum-seltag-ink: #1d2f20;
+}
+
 /* ---- Mobile / tablet: stacked, collapsible summary, sticky pay ---- */
 @media (max-width: 1023.98px) {
   .nco-summary__inner { padding-top: 4.5rem; padding-bottom: 1.4rem; }
@@ -431,11 +559,6 @@
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-  }
-  .nco-summary__glow {
-    background:
-      radial-gradient(ellipse 80% 55% at 20% 0%, rgb(255 255 255 / 0.42), transparent 60%),
-      radial-gradient(ellipse 65% 45% at 90% 100%, rgb(23 69 32 / 0.07), transparent 60%);
   }
   .nco-summary__inner {
     flex: 1 0 auto;
