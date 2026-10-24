@@ -699,7 +699,10 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
     <GuideContext.Provider value={value}>
       {children}
       {current ? (
-        <div className="pg-root" data-guide-root="">
+        <div
+          className={`pg-root${current.target ? "" : " pg-root--intro"}`}
+          data-guide-root=""
+        >
           {current.demo === "voice" && current.target ? (
             <GuideVoiceDemo composerSelector={current.target} />
           ) : null}
