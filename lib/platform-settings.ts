@@ -1,4 +1,5 @@
 import { ensureSchemaReady, getPool } from "@/lib/db";
+import { canonicalizeDeepseekModelId } from "@/lib/provider-catalog";
 import type { AiProvider, ConnectorConfig } from "@/lib/types";
 import {
   DEFAULT_AI_CONNECTORS,
@@ -239,6 +240,8 @@ function normalizeConnector(
   if (provider === "openai" && /^gpt-5/i.test(model)) {
     model = fallback.model;
   }
+  // Store and show the id that is actually sent (legacy alias -> deepseek-flash).
+  if (provider === "deepseek") model = canonicalizeDeepseekModelId(model);
   return {
     apiKey: typeof raw?.apiKey === "string" ? raw.apiKey : fallback.apiKey,
     model,

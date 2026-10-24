@@ -40,8 +40,17 @@ describe("sanitizeProviderError", () => {
 
 describe("model id helpers", () => {
   it("canonicalizes DeepSeek allow-list aliases", () => {
-    assert.equal(canonicalizeDeepseekModelId("deepseek-flash"), "deepseek-v4-flash");
-    assert.equal(canonicalizeDeepseekModelId("deepseek-chat"), "deepseek-v4-flash");
+    assert.equal(canonicalizeDeepseekModelId("deepseek-flash"), "deepseek-flash");
+    for (const legacy of [
+      "deepseek-chat",
+      "deepseek-reasoner",
+      "deepseek-coder",
+      "deepseek-v4-flash",
+      "deepseek-v4-flash-vision-exp",
+    ]) {
+      assert.equal(canonicalizeDeepseekModelId(legacy), "deepseek-flash");
+    }
+    assert.equal(canonicalizeDeepseekModelId(" deepseek-v4-flash "), "deepseek-flash");
     assert.equal(canonicalizeDeepseekModelId("deepseek-v4-pro"), "deepseek-v4-pro");
   });
 
@@ -96,10 +105,10 @@ describe("listLlmModels", () => {
       return new Response("not found", { status: 404 });
     };
     const models = await listLlmModels("deepseek", "sk-test", fetchFn);
-    assert.deepEqual(models, ["deepseek-v4-flash", "deepseek-v4-pro"]);
+    assert.deepEqual(models, ["deepseek-flash", "deepseek-v4-pro"]);
   });
 
-  it("includes DeepSeek vision when the key actually serves it", async () => {
+  it("folds legacy DeepSeek ids into deepseek-flash", async () => {
     const fetchFn = async (url: string, init?: RequestInit) => {
       if (url.endsWith("/models")) {
         return new Response(
@@ -118,11 +127,7 @@ describe("listLlmModels", () => {
       return new Response("not found", { status: 404 });
     };
     const models = await listLlmModels("deepseek", "sk-test", fetchFn);
-    assert.deepEqual(models, [
-      "deepseek-v4-flash",
-      "deepseek-v4-pro",
-      "deepseek-v4-flash-vision-exp",
-    ]);
+    assert.deepEqual(models, ["deepseek-flash", "deepseek-v4-pro"]);
   });
 
   it("does not throw raw secret on 401", async () => {

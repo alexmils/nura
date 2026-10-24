@@ -31,18 +31,16 @@ const OPENAI_NON_CHAT_RE =
   /(image|tts|transcribe|realtime|audio|whisper|embedding|moderation|search-preview)/i;
 
 /** Current DeepSeek API model IDs (docs + live allow-list aliases). */
-const DEEPSEEK_DOCUMENTED_MODELS = [
-  "deepseek-v4-flash",
-  "deepseek-v4-pro",
-  "deepseek-v4-flash-vision-exp",
-] as const;
+const DEEPSEEK_DOCUMENTED_MODELS = ["deepseek-flash", "deepseek-v4-pro"] as const;
 
 /** Map legacy / shortened allow-list ids → documented request ids. */
+// `deepseek-flash` is served by DeepSeek-V4.1-Flash; the older ids still route to it.
 const DEEPSEEK_CANONICAL: Record<string, string> = {
-  "deepseek-flash": "deepseek-v4-flash",
-  "deepseek-chat": "deepseek-v4-flash",
-  "deepseek-reasoner": "deepseek-v4-flash",
-  "deepseek-coder": "deepseek-v4-flash",
+  "deepseek-chat": "deepseek-flash",
+  "deepseek-reasoner": "deepseek-flash",
+  "deepseek-coder": "deepseek-flash",
+  "deepseek-v4-flash": "deepseek-flash",
+  "deepseek-v4-flash-vision-exp": "deepseek-flash",
 };
 
 function redactSecrets(text: string): string {

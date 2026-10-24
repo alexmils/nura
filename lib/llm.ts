@@ -4,6 +4,7 @@ import {
   recordLlmUsage,
   type LlmUsagePurpose,
 } from "./llm-usage";
+import { canonicalizeDeepseekModelId } from "./provider-catalog";
 
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
@@ -22,9 +23,11 @@ export type ChatCompletionOptions = {
   /** Ask the provider for a JSON object (DeepSeek / OpenAI `response_format`). */
   json?: boolean;
   /**
-   * Turn hidden reasoning off where the provider supports it (DeepSeek V4:
+   * Turn hidden reasoning off where the provider supports it (DeepSeek:
    * `thinking: {type: "disabled"}`). Reasoning tokens count against the output
    * budget, so a structured call can be cut off before its JSON is complete.
+   * DeepSeek defaults to off (short guide turns don't need it); pass `false`
+   * to let it think.
    */
   disableThinking?: boolean;
   /**
@@ -174,7 +177,7 @@ export function openAiCompatibleBodyExtras(
       : { max_tokens: budget };
   if (!isOpenAiGpt5) out.temperature = 0.4;
   if (opts?.json) out.response_format = { type: "json_object" };
-  if (opts?.disableThinking && provider === "deepseek") {
+  if (provider === "deepseek" && opts?.disableThinking !== false) {
     out.thinking = { type: "disabled" };
   }
   return out;
@@ -210,7 +213,11 @@ export async function chatCompletionDetailed(
     );
   }
 
-  const { provider, key, model } = resolved;
+  const { provider, key } = resolved;
+  const model =
+    provider === "deepseek"
+      ? canonicalizeDeepseekModelId(resolved.model)
+      : resolved.model;
 
   if (provider === "claude") {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
