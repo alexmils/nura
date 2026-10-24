@@ -64,8 +64,10 @@
   font-size: clamp(1.625rem, 5vw, 2rem);
 }
 
-.ob-shell:has(.ob-tutorial) .ob-lead-stack {
-  max-width: 18rem;
+.ob-shell:has(.ob-tutorial) .ob-lead {
+  max-width: 28rem;
+  text-align: center;
+  background: none;
 }
 
 .ob-lead {

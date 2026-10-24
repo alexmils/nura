@@ -346,13 +346,21 @@ function OnboardingFlow() {
         leadLines: undefined as readonly string[] | undefined,
       };
     }
+    // Standard trial: the configured length. A trial without caps is the
+    // win-back one (different length), and a paid plan has no trial at all.
+    const accessLine =
+      status?.accessTier === "active" || status?.accessTier === "legacy"
+        ? "Your plan is active."
+        : status?.accessTier === "trialing" && !status.isTrialLimited
+          ? "Your free trial has started."
+          : `Your ${TRIAL_DAYS}-day free trial has started.`;
     return {
       kicker: undefined as string | undefined,
-      title: "You’re ready",
-      lead: undefined as string | undefined,
-      leadLines: ["Your trial is on.", "Open the app and tap New chat."] as const,
+      title: "You’re all set",
+      lead: `${accessLine} Whenever you’re ready, begin your first session. Nura will guide you step by step.`,
+      leadLines: undefined as readonly string[] | undefined,
     };
-  }, [step]);
+  }, [step, status?.accessTier, status?.isTrialLimited]);
 
   if (loading) {
     return (
