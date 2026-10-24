@@ -346,21 +346,17 @@ function OnboardingFlow() {
         leadLines: undefined as readonly string[] | undefined,
       };
     }
-    // Standard trial: the configured length. A trial without caps is the
-    // win-back one (different length), and a paid plan has no trial at all.
     const accessLine =
       status?.accessTier === "active" || status?.accessTier === "legacy"
         ? "Your plan is active."
-        : status?.accessTier === "trialing" && !status.isTrialLimited
-          ? "Your free trial has started."
-          : `Your ${TRIAL_DAYS}-day free trial has started.`;
+        : "Your free trial has started.";
     return {
       kicker: undefined as string | undefined,
       title: "You’re all set",
-      lead: `${accessLine} Whenever you’re ready, begin your first session. Nura will guide you step by step.`,
+      lead: accessLine,
       leadLines: undefined as readonly string[] | undefined,
     };
-  }, [step, status?.accessTier, status?.isTrialLimited]);
+  }, [step, status?.accessTier]);
 
   if (loading) {
     return (
