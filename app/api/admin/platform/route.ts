@@ -49,6 +49,7 @@ function redactPlatformSettings(settings: PlatformSettings): PlatformSettings {
       cloudName: "",
       apiKey: "",
       apiSecret: "",
+      accountEmail: "",
     },
   };
 }
