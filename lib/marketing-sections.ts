@@ -397,9 +397,8 @@ function faqDefaults(
 export const AUTH_PANEL_ID = "auth-login";
 export const AUTH_PANEL_TEMPLATE_KEY = "template";
 export const AUTH_PANEL_TEMPLATES = [
+  { value: "photo", label: "Photo card", hint: "Soft gradient page, a rounded photo or video card on the left, form on the right." },
   { value: "forest", label: "Forest value", hint: "Deep forest, slow light, trial badge and three cards." },
-  { value: "breath", label: "Breathing light", hint: "A large orb that slowly breathes, one calm line, a glass card." },
-  { value: "press", label: "Editorial split", hint: "Big type, an oversized trial number, numbered notes, optional photo." },
 ] as const satisfies readonly FieldOption[];
 export type AuthPanelTemplate = (typeof AUTH_PANEL_TEMPLATES)[number]["value"];
 
@@ -419,15 +418,22 @@ export function authPanelTemplate(
 ): AuthPanelTemplate {
   const pick = (raw: unknown) =>
     AUTH_PANEL_TEMPLATES.some((option) => option.value === raw) ? (raw as AuthPanelTemplate) : null;
-  return pick(override) ?? pick(config?.[AUTH_PANEL_TEMPLATE_KEY]) ?? "forest";
+  return pick(override) ?? pick(config?.[AUTH_PANEL_TEMPLATE_KEY]) ?? "photo";
 }
 
 export function authSocialPosition(config: SectionConfig | undefined): AuthSocialPosition {
   const raw = config?.socialPosition;
   return AUTH_SOCIAL_POSITIONS.some((option) => option.value === raw)
     ? (raw as AuthSocialPosition)
-    : "bottom-left";
+    : "bottom-right";
 }
+
+export const AUTH_CARD_RADII = [
+  { value: "16", label: "16 px" },
+  { value: "24", label: "24 px" },
+  { value: "28", label: "28 px" },
+  { value: "36", label: "36 px" },
+] as const satisfies readonly FieldOption[];
 
 const authOnly = <T extends object>(field: T, template: AuthPanelTemplate): T => ({
   ...field,
@@ -446,6 +452,14 @@ const AUTH_PANEL_SECTION: SectionDef = {
     { ...text("socialPosition", "Social icons"), options: AUTH_SOCIAL_POSITIONS, select: true },
     { ...link("socialInstagram", "Instagram link"), hint: "Blank restores the default link." },
     { ...link("socialFacebook", "Facebook link"), hint: "Blank restores the default link." },
+
+    authOnly(area("cardTitle", "Headline", LINE_HINT), "photo"),
+    authOnly(text("cardTagline", "Tagline under the logo"), "photo"),
+    authOnly(media("cardMedia", "Card photo or video", "Fills the rounded card. A muted video loops; its poster shows if motion is reduced."), "photo"),
+    authOnly({ ...text("cardRadius", "Card corner radius"), options: AUTH_CARD_RADII, select: true }, "photo"),
+    authColor("cardTitleColor", "Headline colour", "photo"),
+    authColor("cardPageTop", "Page gradient: top colour", "photo"),
+    authColor("cardPageBottom", "Page gradient: bottom colour", "photo"),
 
     authOnly(text("forestBadge", "Badge"), "forest"),
     authOnly(area("forestTitle", "Headline", LINE_HINT), "forest"),
@@ -469,45 +483,24 @@ const AUTH_PANEL_SECTION: SectionDef = {
     authColor("forestCard", "Card colour", "forest"),
     authColor("forestBadgeBg", "Badge colour", "forest"),
 
-    authOnly(text("breathIn", "Inhale word"), "breath"),
-    authOnly(text("breathOut", "Exhale word"), "breath"),
-    authOnly(area("breathTitle", "Headline", LINE_HINT), "breath"),
-    authOnly(area("breathLead", "Subhead"), "breath"),
-    authOnly(text("breathNote", "Trial note"), "breath"),
-    authColor("breathBg", "Background colour", "breath"),
-    authColor("breathOrb", "Orb colour", "breath"),
-    authColor("breathText", "Text colour", "breath"),
-    authColor("breathCard", "Card colour", "breath"),
-
-    authOnly(text("editKicker", "Label"), "press"),
-    authOnly(area("editTitle", "Headline", LINE_HINT), "press"),
-    authOnly(text("editNumber", "Big number"), "press"),
-    authOnly(text("editNumberLabel", "Big number label"), "press"),
-    authOnly(area("editNumberText", "Under the number"), "press"),
-    authOnly(
-      {
-        key: "editNotes",
-        label: "Numbered notes",
-        kind: "list",
-        itemLabel: "Note",
-        max: 3,
-        fixed: true,
-        fields: [text("title", "Title"), area("text", "Description")],
-      } satisfies ListField,
-      "press"
-    ),
-    authOnly(text("editSnippetGuide", "App card: guide line"), "press"),
-    authOnly(text("editSnippetMe", "App card: reply"), "press"),
-    authOnly(media("editPhoto", "Photo or video", "Optional. Shown in the arch on the right."), "press"),
-    authColor("editBg", "Background colour", "press"),
-    authColor("editInk", "Text colour", "press"),
-    authColor("editAccent", "Accent colour", "press"),
   ],
   defaults: {
-    [AUTH_PANEL_TEMPLATE_KEY]: "forest",
-    socialPosition: "bottom-left",
+    [AUTH_PANEL_TEMPLATE_KEY]: "photo",
+    socialPosition: "bottom-right",
     socialInstagram: BRAND_SOCIAL.instagram,
     socialFacebook: BRAND_SOCIAL.facebook,
+
+    cardTitle: "A calm place to heal,\nat your own pace.",
+    cardTagline: "Self-help EMDR, guided when you want it",
+    cardMediaKind: "image",
+    cardMediaImage: "/marketing/landing/green-landscape.jpg",
+    cardMediaVideo: "",
+    cardMediaPoster: "",
+    cardMediaAlt: "Soft green hills under a pale sky",
+    cardRadius: "28",
+    cardTitleColor: "",
+    cardPageTop: "",
+    cardPageBottom: "",
 
     forestBadge: `${TRIAL_DAYS}-day free trial`,
     forestTitle: "Go at your own pace.\nCome back whenever you need.",
@@ -537,36 +530,6 @@ const AUTH_PANEL_SECTION: SectionDef = {
     forestCard: "",
     forestBadgeBg: "",
 
-    breathIn: "Breathe in",
-    breathOut: "Breathe out",
-    breathTitle: "You're in a safe place.",
-    breathLead: "Take one slow breath with the light. When you're ready, sign in and pick up where you left off.",
-    breathNote: `${TRIAL_DAYS}-day free trial, cancel anytime`,
-    breathBg: "",
-    breathOrb: "",
-    breathText: "",
-    breathCard: "",
-
-    editKicker: "Self-help EMDR",
-    editTitle: "Calm is a practice.\nStart yours here.",
-    editNumber: String(TRIAL_DAYS),
-    editNumberLabel: "days free",
-    editNumberText: "The full app on every plan. Cancel anytime.",
-    editNotes: [
-      { id: "guide", title: "A guide, when you want one", text: "The AI agent checks in before and after every set." },
-      { id: "control", title: "Your pace, your settings", text: "Visuals, sound and speed, set the way you like." },
-      { id: "safety", title: "Safety first", text: "Grounding, a calm place and a pause at any moment." },
-    ],
-    editSnippetGuide: "How calm do you feel right now, from 0 to 10?",
-    editSnippetMe: "About a 6 today.",
-    editPhotoKind: "none",
-    editPhotoImage: "",
-    editPhotoVideo: "",
-    editPhotoPoster: "",
-    editPhotoAlt: "",
-    editBg: "",
-    editInk: "",
-    editAccent: "",
   },
 };
 

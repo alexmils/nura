@@ -407,15 +407,9 @@
 .fe-tpl-thumb--forest .t-line--1 { top: 28%; left: 8%; width: 70%; height: 10%; }
 .fe-tpl-thumb--forest .t-line--2 { top: 43%; left: 8%; width: 52%; height: 6%; opacity: 0.6; }
 .fe-tpl-thumb--forest .t-line--3 { top: 62%; left: 8%; width: 84%; height: 22%; border-radius: 4px; background: rgba(246, 250, 239, 0.14); }
-.fe-tpl-thumb--breath { background: radial-gradient(circle at 50% 38%, #cfe3a6 0, #7fa65a 16%, transparent 34%), #1b2a22; }
-.fe-tpl-thumb--breath .t-line--1 { top: 66%; left: 18%; width: 64%; height: 22%; border-radius: 5px; background: rgba(255, 255, 255, 0.16); }
-.fe-tpl-thumb--breath .t-line--2 { top: 71%; left: 26%; width: 48%; height: 6%; }
-.fe-tpl-thumb--breath .t-line--3 { top: 80%; left: 34%; width: 32%; height: 4%; opacity: 0.6; }
-.fe-tpl-thumb--breath .t-btn { display: none; }
-.fe-tpl-thumb--press { background: #f3efe2; }
-.fe-tpl-thumb--press i { background: #1d2b20; }
-.fe-tpl-thumb--press .t-line--1 { top: 14%; left: 7%; width: 60%; height: 13%; }
-.fe-tpl-thumb--press .t-line--2 { top: 31%; left: 7%; width: 44%; height: 13%; }
-.fe-tpl-thumb--press .t-line--3 { top: 56%; left: 7%; width: 18%; height: 30%; background: #4f7a36; }
-.fe-tpl-thumb--press .t-btn { top: 60%; left: 34%; width: 40%; height: 2px; border-radius: 0; background: #1d2b20; }
-.fe-tpl-thumb--press .t-extra { display: block; top: 10%; left: 74%; width: 20%; height: 50%; border-radius: 99px 99px 4px 4px; background: #9bb27a; box-shadow: none; }
+.fe-tpl-thumb--photo { background: linear-gradient(180deg, #e7f3d4, #e2e4df); }
+.fe-tpl-thumb--photo .t-media { display: block; top: 6%; left: 4%; width: 44%; height: 88%; border-radius: 6px; background: linear-gradient(160deg, #a9c97a, #2f4a2f); box-shadow: none; }
+.fe-tpl-thumb--photo .t-line--1 { top: 12%; left: 8%; width: 30%; height: 7%; }
+.fe-tpl-thumb--photo .t-line--2 { top: 36%; left: 60%; width: 28%; height: 8%; background: #ffffff; box-shadow: 0 0 0 1px rgba(42, 48, 32, 0.12); }
+.fe-tpl-thumb--photo .t-line--3 { top: 50%; left: 60%; width: 28%; height: 8%; background: #ffffff; box-shadow: 0 0 0 1px rgba(42, 48, 32, 0.12); }
+.fe-tpl-thumb--photo .t-btn { top: 66%; left: 60%; width: 28%; }

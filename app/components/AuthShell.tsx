@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
 import { AuthVisual } from "@/app/components/auth-visual/AuthVisualVariants";
 import { ConversionTags } from "@/app/components/ConversionTags";
 import { stampBrowserPlace } from "@/lib/browser-place-client";
-import type { SectionConfig } from "@/lib/marketing-sections";
-import { MarketingCopyProvider } from "./frontend/section-editor/MarketingCopy";
+import {
+  AUTH_PANEL_ID,
+  authPanelTemplate,
+  sectionText,
+  type SectionConfig,
+} from "@/lib/marketing-sections";
+import { MarketingCopyProvider, useSectionConfig } from "./frontend/section-editor/MarketingCopy";
 import { SectionBackdrop } from "./frontend/section-editor/EditablePart";
 import {
   SectionEdit,
@@ -52,14 +57,25 @@ function AuthShellInner({
   align = "start",
   editableVisual = false,
 }: AuthShellProps) {
+  // `?auth=photo|forest` previews a preset; read after mount so every page
+  // using the shell works without a Suspense boundary.
+  const [preview, setPreview] = useState<string | null>(null);
   useEffect(() => {
     stampBrowserPlace();
+    setPreview(new URLSearchParams(window.location.search).get("auth"));
   }, []);
+  const panel = useSectionConfig(AUTH_PANEL_ID);
+  const template = authPanelTemplate(panel, preview);
+  const card = !hideVisual && template === "photo";
   const isCenter = align === "center";
   const alignClass = isCenter ? " auth-shell-main--center" : "";
+  const shellStyle = card ? cardShellStyle(panel) : undefined;
 
   return (
-    <div className={`auth-shell${hideVisual ? " auth-shell--solo" : ""}`}>
+    <div
+      className={`auth-shell${hideVisual ? " auth-shell--solo" : ""}${card ? " auth-shell--card" : ""}`}
+      style={shellStyle}
+    >
       <ConversionTags />
       <div className="auth-shell-pane auth-shell-pane--form">
         {!isCenter ? (
@@ -106,7 +122,7 @@ function AuthShellInner({
         >
           {editableVisual ? <SectionEdit id="auth-login" /> : null}
           <SectionBackdrop id="auth-login">
-            <AuthVisual />
+            <AuthVisual template={template} />
           </SectionBackdrop>
         </aside>
       ) : null}
@@ -114,6 +130,17 @@ function AuthShellInner({
       {editableVisual ? <SectionEditorHost /> : null}
     </div>
   );
+}
+
+function cardShellStyle(panel: SectionConfig): CSSProperties {
+  const style: Record<string, string> = {};
+  const top = sectionText(panel, "cardPageTop").trim();
+  const bottom = sectionText(panel, "cardPageBottom").trim();
+  const radius = Number.parseInt(sectionText(panel, "cardRadius"), 10);
+  if (top) style["--auth-top"] = top;
+  if (bottom) style["--auth-bottom"] = bottom;
+  if (Number.isFinite(radius) && radius >= 0 && radius <= 64) style["--auth-radius"] = `${radius}px`;
+  return style as CSSProperties;
 }
 
 type AuthFieldProps = {
