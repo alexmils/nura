@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; from?: string; panel?: string }>;
+  searchParams: Promise<{ plan?: string; from?: string }>;
 }) {
   const sp = await searchParams;
   const [config, configured, session] = await Promise.all([
@@ -28,8 +28,6 @@ export default async function CheckoutPage({
   const plans = resolveBillingPlans(config);
   const plan = parseCheckoutPlan(sp.plan, plans.yearly ? "yearly" : undefined);
   const source = parseCheckoutSource(sp.from);
-  // Left panel colour preview while the theme is being picked (?panel=1..5).
-  const panel = /^[1-5]$/.test(sp.panel ?? "") ? Number(sp.panel) : 0;
 
   let signedIn: { email: string; name: string | null; role: string } | null = null;
   if (session) {
@@ -50,7 +48,6 @@ export default async function CheckoutPage({
         trialDays={TRIAL_DAYS}
         stripeConfigured={configured}
         signedIn={signedIn}
-        panel={panel}
       />
       <MarketingExtras />
     </>
