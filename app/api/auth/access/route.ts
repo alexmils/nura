@@ -40,6 +40,7 @@ export async function GET() {
   const redirectTo = resolveAccessRedirect({
     role: auth.user.role,
     needsOnboarding: entitlement.needsOnboarding,
+    onboardingPending: entitlement.onboardingPending,
     needsPayment: entitlement.needsPayment,
     canUseApp: entitlement.canUseApp,
   });

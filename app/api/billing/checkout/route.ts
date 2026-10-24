@@ -191,9 +191,10 @@ export async function POST(request: Request) {
     }
 
     // Members who have not finished onboarding (new accounts made on the
-    // checkout page) land on onboarding, which shows the trial welcome.
+    // checkout page) land on onboarding after paying, on the on-site page and
+    // the hosted fallback alike, and get the same steps as a normal signup.
     const toOnboarding =
-      source === "onboarding" || (elements && !auth.user.onboardingCompletedAt);
+      source === "onboarding" || !auth.user.onboardingCompletedAt;
     const successPath = checkoutReturnPath(
       toOnboarding ? "onboarding" : "billing",
       "success"

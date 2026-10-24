@@ -22,6 +22,12 @@ export type EntitlementSnapshot = {
   accessTier: AccessTier;
   canUseApp: boolean;
   needsOnboarding: boolean;
+  /**
+   * Has access (trial / paid) but has not finished the onboarding steps yet,
+   * e.g. paid on /checkout before seeing them. The app gate sends these
+   * members through /app/onboarding first; APIs still allow use.
+   */
+  onboardingPending: boolean;
   needsPayment: boolean;
   plan: string;
   status: SubscriptionStatus;
@@ -170,10 +176,16 @@ export function buildEntitlementSnapshot(input: {
     new Date(renewsAt).getTime() > nowMs;
   const accessEndsAt = cancelAtPeriodEnd ? renewsAt : null;
 
+  const onboardingPending =
+    input.role === "user" &&
+    !input.onboardingCompletedAt &&
+    (accessTier === "trialing" || accessTier === "active");
+
   return {
     accessTier,
     canUseApp: canUseApp && !needsOnboarding,
     needsOnboarding,
+    onboardingPending,
     needsPayment,
     plan: input.plan || "free",
     status: normalizeStatus(input.status),
@@ -238,6 +250,7 @@ export function publicEntitlement(snapshot: EntitlementSnapshot) {
     accessTier: snapshot.accessTier,
     canUseApp: snapshot.canUseApp,
     needsOnboarding: snapshot.needsOnboarding,
+    onboardingPending: snapshot.onboardingPending,
     needsPayment: snapshot.needsPayment,
     plan: snapshot.plan,
     status: snapshot.status,

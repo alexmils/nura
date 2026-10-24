@@ -10,6 +10,7 @@ import {
 
 type AccessPayload = {
   needsOnboarding?: boolean;
+  onboardingPending?: boolean;
   needsPayment?: boolean;
   canUseApp?: boolean;
   role?: string;
@@ -47,12 +48,15 @@ export function AppAccessGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        if (!data.canUseApp) {
+        // Paid or trialing but onboarding steps not done yet (e.g. paid on
+        // /checkout first): same onboarding as a normal signup before the app.
+        if (!data.canUseApp || data.onboardingPending) {
           const dest =
             data.redirectTo ??
             resolveAccessRedirect({
               role: data.role,
               needsOnboarding: data.needsOnboarding,
+              onboardingPending: data.onboardingPending,
               needsPayment: data.needsPayment,
               canUseApp: data.canUseApp,
             });

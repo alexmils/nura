@@ -17,7 +17,7 @@ import {
   describeInvoicePayment,
   recordBillingEvent,
 } from "@/lib/billing-events";
-import { getUserByEmail, getUserById, markOnboardingCompleted } from "@/lib/users";
+import { getUserByEmail, getUserById } from "@/lib/users";
 import {
   dispatchConversion,
   isFirstPaidCharge,
@@ -150,7 +150,9 @@ export async function POST(request: Request) {
         stripeLivemode: event.livemode,
         eventCreatedAt: event.created,
       });
-      await markOnboardingCompleted(userId);
+      // Onboarding is finished by the member on /app/onboarding (age, email
+      // choice, welcome), not by the payment. The app gate routes trialing /
+      // paid members without onboarding_completed_at there first.
 
       const amountCents = session.amount_total ?? mapped.amountCents ?? 0;
       const isTrial = mapped.status === "trialing" || amountCents === 0;
@@ -288,9 +290,6 @@ export async function POST(request: Request) {
           stripeLivemode: event.livemode,
           eventCreatedAt: event.created,
         });
-        if (mapped.status === "trialing" || mapped.status === "active") {
-          await markOnboardingCompleted(userId);
-        }
         if (sub.cancel_at_period_end) {
           const periodEnd = sub.current_period_end
             ? new Date(sub.current_period_end * 1000)

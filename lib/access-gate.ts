@@ -34,6 +34,8 @@ export function isReachableWithoutAccess(pathname: string): boolean {
 export type AccessRedirectInput = {
   role?: string | null;
   needsOnboarding?: boolean;
+  /** Has access but has not finished the onboarding steps (see entitlements). */
+  onboardingPending?: boolean;
   needsPayment?: boolean;
   canUseApp?: boolean;
   next?: string | null;
@@ -44,7 +46,7 @@ export function resolveAccessRedirect(input: AccessRedirectInput): string {
   if (input.role === "platform_admin" || input.role === "support") {
     return "/admin";
   }
-  if (input.needsOnboarding) {
+  if (input.needsOnboarding || input.onboardingPending) {
     const next = input.next?.trim();
     if (
       next &&

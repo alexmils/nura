@@ -285,6 +285,7 @@ export async function GET(request: Request) {
     const dest = resolveAccessRedirect({
       role: user.role,
       needsOnboarding: entitlement.needsOnboarding,
+      onboardingPending: entitlement.onboardingPending,
       needsPayment: entitlement.needsPayment,
       canUseApp: entitlement.canUseApp,
       next: isNew ? `${APP_BASE}/onboarding?registered=1` : parsed.next,

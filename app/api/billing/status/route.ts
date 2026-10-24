@@ -16,7 +16,6 @@ import {
   mapStripeSubscriptionWithConfig,
 } from "@/lib/stripe-admin";
 import { runCheckoutTrialEffects } from "@/lib/checkout-trial-effects";
-import { markOnboardingCompleted } from "@/lib/users";
 import { getPlatformSettings } from "@/lib/platform-settings";
 import { publicAdsConfig } from "@/lib/ads";
 import { syncSubscriptionDefaultPaymentMethod } from "@/lib/billing-manage-server";
@@ -92,10 +91,6 @@ export async function GET(request: Request) {
               ).catch((err) =>
                 console.error("[billing/status] default payment method", err)
               );
-            }
-            if (!auth.user.onboardingCompletedAt) {
-              await markOnboardingCompleted(auth.user.id);
-              auth.user.onboardingCompletedAt = new Date().toISOString();
             }
             const amountCents =
               typeof session.amount_total === "number"

@@ -25,6 +25,7 @@ function redirectAfterLogin(
   role?: string,
   entitlement?: {
     needsOnboarding?: boolean;
+    onboardingPending?: boolean;
     needsPayment?: boolean;
     canUseApp?: boolean;
   }
@@ -32,6 +33,7 @@ function redirectAfterLogin(
   return resolveAccessRedirect({
     role,
     needsOnboarding: entitlement?.needsOnboarding,
+    onboardingPending: entitlement?.onboardingPending,
     needsPayment: entitlement?.needsPayment,
     canUseApp: entitlement?.canUseApp,
     next,
