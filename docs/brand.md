@@ -12,7 +12,7 @@ Operator entity: `lib/legal-entity.ts` (**Receptly LLC**).
 
 | Layer | Name | Where |
 |---|---|---|
-| Brand / UI chrome | Nura | Header, sidebar, email from-name, Stripe Checkout, lockup |
+| Brand / UI chrome | Nura | Header, sidebar, email from-name, checkout page, lockup |
 | Legal operator | Receptly LLC | Terms, Privacy, JSON-LD `legalName` |
 | Marketing footer line | © {year} Nura \| All rights reserved | Site footer only — operator stays on legal pages |
 | Domain | nurahelp.com | Host only. Do not write “NuraHelp” in UI copy. |
@@ -103,6 +103,8 @@ Files: `public/brand/nura-wave-logo.png` (+ `-black` / `-white` / color squares)
 English, sentence case, short sentences. No hype (“revolutionary”, “neural networks”, “blockchain”). Clinic-quiet, not a startup pitch.
 
 **Never use the em dash (—)** in user-facing sentences (UI, agent lines, emails, FAQ, marketing body). It reads as AI-written. Prefer a comma, period, colon, or parentheses. Strip it from agent prompts too, or the model will keep writing it. OK in code comments and the layout title template ` — Nura`. See `.cursor/rules/nura-brand.mdc`.
+
+**Never name the payment processor to users.** No “Stripe” (or any processor) in pages, checkout, emails, toasts or error messages. Say **secure payment** / **payments are encrypted** / **Manage billing**; “our payment provider” only where legally needed. Admin-only screens may show Stripe details; the Termly privacy notice keeps its subprocessor list. See `.cursor/rules/no-payment-processor-copy.mdc`.
 
 **Never say BLS to users.** Prefer **self-guided set time** / **Set running** / **visual sets** / **session controls**. Internal code names (`bls`, `TRIAL_BLS_SECONDS`) are fine. See `.cursor/rules/nura-brand.mdc`.
 

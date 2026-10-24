@@ -432,7 +432,7 @@ function OnboardingFlow() {
       {step === "plan" && (
         <div className="ob-plan-step">
           {!status?.stripeConfigured && (
-            <AuthError message="Stripe is not configured yet. Ask your admin to set price IDs." />
+            <AuthError message="Checkout is not available right now. Please try again later." />
           )}
           <div className="upgrade-plan-list" role="radiogroup" aria-label="Plan">
             {orderedBillingPlans(status?.plans ?? BILLING_PLANS).map((p) => {

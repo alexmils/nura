@@ -157,8 +157,8 @@ export function BillingPaywall({
           ) : (
             <p className="bp-fine">
               {portalPrimary
-                ? "Opens the secure Stripe billing portal."
-                : "Cancel anytime. Secure checkout by Stripe."}
+                ? "Opens secure billing management."
+                : "Cancel anytime. Secure payment."}
             </p>
           )}
           {message ? (

@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   const stripe = await getStripe();
   if (!stripe) {
     return NextResponse.json(
-      { error: "Stripe checkout is not configured" },
+      { error: "Checkout is not available right now" },
       { status: 503 }
     );
   }
@@ -78,8 +78,9 @@ export async function POST(request: Request) {
 
   const priceId = await priceIdForPlan(plan);
   if (!priceId) {
+    console.error("[stripe/checkout] no price configured for plan", plan);
     return NextResponse.json(
-      { error: `Stripe price for ${plan} is not configured` },
+      { error: "This plan is not available right now" },
       { status: 503 }
     );
   }

@@ -60,8 +60,8 @@ export const REACTIVATE_CLOSED_COPY: Record<
 
 /** What the free days include (checkmark list). */
 export const REACTIVATE_INCLUDED = [
-  "Guided EMDR sessions with the moving ball",
-  "Free sets whenever you need them",
+  "AI agent-guided EMDR sessions",
+  "Self-guided sets whenever you need them",
   "No session limits for the whole period",
 ];
 

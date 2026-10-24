@@ -1,0 +1,16 @@
+---
+description: Never name Stripe (or any payment processor) in user-facing copy
+alwaysApply: true
+---
+
+# No payment processor in user-facing copy
+
+Never mention Stripe (or any payment processor) in user-facing copy: pages, checkout, emails (including DB template defaults and seed code), toasts, error messages returned by user-facing APIs, FAQ / pricing / legal copy and metadata.
+
+- Use neutral wording: "Secure payment", "Payments are encrypted", "Your card details are encrypted", "Manage billing", "Checkout is not available right now".
+- "Our payment provider" only where it is legally needed.
+- Admin-only screens (`/admin`, `app/api/admin`, admin emails) may show Stripe details.
+- The Termly privacy notice (`lib/legal/privacy-body.generated.ts`) is legal text: leave its subprocessor list as is.
+- Code identifiers, comments, logs (`console.*`) and webhook responses are not user-facing and may keep the name.
+
+Guarded by `tests/no-payment-processor-copy.test.ts`. Full voice rules: `docs/brand.md`.

@@ -22,7 +22,7 @@ export async function POST() {
   });
   if (!resolved) {
     return NextResponse.json(
-      { error: "Stripe is not configured for this customer" },
+      { error: "Billing is not available right now. Try again later." },
       { status: 503 }
     );
   }

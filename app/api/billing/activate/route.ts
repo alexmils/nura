@@ -61,7 +61,7 @@ export async function POST(request: Request) {
   });
   if (!resolved) {
     return NextResponse.json(
-      { error: "Stripe is not configured for this subscription" },
+      { error: "Billing is not available right now. Try again later." },
       { status: 503 }
     );
   }

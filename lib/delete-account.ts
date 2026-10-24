@@ -190,7 +190,7 @@ export async function deleteUserAccount(opts: {
   if (stripe.hadSubscription && !stripe.canceled) {
     return {
       error:
-        "Could not cancel the Stripe subscription. Fix billing or try again before deleting this account.",
+        "Could not cancel the subscription. Try again, or contact support before deleting this account.",
     };
   }
 
