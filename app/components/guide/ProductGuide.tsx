@@ -15,6 +15,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { APP_BASE } from "@/lib/app-base";
 import { isAccessAllowedPath } from "@/lib/access-gate";
+import {
+  GUIDE_PREVIEW_PARAM as PREVIEW_PARAM,
+  isGuidePreviewSearch,
+} from "@/lib/guide-preview";
 import { GuideVoiceDemo } from "./GuideVoiceDemo";
 import {
   GUIDE_STEPS,
@@ -141,8 +145,6 @@ function isFullyVisible(el: Element): boolean {  const r = el.getBoundingClientR
   return true;
 }
 
-const PREVIEW_PARAM = "tour";
-const PREVIEW_VALUE = "frost1";
 
 export function ProductGuideProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -232,7 +234,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
       setPreview(false);
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
-        if (url.searchParams.get(PREVIEW_PARAM) === PREVIEW_VALUE) {
+        if (isGuidePreviewSearch(url.searchParams)) {
           url.searchParams.delete(PREVIEW_PARAM);
           window.history.replaceState(window.history.state, "", url.toString());
         }
@@ -683,8 +685,7 @@ export function ProductGuideProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!pathname?.startsWith(APP_BASE) || isAccessAllowedPath(pathname)) return;
     if (previewRef.current || active) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get(PREVIEW_PARAM) !== PREVIEW_VALUE) return;
+    if (!isGuidePreviewSearch(window.location.search)) return;
     previewRef.current = true;
     autoStartRef.current = true;
     setPreview(true);

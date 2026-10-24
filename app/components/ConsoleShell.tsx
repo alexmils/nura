@@ -6,6 +6,7 @@ import { useApp } from "./AppProvider";
 import { AppConsoleFrame } from "./AppConsoleFrame";
 import { SidebarNavProvider, useSidebarNav } from "./SidebarNavContext";
 import { isSessionHostPath } from "@/lib/sidebar-thread-nav";
+import { useGuideOptional } from "./guide/ProductGuide";
 
 /**
  * Chrome shared by every console page (app/app/(console)/layout.tsx): the
@@ -17,7 +18,9 @@ export function ConsoleShell({ children }: { children: ReactNode }) {
   const onSession = isSessionHostPath(pathname);
   const { sessionMode, setSessionMode, consentOk } = useApp();
   const immersive = onSession && sessionMode === "running";
-  const consentLock = onSession && consentOk === false;
+  const guide = useGuideOptional();
+  // The tour preview shows the app without the consent lock (nothing saved).
+  const consentLock = onSession && consentOk === false && !guide?.preview;
 
   // A set cannot run off the session screen; never come back immersive.
   useEffect(() => {

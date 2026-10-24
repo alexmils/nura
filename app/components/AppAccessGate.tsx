@@ -7,6 +7,7 @@ import {
   isAccessAllowedPath,
   resolveAccessRedirect,
 } from "@/lib/access-gate";
+import { isGuidePreviewSearch } from "@/lib/guide-preview";
 
 type AccessPayload = {
   needsOnboarding?: boolean;
@@ -44,6 +45,18 @@ export function AppAccessGate({ children }: { children: React.ReactNode }) {
         }
 
         if (data.role === "platform_admin" || data.role === "support") {
+          setReady(true);
+          return;
+        }
+
+        // Tour preview (/app?tour=frost1): only needs app access, so an
+        // unfinished onboarding does not redirect it away.
+        if (
+          data.canUseApp &&
+          !data.needsOnboarding &&
+          pathname === APP_BASE &&
+          isGuidePreviewSearch(window.location.search)
+        ) {
           setReady(true);
           return;
         }

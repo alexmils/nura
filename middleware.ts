@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/role-sync";
 import { NOINDEX_ROBOTS, shouldNoindexPath } from "@/lib/crawl-headers";
 import { applySecurityHeaders } from "@/lib/security-headers";
+import { isGuidePreviewSearch } from "@/lib/guide-preview";
 import {
   isAuthLinkScreen,
   isAuthPublicPath,
@@ -264,7 +265,11 @@ export async function middleware(request: NextRequest) {
       // Staff open the member-facing feedback form to check what an email
       // links to. Its own API marks staff as a preview, so nothing is saved.
       pathname === `${APP_BASE}/feedback` ||
-      pathname.startsWith("/api/feedback");
+      pathname.startsWith("/api/feedback") ||
+      // Staff preview the product tour on the session home (page only; the
+      // member APIs it calls stay 403 and the page copes with that).
+      (pathname === APP_BASE &&
+        isGuidePreviewSearch(request.nextUrl.searchParams));
     if (!adminAllowed) {
       if (pathname.startsWith("/api/")) {
         return applyCrawlHeaders(

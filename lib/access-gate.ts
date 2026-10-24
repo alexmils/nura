@@ -1,5 +1,6 @@
 import { APP_BASE, LOGIN_PATH, safeAppNext } from "@/lib/app-base";
 import { isUnauthenticatedPublicPath } from "@/lib/public-paths";
+import { isGuidePreviewUrl } from "@/lib/guide-preview";
 
 /** Paths ordinary users may open before onboarding / payment is finished. */
 export const ACCESS_ALLOWED_PREFIXES = [
@@ -44,7 +45,18 @@ export type AccessRedirectInput = {
 /** Where to send a user after login / when blocked from the main app. */
 export function resolveAccessRedirect(input: AccessRedirectInput): string {
   if (input.role === "platform_admin" || input.role === "support") {
+    // Staff signing in through the tour preview link land on the preview.
+    if (isGuidePreviewUrl(input.next)) return input.next!.trim();
     return "/admin";
+  }
+  // The tour preview needs app access, not finished onboarding steps.
+  if (
+    input.onboardingPending &&
+    !input.needsOnboarding &&
+    input.canUseApp !== false &&
+    isGuidePreviewUrl(input.next)
+  ) {
+    return input.next!.trim();
   }
   if (input.needsOnboarding || input.onboardingPending) {
     const next = input.next?.trim();
