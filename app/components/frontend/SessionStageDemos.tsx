@@ -1,8 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { Eye, Gamepad2, Volume2 } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  ChevronDown,
+  Circle,
+  Eye,
+  Gamepad2,
+  Infinity as InfinityIcon,
+  SlidersHorizontal,
+  Square,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { reducedMotion, useInViewLoop, wait } from "./demo-loop";
 import "./ground-first-tutorial.css";
 import "./session-stage-demos.css";
@@ -129,18 +139,72 @@ export function RhythmDemo({
  * Mirrors the app: screen 1 is the set surface (BallCanvas defaults: white
  * background, near-black ball with a soft shadow) with the ball sweeping
  * left-right ease-in-out; screen 2 is the guide's check-in in the chat
- * (typing dots, then the question). Loops while in view. Timing:
- * set 4.4s (4 passes of 1.1s), typing dots 1.2s, question 3.4s, then
- * back to the set (about 9s per loop).
- * Reduced motion: the check-in screen, static.
+ * (typing dots, then the question). Under the ball sits a static copy of
+ * the app's BLS control bar (BlsToolbar: Speed, Repeats, Stereo sound,
+ * Animation, Adjustments). Loops while in view. Timing: set 2.2s (2 passes
+ * of 1.1s), 0.4s crossfade, typing dots 0.6s, question 2.5s, then back to
+ * the set (about 5.3s per loop). Reduced motion: the question, static.
  */
 export type CheckPhase = "set" | "typing" | "ask";
 export const CHECK_PASS_MS = 1100;
-export const CHECK_SET_PASSES = 4;
+export const CHECK_SET_PASSES = 2;
 export const CHECK_SET_MS = CHECK_PASS_MS * CHECK_SET_PASSES;
-export const CHECK_TYPING_MS = 1200;
-export const CHECK_ASK_MS = 3400;
+export const CHECK_TYPING_MS = 600;
+export const CHECK_ASK_MS = 2500;
 export const CHECK_QUESTION = "What did you notice?";
+
+/** Static, non-interactive copy of the app's BLS control bar (BlsToolbar defaults). */
+function DemoBlsGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <span className="ssd-bls-group">
+      <span className="ssd-bls-seg">{children}</span>
+      <span className="ssd-bls-label">{label}</span>
+    </span>
+  );
+}
+
+function DemoBlsBar() {
+  const icon = { size: "1.15em", strokeWidth: 2 } as const;
+  return (
+    <div className="ssd-bls" data-testid="check-demo-bls">
+      <span className="ssd-bls-collapse">
+        <ChevronDown {...icon} />
+      </span>
+      <DemoBlsGroup label="Speed">
+        <span className="ssd-bls-btn">0.1</span>
+        <span className="ssd-bls-btn is-active">1</span>
+        <span className="ssd-bls-btn">5</span>
+      </DemoBlsGroup>
+      <DemoBlsGroup label="Repeats">
+        <span className="ssd-bls-btn is-active">24</span>
+        <span className="ssd-bls-btn">
+          <InfinityIcon {...icon} />
+        </span>
+      </DemoBlsGroup>
+      <DemoBlsGroup label="Stereo sound">
+        <span className="ssd-bls-btn">
+          <VolumeX {...icon} />
+        </span>
+        <span className="ssd-bls-btn is-active">
+          <Volume2 {...icon} />
+        </span>
+      </DemoBlsGroup>
+      <DemoBlsGroup label="Animation">
+        <span className="ssd-bls-btn is-active">
+          <Circle size="1.15em" strokeWidth={2.5} />
+        </span>
+        <span className="ssd-bls-btn">
+          <Square size="1.05em" strokeWidth={2} />
+        </span>
+      </DemoBlsGroup>
+      <DemoBlsGroup label="Adjustments">
+        <span className="ssd-bls-btn">
+          <SlidersHorizontal {...icon} />
+        </span>
+      </DemoBlsGroup>
+    </div>
+  );
+}
 
 export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
   const { rootRef, inView } = useInViewLoop(forcePlay);
@@ -182,11 +246,14 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
     >
       <div className="ssd-frame ssd-checkin">
         <div className="ssd-setscreen">
-          <span
-            key={loop}
-            className="ssd-setball"
-            style={{ ["--ssd-pass" as string]: `${CHECK_PASS_MS}ms` }}
-          />
+          <div className="ssd-setlane">
+            <span
+              key={loop}
+              className="ssd-setball"
+              style={{ ["--ssd-pass" as string]: `${CHECK_PASS_MS}ms` }}
+            />
+          </div>
+          <DemoBlsBar />
         </div>
         <div className="ssd-guide">
           <div className="ssd-chat">

@@ -38,4 +38,41 @@ describe("How it works > Check in demo mirrors the app", () => {
     assert.match(tsx, /import "\.\/check-in-demo\.css";/);
     assert.doesNotMatch(read("app/globals.css"), /ssd-setball|ssd-setscreen/);
   });
+
+  it("short loop: question shows within ~3s, whole loop about 5-6s", () => {
+    const num = (name: string) => Number((tsx.match(new RegExp(`export const ${name} = (\\d+);`)) ?? [])[1]);
+    const pass = num("CHECK_PASS_MS");
+    const passes = num("CHECK_SET_PASSES");
+    const typing = num("CHECK_TYPING_MS");
+    const ask = num("CHECK_ASK_MS");
+    assert.equal(passes, 2);
+    assert.ok(pass * passes + typing <= 3000, "question appears within 3s");
+    const total = pass * passes + typing + ask;
+    assert.ok(total >= 5000 && total <= 6000, `loop ${total}ms`);
+    assert.match(css, /\.ssd-setscreen \{[^}]*transition:\s*opacity 0\.4s/);
+  });
+
+  it("question screen sits above the set screen and becomes visible after the set", () => {
+    assert.match(css, /\.ssd-setscreen \{[^}]*z-index: 1/);
+    assert.match(css, /\.ssd-guide \{[^}]*z-index: 2/);
+    assert.match(css, /\.ssd--check:not\(\.is-set\) \.ssd-guide \{[^}]*opacity: 1;[^}]*visibility: visible/);
+    assert.match(check, /\{phase === "ask" \? <AgentRow>\{CHECK_QUESTION\}<\/AgentRow> : null\}/);
+  });
+
+  it("starts at once when its stage is active", () => {
+    assert.match(read("app/components/frontend/SessionPathSticky.tsx"), /<CheckInDemo forcePlay \/>/);
+  });
+
+  it("set screen shows a static copy of the app's BLS control bar", () => {
+    const bar = tsx.slice(tsx.indexOf("function DemoBlsBar"), tsx.indexOf("export function CheckInDemo"));
+    for (const label of ["Speed", "Repeats", "Stereo sound", "Animation", "Adjustments"]) {
+      assert.ok(bar.includes(`label="${label}"`), label);
+    }
+    for (const v of [">0.1<", ">1<", ">5<", ">24<", "<InfinityIcon", "<VolumeX", "<Volume2", "<Circle", "<Square", "<SlidersHorizontal", "<ChevronDown"]) {
+      assert.ok(bar.includes(v), v);
+    }
+    assert.doesNotMatch(bar, /<button|onClick/, "non-interactive");
+    assert.match(check, /<DemoBlsBar \/>/);
+    assert.match(css, /\.ssd-bls \{/);
+  });
 });

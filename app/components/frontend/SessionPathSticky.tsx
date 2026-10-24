@@ -601,7 +601,7 @@ export function SessionPathSticky() {
                         }
                         demo={
                           stage.id === "checkin" ? (
-                            active === "checkin" ? <CheckInDemo /> : null
+                            active === "checkin" ? <CheckInDemo forcePlay /> : null
                           ) : stage.id === "close" ? (
                             active === "close" ? <CloseGentlyDemo /> : null
                           ) : undefined
