@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
-import { AuthSessionMockup } from "@/app/components/AuthSessionMockup";
+import { AuthVisual } from "@/app/components/auth-visual/AuthVisualVariants";
 import { ConversionTags } from "@/app/components/ConversionTags";
 import { stampBrowserPlace } from "@/lib/browser-place-client";
 import type { SectionConfig } from "@/lib/marketing-sections";
@@ -106,7 +106,7 @@ function AuthShellInner({
         >
           {editableVisual ? <SectionEdit id="auth-login" /> : null}
           <SectionBackdrop id="auth-login">
-            <AuthSessionMockup />
+            <AuthVisual />
           </SectionBackdrop>
         </aside>
       ) : null}
