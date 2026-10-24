@@ -133,102 +133,181 @@ export function RhythmDemo({
   );
 }
 
-/* --- Check in: the real set screen, then the guide asks --- */
+/* --- Check in: the real set screen, then the guide's check-in --- */
 
 /**
- * Mirrors the app: screen 1 is the set surface (BallCanvas defaults: white
- * background, near-black ball with a soft shadow) with the ball sweeping
- * left-right ease-in-out; screen 2 is the guide's check-in in the chat
- * (typing dots, then the question). Under the ball sits a static copy of
- * the app's BLS control bar (BlsToolbar: Speed, Repeats, Stereo sound,
- * Animation, Adjustments). Loops while in view. Timing: set 2.2s (2 passes
- * of 1.1s), 0.4s crossfade, typing dots 0.6s, question 2.5s, then back to
- * the set (about 5.3s per loop). Reduced motion: the question, static.
+ * A scaled-down replica of the real session screen. The set surface and the
+ * BLS control bar are rendered at a fixed virtual desktop size (1600px wide,
+ * the card's aspect) with the app's own .bls-* classes from globals.css, then
+ * scaled with one transform so every proportion matches the app. The chat
+ * uses the app's .agent-chat-* classes, scaled separately so it stays legible.
+ *
+ * Loop (about 11.6s): ball 2 passes (2.2s), 0.4s fade, then the check-in
+ * conversation (agent lines get 0.6s typing dots first), then back to the set.
+ * Reduced motion: the full conversation, static.
  */
-export type CheckPhase = "set" | "typing" | "ask";
+export const CHECK_VIRTUAL_W = 1600;
+export const CHECK_CHAT_VIRTUAL_W = 768;
 export const CHECK_PASS_MS = 1100;
 export const CHECK_SET_PASSES = 2;
 export const CHECK_SET_MS = CHECK_PASS_MS * CHECK_SET_PASSES;
+export const CHECK_FADE_MS = 400;
 export const CHECK_TYPING_MS = 600;
-export const CHECK_ASK_MS = 2500;
 export const CHECK_QUESTION = "What did you notice?";
 
-/** Static, non-interactive copy of the app's BLS control bar (BlsToolbar defaults). */
+export type CheckLine = { role: "agent" | "user"; text: string; holdMs: number };
+export const CHECK_SCRIPT: CheckLine[] = [
+  { role: "agent", text: CHECK_QUESTION, holdMs: 1400 },
+  { role: "user", text: "My chest feels a bit lighter.", holdMs: 1200 },
+  { role: "agent", text: "On a scale of 0\u201310, how disturbing does it feel now?", holdMs: 1400 },
+  { role: "user", text: "4", holdMs: 1100 },
+  { role: "agent", text: "Let\u2019s do another set.", holdMs: 1800 },
+];
+
+/** Total loop length in ms (set + fade + typing before agent lines + holds). */
+export function checkLoopMs(): number {
+  return (
+    CHECK_SET_MS +
+    CHECK_FADE_MS +
+    CHECK_SCRIPT.reduce((t, l) => t + l.holdMs + (l.role === "agent" ? CHECK_TYPING_MS : 0), 0)
+  );
+}
+
+type CheckPhase = "set" | "chat";
+
+/** Real BlsToolbar markup (app defaults), static and non-interactive. */
 function DemoBlsGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <span className="ssd-bls-group">
-      <span className="ssd-bls-seg">{children}</span>
-      <span className="ssd-bls-label">{label}</span>
-    </span>
+    <div className="bls-group">
+      <div className="bls-seg">{children}</div>
+      <span className="bls-group-meta">
+        <span className="bls-group-label">{label}</span>
+      </span>
+    </div>
   );
 }
 
 function DemoBlsBar() {
-  const icon = { size: "1.15em", strokeWidth: 2 } as const;
   return (
-    <div className="ssd-bls" data-testid="check-demo-bls">
-      <span className="ssd-bls-collapse">
-        <ChevronDown {...icon} />
-      </span>
-      <DemoBlsGroup label="Speed">
-        <span className="ssd-bls-btn">0.1</span>
-        <span className="ssd-bls-btn is-active">1</span>
-        <span className="ssd-bls-btn">5</span>
-      </DemoBlsGroup>
-      <DemoBlsGroup label="Repeats">
-        <span className="ssd-bls-btn is-active">24</span>
-        <span className="ssd-bls-btn">
-          <InfinityIcon {...icon} />
+    <div className="ssd-app-dock" data-testid="check-demo-bls">
+      <div className="bls-bar">
+        <span className="bls-collapse-btn">
+          <ChevronDown size={16} strokeWidth={2} />
         </span>
-      </DemoBlsGroup>
-      <DemoBlsGroup label="Stereo sound">
-        <span className="ssd-bls-btn">
-          <VolumeX {...icon} />
-        </span>
-        <span className="ssd-bls-btn is-active">
-          <Volume2 {...icon} />
-        </span>
-      </DemoBlsGroup>
-      <DemoBlsGroup label="Animation">
-        <span className="ssd-bls-btn is-active">
-          <Circle size="1.15em" strokeWidth={2.5} />
-        </span>
-        <span className="ssd-bls-btn">
-          <Square size="1.05em" strokeWidth={2} />
-        </span>
-      </DemoBlsGroup>
-      <DemoBlsGroup label="Adjustments">
-        <span className="ssd-bls-btn">
-          <SlidersHorizontal {...icon} />
-        </span>
-      </DemoBlsGroup>
+        <div className="bls-panel">
+          <DemoBlsGroup label="Speed">
+            <span className="bls-seg-btn">0.1</span>
+            <span className="bls-seg-btn bls-seg-btn-active">1</span>
+            <span className="bls-seg-btn">5</span>
+          </DemoBlsGroup>
+          <DemoBlsGroup label="Repeats">
+            <span className="bls-seg-btn bls-seg-btn-active">24</span>
+            <span className="bls-seg-btn">
+              <InfinityIcon size={16} strokeWidth={2} />
+            </span>
+          </DemoBlsGroup>
+          <DemoBlsGroup label="Stereo sound">
+            <span className="bls-seg-btn">
+              <VolumeX size={16} strokeWidth={2} />
+            </span>
+            <span className="bls-seg-btn bls-seg-btn-active">
+              <Volume2 size={16} strokeWidth={2} />
+            </span>
+          </DemoBlsGroup>
+          <DemoBlsGroup label="Animation">
+            <span className="bls-seg-btn bls-seg-btn-active">
+              <Circle size={16} strokeWidth={2.5} />
+            </span>
+            <span className="bls-seg-btn">
+              <Square size={15} strokeWidth={2} />
+            </span>
+          </DemoBlsGroup>
+          <DemoBlsGroup label="Adjustments">
+            <span className="bls-seg-btn">
+              <SlidersHorizontal size={16} strokeWidth={2} />
+            </span>
+          </DemoBlsGroup>
+        </div>
+      </div>
     </div>
   );
+}
+
+function ChatAvatar() {
+  return (
+    <Image
+      src={GUIDE_MARK}
+      alt=""
+      width={44}
+      height={44}
+      className="avatar-img avatar-sm avatar-guide ssd-chat-avatar"
+    />
+  );
+}
+
+/** Scale factors for the virtual app + chat, from the card's real size. */
+function useCheckScale(ref: { current: HTMLDivElement | null }) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const apply = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (!w || !h) return;
+      const scale = w / CHECK_VIRTUAL_W;
+      const chat = Math.min(1, (w * 0.9) / CHECK_CHAT_VIRTUAL_W);
+      el.style.setProperty("--ssd-scale", String(scale));
+      el.style.setProperty("--ssd-vh", `${Math.round(h / scale)}px`);
+      el.style.setProperty("--ssd-chat-scale", String(chat));
+      el.style.setProperty("--ssd-chat-vw", `${Math.round(w / chat)}px`);
+      el.style.setProperty("--ssd-chat-vh", `${Math.round(h / chat)}px`);
+    };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
 }
 
 export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
   const { rootRef, inView } = useInViewLoop(forcePlay);
   const [phase, setPhase] = useState<CheckPhase>("set");
+  const [shown, setShown] = useState(0);
+  const [typing, setTyping] = useState(false);
   const [loop, setLoop] = useState(0);
+  useCheckScale(rootRef);
 
   useEffect(() => {
     if (!inView) return;
     if (reducedMotion()) {
-      setPhase("ask");
+      setPhase("chat");
+      setTyping(false);
+      setShown(CHECK_SCRIPT.length);
       return;
     }
     let cancelled = false;
     const run = async () => {
       while (!cancelled) {
         setPhase("set");
+        setShown(0);
+        setTyping(false);
         setLoop((n) => n + 1);
         await wait(CHECK_SET_MS);
         if (cancelled) return;
-        setPhase("typing");
-        await wait(CHECK_TYPING_MS);
-        if (cancelled) return;
-        setPhase("ask");
-        await wait(CHECK_ASK_MS);
+        setPhase("chat");
+        await wait(CHECK_FADE_MS);
+        for (let i = 0; i < CHECK_SCRIPT.length; i++) {
+          if (cancelled) return;
+          const line = CHECK_SCRIPT[i];
+          if (line.role === "agent") {
+            setTyping(true);
+            await wait(CHECK_TYPING_MS);
+            if (cancelled) return;
+            setTyping(false);
+          }
+          setShown(i + 1);
+          await wait(line.holdMs);
+        }
       }
     };
     void run();
@@ -245,8 +324,8 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
       aria-hidden
     >
       <div className="ssd-frame ssd-checkin">
-        <div className="ssd-setscreen">
-          <div className="ssd-setlane">
+        <div className="ssd-app">
+          <div className="ssd-app-canvas">
             <span
               key={loop}
               className="ssd-setball"
@@ -256,20 +335,35 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
           <DemoBlsBar />
         </div>
         <div className="ssd-guide">
-          <div className="ssd-chat">
-            {phase === "typing" ? (
-              <div className="gft-row gft-row--agent">
-                <span className="gft-avatar gft-avatar--guide">
-                  <Image src={GUIDE_MARK} alt="" width={28} height={28} />
-                </span>
-                <div className="gft-bubble gft-bubble--agent ssd-typing">
-                  <span />
-                  <span />
-                  <span />
+          <div className="ssd-guide-inner">
+            <div className="agent-chat-messages ssd-chat-messages">
+              {CHECK_SCRIPT.slice(0, shown).map((line, i) =>
+                line.role === "agent" ? (
+                  <div key={i} className="agent-chat-row agent-chat-row--agent">
+                    <ChatAvatar />
+                    <div className="agent-chat-bubble agent-chat-bubble--agent">
+                      <p className="agent-chat-text">{line.text}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className="agent-chat-row agent-chat-row--user">
+                    <div className="agent-chat-bubble agent-chat-bubble--user">
+                      <p className="agent-chat-text">{line.text}</p>
+                    </div>
+                  </div>
+                )
+              )}
+              {typing ? (
+                <div className="agent-chat-row agent-chat-row--agent agent-chat-row--thinking">
+                  <ChatAvatar />
+                  <div className="agent-chat-bubble agent-chat-bubble--agent ssd-typing">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
                 </div>
-              </div>
-            ) : null}
-            {phase === "ask" ? <AgentRow>{CHECK_QUESTION}</AgentRow> : null}
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

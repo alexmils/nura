@@ -1,61 +1,65 @@
 /*
  * How it works > Check in demo (CheckInDemo in SessionStageDemos.tsx).
- * Screen 1 mirrors the app's set surface (BallCanvas defaults: white
- * background, #111 ball with a soft shadow, left-right ease-in-out sweep)
- * with a static copy of the BLS control bar (BlsToolbar) docked below.
- * Screen 2 is the guide's check-in in the chat (typing dots, then the
- * question). Pure CSS transforms/opacity; the card keeps the .ssd-frame size.
+ * A scaled-down replica of the real session screen: the set surface and the
+ * BLS control bar are laid out at a fixed virtual desktop width (1600px) with
+ * the app's own .bls-* classes (globals.css) and scaled with one transform,
+ * so proportions match the app. The check-in chat uses the app's
+ * .agent-chat-* classes, scaled separately so it stays legible in the card.
+ * JS (useCheckScale) sets --ssd-scale / --ssd-vh / --ssd-chat-*.
  */
+
+/* session-path-sticky.css zooms .ssd-frame on wide cards; the replica scales itself. */
+.ssd-frame.ssd-checkin {
+  zoom: 1;
+}
 
 .ssd-checkin {
   display: block;
   padding: 0;
   overflow: hidden;
+  background: #ffffff;
 }
 
-/* Screen 1: the set surface */
-.ssd-setscreen {
+/* Virtual app (1600px wide, card aspect) scaled to the card. */
+.ssd-app {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1600px;
+  height: var(--ssd-vh, 900px);
+  transform: scale(var(--ssd-scale, 0.48));
+  transform-origin: 0 0;
+  background: var(--bg-canvas, #ffffff);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  --bls-dock-height: 5.5rem;
+}
+
+.ssd-app-canvas {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
   background: #ffffff;
-  container-type: inline-size;
-  --ssd-ball-size: clamp(1.1rem, 6cqw, 2.3rem);
-  --ssd-margin: clamp(0.75rem, 5cqw, 2rem);
-  opacity: 0;
-  transform: scale(1.015);
-  transition:
-    opacity 0.4s ease,
-    transform 0.4s ease;
 }
 
-.ssd--check.is-set .ssd-setscreen {
-  opacity: 1;
-  transform: none;
-}
-
-.ssd-setlane {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-
+/* App ball: BallCanvas defaults (48px, #111111, Tailwind shadow-md). */
 .ssd-setball {
   position: absolute;
-  top: 50%;
-  left: var(--ssd-margin);
-  width: var(--ssd-ball-size);
-  height: var(--ssd-ball-size);
+  top: calc(50% - var(--bls-dock-height) / 2);
+  left: 2rem;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
   background: #111111;
-  /* Same soft shadow as the app ball (Tailwind shadow-md). */
   box-shadow:
     0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1);
   transform: translate(0, -50%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
   will-change: transform;
+}
+
+.ssd--check.is-set .ssd-setball {
+  opacity: 1;
 }
 
 .ssd--check.is-playing.is-set .ssd-setball {
@@ -69,137 +73,131 @@
     transform: translate(0, -50%);
   }
   50% {
-    transform: translate(calc(100cqw - var(--ssd-ball-size) - 2 * var(--ssd-margin)), -50%);
+    transform: translate(calc(1600px - 48px - 4rem), -50%);
   }
 }
 
-/* Static copy of the app's BLS control bar (.bls-bar / .bls-seg in globals.css),
-   scaled with the card via em units. */
-.ssd-bls {
-  position: relative;
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0.55em 0.75em;
-  margin: 0 clamp(0.4rem, 2.5cqw, 0.9rem) clamp(0.4rem, 2.5cqw, 0.9rem);
-  padding: 0.65em 2.1em 0.5em 0.75em;
-  font-size: clamp(0.45rem, 2.1cqw, 0.8rem);
-  background: var(--bg-elevated, #ffffff);
-  border: 1px solid var(--border, #dfe3da);
-  border-radius: var(--radius-md, 10px);
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.12),
-    0 0 0 1px rgba(0, 0, 0, 0.04);
-  color: var(--text-secondary, #5b6352);
-  font-family: var(--font-sans), system-ui, sans-serif;
-}
-
-.ssd-bls-collapse {
+/* Docked like the desktop .bls-dock (absolute bottom, small inset). The bar
+   and groups use the real .bls-* rules unchanged. */
+.ssd-app-dock {
   position: absolute;
-  top: 0.35em;
-  right: 0.35em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75em;
-  height: 1.75em;
-  color: var(--text-muted, #8a9180);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  padding: 0 0.75rem 0.9rem;
 }
 
-.ssd-bls-group {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3em;
-  min-width: 0;
+/* The app switches the bar to its phone layout below 767px viewport width.
+   The replica is always the desktop screen, so keep the desktop rules here. */
+@media (max-width: 767px) {
+  .ssd-app .bls-bar {
+    width: auto;
+    padding: 0.65rem 0.75rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .ssd-app .bls-panel {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.55rem 0.75rem;
+    justify-items: normal;
+  }
+
+  .ssd-app .bls-group {
+    width: auto;
+  }
+
+  .ssd-app .bls-seg,
+  .ssd-app .bls-group .bls-seg:has(.bls-seg-btn:only-child) {
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    gap: 0.15rem;
+    padding: 0.2rem;
+  }
+
+  .ssd-app .bls-seg-btn {
+    flex: 0 0 auto;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0 0.55rem;
+    font-size: 0.9375rem;
+  }
+
+  .ssd-app .bls-collapse-btn {
+    top: 0.35rem;
+    right: 0.35rem;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
 }
 
-.ssd-bls-seg {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.15em;
-  padding: 0.2em;
-  border: 1px solid var(--border, #dfe3da);
-  border-radius: 999px;
-  background: var(--bg-muted, #f2f4ef);
-}
-
-.ssd-bls-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 2.25em;
-  min-height: 2.25em;
-  padding: 0 0.55em;
-  box-sizing: border-box;
-  border-radius: 999px;
-  font-size: 0.9375em;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--text-secondary, #5b6352);
-}
-
-.ssd-bls-btn.is-active {
-  background: var(--bg-elevated, #ffffff);
-  color: var(--text, #2a3020);
-  box-shadow:
-    0 1px 2px rgba(42, 48, 32, 0.1),
-    0 0 0 1px color-mix(in srgb, var(--accent, #84b067) 28%, var(--border, #dfe3da));
-}
-
-.ssd-bls-label {
-  font-size: 0.75em;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  color: var(--text-muted, #8a9180);
-  white-space: nowrap;
-}
-
-/* Screen 2: the guide checks in (above the set screen once it fades). */
+/* Check-in chat, layered over the set screen like the app's agent overlay. */
 .ssd-guide {
   position: absolute;
   inset: 0;
   z-index: 2;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: clamp(0.9rem, 2.5vw, 1.5rem);
+  overflow: hidden;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(0.5rem);
   transition:
     opacity 0.4s ease,
-    transform 0.4s ease,
     visibility 0s linear 0.4s;
 }
 
 .ssd--check:not(.is-set) .ssd-guide {
   opacity: 1;
   visibility: visible;
-  transform: none;
   transition:
     opacity 0.4s ease 0.1s,
-    transform 0.4s ease 0.1s,
     visibility 0s;
 }
 
-.ssd--check .ssd-chat {
-  width: min(100%, 30rem);
-  color: #2a3020;
+/* Chat laid out at its own virtual size and scaled to stay readable. */
+.ssd-guide-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  box-sizing: border-box;
+  width: var(--ssd-chat-vw, 768px);
+  height: var(--ssd-chat-vh, 432px);
+  transform: scale(var(--ssd-chat-scale, 1));
+  transform-origin: 0 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  /* Keep clear of the docked control bar, like the app overlay. */
+  padding: 1rem 1rem calc(var(--bls-dock-height, 5.5rem) * var(--ssd-scale, 0.48) / var(--ssd-chat-scale, 1) + 0.75rem);
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-.ssd--check .gft-row {
+.ssd-chat-messages.agent-chat-messages {
+  width: min(96%, 48rem);
+  max-height: none;
+  overflow: hidden;
+  justify-content: flex-end;
+  scroll-behavior: auto;
+}
+
+.ssd-chat-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.ssd--check .agent-chat-row {
   animation: ssd-bubble-in 0.3s ease both;
 }
 
 @keyframes ssd-bubble-in {
   from {
     opacity: 0;
-    transform: translateY(0.35rem);
+    transform: translateY(0.5rem);
   }
   to {
     opacity: 1;
@@ -211,13 +209,14 @@
 .ssd-typing {
   display: inline-flex;
   align-items: center;
-  gap: 0.28rem;
-  min-height: 1.6rem;
+  gap: 0.35rem;
+  min-height: 1.65rem;
+  color: var(--text-secondary, #5b6352);
 }
 
 .ssd-typing span {
-  width: 0.38rem;
-  height: 0.38rem;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 999px;
   background: currentColor;
   opacity: 0.35;
@@ -241,16 +240,15 @@
   }
   40% {
     opacity: 0.9;
-    transform: translateY(-0.18rem);
+    transform: translateY(-0.2rem);
   }
 }
 
-/* Reduced motion: the static question screen (the component stops at "ask"). */
+/* Reduced motion: the full conversation, static. */
 @media (prefers-reduced-motion: reduce) {
-  .ssd--check .ssd-setscreen,
   .ssd--check .ssd-guide,
   .ssd--check .ssd-setball,
-  .ssd--check .gft-row,
+  .ssd--check .agent-chat-row,
   .ssd-typing span {
     animation: none !important;
     transition: none !important;
