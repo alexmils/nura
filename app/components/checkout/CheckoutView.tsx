@@ -650,6 +650,23 @@ function AccountStep({
             ? `Create your account, then ${what}.`
             : `Sign in, then ${what}.`}
         </p>
+        <p className="nco-switch">
+          {mode === "signup" ? (
+            <>
+              Already have an account?{" "}
+              <button type="button" className="nco-link" onClick={() => switchMode("signin")}>
+                Sign in
+              </button>
+            </>
+          ) : (
+            <>
+              New to Nura?{" "}
+              <button type="button" className="nco-link" onClick={() => switchMode("signup")}>
+                Create an account
+              </button>
+            </>
+          )}
+        </p>
       </header>
 
       {notice}
@@ -707,24 +724,6 @@ function AccountStep({
         action={mode === "signup" ? "signup" : "login"}
         onToken={setToken}
       />
-
-      <p className="nco-switch">
-        {mode === "signup" ? (
-          <>
-            Already have an account?{" "}
-            <button type="button" className="nco-link" onClick={() => switchMode("signin")}>
-              Sign in
-            </button>
-          </>
-        ) : (
-          <>
-            New to Nura?{" "}
-            <button type="button" className="nco-link" onClick={() => switchMode("signup")}>
-              Create an account
-            </button>
-          </>
-        )}
-      </p>
 
       <OrderCard order={order}>
         <button type="submit" className="nco-pay" disabled={busy || disabled}>
