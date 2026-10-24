@@ -1,0 +1,75 @@
+/*
+ * Home: stories - phone news-ticker loop.
+ *
+ * HomeLandingV2 renders the story cards twice in .v2-story-track; the second
+ * set is aria-hidden (.v2-story-card--clone). On phones the track slides from
+ * 0 to -50% (exactly one set, because each card carries its own trailing
+ * margin instead of the flex gap) and repeats, so the seam is invisible.
+ *
+ * Everywhere else - desktop/tablet, or reduced motion (OS setting or the Nura
+ * a11y panel) - the clones are hidden and the strip stays the swipeable row
+ * (desktop keeps the useStoryTrack scroll-driven slide).
+ */
+
+.v2-story-card--clone {
+  display: none;
+}
+
+@keyframes v2-story-ticker {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: no-preference) {
+  html:not([data-a11y-motion="reduced"]) .v2-story-card--clone {
+    display: flex;
+  }
+
+  html:not([data-a11y-motion="reduced"]) .v2-story-viewport {
+    /* No manual swipe to fight the loop; vertical page scroll passes through. */
+    overflow: hidden;
+    scroll-snap-type: none;
+    touch-action: pan-y;
+    /* Soft entry/exit; the mask fades to whatever sits behind (the yellow). */
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 1rem,
+      #000 calc(100% - 1rem),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 1rem,
+      #000 calc(100% - 1rem),
+      transparent 100%
+    );
+  }
+
+  html:not([data-a11y-motion="reduced"]) .v2-story-track {
+    gap: 0;
+    /* Padding would be part of the -50%; a margin keeps the first card on
+       the text column without breaking the loop maths. */
+    padding-inline: 0;
+    margin-left: var(--story-gutter);
+    /* ~5s per card: 8 cards = 40s per loop, about 60px/s on a phone. */
+    animation: v2-story-ticker calc(var(--story-count, 8) * 5s) linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+
+  html:not([data-a11y-motion="reduced"]) .v2-story-track > .v2-story-card {
+    margin-right: 1.25rem;
+    scroll-snap-align: none;
+  }
+
+  /* Never pauses: taps, holds and hover must not stop the ticker. */
+  html:not([data-a11y-motion="reduced"]) .v2-story-viewport .v2-story-track {
+    animation-play-state: running !important;
+  }
+}

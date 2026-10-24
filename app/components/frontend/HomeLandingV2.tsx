@@ -3,7 +3,7 @@ import { frameKey, storedFrameStyle } from "@/lib/image-position";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   Check,
@@ -67,6 +67,7 @@ import { useStoryTrack } from "./useStoryTrack";
 import "lenis/dist/lenis.css";
 import "./landing-motion.css";
 import "./landing-v2.css";
+import "./story-marquee.css";
 import "./hero-templates.css";
 
 /* ------------------------------------------------------------------ */
@@ -879,11 +880,18 @@ export function HomeLandingV2({
             aria-label="Stories from Nura members"
             tabIndex={0}
           >
-            <div className="v2-story-track" ref={storyTrackRef}>
-              {STORIES.map((story, index) => (
+            <div
+              className="v2-story-track"
+              ref={storyTrackRef}
+              style={{ "--story-count": STORIES.length } as CSSProperties}
+            >
+              {/* The set renders twice: phones loop it as a ticker (story-marquee.css)
+                  and the second, aria-hidden copy is hidden everywhere else. */}
+              {[false, true].flatMap((clone) => STORIES.map((story, index) => (
                 <article
-                  key={`${story.name}-${index}`}
-                  className="v2-glass v2-glass--strong v2-story v2-story-card"
+                  key={`${clone ? "clone-" : ""}${story.name}-${index}`}
+                  className={`v2-glass v2-glass--strong v2-story v2-story-card${clone ? " v2-story-card--clone" : ""}`}
+                  aria-hidden={clone ? true : undefined}
                 >
                   <span className="v2-story-quote" aria-hidden>“</span>
                   <p>{story.quote}</p>
@@ -895,7 +903,7 @@ export function HomeLandingV2({
                     </span>
                   </footer>
                 </article>
-              ))}
+              )))}
             </div>
           </div>
         </div>
