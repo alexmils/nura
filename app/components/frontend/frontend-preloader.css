@@ -1,4 +1,4 @@
-/* Full-screen mint preloader: large wave logo, small percent below */
+/* Full-screen mint preloader: large wave logo only */
 
 html.fe-preloader-active,
 html.fe-preloader-active body {
@@ -33,33 +33,6 @@ html.fe-preloader-active body {
 /* The logo is the focus: centred and larger than the header lockup. */
 .fe-preloader .fe-preloader-logo {
   width: clamp(14rem, 62vw, 26rem);
-}
-
-/* Small, quiet counter just under the logo. */
-.fe-preloader-count {
-  margin: 0;
-  display: flex;
-  justify-content: center;
-  align-items: baseline;
-  width: 100%;
-  font-family: var(--font-sans, var(--font-source-sans), ui-sans-serif, system-ui, sans-serif);
-  font-size: clamp(0.95rem, 2.4vw, 1.1rem);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  color: inherit;
-  opacity: 0.85;
-  user-select: none;
-}
-
-.fe-preloader-num {
-  display: inline-block;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.fe-preloader-pct {
-  margin-left: 0.1em;
 }
 
 @media (prefers-reduced-motion: reduce) {

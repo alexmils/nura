@@ -87,16 +87,10 @@ export function FrontendPreloader() {
       className={`fe-preloader${phase === "out" ? " is-out" : ""}`}
       role="status"
       aria-live="polite"
-      aria-label={`Loading ${fill} percent`}
+      aria-label="Loading"
     >
       <div className="fe-preloader-inner">
-        <AnimatedBrandWave size="lg" fill={fill} className="fe-preloader-logo" />
-        <p className="fe-preloader-count">
-          <span className="fe-preloader-num">{fill}</span>
-          <span className="fe-preloader-pct" aria-hidden>
-            %
-          </span>
-        </p>
+        <AnimatedBrandWave size="lg" fill={fill} className="fe-preloader-logo" />
       </div>
     </div>
   );
