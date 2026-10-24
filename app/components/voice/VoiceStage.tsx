@@ -1,11 +1,11 @@
 "use client";
 
 import { Mic, MicOff, RotateCw, Square } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { VOICE_HOTKEY_TITLES, voiceHotkeyAction } from "@/lib/voice-hotkeys";
 import { createPortal } from "react-dom";
 import type { VoicePhase } from "../useGuidedVoiceMode";
 import { VoiceOrb, type VoiceOrbState } from "./VoiceOrb";
-import { VoiceGlow } from "./VoiceGlow";
 import { useMedia } from "./useMedia";
 import { PHONE_LANDSCAPE_QUERY } from "./voice-orb-env";
 import "./voice-stage.css";
@@ -75,7 +75,7 @@ export type VoiceStageProps = {
  * portalled to <body> so no session ancestor (the agent overlay is
  * transformed) can trap or clip it, and it covers the session's voice dock.
  * Only a phone held sideways (PHONE_LANDSCAPE_QUERY) skips the stage: the
- * transcript shows (text mode) with the bottom glow.
+ * transcript shows (text mode) and VoiceDockBeam glows along the voice pill.
  */
 export function VoiceStage(props: VoiceStageProps) {
   const phoneLandscape = useMedia(PHONE_LANDSCAPE_QUERY);
@@ -93,18 +93,40 @@ export function VoiceStage(props: VoiceStageProps) {
   const showStage = mounted && !phoneLandscape && phase !== "bls";
   useScrollLock(showStage && !props.exiting);
 
+  // Keyboard shortcuts (lib/voice-hotkeys.ts): S ends voice, M toggles the mic.
+  // Latest props live in a ref so the listener is added once per mount and
+  // removed on unmount; `ended` keeps a double S from ending (and chiming) twice.
+  const latest = useRef(props);
+  latest.current = props;
+  const ended = useRef(false);
+  useEffect(() => {
+    // A new voice session (or an end that did not go through) re-arms S.
+    if (!props.exiting) ended.current = false;
+  }, [props.exiting]);
+  const hotkeysOn = mounted && phase !== "bls";
+  useEffect(() => {
+    if (!hotkeysOn) return;
+    const onKey = (e: KeyboardEvent) => {
+      const p = latest.current;
+      const action = voiceHotkeyAction(e, {
+        exiting: p.exiting || ended.current,
+        canToggleMute: !(p.stalled && p.onResume),
+      });
+      if (!action) return;
+      e.preventDefault();
+      if (action === "end") {
+        ended.current = true;
+        p.onEnd();
+      } else {
+        p.onToggleMute();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [hotkeysOn]);
+
   if (!mounted || phase === "bls") return null;
 
-  if (phoneLandscape) {
-    return (
-      <VoiceGlow
-        state={state}
-        exiting={props.exiting}
-        getInputLevel={getInputLevel}
-        getOutputLevel={getOutputLevel}
-      />
-    );
-  }
   if (!showStage) return null;
 
   const label = stateLabel(phase, props);
@@ -115,6 +137,8 @@ export function VoiceStage(props: VoiceStageProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Voice conversation"
+      // Long-press on iOS / right-click: no Copy / Search callout on the orb or label.
+      onContextMenu={(e) => e.preventDefault()}
     >
       <button
         type="button"
@@ -144,6 +168,8 @@ export function VoiceStage(props: VoiceStageProps) {
             onClick={props.onToggleMute}
             aria-pressed={props.muted}
             aria-label={props.muted ? "Unmute microphone" : "Mute microphone"}
+            aria-keyshortcuts="M"
+            title={props.muted ? VOICE_HOTKEY_TITLES.unmute : VOICE_HOTKEY_TITLES.mute}
             disabled={props.exiting}
           >
             {props.muted ? <MicOff size={22} aria-hidden /> : <Mic size={22} aria-hidden />}
@@ -154,12 +180,18 @@ export function VoiceStage(props: VoiceStageProps) {
           className="voice-stage-btn voice-stage-btn--end"
           onClick={props.onEnd}
           aria-label="End voice"
+          aria-keyshortcuts="S"
+          title={VOICE_HOTKEY_TITLES.end}
           disabled={props.exiting}
         >
           <Square size={16} fill="currentColor" strokeWidth={0} aria-hidden />
           <span>End voice</span>
         </button>
       </div>
+      {/* Mouse / trackpad devices only (hidden on touch via CSS). */}
+      <p className="voice-stage-keys" aria-hidden="true">
+        <kbd>M</kbd> {props.muted ? "unmute" : "mute"} <span className="voice-stage-keys-sep">{"\u00b7"}</span> <kbd>S</kbd> end
+      </p>
     </div>,
     document.body,
   );

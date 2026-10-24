@@ -11,6 +11,8 @@
  * speechSynthesis; every later reply reuses them.
  */
 
+import { planTtsStart } from "./voice-playback";
+
 const SILENT_WAV =
   "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 
@@ -20,6 +22,8 @@ let analyser: AnalyserNode | null = null;
 let routed = false;
 let frame: Uint8Array<ArrayBuffer> | null = null;
 let synthSpeaking = false;
+/** Date.now() when the last voice chime finishes ringing. */
+let chimeEndsAt = 0;
 
 type AudioCtor = typeof AudioContext;
 
@@ -170,4 +174,54 @@ export function cancelDeviceVoice(): void {
   } catch {
     /* ignore */
   }
+}
+
+/** A voice chime is ringing for `ms`; TTS waits until it is done. */
+export function noteVoiceChimePlaying(ms: number): void {
+  chimeEndsAt = Math.max(chimeEndsAt, Date.now() + Math.max(0, ms));
+}
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, Math.max(0, ms)));
+
+/**
+ * Before every voice-mode TTS reply: wait out the start chime, make sure the
+ * shared AudioContext is running, then play a near-silent pre-roll (about
+ * -80 dB, inaudible) that keeps sounding into the start of the reply, so the
+ * iOS / Bluetooth output path is awake and the first syllable is not eaten.
+ * No gain ramp from 0 is applied to the reply itself. Returns false when the
+ * caller cancelled meanwhile (barge-in, stop, new line).
+ */
+export async function prepareVoicePlayback(opts: { isCancelled?: () => boolean } = {}): Promise<boolean> {
+  if (typeof window === "undefined") return true;
+  const plan = planTtsStart({ now: Date.now(), chimeEndsAt });
+  if (plan.chimeWaitMs > 0) await sleep(plan.chimeWaitMs);
+  if (opts.isCancelled?.()) return false;
+  const c = ctx;
+  if (c && c.state !== "running" && c.state !== "closed") {
+    await Promise.race([c.resume().catch(() => {}), sleep(400)]);
+  }
+  if (c && c.state === "running") {
+    try {
+      const len = Math.max(1, Math.round((c.sampleRate * plan.silenceMs) / 1000));
+      const buf = c.createBuffer(1, len, c.sampleRate);
+      const data = buf.getChannelData(0);
+      // Not pure zeros: some Bluetooth sinks treat digital silence as idle.
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * 1e-4;
+      const src = c.createBufferSource();
+      src.buffer = buf;
+      src.connect(c.destination);
+      src.start(c.currentTime);
+      src.onended = () => {
+        try {
+          src.disconnect();
+        } catch {
+          /* ignore */
+        }
+      };
+    } catch {
+      /* pre-roll is best effort */
+    }
+  }
+  await sleep(plan.prerollMs);
+  return !opts.isCancelled?.();
 }

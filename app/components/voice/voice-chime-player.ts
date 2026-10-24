@@ -1,6 +1,6 @@
 "use client";
 
-import { getVoiceAudioContext, resumeVoiceAudio } from "@/lib/voice-audio";
+import { getVoiceAudioContext, noteVoiceChimePlaying, resumeVoiceAudio } from "@/lib/voice-audio";
 import { CHIMES, chimeDuration, dbToGain, shouldPlayChime, type ChimeKind } from "@/lib/voice-chime";
 
 /**
@@ -24,6 +24,8 @@ export function playVoiceChime(kind: ChimeKind, enabled: boolean): void {
   }
   resumeVoiceAudio();
   const spec = CHIMES[kind];
+  // TTS must not start under the chime (prepareVoicePlayback waits for it).
+  noteVoiceChimePlaying((chimeDuration(spec) + 0.05) * 1000);
   try {
     const out = ctx.createGain();
     out.gain.value = dbToGain(spec.peakDb);
@@ -46,6 +48,15 @@ export function playVoiceChime(kind: ChimeKind, enabled: boolean): void {
       g.gain.exponentialRampToValueAtTime(0.0001, end);
       osc.connect(g);
       g.connect(out);
+      // Free each note's nodes as soon as it ends (no build-up over many opens).
+      osc.onended = () => {
+        try {
+          osc.disconnect();
+          g.disconnect();
+        } catch {
+          /* ignore */
+        }
+      };
       osc.start(start);
       osc.stop(end + 0.02);
     }

@@ -84,7 +84,7 @@ describe("voice orb allowlist", () => {
 
   it("keeps SHDR-21 on the brand tints", () => {
     assert.deepEqual(VOICE_ORB_LOOKS["shdr-21"].colors.idle, { light: "#87d539", shadow: "#5a8540" });
-    assert.deepEqual(VOICE_ORB_LOOKS["shdr-21"].colors.speaking, { light: "#6ee83a", shadow: "#3f9a2a" });
+    assert.deepEqual(VOICE_ORB_LOOKS["shdr-21"].colors.speaking, { light: "#5ed42a", shadow: "#2f8a22" });
   });
 
   it("keeps listening / thinking / speaking green on every orb (no gold or orange)", () => {

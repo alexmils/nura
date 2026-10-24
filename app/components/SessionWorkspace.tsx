@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import { cancelDeviceVoice, speakWithDeviceVoice, voiceAudioElement } from "@/lib/voice-audio";
+import {
+  cancelDeviceVoice,
+  prepareVoicePlayback,
+  speakWithDeviceVoice,
+  voiceAudioElement,
+} from "@/lib/voice-audio";
 import { useApp } from "./AppProvider";
 import { BallCanvas } from "./BallCanvas";
 import {
@@ -76,6 +81,8 @@ export function SessionWorkspace() {
     sessionMode,
     setSessionMode,
     sendUserMessage,
+    noteComposerDraft,
+    flushPendingReplies,
     requestCheckIn,
     settings,
     entitlement,
@@ -165,6 +172,7 @@ export function SessionWorkspace() {
           sessionMode,
           target: thread.target,
           suds: thread.suds,
+          dissociation: thread.dissociation,
         }
       : null;
   const manualStartAllowed =
@@ -340,6 +348,8 @@ export function SessionWorkspace() {
 
   const beginBlsRun = useCallback(() => {
     if (!thread) return;
+    // Anything still waiting for the quiet window goes to the guide now.
+    flushPendingReplies();
     setRunning(true);
     runningRef.current = true;
     setSessionMode("running");
@@ -355,6 +365,7 @@ export function SessionWorkspace() {
     entitlement,
     continueFreeLease,
     updateThreadLocal,
+    flushPendingReplies,
   ]);
 
   /**
@@ -472,8 +483,12 @@ export function SessionWorkspace() {
     noteAdSetCompleted,
   ]);
 
+  /** In-flight /api/voice request; aborted when playback stops or restarts. */
+  const playAbortRef = useRef<AbortController | null>(null);
   const stopPlayback = useCallback(() => {
     playGenRef.current += 1;
+    playAbortRef.current?.abort();
+    playAbortRef.current = null;
     cancelDeviceVoice();
     if (audioRef.current) {
       audioRef.current.pause();
@@ -493,21 +508,35 @@ export function SessionWorkspace() {
     async (text: string) => {
       stopPlayback();
       const gen = playGenRef.current;
+      const ctl = new AbortController();
+      playAbortRef.current = ctl;
       try {
         const res = await fetch("/api/voice", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
+          signal: ctl.signal,
         });
         if (gen !== playGenRef.current) return;
         if (!res.ok) {
           // Server voice unavailable: in voice mode the guide still speaks,
           // with the device's own voice.
-          if (voiceActiveRef.current) await speakWithDeviceVoice(text);
+          if (voiceActiveRef.current) {
+            if (!(await prepareVoicePlayback({ isCancelled: () => gen !== playGenRef.current }))) return;
+            await speakWithDeviceVoice(text);
+          }
           return;
         }
         const buf = await res.arrayBuffer();
         if (gen !== playGenRef.current) return;
+        // Voice mode: after the start chime, with the output warmed up, so
+        // the first syllable is not clipped (lib/voice-playback.ts).
+        if (
+          voiceActiveRef.current &&
+          !(await prepareVoicePlayback({ isCancelled: () => gen !== playGenRef.current }))
+        ) {
+          return;
+        }
         const blob = new Blob([buf], { type: "audio/mpeg" });
         const url = URL.createObjectURL(blob);
         // Reuse the element unlocked by the "Start voice" tap: iOS rejects a
@@ -606,10 +635,30 @@ export function SessionWorkspace() {
     return () => observer.disconnect();
   }, [toolbarVisible, toolbarCollapsed, gamepadConnected, thread?.mode, running]);
 
+  // Typing in the composer keeps the "wait for them to finish" window open
+  // (lib/reply-debounce.ts). Leaving the session screen sends what is waiting.
+  useEffect(() => {
+    const onInput = (e: Event) => {
+      const el = e.target as HTMLInputElement | null;
+      if (el?.classList?.contains("agent-composer-input")) {
+        noteComposerDraft(el.value ?? "");
+      }
+    };
+    document.addEventListener("input", onInput, true);
+    return () => {
+      document.removeEventListener("input", onInput, true);
+      flushPendingReplies();
+    };
+  }, [noteComposerDraft, flushPendingReplies]);
+
   const handleReply = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { immediate?: boolean }) => {
       if (!guided) return { startSet: false as const };
-      const result = await sendUserMessage(text);
+      // Voice Mode keeps its own turn-taking: no typing wait there.
+      const result = await sendUserMessage(text, {
+        immediate: opts?.immediate,
+        voice: voiceActiveRef.current,
+      });
       setSessionMode("idle");
       // The guide owns the ball in chat too, not only in Voice Mode. Without
       // this the reply says "I'll start the set now" and then nothing moves,
@@ -906,7 +955,7 @@ export function SessionWorkspace() {
             agentTyping={agentTyping}
             userAvatarUrl={currentUser?.avatarUrl}
             userDisplayName={displayNameFor(currentUser)}
-            onReply={(t) => void handleReply(t)}
+            onReply={(t, o) => void handleReply(t, o)}
             onPlayLine={(t) => void playLine(t)}
             onRepeatSet={repeatAllowed ? repeatSet : undefined}
             voiceAvailable={voice.available}
@@ -937,6 +986,7 @@ export function SessionWorkspace() {
                 />
               ) : null
             }
+            sessionClosed={showClosureCard}
             closureCard={
               showClosureCard ? (
                 <SessionClosureCard

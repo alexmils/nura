@@ -33,14 +33,14 @@ export const VOICE_ORB_LOOKS: Record<VoiceOrbId, OrbLook> = {
   "shdr-21-halo": {
     colors: {
       idle: { light: "#b9e47e", shadow: "#4f8a2c" },
-      listening: { light: "#c4f08a", shadow: "#58a032" },
+      listening: { light: "#a6e468", shadow: "#50962e" },
       thinking: { light: "#7ed69a", shadow: "#2f7f4a" },
-      speaking: { light: "#8cf05a", shadow: "#3c9a2a" },
+      speaking: { light: "#6cd83a", shadow: "#2f8a22" },
     },
     statePresets: {
       idle: { density: 2.6, edgeSoft: 1.3, alphaGain: 1.3, ambient: 0.14, power: 1.35, shadowLift: 0.7 },
       thinking: { density: 2.6, edgeSoft: 1.3, alphaGain: 1.3, ambient: 0.16, power: 1.45, shadowLift: 0.75 },
-      speaking: { density: 2.6, edgeSoft: 1.3, alphaGain: 1.35, ambient: 0.18, power: 1.6, shadowLift: 0.8 },
+      speaking: { density: 2.6, edgeSoft: 1.3, alphaGain: 1.4, ambient: 0.12, power: 1.6, shadowLift: 0.8 },
     },
   },
   /* Plasma: lime arcs from a sunny nucleus. */
@@ -72,7 +72,7 @@ export const VOICE_ORB_LOOKS: Record<VoiceOrbId, OrbLook> = {
       idle: { deep: "#3d6b2c", sun: "#eef8a8", sheen: "#dcefc4" },
       listening: { deep: "#4a8a32", sun: "#dcfcb0", sheen: "#e0f6c8" },
       thinking: { deep: "#24684a", sun: "#d4f5d8", sheen: "#cdebd8" },
-      speaking: { deep: "#3f9a2a", sun: "#bef76a", sheen: "#def8b8" },
+      speaking: { deep: "#3f9a2a", sun: "#b4f59a", sheen: "#d4f7c4" },
     },
   },
   /* Sunlit water · Mint: pale mint water, softer net. */
@@ -93,9 +93,9 @@ export const VOICE_ORB_LOOKS: Record<VoiceOrbId, OrbLook> = {
   "shdr-17": {
     colors: {
       idle: { deep: "#2f5226", low: "#87d539", mid: "#cfe89a", hot: "#f2cf5b", flash: "#fffbe6" },
-      listening: { deep: "#33602a", low: "#9ce64a", mid: "#d6f5a0", hot: "#b4f06a", flash: "#fbffe6" },
+      listening: { deep: "#2f5f2a", low: "#8fe04a", mid: "#c4eea0", hot: "#a8ec6a", flash: "#f4ffe8" },
       thinking: { deep: "#1f4a32", low: "#4cc46a", mid: "#b8ecc4", hot: "#8fe08a", flash: "#f4fff4" },
-      speaking: { deep: "#2a6a20", low: "#6ee83a", mid: "#c4f78a", hot: "#d4fb9a", flash: "#f8ffe8" },
+      speaking: { deep: "#2a6a20", low: "#4fd02a", mid: "#a8ec7a", hot: "#c8f78a", flash: "#f4ffe8" },
     },
     statePresets: {
       idle: { rainbow: 0.15, grain: 0.22, filmGrain: 0.15 },
@@ -107,9 +107,9 @@ export const VOICE_ORB_LOOKS: Record<VoiceOrbId, OrbLook> = {
   "shdr-32": {
     colors: {
       idle: { tint: "#ffffff", core: "#fff8dc", inner: "#a8e063", outer: "#f2cf5b", deep: "#1d2b16", rim: "#cfe89a" },
-      listening: { tint: "#ffffff", core: "#f8ffe4", inner: "#b4ee6a", outer: "#8fd84a", deep: "#1f3418", rim: "#d8f5a8" },
+      listening: { tint: "#ffffff", core: "#eefce0", inner: "#b4ee6a", outer: "#8fd84a", deep: "#1f3418", rim: "#d8f5a8" },
       thinking: { tint: "#ffffff", core: "#effff2", inner: "#5cc87a", outer: "#3fa860", deep: "#12301f", rim: "#bfecc8" },
-      speaking: { tint: "#ffffff", core: "#f4ffd8", inner: "#8ef04a", outer: "#5fd02e", deep: "#183a12", rim: "#c8f78a" },
+      speaking: { tint: "#ffffff", core: "#e2fcd4", inner: "#7ee84a", outer: "#5fd02e", deep: "#183a12", rim: "#c8f78a" },
     },
   },
   /* Pixel dome: forest ink on pastel paper. */
@@ -118,7 +118,7 @@ export const VOICE_ORB_LOOKS: Record<VoiceOrbId, OrbLook> = {
       idle: { ink: "#2f4a22", paper: "#d9f0a8" },
       listening: { ink: "#33582a", paper: "#d8f8b0" },
       thinking: { ink: "#1f4a34", paper: "#c8f0d4" },
-      speaking: { ink: "#2a6a1c", paper: "#c4f58a" },
+      speaking: { ink: "#2a6a1c", paper: "#aef08c" },
     },
   },
   /* Light tiles: pastel tiles on a soft moss wall, little confetti. */

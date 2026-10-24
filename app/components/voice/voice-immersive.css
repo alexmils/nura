@@ -1,0 +1,185 @@
+/*
+ * Phone held sideways + voice mode active: immersive, ChatGPT-voice-like.
+ * html[data-voice-immersive] is set by VoiceDockBeam (only mounted while the
+ * voice dock is up) and the media query is PHONE_LANDSCAPE_QUERY
+ * (voice-orb-env.ts). Desktop, tablet, portrait and non-voice landscape never
+ * match. No markup is duplicated: the existing header is collapsed to its
+ * crisis button, pinned as a small round corner button.
+ */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  /* ---- Chrome out: sidebar, menu toggle, title, billing hint ---- */
+  html[data-voice-immersive] .app-sidebar,
+  html[data-voice-immersive] .app-sidebar-backdrop,
+  html[data-voice-immersive] .workspace-menu-btn,
+  html[data-voice-immersive] .workspace-header .workspace-header-lead,
+  html[data-voice-immersive] .workspace-header .billing-charge-hint {
+    display: none !important;
+  }
+  html[data-voice-immersive] .workspace-main {
+    width: 100%;
+  }
+
+  /* Header takes no space; only its crisis button stays, top-right. */
+  html[data-voice-immersive] .workspace-header,
+  html[data-voice-immersive] .workspace-header.workspace-header--calm {
+    position: fixed;
+    top: max(0.5rem, env(safe-area-inset-top));
+    right: max(0.5rem, env(safe-area-inset-right));
+    z-index: 60;
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  html[data-voice-immersive] .workspace-header .workspace-header-row,
+  html[data-voice-immersive] .workspace-header .workspace-header-trail {
+    gap: 0;
+    margin: 0;
+  }
+  html[data-voice-immersive] .workspace-header .crisis-help-btn,
+  html[data-voice-immersive] .workspace-header--calm .crisis-help-btn {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    border: 1px solid rgba(42, 48, 32, 0.08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: var(--text-secondary, #5e7048);
+    animation: voice-immersive-fade 0.35s ease both;
+  }
+  html[data-voice-immersive] .workspace-header .crisis-help-btn-label {
+    display: none !important;
+  }
+  html[data-voice-immersive] .workspace-header .crisis-help-btn-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* ---- No chat card: full-bleed, safe-area padded ---- */
+  html[data-voice-immersive] .agent-overlay.agent-overlay--voice {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    transform: none;
+  }
+  html[data-voice-immersive] .agent-overlay--voice .agent-overlay-inner {
+    box-sizing: border-box;
+    height: 100%;
+    max-height: none;
+    gap: 0.4rem;
+    border-radius: 0;
+    background: transparent;
+    /* Top: room for the corner help button so messages never sit under it. */
+    padding:
+      calc(max(0.5rem, env(safe-area-inset-top)) + 2.75rem)
+      max(1rem, env(safe-area-inset-right))
+      max(0.5rem, env(safe-area-inset-bottom))
+      max(1rem, env(safe-area-inset-left));
+    animation: voice-immersive-fade 0.35s ease both;
+  }
+  html[data-voice-immersive] .agent-overlay--voice .agent-chat-messages {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+
+  /* ---- Bottom pill: compact, white, with room for the glow to rise ---- */
+  html[data-voice-immersive] .agent-voice-dock {
+    margin-top: 0;
+    padding-top: 2rem;
+  }
+  html[data-voice-immersive] .agent-voice-bar {
+    min-height: 52px;
+    padding-top: 0.4rem;
+    padding-bottom: 0.4rem;
+  }
+
+  /* Pill fill: near-white, slightly frosted, so the edge + glow read on the green page. */
+  .voice-dock-beam .agent-voice-bar {
+    position: relative;
+    border-color: transparent;
+    background: rgba(255, 255, 255, 0.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  /* Animated gradient edge: a 2px ring (mask) of a slowly turning conic
+     gradient, yellow -> lime -> green; opacity follows the beam level. */
+  .voice-dock-beam .agent-voice-bar::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    padding: 2px;
+    border-radius: inherit;
+    background: conic-gradient(
+      from var(--beam-angle, 0deg),
+      #f5d742,
+      #ffe970,
+      #9be84a,
+      #3fae4f,
+      #2f8a22,
+      #9be84a,
+      #ffe970,
+      #f5d742
+    );
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    opacity: var(--beam-edge, 0.3);
+    pointer-events: none;
+    transition: opacity 0.12s linear;
+    animation: voice-beam-edge-spin 7s linear infinite;
+  }
+  .voice-dock-beam[data-state="speaking"] .agent-voice-bar::before {
+    animation-duration: 4s;
+    filter: saturate(1.25);
+  }
+  /* Thinking: one bright arc travels around a faint ring. */
+  .voice-dock-beam[data-state="thinking"] .agent-voice-bar::before {
+    background:
+      conic-gradient(
+        from var(--beam-angle, 0deg),
+        transparent 0 62%,
+        #f5d742 74%,
+        #ffe970 80%,
+        #9be84a 88%,
+        transparent 100%
+      ),
+      linear-gradient(90deg, rgba(155, 232, 74, 0.35), rgba(245, 215, 66, 0.35));
+    animation-duration: 2.2s;
+  }
+  .voice-dock-beam[data-state="idle"] .agent-voice-bar::before,
+  .voice-dock-beam--still .agent-voice-bar::before {
+    animation: none;
+  }
+}
+
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+@keyframes voice-beam-edge-spin {
+  to {
+    --beam-angle: 360deg;
+  }
+}
+@keyframes voice-immersive-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-voice-immersive] .agent-overlay--voice .agent-overlay-inner,
+  html[data-voice-immersive] .workspace-header .crisis-help-btn,
+  .voice-dock-beam .agent-voice-bar::before {
+    animation: none !important;
+  }
+}

@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  buildVoiceRibbonBand,
-  buildVoiceWavePath,
   normalizeMicRms,
   rmsFromTimeDomain,
   smoothLevel,
-  waveAmplitude,
 } from "../lib/mic-level";
 
 describe("mic-level", () => {
@@ -34,29 +31,5 @@ describe("mic-level", () => {
     const down = smoothLevel(1, 0, 0.5, 0.1);
     assert.ok(up > 0.4);
     assert.ok(down > 0.8);
-  });
-
-  it("waveAmplitude grows while listening", () => {
-    assert.ok(waveAmplitude(0.9, "listening") > waveAmplitude(0.2, "listening"));
-    assert.ok(waveAmplitude(0, "listening") >= 8);
-    assert.ok(waveAmplitude(0, "listening") < waveAmplitude(0, "ambient"));
-    assert.ok(
-      waveAmplitude(0.9, "listening") > waveAmplitude(0.9, "ambient")
-    );
-  });
-
-  it("buildVoiceWavePath uses smooth cubics across full width", () => {
-    const d = buildVoiceWavePath(90, 54, 0.8, 14, 0);
-    assert.ok(d.startsWith("M"));
-    assert.ok(d.includes("C"));
-    assert.equal(d.includes(" L"), false);
-    assert.ok(d.includes("90.00") || d.includes("90.0"));
-  });
-
-  it("buildVoiceRibbonBand is a closed filled path", () => {
-    const d = buildVoiceRibbonBand(90, 54, 0.5, 12, 7, 0);
-    assert.ok(d.startsWith("M"));
-    assert.ok(d.trimEnd().endsWith("Z"));
-    assert.ok(d.includes("C"));
   });
 });

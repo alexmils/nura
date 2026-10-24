@@ -59,7 +59,7 @@ export const ORB_TINTS: Record<VoiceOrbState, string> = {
   idle: "#87d539",
   listening: "#9be84a",
   thinking: "#4fc46a",
-  speaking: "#6ee83a",
+  speaking: "#5ed42a",
 };
 
 /** SHDR-21 self-shadowed side: a deeper shade of each state's colour. */
@@ -67,16 +67,17 @@ export const ORB_SHADOWS: Record<VoiceOrbState, string> = {
   idle: "#5a8540",
   listening: "#5f9a34",
   thinking: "#2f7a45",
-  speaking: "#3f9a2a",
+  speaking: "#2f8a22",
 };
 
 /**
  * SHDR-21's shipped speaking preset (power 3.1, ambient 0.46) is tuned for a
  * dark page and washes out to white on Nura's cream. Tone it down, still
- * brighter than idle (1.9 / 0.12). Merged key by key over Orbkit's presets.
+ * brighter than idle (1.9 / 0.12); ambient stays low so the vivid green
+ * does not wash out to cream. Merged key by key over Orbkit's presets.
  */
 export const ORB_STATE_PRESETS: Partial<Record<OrbkitState, Record<string, number>>> = {
-  speaking: { power: 2.2, ambient: 0.28 },
+  speaking: { power: 2.2, ambient: 0.18 },
 };
 
 export const ORB_STATE_COLORS: Record<OrbkitState, { light: string; shadow: string }> = {

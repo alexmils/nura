@@ -35,6 +35,8 @@ export type BrowserSpeechCallbacks = {
   /** Only fires when the engine permanently stops (fatal error or stop()). */
   onEnd?: () => void;
   onStatus?: (status: BrowserSpeechStatus) => void;
+  /** The engine detected speech (before any transcript arrives). */
+  onSpeechStart?: () => void;
 };
 
 type SpeechRecognitionLike = {
@@ -45,6 +47,7 @@ type SpeechRecognitionLike = {
   onerror: ((ev: { error?: string; message?: string }) => void) | null;
   onend: (() => void) | null;
   onstart?: (() => void) | null;
+  onspeechstart?: (() => void) | null;
   start: () => void;
   stop: () => void;
   abort: () => void;
@@ -169,7 +172,15 @@ export type BrowserSpeechSession = {
  */
 export function startBrowserSpeech(
   callbacks: BrowserSpeechCallbacks,
-  options?: { lang?: string; startTimeoutMs?: number }
+  options?: {
+    lang?: string;
+    startTimeoutMs?: number;
+    /**
+     * Treat "network" (speech service unreachable, e.g. Brave / no Google
+     * speech backend) as fatal instead of retrying quietly. Dictation sets it.
+     */
+    networkIsFatal?: boolean;
+  }
 ): BrowserSpeechSession | null {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) {
@@ -219,6 +230,7 @@ export function startBrowserSpeech(
     rec.onerror = null;
     rec.onend = null;
     rec.onstart = null;
+    rec.onspeechstart = null;
     try {
       rec.abort();
     } catch {
@@ -283,7 +295,7 @@ export function startBrowserSpeech(
       // Our own stop, or a natural pause. `onend` handles the restart.
       if (code === "aborted" || code === "no-speech") return;
 
-      if (isFatalSpeechError(code)) {
+      if (isFatalSpeechError(code) || (code === "network" && options?.networkIsFatal)) {
         finishFatal(
           code,
           code === "not-allowed"
@@ -321,6 +333,9 @@ export function startBrowserSpeech(
     // seconds here (permission prompts, Siri dictation spin-up) or never
     // start at all; the old code claimed "Listening" right away and then sat
     // there silently.
+    rec.onspeechstart = () => {
+      callbacks.onSpeechStart?.();
+    };
     rec.onstart = () => {
       clearStartTimer();
       everStarted = true;

@@ -145,3 +145,56 @@ body:has(.voice-stage) .help-fab {
     animation: none;
   }
 }
+
+/* Keyboard hint under the controls: only where there is a real pointer
+   (desktop / trackpad). Touch devices never see it. */
+.voice-stage-keys {
+  display: none;
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--text-secondary, #5e7048);
+  opacity: 0.6;
+  user-select: none;
+}
+.voice-stage-keys kbd {
+  display: inline-block;
+  min-width: 1.25em;
+  padding: 0.05em 0.35em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+}
+.voice-stage-keys-sep {
+  margin: 0 0.35em;
+}
+@media (hover: hover) and (pointer: fine) {
+  .voice-stage-keys { display: block; }
+}
+
+/* No selection / iOS long-press callout anywhere on the stage: a long press
+   on the orb or the status line must not select it (blue box) or open
+   Copy / Search. Taps (interrupt, mic, End voice) still work; the stage
+   root already has touch-action: none, so no double-tap zoom either. */
+.voice-stage,
+.voice-stage *,
+.voice-dock-beam,
+.voice-dock-beam * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.voice-stage canvas,
+.voice-stage img,
+.voice-stage svg,
+.voice-dock-beam canvas {
+  -webkit-user-drag: none;
+}
+.voice-stage-orb,
+.voice-stage-btn {
+  touch-action: manipulation;
+}

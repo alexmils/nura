@@ -237,6 +237,26 @@ interface CanvasContextController {
 
 const canvasControllers = new WeakMap<HTMLCanvasElement, CanvasContextController>();
 
+/*
+  WEBGL_lose_context, remembered per context from the last time it was live.
+
+  getExtension() returns null while a context is lost. React StrictMode (dev)
+  runs every effect twice: the first cleanup loses the context, so the second
+  run fetched the extension while lost, got null, and its unmount cleanup's
+  loseContext() was a silent no-op after the context had been restored. Every
+  voice-mode open then leaked one live context up to the browser cap (~16),
+  making each open slower (seen in a 30-cycle stress run). Any real loss and
+  restore cycle (GPU reset, eviction) hit the same path in production.
+*/
+const loseExtByGl = new WeakMap<WebGLRenderingContext, WEBGL_lose_context>();
+function loseExtFor(gl: WebGLRenderingContext): WEBGL_lose_context | null {
+  if (!gl.isContextLost()) {
+    const ext = gl.getExtension("WEBGL_lose_context");
+    if (ext) loseExtByGl.set(gl, ext);
+  }
+  return loseExtByGl.get(gl) ?? null;
+}
+
 function compile(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
   const shader = gl.createShader(type);
   if (!shader) return null;
@@ -864,7 +884,7 @@ export function ShaderOrb({
     });
     if (!gl) return;
 
-    const loseExt = gl.getExtension("WEBGL_lose_context");
+    loseExtFor(gl); // remember the live extension object for later restores
 
     /*
       A "generation" is everything tied to a live context: program, buffers,
@@ -1264,7 +1284,7 @@ export function ShaderOrb({
     const onPageHide = (event: PageTransitionEvent) => {
       if (event.persisted) return;
       try {
-        loseExt?.loseContext();
+        loseExtFor(gl)?.loseContext();
       } catch {
         // Already released — nothing to hand back.
       }
@@ -1293,7 +1313,7 @@ export function ShaderOrb({
           setTimeout(() => {
             if (!created.desired) return;
             try {
-              loseExt?.restoreContext();
+              loseExtFor(gl)?.restoreContext();
             } catch {
               // Natural loss — restoration is the browser's call now.
             }
@@ -1318,7 +1338,7 @@ export function ShaderOrb({
       // dispatched this request is honored now; if it is still queued, the
       // lost handler above re-requests it on dispatch.
       try {
-        loseExt?.restoreContext();
+        loseExtFor(gl)?.restoreContext();
       } catch {
         // No restore path — the orb stays blank rather than throwing.
       }
@@ -1354,7 +1374,7 @@ export function ShaderOrb({
         freshly mounted orbs get evicted and render blank.
       */
       try {
-        loseExt?.loseContext();
+        loseExtFor(gl)?.loseContext();
       } catch {
         // Context already lost — nothing to release.
       }

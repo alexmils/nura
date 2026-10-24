@@ -62,8 +62,17 @@ const ShaderOrb = dynamic(() => import("@/components/ui/orbkit-core").then((m) =
   loading: () => null,
 });
 
-/** WebGL 1 is all Orbkit needs. The probe context is released straight away. */
+/**
+ * WebGL 1 is all Orbkit needs. Probed once per page (not on every voice
+ * open), and the probe context is released straight away, so repeated
+ * open / close never piles up contexts against Safari's live-context cap.
+ */
+let webglProbe: boolean | null = null;
 function canUseWebGL(): boolean {
+  if (webglProbe === null) webglProbe = probeWebGL();
+  return webglProbe;
+}
+function probeWebGL(): boolean {
   try {
     const c = document.createElement("canvas");
     const gl = (c.getContext("webgl") || c.getContext("experimental-webgl")) as WebGLRenderingContext | null;

@@ -11,6 +11,7 @@ import {
 import { startServerSpeech, type ServerSpeechSession } from "@/lib/server-stt";
 import { unlockVoiceAudio, voiceOutputLevel } from "@/lib/voice-audio";
 import { createChimeGate, START_CHIME_MIC_GUARD_MS } from "@/lib/voice-chime";
+import { createSpokenTracker } from "@/lib/voice-playback";
 import { playVoiceChime } from "./voice/voice-chime-player";
 import { useVoicePrefs } from "./voice/useVoicePrefs";
 import { selectVoiceEngine, type VoiceEngine } from "@/lib/voice-capture";
@@ -145,7 +146,16 @@ export function useGuidedVoiceMode({
   const activeRef = useRef(false);
   const phaseRef = useRef<VoicePhase>("off");
   const turnBusyRef = useRef(false);
-  const spokenAgentIdRef = useRef<string | null>(null);
+  /**
+   * Bumped on every enter and exit. Async work (a turn's reply, a spoken
+   * line) checks it before touching state, so a quick close + reopen never
+   * lets the old session speak or change phase in the new one.
+   */
+  const sessionGenRef = useRef(0);
+  /** Agent ids already shown before voice opened or already spoken (once each). */
+  const spokenRef = useRef(createSpokenTracker());
+  const lastAgentIdRef = useRef(lastAgentId);
+  lastAgentIdRef.current = lastAgentId;
   const optsRef = useRef({
     sessionKind,
     phase,
@@ -206,6 +216,8 @@ export function useGuidedVoiceMode({
   const finishTurn = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || turnBusyRef.current || !activeRef.current) return;
+    const gen = sessionGenRef.current;
+    const stale = () => gen !== sessionGenRef.current || !activeRef.current;
     turnBusyRef.current = true;
     releaseForTurn();
     setInterim("");
@@ -216,18 +228,19 @@ export function useGuidedVoiceMode({
 
     try {
       const result = await optsRef.current.onSend(trimmed);
-      if (!activeRef.current) return;
+      if (stale()) return;
 
-      if (result.agentId) spokenAgentIdRef.current = result.agentId;
+      spokenRef.current.mark(result.agentId);
 
       const agentText = result.agentText?.trim();
       if (agentText) {
         setPhaseVoice("speaking");
         await optsRef.current.onPlayLine(agentText);
+        if (stale()) return;
         // Drop the tail of the guide's own voice before the person's turn.
         ignoreUntilRef.current = Date.now() + TTS_SETTLE_MS;
       }
-      if (!activeRef.current) return;
+      if (stale()) return;
 
       const auto = shouldAutoStartSet({
         startSet: result.startSet,
@@ -245,12 +258,13 @@ export function useGuidedVoiceMode({
         setPhaseVoice("listening");
       }
     } catch {
-      if (activeRef.current) {
+      if (!stale()) {
         setError("Could not send that. Try again.");
         setPhaseVoice("listening");
       }
     } finally {
-      turnBusyRef.current = false;
+      // An old session's turn must not clear the new session's busy flag.
+      if (gen === sessionGenRef.current) turnBusyRef.current = false;
     }
   }, [releaseForTurn]);
 
@@ -402,6 +416,13 @@ export function useGuidedVoiceMode({
       playVoiceChime("start", chimeOnRef.current);
       ignoreUntilRef.current = Date.now() + START_CHIME_MIC_GUARD_MS;
     }
+    // Lines already on screen were shown (and maybe read) before voice
+    // opened: never replay them. Only replies that arrive from now on speak.
+    spokenRef.current.baseline(lastAgentIdRef.current);
+    // New session: anything still running from the last one is stale.
+    sessionGenRef.current += 1;
+    turnBusyRef.current = false;
+    clearSilence();
     setError(null);
     setStalled(false);
     setMuted(false);
@@ -409,9 +430,10 @@ export function useGuidedVoiceMode({
     activeRef.current = true;
     setPhaseVoice("listening");
     startListeningRef.current();
-  }, [available, supported]);
+  }, [available, supported, clearSilence]);
 
   const exit = useCallback(() => {
+    sessionGenRef.current += 1;
     activeRef.current = false;
     setActive(false);
     setStalled(false);
@@ -492,30 +514,32 @@ export function useGuidedVoiceMode({
   useEffect(() => {
     if (!active || !lastAgentId || !lastAgentContent) return;
     if (running) return;
-    if (spokenAgentIdRef.current === lastAgentId) return;
+    if (spokenRef.current.has(lastAgentId)) return;
     if (turnBusyRef.current) {
-      spokenAgentIdRef.current = lastAgentId;
+      // The turn plays its own reply.
+      spokenRef.current.mark(lastAgentId);
       return;
     }
     if (phaseVoice === "thinking" || phaseVoice === "speaking") return;
-
-    spokenAgentIdRef.current = lastAgentId;
-    let cancelled = false;
+    if (!spokenRef.current.claim(lastAgentId)) return;
+    // Not tied to this effect's cleanup: setting "speaking" re-runs the
+    // effect, which used to cancel the line and leave the phase stuck.
+    const gen = sessionGenRef.current;
     void (async () => {
       releaseForTurn();
       setPhaseVoice("speaking");
       await onPlayLine(lastAgentContent);
-      if (cancelled || !activeRef.current) return;
+      if (gen !== sessionGenRef.current || !activeRef.current) return;
       ignoreUntilRef.current = Date.now() + TTS_SETTLE_MS;
       if (running) {
         setPhaseVoice("bls");
         return;
       }
+      // startListening skips while the phase reads "speaking"; the ref is
+      // what it checks, so move it on first (it sets the state itself).
+      phaseRef.current = "listening";
       startListeningRef.current();
     })();
-    return () => {
-      cancelled = true;
-    };
   }, [
     active,
     lastAgentId,
