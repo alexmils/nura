@@ -15,6 +15,7 @@ type Status = {
   configured: boolean;
   source: "settings" | "env" | "none";
   problem?: string | null;
+  accountEmail?: string;
 };
 
 function MediaPageInner() {
@@ -81,6 +82,8 @@ function MediaSettings() {
   const [apiSecret, setApiSecret] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [accountEmail, setAccountEmail] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
 
   useEffect(() => {
     void fetch("/api/admin/cloudinary")
@@ -88,6 +91,7 @@ function MediaSettings() {
       .then((body: Status) => {
         setStatus(body);
         setCloudName(body.cloudName || "");
+        setAccountEmail(body.accountEmail || "");
       })
       .catch(() => setMessage("Could not load settings."));
   }, []);
@@ -118,6 +122,27 @@ function MediaSettings() {
     }
   }
 
+  async function saveAccountEmail() {
+    setBusy(true);
+    setAccountMessage("");
+    try {
+      const res = await fetch("/api/admin/cloudinary", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountEmail }),
+      });
+      const body = (await res.json().catch(() => null)) as Status & { error?: string };
+      if (!res.ok) throw new Error(body?.error || "Could not save.");
+      setStatus(body);
+      setAccountEmail(body.accountEmail || "");
+      setAccountMessage("Saved.");
+    } catch (err) {
+      setAccountMessage(err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function test() {
     setBusy(true);
     setMessage("");
@@ -135,6 +160,31 @@ function MediaSettings() {
 
   return (
     <div className="admin-media-settings">
+      <div className="admin-media-account" data-testid="cloudinary-account">
+        <p>
+          Current cloud name: <strong data-testid="cloudinary-current-cloud">{status?.cloudName || "not set"}</strong>
+        </p>
+        <label>
+          Cloudinary account email
+          <input
+            type="email"
+            value={accountEmail}
+            onChange={(event) => setAccountEmail(event.target.value)}
+            placeholder="name@example.com"
+            autoComplete="off"
+            data-testid="cloudinary-account-email"
+          />
+        </label>
+        <p>
+          <small>Which Cloudinary login owns this cloud. For reference only. Leave empty to use the default.</small>
+        </p>
+        {accountMessage ? <p>{accountMessage}</p> : null}
+        <div>
+          <button type="button" disabled={busy} onClick={() => void saveAccountEmail()}>
+            Save email
+          </button>
+        </div>
+      </div>
       <p>
         Cloud name, API key, and API secret are on the Cloudinary dashboard under Product Environment Credentials.
         The secret is never shown again. Leave a field blank to keep the stored value.

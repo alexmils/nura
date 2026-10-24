@@ -133,6 +133,8 @@ export type PlatformSettings = {
     cloudName: string;
     apiKey: string;
     apiSecret: string;
+    /** Which Cloudinary login owns this cloud. Reference note only, never used to connect. */
+    accountEmail: string;
   };
   /** Meta Ads overview card — account, token, and app secret for refresh. */
   metaAds: MetaAdsSettings;
@@ -208,7 +210,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   email: { ...DEFAULT_PLATFORM_EMAIL },
   seo: { ...DEFAULT_PLATFORM_SEO, pages: {} },
   mcp: { ...DEFAULT_PLATFORM_MCP },
-  cloudinary: { cloudName: "", apiKey: "", apiSecret: "" },
+  cloudinary: { cloudName: "", apiKey: "", apiSecret: "", accountEmail: "" },
   metaAds: { ...DEFAULT_META_ADS_SETTINGS },
   faviconUrl: "",
   appLogoUrl: "",
@@ -307,13 +309,14 @@ function normalizeCloudinary(
   raw: unknown
 ): PlatformSettings["cloudinary"] {
   if (!raw || typeof raw !== "object") {
-    return { cloudName: "", apiKey: "", apiSecret: "" };
+    return { cloudName: "", apiKey: "", apiSecret: "", accountEmail: "" };
   }
   const r = raw as Partial<PlatformSettings["cloudinary"]>;
   return {
     cloudName: typeof r.cloudName === "string" ? r.cloudName.trim() : "",
     apiKey: typeof r.apiKey === "string" ? r.apiKey.trim() : "",
     apiSecret: typeof r.apiSecret === "string" ? r.apiSecret.trim() : "",
+    accountEmail: typeof r.accountEmail === "string" ? r.accountEmail.trim() : "",
   };
 }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isAuthContext, requirePlatformAdmin } from "@/lib/api-auth";
 import {
   getCloudinaryStatus,
+  saveCloudinaryAccountEmail,
   saveCloudinarySettings,
   testCloudinary,
 } from "@/lib/cloudinary";
@@ -22,7 +23,17 @@ export async function PUT(request: Request) {
     cloudName?: string;
     apiKey?: string;
     apiSecret?: string;
+    accountEmail?: string;
   } | null;
+  // Reference note only ("which Cloudinary login owns this cloud"): saved on its own.
+  if (body && "accountEmail" in body && typeof body.cloudName !== "string") {
+    try {
+      return NextResponse.json(await saveCloudinaryAccountEmail(body.accountEmail));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
   if (!body || typeof body.cloudName !== "string") {
     return NextResponse.json({ error: "Cloud name is required." }, { status: 400 });
   }

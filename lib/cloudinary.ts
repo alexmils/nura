@@ -17,7 +17,40 @@ export type CloudinaryStatus = {
   source: "settings" | "env" | "none";
   /** What looks wrong with the stored values (never contains a secret). */
   problem: string | null;
+  /** Reference note: which Cloudinary login owns this cloud (saved value or the built-in default). */
+  accountEmail: string;
 };
+
+/**
+ * Built-in reference value: the Cloudinary login that owns Nura's cloud (same
+ * account in dev and production). Shown when nothing is saved in settings, so
+ * no production DB write is needed; an admin can override it.
+ */
+export const DEFAULT_CLOUDINARY_ACCOUNT_EMAIL = "hello@alexandermils.com";
+
+/** Saved value, or the built-in default when nothing is saved. */
+export function effectiveCloudinaryAccountEmail(saved: string | null | undefined): string {
+  return saved?.trim() || DEFAULT_CLOUDINARY_ACCOUNT_EMAIL;
+}
+
+const ACCOUNT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * The Cloudinary login email is a reference note for admins who use several
+ * Cloudinary accounts. Empty is allowed (clears the saved value, so the
+ * built-in default shows again); otherwise it must look
+ * like an email. Returns the trimmed value, or throws with a message.
+ */
+export function normalizeCloudinaryAccountEmail(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "string") throw new Error("Cloudinary account email must be text.");
+  const email = value.trim();
+  if (!email) return "";
+  if (email.length > 254 || !ACCOUNT_EMAIL_RE.test(email)) {
+    throw new Error("Enter a valid email address for the Cloudinary account, or leave it empty.");
+  }
+  return email;
+}
 
 const API_ROOT = "https://api.cloudinary.com/v1_1";
 const FOLDER = "nura";
@@ -196,7 +229,19 @@ export async function getCloudinaryStatus(): Promise<CloudinaryStatus> {
     configured: Boolean(resolved.creds),
     source: resolved.source,
     problem: resolved.creds ? cloudNameProblem(resolved.creds.cloudName) : null,
+    accountEmail: effectiveCloudinaryAccountEmail(settings.cloudinary.accountEmail),
   };
+}
+
+/** Saves only the reference email; credentials are untouched. */
+export async function saveCloudinaryAccountEmail(value: unknown): Promise<CloudinaryStatus> {
+  const accountEmail = normalizeCloudinaryAccountEmail(value);
+  const current = await getPlatformSettings();
+  await savePlatformSettings({
+    ...current,
+    cloudinary: { ...current.cloudinary, accountEmail },
+  });
+  return getCloudinaryStatus();
 }
 
 export async function saveCloudinarySettings(input: {
@@ -208,7 +253,7 @@ export async function saveCloudinarySettings(input: {
   const cloudinary = mergeCloudinaryInput(current.cloudinary, input);
   await savePlatformSettings({
     ...current,
-    cloudinary,
+    cloudinary: { ...cloudinary, accountEmail: current.cloudinary.accountEmail ?? "" },
   });
   return getCloudinaryStatus();
 }
