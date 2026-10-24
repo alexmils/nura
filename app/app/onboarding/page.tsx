@@ -20,6 +20,7 @@ import {
   metaMoneyFromPlanPrice,
   trackMetaEvent,
 } from "@/lib/meta-pixel";
+import { checkoutPageHref } from "@/lib/checkout-page";
 
 type BillingStatus = {
   accessTier: string;
@@ -244,29 +245,9 @@ function OnboardingFlow() {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, source: "onboarding" }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Checkout unavailable");
-        return;
-      }
-      if (data.url) {
-        const money = metaMoneyFromPlanPrice(
-          status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-        );
-        trackMetaEvent("InitiateCheckout", {
-          ...money,
-          content_name: plan,
-          content_category: "subscription",
-        });
-        window.location.href = data.url;
-        return;
-      }
-      setError("Checkout unavailable");
+      // Subscribe goes to the on-site checkout page (/checkout).
+      window.location.href = checkoutPageHref(plan, "onboarding");
+      return;
     } catch {
       setError("Could not start checkout.");
     } finally {

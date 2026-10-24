@@ -14,7 +14,7 @@ import {
   trackMetaEvent,
 } from "@/lib/meta-pixel";
 import { useToast } from "@/app/components/Toast";
-import { checkoutStartNotice } from "@/lib/checkout-feedback";
+import { checkoutPageHref } from "@/lib/checkout-page";
 
 type UpgradeReason = "trial_limit_reached" | "bls_limit_reached" | "generic";
 
@@ -167,31 +167,9 @@ export function UpgradeModal({
         }
       }
 
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, source: "upgrade_modal" }),
-      });
-      const data = await res.json();
-      const notice = checkoutStartNotice({
-        ok: res.ok,
-        error: data.error,
-        url: data.url,
-      });
-      if (notice) {
-        setError(notice.message);
-        toast(notice.message, "error");
-        return;
-      }
-      const money = metaMoneyFromPlanPrice(
-        plans[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-      );
-      trackMetaEvent("InitiateCheckout", {
-        ...money,
-        content_name: plan,
-        content_category: "subscription",
-      });
-      window.location.href = data.url;
+      // Subscribe goes to the on-site checkout page (/checkout).
+      window.location.href = checkoutPageHref(plan, "upgrade");
+      return;
     } catch {
       const message = "Could not start upgrade.";
       setError(message);

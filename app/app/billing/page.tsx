@@ -10,6 +10,7 @@ import {
   type BillingPlanMeta,
 } from "@/lib/billing-constants";
 import { shouldOfferBillingPortal } from "@/lib/checkout-rules";
+import { checkoutPageHref } from "@/lib/checkout-page";
 import { billingSummaryStatusLabel } from "@/lib/billing-status-display";
 import {
   deriveBillingState,
@@ -23,10 +24,7 @@ import {
 import { ConversionTags } from "@/app/components/ConversionTags";
 import { UpgradeModal } from "@/app/components/UpgradeModal";
 import { useToast } from "@/app/components/Toast";
-import {
-  checkoutReturnNotice,
-  checkoutStartNotice,
-} from "@/lib/checkout-feedback";
+import { checkoutReturnNotice } from "@/lib/checkout-feedback";
 
 const BILLING_FLIP_MS = 620;
 
@@ -240,35 +238,9 @@ function BillingPageInner() {
     setBusy(true);
     setMsg("");
     try {
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, source: "billing_page" }),
-      });
-      const data = await res.json();
-      const notice = checkoutStartNotice({
-        ok: res.ok,
-        error:
-          data.error ??
-          (data.code === "use_portal"
-            ? "Open Manage billing to update your card."
-            : null),
-        url: data.url,
-      });
-      if (notice) {
-        setMsg(notice.message);
-        toast(notice.message, "error");
-        return;
-      }
-      const money = metaMoneyFromPlanPrice(
-        status?.plans?.[plan]?.displayPrice ?? BILLING_PLANS[plan].displayPrice
-      );
-      trackMetaEvent("InitiateCheckout", {
-        ...money,
-        content_name: plan,
-        content_category: "subscription",
-      });
-      window.location.href = data.url;
+      // Subscribe goes to the on-site checkout page (/checkout).
+      window.location.href = checkoutPageHref(plan, "billing");
+      return;
     } catch {
       const message = "Could not start checkout.";
       setMsg(message);

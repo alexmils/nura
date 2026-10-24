@@ -15,6 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import { appPath } from "@/lib/app-base";
+import { checkoutPageHref } from "@/lib/checkout-page";
 import {
   BILLING_PLANS,
   type BillingPlanId,
@@ -501,7 +502,7 @@ export function PricingSection() {
                   ) : null}
                   <p className="fe-price-card-details">{card.details}</p>
                   <Link
-                    href={appPath("/create-account")}
+                    href={checkoutPageHref(card.id)}
                     className={`fe-price-card-cta${featured ? " fe-price-card-cta--accent" : ""}`}
                   >
                     {sectionText(cardCopy, "cta")}

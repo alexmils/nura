@@ -20,6 +20,7 @@ import {
   Volume2,
 } from "lucide-react";
 import { appPath } from "@/lib/app-base";
+import { checkoutPageHref } from "@/lib/checkout-page";
 import {
   BILLING_PLANS,
   type BillingPlanId,
@@ -273,7 +274,7 @@ function PricingCard({ plan, cta, featuresLabel }: { plan: PlanCard; cta: string
         {plan.note ? <span className="v2-price-note">{plan.note}</span> : null}
       </div>
       <Link
-        href={appPath("/create-account")}
+        href={checkoutPageHref(plan.id)}
         className={`v2-btn${plan.featured ? " v2-btn--primary" : " v2-btn--outline"}`}
       >
         {cta}

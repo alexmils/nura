@@ -15,8 +15,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { BrandLockup } from "@/app/components/BrandLockup";
-import { appPath } from "@/lib/app-base";
 import { BILLING_PLANS, type BillingPlanId } from "@/lib/billing-constants";
+import { checkoutPageHref } from "@/lib/checkout-page";
 import { KNOWLEDGE_HERO } from "@/lib/knowledge-clips";
 import {
   linesOf,
@@ -125,7 +125,7 @@ export function PricingPageView() {
                   </header>
                   <p className="fe-price-card-details">{card.details}</p>
                   <Link
-                    href={appPath("/create-account")}
+                    href={checkoutPageHref(card.id)}
                     className={`fe-price-card-cta${featured ? " fe-price-card-cta--accent" : ""}`}
                   >
                     {sectionText(cardCopy, "cta")}
