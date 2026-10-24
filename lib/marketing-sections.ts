@@ -397,7 +397,7 @@ function faqDefaults(
 export const AUTH_PANEL_ID = "auth-login";
 export const AUTH_PANEL_TEMPLATE_KEY = "template";
 export const AUTH_PANEL_TEMPLATES = [
-  { value: "photo", label: "Photo card", hint: "Soft gradient page, a rounded photo or video card on the left, form on the right." },
+  { value: "photo", label: "Photo card", hint: "Soft gradient page, form on the left, a rounded photo or video card on the right." },
   { value: "forest", label: "Forest value", hint: "Deep forest, slow light, trial badge and three cards." },
 ] as const satisfies readonly FieldOption[];
 export type AuthPanelTemplate = (typeof AUTH_PANEL_TEMPLATES)[number]["value"];

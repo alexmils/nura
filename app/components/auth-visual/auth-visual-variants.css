@@ -337,11 +337,7 @@
 
 @media (min-width: 960px) {
   .auth-shell--card:not(.auth-shell--solo) {
-    grid-template-columns: minmax(0, 1fr) minmax(26rem, 1fr);
-  }
-
-  .auth-shell--card .auth-shell-pane--visual {
-    order: -1;
+    grid-template-columns: minmax(26rem, 1fr) minmax(0, 1fr);
   }
 
   .auth-shell--card .auth-shell-pane--visual > .fe-bgwrap {
@@ -355,10 +351,10 @@
     border-radius: inherit;
   }
 
-  /* The card carries the logo; the form column is inset from the right edge. */
+  /* The card carries the logo; the form column is inset from the left edge. */
   .auth-shell--card .auth-shell-pane--form {
     border-right: none;
-    padding: 1.85rem clamp(2.5rem, 7vw, 7rem) 2.5rem 2.5rem;
+    padding: 1.85rem 2.5rem 2.5rem clamp(2.5rem, 7vw, 7rem);
   }
 
   .auth-shell--card .auth-shell-chrome,
