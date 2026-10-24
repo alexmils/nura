@@ -151,7 +151,7 @@
 
 .admin-user-preview {
   margin-top: 0.75rem;
-  padding: 0.85rem 1rem;
+  padding: 0.6rem 0.7rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   background: var(--bg-muted, rgba(0, 0, 0, 0.03));
@@ -176,3 +176,102 @@
 .admin-toolbar .admin-segmented {
   margin-bottom: 0;
 }
+
+/* Win-back email preview: the frame grows to the whole email (no inner
+   scroll), centered at email width so there are no wide empty sides. */
+.email-frame {
+  display: block;
+  max-width: 100%;
+  border: 0;
+  background: #fff;
+}
+.winback-preview-stage {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(42, 48, 32, 0.12);
+}
+.winback-preview-full { margin-left: auto; }
+
+/* Full-screen email preview. */
+.email-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 24, 16, 0.82);
+}
+.email-overlay__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid rgba(42, 48, 32, 0.14);
+}
+.email-overlay__subject {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.email-overlay__subject span {
+  margin-right: 0.35rem;
+  font-weight: 400;
+  color: #5c6450;
+}
+.email-overlay__modes {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid rgba(42, 48, 32, 0.16);
+  border-radius: 999px;
+}
+.email-overlay__modes button {
+  padding: 0.3rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.email-overlay__modes button.is-active { background: #2a3020; color: #fff; }
+.email-overlay__close {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid rgba(42, 48, 32, 0.2);
+  border-radius: 0.5rem;
+  background: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.email-overlay__close kbd {
+  padding: 0 0.3rem;
+  border: 1px solid rgba(42, 48, 32, 0.2);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: #5c6450;
+}
+.email-overlay__stage {
+  flex: 1;
+  overflow: auto;
+  padding: 1.25rem;
+}
+.email-overlay__device {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.6);
+}
+.email-overlay__device.is-mobile { width: 390px; max-width: 100%; }

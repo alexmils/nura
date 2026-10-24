@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RenderedWinbackEmail } from "@/lib/winback-email";
 import { WINBACK_NOTE_MAX } from "@/lib/email/winback-template";
 import type { WinbackDraft } from "./WinbackEmailEditor";
+import { EmailPreviewFrame, EmailPreviewOverlay } from "./EmailPreviewFrame";
 
 import "./admin-user-layout.css";
 
@@ -29,6 +30,7 @@ export function WinbackEmailComposer(props: {
   const [testTo, setTestTo] = useState(props.adminEmail);
   const [testBusy, setTestBusy] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [fullScreen, setFullScreen] = useState(false);
   const seq = useRef(0);
 
   useEffect(() => {
@@ -111,7 +113,7 @@ export function WinbackEmailComposer(props: {
         />
       </label>
 
-      <div className="winback-preview-tabs" role="tablist" style={{ display: "flex", gap: "0.35rem" }}>
+      <div className="winback-preview-tabs" role="tablist" style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
         <button
           type="button"
           role="tab"
@@ -130,6 +132,15 @@ export function WinbackEmailComposer(props: {
         >
           Plain text
         </button>
+        <button
+          type="button"
+          className="btn-secondary admin-btn-sm winback-preview-full"
+          disabled={!preview}
+          onClick={() => setFullScreen(true)}
+          data-testid="user-winback-fullscreen"
+        >
+          Open full screen
+        </button>
       </div>
       {previewError ? <p className="admin-panel-sub" style={{ margin: 0 }}>Preview error: {previewError}</p> : null}
       {preview ? (
@@ -139,13 +150,13 @@ export function WinbackEmailComposer(props: {
             {preview.hasRealLink ? "" : " (placeholder link: generate a link first)"}
           </p>
           {view === "html" ? (
-            <iframe
-              title="Win-back email preview"
-              sandbox=""
-              srcDoc={preview.html}
-              style={{ width: "100%", height: 620, border: "1px solid rgba(42,48,32,0.18)", borderRadius: 8, background: "#fff" }}
-              data-testid="user-winback-iframe"
-            />
+            <div className="winback-preview-stage">
+              <EmailPreviewFrame
+                html={preview.html}
+                title="Win-back email preview"
+                testId="user-winback-iframe"
+              />
+            </div>
           ) : (
             <pre
               style={{
@@ -156,8 +167,7 @@ export function WinbackEmailComposer(props: {
                 borderRadius: 8,
                 fontFamily: "inherit",
                 fontSize: "0.85rem",
-                maxHeight: 620,
-                overflow: "auto",
+                background: "#fff",
               }}
               data-testid="user-winback-text"
             >
@@ -167,6 +177,9 @@ export function WinbackEmailComposer(props: {
         </div>
       ) : !previewError ? (
         <p className="admin-panel-sub" style={{ margin: 0 }}>Rendering preview...</p>
+      ) : null}
+      {fullScreen && preview ? (
+        <EmailPreviewOverlay html={preview.html} subject={preview.subject} onClose={() => setFullScreen(false)} />
       ) : null}
 
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
