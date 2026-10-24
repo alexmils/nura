@@ -43,6 +43,10 @@ export type AdminUserDetail = {
   emailVerified: boolean;
   hasPassword: boolean;
   statsExcluded: boolean;
+  marketingEmailOptIn: boolean;
+  marketingEmailOptInAt: string | null;
+  /** Set by a Brevo hard bounce; the address is suppressed until a new opt-in. */
+  marketingEmailBouncedAt: string | null;
   plan: string;
   subscriptionStatus: string;
   amountCents: number;
@@ -194,6 +198,9 @@ export async function getAdminUserDetail(
     emailVerified: user.emailVerified,
     hasPassword: Boolean(user.passwordHash),
     statsExcluded: Boolean(excluded.rows[0]?.stats_excluded),
+    marketingEmailOptIn: user.marketingEmailOptIn,
+    marketingEmailOptInAt: user.marketingEmailOptInAt,
+    marketingEmailBouncedAt: user.marketingEmailBouncedAt,
     plan,
     subscriptionStatus,
     amountCents: subRow?.amount_cents ?? 0,

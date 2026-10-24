@@ -377,6 +377,29 @@ export default function AdminUserDetailPage() {
                   <dd>{detail.hasPassword ? "Set" : "Not set"}</dd>
                   <dt>Email verified</dt>
                   <dd>{detail.emailVerified ? "Yes" : "No"}</dd>
+                  <dt>Marketing email</dt>
+                  <dd
+                    title={
+                      detail.marketingEmailOptInAt
+                        ? `Since ${formatDate(detail.marketingEmailOptInAt)}`
+                        : undefined
+                    }
+                  >
+                    {detail.marketingEmailOptIn ? "On" : "Off"}
+                  </dd>
+                  <dt>Bounced</dt>
+                  <dd>
+                    {detail.marketingEmailBouncedAt ? (
+                      <>
+                        <span className="admin-badge admin-badge-disabled">
+                          Suppressed
+                        </span>{" "}
+                        {formatDate(detail.marketingEmailBouncedAt)}
+                      </>
+                    ) : (
+                      "No"
+                    )}
+                  </dd>
                   <dt>Stats</dt>
                   <dd>{detail.statsExcluded ? "Ignored" : "Counted"}</dd>
                 </dl>
