@@ -1010,12 +1010,15 @@
   pointer-events: none;
 }
 
-/* Turnstile renders its own iframe; reserve the row so the button does not jump. */
+/* Interaction-only Turnstile: no reserved row unless a challenge appears. */
 .cta-contact-turnstile {
   grid-column: 1 / -1;
-  min-height: 4rem;
   display: flex;
   align-items: center;
+}
+
+.cta-contact-turnstile:empty {
+  display: none;
 }
 
 .cta-contact-turnstile .auth-turnstile {

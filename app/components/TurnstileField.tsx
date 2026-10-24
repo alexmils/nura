@@ -38,10 +38,15 @@ type Props = {
   action: TurnstileAction;
   onToken: (token: string | null) => void;
   className?: string;
+  /**
+   * "always" (default) shows the checkbox; "interaction-only" keeps the frame
+   * out of the layout unless Cloudflare needs the visitor to do something.
+   */
+  appearance?: "always" | "interaction-only" | "execute";
 };
 
 export const TurnstileField = forwardRef<TurnstileFieldHandle, Props>(
-  function TurnstileField({ action, onToken, className }, ref) {
+  function TurnstileField({ action, onToken, className, appearance = "always" }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
     const onTokenRef = useRef(onToken);
@@ -77,6 +82,7 @@ export const TurnstileField = forwardRef<TurnstileFieldHandle, Props>(
         action,
         theme: "light",
         size: "flexible",
+        appearance,
         callback: (token: string) => {
           onTokenRef.current(token);
         },
@@ -100,7 +106,7 @@ export const TurnstileField = forwardRef<TurnstileFieldHandle, Props>(
         }
         onTokenRef.current(null);
       };
-    }, [scriptReady, action]);
+    }, [scriptReady, action, appearance]);
 
     return (
       <div className={className ?? "auth-turnstile"}>

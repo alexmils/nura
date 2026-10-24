@@ -461,6 +461,7 @@ export function CtaShowcase(props: CtaShowcaseProps) {
                 <TurnstileField
                   ref={turnstileRef}
                   action="contact"
+                  appearance="interaction-only"
                   onToken={setTurnstileToken}
                 />
               </div>
