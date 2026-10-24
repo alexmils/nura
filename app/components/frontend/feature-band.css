@@ -3,10 +3,10 @@
  * Switched off by default (the section's own "Show this section" switch).
  */
 
-.v2-feature-band {
-  background: #fbfaf5;
+.v2-section.v2-feature-band {
   min-height: 0;
   padding: clamp(3.5rem, 7vw, 6.5rem) 0;
+  background: #fbfaf5;
 }
 
 .v2-fb-grid {

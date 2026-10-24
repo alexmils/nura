@@ -3,7 +3,9 @@
  * horizontally, alternating solid and faded. Ships switched off.
  */
 
-.v2-ticker {
+/* Two classes: landing-v2.css may load after this file and sets
+   .v2-section { min-height: 110svh }, which otherwise leaves a huge lime field. */
+.v2-section.v2-ticker {
   min-height: 0;
   padding: 0;
   overflow: hidden;
