@@ -6,7 +6,6 @@ import {
   getAccountMemoryContext,
   getThread,
   listMessages,
-  updateMessageContent,
   updateThread,
   upsertClientProfile,
 } from "@/lib/db";
@@ -21,12 +20,19 @@ import {
   classifyInterpreterOutput,
   closedSessionReply,
   CLOSED_SESSION_GUIDE_RULE,
+  consecutiveMessagesRule,
+  guardRepeatedReply,
   guideAppStateBlock,
   heuristicTurn,
+  isNearDuplicateReply,
+  lastAgentMessage,
+  repeatRetryInstruction,
+  trailingUserMessages,
   usagePurposeForOutcome,
   type InterpreterOutcome,
 } from "@/lib/agent-turn";
 import { canStartBls } from "@/lib/session-mode";
+import { batchTurnText, normalizeUserBatch } from "@/lib/reply-debounce";
 import {
   checkInLine,
   guidedFallbackReply,
@@ -35,10 +41,18 @@ import {
   reevaluationOpeningLine,
   systemPromptForPhase,
 } from "@/lib/protocol";
+import { detectCrisis, groundingFallbackLine } from "@/lib/crisis-detect";
 import {
-  detectSessionLanguage,
-  isWelcomeOpening,
-  welcomeLineFor,
+  dissociationFallbackLine,
+  dissociationGuideBlock,
+  dissociationPatch,
+  screenDissociationTurn,
+  type DissociationScreen,
+} from "@/lib/dissociation-screen";
+import {
+  resolveTurnLanguage,
+  turnLanguageBlock,
+  type TurnLanguage,
 } from "@/lib/session-languages";
 import {
   getLlmRuntimeConfig,
@@ -53,7 +67,13 @@ import {
   type SessionInterpretation,
 } from "@/lib/session-interpreter";
 import { withAuth } from "@/lib/api-auth";
+import {
+  isGuidedSessionClosed,
+  sessionClosedBody,
+  SESSION_CLOSED_STATUS,
+} from "@/lib/session-closed-guard";
 import { getRlsContext } from "@/lib/rls";
+import { recordProblemReportFromChat } from "@/lib/problem-reports";
 import {
   scheduleSessionMemoryExtract,
   shouldScheduleMemoryExtract,
@@ -124,14 +144,27 @@ async function runInterpreter(opts: {
 export async function POST(request: Request) {
   return withAuth(async () => {
     const body = await request.json();
-    const { threadId, userMessage, bootstrap, afterSet, setOutcome } =
+    const {
+      threadId,
+      userMessage: singleUserMessage,
+      userMessages,
+      bootstrap,
+      afterSet,
+      setOutcome,
+    } =
       body as {
         threadId: string;
         userMessage?: string;
+        /** Messages sent in one quiet window (lib/reply-debounce.ts): one turn. */
+        userMessages?: string[];
         bootstrap?: boolean;
         afterSet?: boolean;
         setOutcome?: "completed" | "stopped";
       };
+    // Each message is saved in order; the guide answers the batch once, and
+    // the interpreter / language / safety checks read it as one text.
+    const userBatch = normalizeUserBatch(userMessages, singleUserMessage);
+    const userMessage = batchTurnText(userBatch);
 
     let thread = await getThread(threadId);
     if (!thread) {
@@ -142,6 +175,15 @@ export async function POST(request: Request) {
         { error: "Chat is only available in guided sessions" },
         { status: 400 }
       );
+    }
+
+    // Closed session (summary card shown, composer disabled): refuse every
+    // further turn BEFORE saving the message or calling the interpreter /
+    // guide model, so nothing after closure costs an LLM call.
+    if (isGuidedSessionClosed(thread)) {
+      return NextResponse.json(sessionClosedBody(thread), {
+        status: SESSION_CLOSED_STATUS,
+      });
     }
 
     // How the set the app just ran actually ended. The guide cannot see the
@@ -198,8 +240,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: msg, thread });
     }
 
-    if (userMessage) {
-      await addMessage(threadId, "user", userMessage);
+    for (const text of userBatch) {
+      await addMessage(threadId, "user", text);
+    }
+
+    // Problem reports (lib/problem-reports.ts): the person says the APP is not
+    // working (no ball, no sound...). Fire-and-forget and fail-safe: it never
+    // changes or delays the reply, and crisis turns are left to crisis handling.
+    if (userMessage && !detectCrisis(userMessage)) {
+      void recordProblemReportFromChat({
+        userId,
+        threadId,
+        text: userMessage,
+        languageHint: thread.agentLanguage ?? null,
+      }).catch(() => {});
     }
 
     // Closed session: a bare goodbye gets one closing line, then silence, so
@@ -228,26 +282,38 @@ export async function POST(request: Request) {
     let interpretation: SessionInterpretation | null = null;
     let workingThread = thread;
 
-    // The first recognizable user message decides the session language: pin the
-    // guide to it and rewrite the opening welcome so the first bubble matches.
-    // Stays open until a language is pinned, so a vague opener is not fatal.
-    if (userMessage && !workingThread.agentLanguage) {
-      const detected = detectSessionLanguage(userMessage);
-      if (detected) {
-        const opening = history.find((m) => m.role === "agent");
-        if (opening && isWelcomeOpening(opening.content)) {
-          await updateMessageContent(opening.id, welcomeLineFor(detected.code));
-        }
+    // Reply language, decided every turn from what the user writes in THIS
+    // session (lib/session-languages.ts resolveTurnLanguage): a clear message in
+    // another language or an explicit request switches, "I don't understand"
+    // and short replies keep the current language, and an unpinned session
+    // defaults to English. Memory, profile, browser and country never decide it.
+    let turnLanguage: TurnLanguage | null = null;
+    if (userMessage) {
+      turnLanguage = resolveTurnLanguage({
+        current: workingThread.agentLanguage,
+        userMessage,
+      });
+      if (
+        turnLanguage.pin &&
+        turnLanguage.code !== workingThread.agentLanguage
+      ) {
+        // The English opening welcome is app UI and stays English (UI is never
+        // localized); only the guide's replies follow the session language.
         const withLanguage = await updateThread(threadId, {
-          agentLanguage: detected.code,
+          agentLanguage: turnLanguage.code,
         });
         if (withLanguage) workingThread = withLanguage;
       }
     }
 
+    // Dissociation screening (lib/dissociation-screen.ts): read from the user's
+    // answer to the guide's last line, before the phase patch is built.
+    let dissociationScreen: DissociationScreen | null = null;
+    const answeredLine = lastAgentMessage(history);
+
     let interpreterOutcome: InterpreterOutcome | "disabled" | null = null;
     if (userMessage && platform.flags.sessionInterpreter !== false) {
-      const recent = (await listMessages(threadId)).slice(-8).map((m) => ({
+      const recent = (await listMessages(threadId)).slice(-16).map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -264,6 +330,7 @@ export async function POST(request: Request) {
           `intakeComplete=${thread.intakeComplete ?? false}`,
           `setsCompleted=${thread.setCount ?? 0}`,
           `lastSetOutcome=${thread.lastSetOutcome ?? "none"}`,
+          `dissociation=${thread.dissociation ?? "none"}`,
           profileContext ? `profile:\n${profileContext}` : "profile: none",
         ].join("\n"),
         recentMessages: recent,
@@ -274,9 +341,21 @@ export async function POST(request: Request) {
       interpreterOutcome = run.outcome;
 
       if (interpretation) {
+        const screened = screenDissociationTurn({
+          thread,
+          userMessage,
+          lastAgentMessage: answeredLine,
+          interpretation,
+        });
+        interpretation = screened.interpretation;
+        dissociationScreen = screened.screen;
         const guarded = guardSetEntry(
           thread,
-          threadPatchFromInterpretation(thread, interpretation)
+          dissociationPatch(
+            thread,
+            screened.screen,
+            threadPatchFromInterpretation(thread, interpretation)
+          )
         );
         const patch = guarded.patch;
         if (guarded.blocked) {
@@ -325,10 +404,22 @@ export async function POST(request: Request) {
         userTurns: userMsgs.length,
         firstUserMessage,
       });
-      interpretation = fallback.interpretation;
+      const screened = screenDissociationTurn({
+        thread: workingThread,
+        userMessage,
+        lastAgentMessage: answeredLine,
+        interpretation: fallback.interpretation,
+      });
+      interpretation = screened.interpretation;
+      dissociationScreen = screened.screen;
+      const screenedPatch = dissociationPatch(
+        workingThread,
+        screened.screen,
+        fallback.patch
+      );
       const patch = {
-        ...fallback.patch,
-        ...baselinePatch(workingThread, fallback.patch),
+        ...screenedPatch,
+        ...baselinePatch(workingThread, screenedPatch),
       };
       if (Object.keys(patch).length > 0) {
         const updated = await updateThread(threadId, patch);
@@ -393,7 +484,7 @@ export async function POST(request: Request) {
         workingThread.phase,
         memoryContext,
         freshProfileContext,
-        workingThread.agentLanguage
+        turnLanguage?.code ?? workingThread.agentLanguage
       ) +
       (adminNotes
         ? `\n\nAdmin protocol notes (platform):\n${adminNotes.slice(0, 4000)}`
@@ -403,23 +494,39 @@ export async function POST(request: Request) {
         : "") +
       `\n\nSet state for this thread (the app runs the sets, you do not see them):\n- sets completed: ${workingThread.setCount ?? 0}\n- last set: ${workingThread.lastSetOutcome ?? "none yet"}\nA "stopped" last set means the person was interrupted or cut it short, so nothing was processed: the same set is repeated, and you do not read SUDs or VoC from it.` +
       `\n\n${guideAppStateBlock({ thread: workingThread, setStartsNow })}` +
+      (dissociationGuideBlock(workingThread.dissociation)
+        ? `\n\n${dissociationGuideBlock(workingThread.dissociation)}`
+        : "") +
       (workingThread.phase === "closure"
         ? `\n\n${CLOSED_SESSION_GUIDE_RULE}`
         : "");
 
-    const messages = [
-      {
-        role: "system" as const,
-        content: system,
-      },
-      ...(await listMessages(threadId))
+    const promptHistory = await listMessages(threadId);
+    const lateMessagesRule = consecutiveMessagesRule(
+      trailingUserMessages(promptHistory)
+    );
+    // Language goes last so memory, profile and admin notes cannot outweigh it.
+    const systemFinal =
+      system +
+      (lateMessagesRule ? `\n\n${lateMessagesRule}` : "") +
+      (turnLanguage ? `\n\n${turnLanguageBlock(turnLanguage)}` : "");
+
+    const toChat = (rows: { role: string; content: string }[]) =>
+      rows
         .filter((m) => !isStaleFallbackMessage(m.content))
         .map((m) => ({
           role: (m.role === "agent" ? "assistant" : "user") as
             | "assistant"
             | "user",
           content: m.content,
-        })),
+        }));
+
+    const messages = [
+      {
+        role: "system" as const,
+        content: systemFinal,
+      },
+      ...toChat(promptHistory),
       // A set just ended in a session pinned to another language: instead of the
       // canned English line, have the guide say it in the user's language. This
       // control turn is only sent to the model, never stored.
@@ -438,10 +545,58 @@ export async function POST(request: Request) {
         userId,
         purpose: "guided_chat",
       });
-      const text = reply.trim();
+      let text = reply.trim();
       if (!text) {
         throw new Error("Empty LLM reply");
       }
+
+      // Never post the previous guide line again. Two messages sent in a row
+      // used to run as two parallel turns that both asked the same question;
+      // the client now serializes sends, and this catches any repeat that is
+      // left (another tab, a model that loops on an unanswered question).
+      if (!localizedCheckIn) {
+        const latest = await listMessages(threadId);
+        let verdict = guardRepeatedReply({
+          reply: text,
+          history: latest,
+          retried: false,
+        });
+        if (verdict === "retry") {
+          const second = (
+            await chatCompletion(
+              settings,
+              [
+                { role: "system" as const, content: systemFinal },
+                ...toChat(latest),
+                {
+                  role: "user" as const,
+                  content: repeatRetryInstruction(
+                    lastAgentMessage(latest) ?? text
+                  ),
+                },
+              ],
+              { userId, purpose: "guided_chat" }
+            )
+          ).trim();
+          verdict = second
+            ? guardRepeatedReply({ reply: second, history: latest, retried: true })
+            : "drop";
+          if (verdict === "use") text = second;
+        }
+        if (verdict === "drop") {
+          console.warn(
+            `[chat] guide repeated its previous line twice thread=${threadId}; reply suppressed`
+          );
+          return NextResponse.json({
+            message: null,
+            thread: await getThread(threadId),
+            interpreterOutcome,
+            interpretation: null,
+            duplicateSuppressed: true,
+          });
+        }
+      }
+
       const agentMsg = await addMessage(threadId, "agent", text);
       const fresh = await getThread(threadId);
 
@@ -470,11 +625,24 @@ export async function POST(request: Request) {
         interpretation?.outOfWindow ||
         interpretation?.needsGrounding ||
         interpretation?.riskFlag
-          ? "Let's pause and ground. Cross your arms for a butterfly hug, or picture your safe place. When you feel steadier, tell me what you notice. If you are in crisis, please seek professional or emergency help."
+          ? groundingFallbackLine(
+              detectCrisis(userMessage)?.language ??
+                turnLanguage?.code ??
+                workingThread.agentLanguage
+            )
           : localizedCheckIn
             ? setLine
-            : guidedFallbackReply(workingThread.phase, userMessage);
-      const agentMsg = await addMessage(threadId, "agent", fallback);
+            : ((dissociationScreen?.changed
+                ? dissociationFallbackLine(workingThread.dissociation)
+                : null) ??
+              guidedFallbackReply(workingThread.phase, userMessage));
+      // The canned lines are fixed per phase, so a second failure in a row
+      // would post the same line twice. Say something different instead.
+      const previousLine = lastAgentMessage(await listMessages(threadId));
+      const fallbackText = isNearDuplicateReply(fallback, previousLine)
+        ? "Take your time. Tell me a little more in your own words, and we'll go on from there."
+        : fallback;
+      const agentMsg = await addMessage(threadId, "agent", fallbackText);
       return NextResponse.json({
         message: agentMsg,
         thread: await getThread(threadId),

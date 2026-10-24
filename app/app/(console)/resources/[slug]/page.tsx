@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
-import { AppProvider } from "@/app/components/AppProvider";
-import { ResourceArticleShell } from "@/app/components/ResourceArticleShell";
-import { SidebarNavProvider } from "@/app/components/SidebarNavContext";
+import { ResourceArticleView } from "@/app/components/ResourcesView";
 import { getPublishedResourceBySlug } from "@/lib/resources-db";
 import { postToResourceItem } from "@/lib/resources";
 
@@ -15,11 +13,5 @@ export default async function ResourceArticlePage({
   if (!post) notFound();
   if (!post.body && !post.videoUrl) notFound();
 
-  return (
-    <AppProvider>
-      <SidebarNavProvider>
-        <ResourceArticleShell item={postToResourceItem(post)} />
-      </SidebarNavProvider>
-    </AppProvider>
-  );
+  return <ResourceArticleView item={postToResourceItem(post)} />;
 }

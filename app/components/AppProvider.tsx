@@ -21,6 +21,12 @@ import type {
 import { DEFAULT_BLS, DEFAULT_SETTINGS } from "@/lib/types";
 import type { SessionMode } from "@/lib/protocol";
 import { fetchJson, FetchJsonError } from "@/lib/fetch-json";
+import { isSessionClosedError } from "@/lib/session-closed-guard";
+import {
+  createReplyBatcher,
+  shouldReplyImmediately,
+  type ReplySendOptions,
+} from "@/lib/reply-debounce";
 import { DEFAULT_GUIDED_CHAT_CHROME_ID } from "@/lib/guided-chat-chrome";
 import { DEFAULT_FREE_SESSION_CHROME_ID } from "@/lib/free-session-chrome";
 import {
@@ -119,6 +125,10 @@ interface AppState {
    * UI can hold a quiet placeholder instead of flashing the Home screen.
    */
   restoringSession: boolean;
+  /** True once the Recent list has loaded at least once (no "empty" flash). */
+  threadsLoaded: boolean;
+  /** Thread being opened or open now (a select may still be loading). */
+  threadTarget: () => string | null;
   memoryEnabled: boolean;
   settings: AppSettings;
   bls: BlsSettings;
@@ -135,11 +145,16 @@ interface AppState {
   selectThread: (id: string) => Promise<void>;
   /** Clear selection and show the Home welcome screen (no thread open). */
   clearActiveThread: () => void;
-  createThread: () => Promise<void>;
+  /** New thread id, or null when it failed or a leave guard held it. */
+  createThread: () => Promise<string | null>;
   updateThreadLocal: (id: string, patch: Partial<Thread>) => Promise<void>;
   chooseSessionMode: (kind: Exclude<SessionKind, "pending">) => Promise<boolean>;
   deleteThread: (id: string) => Promise<void>;
-  sendUserMessage: (text: string) => Promise<{
+  /**
+   * Shows the message at once; the guide is asked after a short quiet window
+   * (typed chat) or now (`immediate`, `voice`, crisis words).
+   */
+  sendUserMessage: (text: string, opts?: ReplySendOptions) => Promise<{
     startSet: boolean;
     riskFlag?: boolean;
     outOfWindow?: boolean;
@@ -153,6 +168,10 @@ interface AppState {
    * is one the person cut short, which must not count as processed material.
    */
   requestCheckIn: (outcome?: "completed" | "stopped") => Promise<void>;
+  /** Composer text changed: typing keeps the reply wait open. */
+  noteComposerDraft: (draft: string) => void;
+  /** Ask the guide now about anything still waiting (set start, leaving). */
+  flushPendingReplies: () => void;
   bootstrapAgent: () => Promise<void>;
   refreshSettings: () => Promise<void>;
   saveSettings: (s: AppSettings) => Promise<void>;
@@ -188,6 +207,16 @@ interface AppState {
 
 const AppContext = createContext<AppState | null>(null);
 
+type SendResult = Awaited<ReturnType<AppState["sendUserMessage"]>>;
+/** A sent message waiting for the quiet window (lib/reply-debounce.ts). */
+type PendingReply = {
+  text: string;
+  threadId: string;
+  optimisticId: string;
+  resolve: (r: SendResult) => void;
+  reject: (err: unknown) => void;
+};
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -204,6 +233,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * look like the session was lost.
    */
   const [restoringSession, setRestoringSession] = useState(true);
+  const [threadsLoaded, setThreadsLoaded] = useState(false);
+  const threadTargetRef = useRef<string | null>(null);
+  const threadTarget = useCallback(() => threadTargetRef.current, []);
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [guidedChatChromeId, setGuidedChatChromeId] = useState(
@@ -218,7 +250,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const leaveGuardRef = useRef<((proceed: () => void) => boolean) | null>(
     null
   );
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  /**
+   * Typed guided chat waits for the person to finish (2-3 Enters for one
+   * thought) before asking the guide; see lib/reply-debounce.ts.
+   */
+  const postReplyBatchRef = useRef<
+    (items: PendingReply[], keepalive?: boolean) => Promise<void>
+  >(async () => {});
+  const flushKeepaliveRef = useRef(false);
+  const [replyBatcher] = useState(() =>
+    createReplyBatcher<PendingReply>({
+      onFlush: (items) => {
+        // One request per thread, in order (normally a single group).
+        const groups: PendingReply[][] = [];
+        for (const item of items) {
+          const g = groups[groups.length - 1];
+          if (g && g[0].threadId === item.threadId) g.push(item);
+          else groups.push([item]);
+        }
+        for (const g of groups) {
+          void postReplyBatchRef.current(g, flushKeepaliveRef.current);
+        }
+      },
+    })
+  );  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [bls, setBlsState] = useState<BlsSettings>(DEFAULT_BLS);
   const blsUserIdRef = useRef<string | null>(null);
@@ -356,6 +411,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         `/api/threads${q}`
       );
       setThreads(data.threads ?? []);
+      setThreadsLoaded(true);
     } catch (err) {
       console.error("refreshThreads failed:", err);
     }
@@ -385,6 +441,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    */
   const selectThreadRaw = useCallback(
     async (id: string): Promise<boolean> => {
+      threadTargetRef.current = id;
       try {
         const data = await fetchJson<{
           messages?: Message[];
@@ -439,6 +496,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
    * real session stays in Recent untouched.
    */
   const clearActiveThreadRaw = useCallback(() => {
+    threadTargetRef.current = null;
     activeThreadIdRef.current = null;
     setActiveThreadId(null);
     setMessages([]);
@@ -508,10 +566,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     selectThreadRaw,
   ]);
 
-  const createThread = useCallback(async () => {
+  const createThread = useCallback(async (): Promise<string | null> => {
+    let created: Promise<string | null> = Promise.resolve(null);
     runWithLeaveGuard(() => {
-      void createThreadRaw();
+      created = createThreadRaw();
     });
+    return created;
   }, [createThreadRaw, runWithLeaveGuard]);
 
   const updateThreadLocal = useCallback(
@@ -651,70 +711,184 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [activeThreadId, refreshThreads, syncSessionUrl]
   );
 
-  const sendUserMessage = useCallback(async (text: string) => {
-    if (!activeThreadId) {
-      return { startSet: false as const };
-    }
-    const optimistic: Message = {
-      id: `tmp-${Date.now()}`,
-      threadId: activeThreadId,
-      role: "user",
-      content: text,
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((m) => [...m, optimistic]);
-    // Writing indicator for the whole round trip. `finally` matters: a failed
-    // request must not leave the dots moving forever.
-    setAgentTyping(true);
-    try {
-      const data = await fetchJson<{
-        message?: Message;
-        thread?: Thread;
-        interpretation?: {
-          startSet?: boolean;
-          riskFlag?: boolean;
-          outOfWindow?: boolean;
-          distress?: "ok" | "elevated" | "overwhelm";
-        } | null;
-      }>("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ threadId: activeThreadId, userMessage: text }),
-      });
-      if (data.thread) {
-        setThreads((list) =>
-          list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
-        );
-      }
-      if (data.message) {
-        const assistantMsg = data.message;
-        setMessages((m) => {
-          const withoutTmp = m.filter((x) => x.id !== optimistic.id);
-          const hasUser = withoutTmp.some(
-            (x) => x.role === "user" && x.content === text
-          );
-          return hasUser
-            ? [...withoutTmp, assistantMsg]
-            : [...withoutTmp, optimistic, assistantMsg];
-        });
-      }
-      return {
-        startSet: Boolean(data.interpretation?.startSet),
-        riskFlag: data.interpretation?.riskFlag,
-        outOfWindow: data.interpretation?.outOfWindow,
-        distress: data.interpretation?.distress,
-        agentText: data.message?.content,
-        agentId: data.message?.id,
-        phase: data.thread?.phase,
-      };
-    } finally {
-      setAgentTyping(false);
-    }
-  }, [activeThreadId]);
+  // Messages sent while the guide is still answering wait for that reply, so
+  // two quick messages ("No", "first time") never run as two parallel turns
+  // that both answer from the same history (that posted one question twice).
+  const sendChainRef = useRef<Promise<unknown>>(Promise.resolve());
+  const pendingSendsRef = useRef(0);
 
+  /** Closed session refused the turn (409): no toast, just sync the thread. */
+  const markThreadClosed = useCallback((threadId: string) => {
+    setThreads((list) =>
+      list.map((t) =>
+        t.id === threadId ? { ...t, phase: "closure" as const } : t
+      )
+    );
+  }, []);
+
+  /**
+   * Post one guide turn: every message the person sent in the quiet window
+   * (lib/reply-debounce.ts), saved in order, answered once. "Thinking" starts
+   * here, not while we wait for them to finish typing.
+   */
+  const postReplyBatch = useCallback(
+    async (items: PendingReply[], keepalive = false) => {
+      if (items.length === 0) return;
+      const threadId = items[0].threadId;
+      const texts = items.map((i) => i.text);
+      const tmpIds = new Set(items.map((i) => i.optimisticId));
+      const last = items[items.length - 1];
+      const settleEarlier = () => {
+        for (const i of items) {
+          if (i !== last) i.resolve({ startSet: false });
+        }
+      };
+      // Writing indicator for the whole round trip (and any queued sends).
+      // `finally` matters: a failed request must not leave the dots moving forever.
+      pendingSendsRef.current += 1;
+      setAgentTyping(true);
+      const previous = sendChainRef.current;
+      let release: () => void = () => {};
+      sendChainRef.current = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      try {
+        await previous.catch(() => undefined);
+        const data = await fetchJson<{
+          message?: Message;
+          thread?: Thread;
+          interpretation?: {
+            startSet?: boolean;
+            riskFlag?: boolean;
+            outOfWindow?: boolean;
+            distress?: "ok" | "elevated" | "overwhelm";
+          } | null;
+        }>("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            texts.length === 1
+              ? { threadId, userMessage: texts[0] }
+              : { threadId, userMessages: texts }
+          ),
+          keepalive,
+        });
+        if (data.thread) {
+          setThreads((list) =>
+            list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
+          );
+        }
+        if (data.message && activeThreadIdRef.current === threadId) {
+          const assistantMsg = data.message;
+          setMessages((m) => {
+            // Keep the bubbles already on screen; if a reload replaced them
+            // with the saved copies, just add the reply.
+            if (m.some((x) => x.id === assistantMsg.id)) return m;
+            return [...m, assistantMsg];
+          });
+        }
+        settleEarlier();
+        last.resolve({
+          startSet: Boolean(data.interpretation?.startSet),
+          riskFlag: data.interpretation?.riskFlag,
+          outOfWindow: data.interpretation?.outOfWindow,
+          distress: data.interpretation?.distress,
+          agentText: data.message?.content,
+          agentId: data.message?.id,
+          phase: data.thread?.phase,
+        });
+      } catch (err) {
+        settleEarlier();
+        if (isSessionClosedError(err)) {
+          // Server refused: the session is closed. Drop the unsent bubbles and
+          // keep the composer disabled; nothing else to report.
+          setMessages((m) => m.filter((x) => !tmpIds.has(x.id)));
+          markThreadClosed(threadId);
+          last.resolve({ startSet: false });
+          return;
+        }
+        last.reject(err);
+      } finally {
+        release();
+        pendingSendsRef.current = Math.max(0, pendingSendsRef.current - 1);
+        if (pendingSendsRef.current === 0) setAgentTyping(false);
+      }
+    },
+    [markThreadClosed]
+  );
+  postReplyBatchRef.current = postReplyBatch;
+
+  const sendUserMessage = useCallback(
+    async (text: string, opts?: ReplySendOptions): Promise<SendResult> => {
+      if (!activeThreadId) {
+        return { startSet: false as const };
+      }
+      const optimistic: Message = {
+        id: `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        threadId: activeThreadId,
+        role: "user",
+        content: text,
+        createdAt: new Date().toISOString(),
+      };
+      // The bubble shows at once; the guide is asked when the person is done.
+      setMessages((m) => [...m, optimistic]);
+      return new Promise<SendResult>((resolve, reject) => {
+        replyBatcher.push(
+          {
+            text,
+            threadId: activeThreadId,
+            optimisticId: optimistic.id,
+            resolve,
+            reject,
+          },
+          shouldReplyImmediately(text, opts)
+        );
+      });
+    },
+    [activeThreadId, replyBatcher]
+  );
+
+  const noteComposerDraft = useCallback(
+    (draft: string) => replyBatcher.noteDraft(draft),
+    [replyBatcher]
+  );
+  const flushPendingReplies = useCallback(
+    () => replyBatcher.flush(),
+    [replyBatcher]
+  );
+
+  // Leaving the page or backgrounding the tab sends what is waiting rather
+  // than dropping it (keepalive lets the request outlive the page).
+  useEffect(() => {
+    const flushOnLeave = () => {
+      flushKeepaliveRef.current = true;
+      try {
+        replyBatcher.flush();
+      } finally {
+        flushKeepaliveRef.current = false;
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushOnLeave();
+    };
+    window.addEventListener("pagehide", flushOnLeave);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flushOnLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      replyBatcher.flush();
+      replyBatcher.dispose();
+    };
+  }, [replyBatcher]);
   const requestCheckIn = useCallback(
     async (outcome: "completed" | "stopped" = "completed") => {
       if (!activeThreadId) return;
+      // Messages still waiting for the quiet window go first, so the guide
+      // reads them before the set check-in.
+      if (replyBatcher.pendingCount() > 0) {
+        replyBatcher.flush();
+        await sendChainRef.current.catch(() => undefined);
+      }
       setAgentTyping(true);
       try {
         const data = await fetchJson<{ message?: Message; thread?: Thread }>(
@@ -737,11 +911,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             list.map((t) => (t.id === data.thread!.id ? data.thread! : t))
           );
         }
+      } catch (err) {
+        if (isSessionClosedError(err)) {
+          markThreadClosed(activeThreadId);
+          return;
+        }
+        throw err;
       } finally {
         setAgentTyping(false);
       }
     },
-    [activeThreadId]
+    [activeThreadId, markThreadClosed, replyBatcher]
   );
 
   const bootstrapAgent = useCallback(async () => {
@@ -1020,6 +1200,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages,
       agentTyping,
       restoringSession,
+      threadsLoaded,
+      threadTarget,
       memoryEnabled,
       settings,
       bls,
@@ -1036,6 +1218,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       chooseSessionMode,
       deleteThread,
       sendUserMessage,
+      noteComposerDraft,
+      flushPendingReplies,
       requestCheckIn,
       bootstrapAgent,
       refreshSettings,
@@ -1061,6 +1245,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       messages,
       agentTyping,
       restoringSession,
+      threadsLoaded,
+      threadTarget,
       memoryEnabled,
       voiceEnabled,
       guidedChatChromeId,
@@ -1079,6 +1265,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       chooseSessionMode,
       deleteThread,
       sendUserMessage,
+      noteComposerDraft,
+      flushPendingReplies,
       requestCheckIn,
       bootstrapAgent,
       refreshSettings,

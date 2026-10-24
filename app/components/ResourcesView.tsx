@@ -100,9 +100,12 @@ function ResourceVideoCard({ item }: { item: ResourceItem }) {
   );
 }
 
+/** Last list this tab loaded: revisits render at once, then refresh quietly. */
+let resourcesCache: ResourceItem[] | null = null;
+
 export function ResourcesLibrary() {
   const { adsConfig, adsReady } = useApp();
-  const [items, setItems] = useState<ResourceItem[] | null>(null);
+  const [items, setItems] = useState<ResourceItem[] | null>(resourcesCache);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -117,7 +120,8 @@ export function ResourcesLibrary() {
           setItems([]);
           return;
         }
-        setItems(data.resources ?? []);
+        resourcesCache = data.resources ?? [];
+        setItems(resourcesCache);
       } catch {
         if (!cancelled) {
           setError("Could not load resources");

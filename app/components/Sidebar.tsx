@@ -25,6 +25,12 @@ import { useSidebarNav } from "./SidebarNavContext";
 import { useGuideHost, useGuideOptional } from "./guide/ProductGuide";
 import { APP_BASE, appPath } from "@/lib/app-base";
 import { openAccessibilitySettings } from "@/lib/a11y-preferences";
+import {
+  isRecentThreadActive,
+  isSessionHostPath,
+  recentThreadAction,
+  sessionHref,
+} from "@/lib/sidebar-thread-nav";
 
 const SIDEBAR_NAV = [
   { href: APP_BASE, label: "Home", icon: Home, exact: true },
@@ -44,6 +50,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const {
     threads,
+    threadsLoaded,
     activeThreadId,
     selectThread,
     clearActiveThread,
@@ -196,13 +203,24 @@ export function Sidebar() {
 
   const onSelectThread = (id: string) => {
     if (longPress.consumeClick()) return;
+    // Only /app shows a session. Off it, open the thread (no leave guard is
+    // registered there) and go to /app?thread=<id>, which shows it.
+    const action = recentThreadAction(pathname, id);
     void selectThread(id);
+    if (action.kind === "navigate") router.push(action.href);
     closeSidebarDrawer();
   };
 
   const onNewChat = () => {
-    void createThread();
     closeSidebarDrawer();
+    if (isSessionHostPath(pathname)) {
+      void createThread();
+      return;
+    }
+    // Off Home: create it, then show it on /app, which shows the picker.
+    void createThread().then((id) => {
+      if (id) router.push(sessionHref(id));
+    });
   };
 
   return (
@@ -273,7 +291,15 @@ export function Sidebar() {
       <p className="text-sidebar-section px-4 pb-1 pt-2">Recent</p>
 
       <nav className="flex-1 overflow-y-auto px-2 py-1" data-guide="threads">
-        {threads.length === 0 && (
+        {threads.length === 0 && !threadsLoaded ? (
+          // First load still running: neutral placeholder, not "No sessions yet".
+          <div className="sidebar-recent-skeleton" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        ) : null}
+        {threads.length === 0 && threadsLoaded && (
           <p className="text-sidebar-muted px-3 py-4 text-center">
             No sessions yet
           </p>
@@ -289,7 +315,10 @@ export function Sidebar() {
                 openCtxMenu(t.id, e.clientX, e.clientY);
               }}
               {...longPress.bind(t.id)}
-              className={`sidebar-row ${activeThreadId === t.id ? "sidebar-row-active" : ""}`}
+              aria-current={
+                isRecentThreadActive(pathname, activeThreadId, t.id) ? "page" : undefined
+              }
+              className={`sidebar-row ${isRecentThreadActive(pathname, activeThreadId, t.id) ? "sidebar-row-active" : ""}`}
             >
               {t.title}
             </button>

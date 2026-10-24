@@ -8,6 +8,7 @@
  * Kept free of DB / fetch so tests can pin the behavior.
  */
 import type { ProtocolPhase, Thread } from "./types";
+import { isCrisisText } from "./crisis-detect";
 import {
   EMPTY_INTERPRETATION,
   extractJsonObject,
@@ -45,11 +46,19 @@ export function usagePurposeForOutcome(
   return "interpreter";
 }
 
-const RISK_RE =
-  /\b(suicid\w*|kill (my ?self|me)|end (it|my life)|hurt(ing)? my ?self|self[- ]harm|don'?t want to (be here|live)|not safe|unsafe|can'?t breathe|panic attack|feel(ing)? unreal|dissociat\w*)\b/i;
+// Crisis / self-harm words: lib/crisis-detect.ts (EN, DE, ES, IT, FR, PT, NL, PL, SR)
+// is what the server uses now (isCrisisText in heuristicTurn).
+//
+// Legacy English + Serbian literal, kept only because lib/reply-debounce.ts
+// mirrors it (CLIENT_RISK_RE, checked by tests/reply-debounce.test.ts) for the
+// client's send-now rule. Prefer isCrisisText there too: it covers DE/ES/IT/FR/PT.
+export const RISK_RE =
+  /\b(suicid\w*|kill (my ?self|me)|end (it|my life)|hurt(ing)? my ?self|self[- ]harm|don'?t want to (be here|live)|not safe|unsafe|can'?t breathe|panic attack|samoubist\w*|ubi(ti|jem) se|da se ubijem|povredi(m|ti) sebe|da se povredim|ne (z|ž)elim (vi(s|š)e )?da (z|ž)ivim|nisam bezbed(an|na)|napad panike|ne mogu da di(s|š)em)\b/i;
 const PAUSE_RE =
   /^(no|nope|not yet|wait|hold on|pause|stop|break|later|i need a (break|minute|moment))\b/i;
 const AGAIN_RE = /\b(again|repeat|redo|one more|missed it|wasn'?t focused|distracted)\b/i;
+const GROUNDING_READY_SR_RE =
+  /^(spreman|spremna|spremni|mo(z|ž)e|mo(z|ž)emo|hajde|idemo|da)\b/i;
 const READY_RE =
   /^(ok(ay)?|ready|yes|yeah|yep|sure|go|let'?s go|start|begin|continue|done|good|fine|i'?m ready|k)\b/i;
 
@@ -84,7 +93,7 @@ export function heuristicTurn(input: {
   const patch: Partial<Thread> = {};
   const interp: SessionInterpretation = { ...EMPTY_INTERPRETATION };
 
-  if (RISK_RE.test(text)) {
+  if (isCrisisText(text)) {
     interp.riskFlag = true;
     interp.needsGrounding = true;
     interp.distress = "overwhelm";
@@ -107,7 +116,14 @@ export function heuristicTurn(input: {
       break;
     }
     case "grounding": {
-      if (text.length > 2 && !PAUSE_RE.test(text)) patch.phase = "assessment";
+      // Only a "ready" moves on. Naming the safe place ("my bedroom") is the
+      // grounding work itself, not the end of it.
+      if (
+        !PAUSE_RE.test(text) &&
+        (READY_RE.test(text) || GROUNDING_READY_SR_RE.test(text))
+      ) {
+        patch.phase = "assessment";
+      }
       break;
     }
     case "assessment": {
@@ -286,4 +302,93 @@ export function closedSessionReply(input: {
     return { reply: null, silent: true };
   }
   return { reply: CLOSED_SESSION_LINE, silent: false };
+}
+
+/* ------------------------------------------------------------------ */
+/* Repeats and messages sent in a row                                  */
+/* ------------------------------------------------------------------ */
+
+function replyTokens(text: string): string[] {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * True when a reply says the same thing as the previous guide message: equal
+ * after normalizing case, punctuation and accents, or nearly the same words.
+ */
+export function isNearDuplicateReply(
+  reply: string | null | undefined,
+  previous: string | null | undefined
+): boolean {
+  if (!reply || !previous) return false;
+  const a = replyTokens(reply);
+  const b = replyTokens(previous);
+  if (!a.length || !b.length) return false;
+  if (a.join(" ") === b.join(" ")) return true;
+  const setA = new Set(a);
+  const setB = new Set(b);
+  let shared = 0;
+  for (const t of setA) if (setB.has(t)) shared += 1;
+  const union = setA.size + setB.size - shared;
+  const jaccard = union ? shared / union : 0;
+  const lengthRatio = Math.min(a.length, b.length) / Math.max(a.length, b.length);
+  return jaccard >= 0.85 && lengthRatio >= 0.8;
+}
+
+/** User messages after the latest guide message (oldest first). */
+export function trailingUserMessages(
+  history: { role: string; content: string }[]
+): string[] {
+  const out: string[] = [];
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const m = history[i]!;
+    if (m.role !== "user") break;
+    out.unshift(m.content);
+  }
+  return out;
+}
+
+/** Latest guide message in the history, or null. */
+export function lastAgentMessage(
+  history: { role: string; content: string }[]
+): string | null {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    if (history[i]!.role === "agent") return history[i]!.content;
+  }
+  return null;
+}
+
+/**
+ * Prompt rule when the user sent more than one message since the guide last
+ * spoke (a late answer plus a new one, or a correction).
+ */
+export function consecutiveMessagesRule(trailing: string[]): string {
+  if (trailing.length < 2) return "";
+  return `The user sent ${trailing.length} messages in a row since your last reply. Read them together as one turn (a later one may answer your earlier question or add to it). Briefly acknowledge what they added and move on. Do not repeat your previous message.`;
+}
+
+/** Control turn for the one retry after a reply repeated the last guide line. */
+export function repeatRetryInstruction(previousReply: string): string {
+  return `(Your draft repeated your previous message: "${previousReply.slice(0, 300)}". Do not send it again. Acknowledge briefly what the user just added, then either move on to the next step or, if that question is still unanswered, ask it in clearly different, simpler words. Same language as the conversation.)`;
+}
+
+/**
+ * Decide what to do with a guide reply before storing it: "retry" once with
+ * repeatRetryInstruction, then "drop" (store nothing) if it is still a repeat.
+ * Posting the same question twice in a row is worse than one quiet turn.
+ */
+export function guardRepeatedReply(input: {
+  reply: string;
+  history: { role: string; content: string }[];
+  retried: boolean;
+}): "use" | "retry" | "drop" {
+  const previous = lastAgentMessage(input.history);
+  if (!isNearDuplicateReply(input.reply, previous)) return "use";
+  return input.retried ? "drop" : "retry";
 }

@@ -391,7 +391,8 @@ export const COMPOSER_PLACEHOLDERS: Record<string, ComposerPlaceholders> = {
   },
 };
 
-function placeholdersFor(code?: string | null): ComposerPlaceholders {
+/** Translated hint table (no longer used by the composer: UI stays English). */
+export function placeholdersFor(code?: string | null): ComposerPlaceholders {
   if (!code) return COMPOSER_PLACEHOLDERS_EN;
   return COMPOSER_PLACEHOLDERS[code] ?? COMPOSER_PLACEHOLDERS_EN;
 }
@@ -421,8 +422,10 @@ export function composerPlaceholderKind(opts: {
 }
 
 /**
- * Composer hint in the session language. Scale names (SUDs, VoC) stay as the
- * app shows them, so the guide and the person read the same words.
+ * Composer hint. App UI is always English (product decision 2026-10-24): the
+ * session language only steers the guide's replies, never chrome, so
+ * `language` is accepted for compatibility and ignored. Scale names (SUDs,
+ * VoC) stay as the app shows them.
  */
 export function composerPlaceholder(opts: {
   phase: ProtocolPhase;
@@ -430,7 +433,7 @@ export function composerPlaceholder(opts: {
   language?: string | null;
   setStopped?: boolean;
 }): string {
-  const p = placeholdersFor(opts.language);
+  const p = COMPOSER_PLACEHOLDERS_EN;
   switch (composerPlaceholderKind(opts)) {
     case "typeHere":
       return p.typeHere;

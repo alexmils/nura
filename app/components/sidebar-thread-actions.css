@@ -53,3 +53,26 @@
     padding-right: 0.75rem;
   }
 }
+/* Recent list while the first load is running (instead of "No sessions yet"). */
+.sidebar-recent-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.sidebar-recent-skeleton span {
+  display: block;
+  height: 0.75rem;
+  border-radius: 6px;
+  background: currentColor;
+  opacity: 0.12;
+}
+
+.sidebar-recent-skeleton span:nth-child(2) {
+  width: 80%;
+}
+
+.sidebar-recent-skeleton span:nth-child(3) {
+  width: 60%;
+}

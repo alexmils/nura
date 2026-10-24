@@ -1,0 +1,53 @@
+/*
+ * Start a session picker: vertical centering in the space under the
+ * workspace header (all widths; mobile used to pin it to the top).
+ *
+ * "Safe centering": the scroller is a flex column that fills the remaining
+ * height (flex: 1 inside .workspace-main), and the inner block uses
+ * margin-block: auto. When the content fits it sits in the middle; when it
+ * is taller (small phones, landscape) the auto margins collapse to 0 and it
+ * scrolls from the top instead of being clipped (justify-content: center
+ * would cut off the top).
+ *
+ * Optical centre: a little extra bottom padding lifts it slightly above
+ * true centre. Selectors are scoped under .workspace-main so they win over
+ * the base rules in globals.css without editing that file.
+ */
+.workspace-main > .session-start {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-top: 1.5rem;
+  padding-bottom: calc(1.5rem + min(8dvh, 4rem));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+}
+
+.workspace-main > .session-start > .session-start-inner {
+  margin-block: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .workspace-main > .session-start {
+    align-items: center;
+    padding-top: 1rem;
+    padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + min(7dvh, 3.5rem));
+    padding-left: max(1.25rem, env(safe-area-inset-left));
+    padding-right: max(1.25rem, env(safe-area-inset-right));
+  }
+}
+
+/* Short viewports (phone landscape): no optical lift, keep it compact. */
+@media (max-height: 520px) {
+  .workspace-main > .session-start {
+    padding-top: 0.75rem;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}

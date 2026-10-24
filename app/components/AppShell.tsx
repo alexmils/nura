@@ -1,52 +1,30 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect } from "react";
 import { useApp } from "./AppProvider";
-import { AppConsoleFrame } from "./AppConsoleFrame";
 import { SessionWorkspace } from "./SessionWorkspace";
-import {
-  SidebarNavProvider,
-  useSidebarNav,
-} from "./SidebarNavContext";
+import { readThreadIdFromSearch } from "@/lib/session-restore";
 
-function AppShellFrame() {
-  const { sessionMode, consentOk } = useApp();
-  const { open, openSidebar } = useSidebarNav();
-  const immersive = sessionMode === "running";
-  const consentLock = consentOk === false;
-  const wasConsentLocked = useRef(false);
-
-  useLayoutEffect(() => {
-    if (consentLock) {
-      wasConsentLocked.current = true;
-      return;
-    }
-    if (!wasConsentLocked.current) return;
-    wasConsentLocked.current = false;
-    // Phones keep the drawer shut. The desktop rail opens again once consent is saved.
-    if (window.matchMedia("(max-width: 767px)").matches) return;
-    openSidebar();
-  }, [consentLock, openSidebar]);
-
-  return (
-    <AppConsoleFrame
-      immersive={immersive}
-      drawerOpen={open}
-      consentLock={consentLock}
-    >
-      <SessionWorkspace />
-    </AppConsoleFrame>
-  );
-}
-
+/**
+ * The session screen at /app. The sidebar and frame live in ConsoleShell
+ * (shared console layout), so state survives trips to Resources.
+ */
 export function AppShell() {
-  const { sessionMode, consentOk } = useApp();
-  const immersive = sessionMode === "running";
-  const consentLock = consentOk === false;
+  const { activeThreadId, restoringSession, selectThread, threadTarget } =
+    useApp();
 
-  return (
-    <SidebarNavProvider forceClosed={immersive || consentLock}>
-      <AppShellFrame />
-    </SidebarNavProvider>
-  );
+  // Arriving with ?thread=<id> after the first load (Back/Forward, a link):
+  // open that session. A cold load is AppProvider's restore. Layout effect so
+  // it runs before the workspace registers its leave guard: coming back from
+  // Resources never asks about a session that was not on screen.
+  useLayoutEffect(() => {
+    if (restoringSession) return;
+    const id = readThreadIdFromSearch(window.location.search);
+    if (!id || id === activeThreadId || id === threadTarget()) return;
+    void selectThread(id);
+    // Mount only: later changes come from in-app selection.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <SessionWorkspace />;
 }

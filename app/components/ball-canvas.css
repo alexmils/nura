@@ -1,0 +1,18 @@
+/*
+ * Self-guided / BLS set surface (BallCanvas): a non-text visual area that is
+ * tapped to start / stop. A long press on iPhone must not select the ball or
+ * the idle hint (blue box) or open the Copy / Search callout. Chat messages
+ * live in AgentOverlay (a sibling), so their text stays selectable.
+ */
+.workspace-canvas,
+.workspace-canvas * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-drag: none;
+}
+.workspace-canvas {
+  /* Tap to start / stop still works; only double-tap zoom is dropped. */
+  touch-action: manipulation;
+}

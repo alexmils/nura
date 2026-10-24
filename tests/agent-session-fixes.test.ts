@@ -70,11 +70,17 @@ describe("interpreter output classification", () => {
     });
     assert.equal(oa.max_completion_tokens, 2048);
     assert.equal(oa.thinking, undefined);
-    // The guide keeps its old defaults.
-    const guide = openAiCompatibleBodyExtras("deepseek", "deepseek-v4-flash");
+    // The guide keeps its 512 budget; DeepSeek thinking is off by default.
+    const guide = openAiCompatibleBodyExtras("deepseek", "deepseek-flash");
     assert.equal(guide.max_tokens, 512);
-    assert.equal(guide.thinking, undefined);
+    assert.deepEqual(guide.thinking, { type: "disabled" });
     assert.equal(guide.response_format, undefined);
+    const thinking = openAiCompatibleBodyExtras("deepseek", "deepseek-flash", {
+      disableThinking: false,
+    });
+    assert.equal(thinking.thinking, undefined);
+    const oaGuide = openAiCompatibleBodyExtras("openai", "gpt-4.1-mini");
+    assert.equal(oaGuide.thinking, undefined);
   });
 });
 

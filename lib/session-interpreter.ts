@@ -1,5 +1,6 @@
 import type { ProtocolPhase, Thread } from "./types";
 import { PHASE_ORDER } from "./protocol";
+import type { DissociationLevel } from "./dissociation-screen";
 
 export type DistressLevel = "ok" | "elevated" | "overwhelm";
 
@@ -39,6 +40,8 @@ export type SessionInterpretation = {
   intakeComplete: boolean;
   /** True when the guide should start a bilateral set after this turn. */
   startSet: boolean;
+  /** Dissociation screening level read from this turn (lib/dissociation-screen.ts). */
+  dissociation?: DissociationLevel | null;
 };
 
 export const EMPTY_INTERPRETATION: SessionInterpretation = {
@@ -149,6 +152,12 @@ export function parseSessionInterpretation(
     riskNotes: asTrimmedString(o.riskNotes, 400),
     intakeComplete: Boolean(o.intakeComplete),
     startSet: Boolean(o.startSet),
+    dissociation:
+      o.dissociation === "screening" ||
+      o.dissociation === "cautious" ||
+      o.dissociation === "severe"
+        ? o.dissociation
+        : null,
   };
 }
 
@@ -177,14 +186,19 @@ Return ONLY a single JSON object (no markdown, no prose) with this exact shape:
   "riskFlag": boolean,
   "riskNotes": string|null,
   "intakeComplete": boolean,
-  "startSet": boolean
+  "startSet": boolean,
+  "dissociation": "screening"|"cautious"|"severe"|null
 }
 
 Rules:
 - suds is 0-10 disturbance; voc is 0-7 validity of positive cognition. Use null if not clearly stated.
-- Extract target/NC/PC only when the user clearly names them; do not invent.
+- A short fragment ("but I can't", "and also...", "because...") may continue the user's own previous message rather than answer the assistant's last question; read it together with that message, and read typos charitably ("btu i cant" = "but I can't").
+- Extract target/NC/PC only when the user clearly names them; do not invent. Do not repeat the thread's existing target as "target" unless the user names a new one this turn.
+- In grounding, a place or image the user describes is their SAFE PLACE (a resource), never the target. Suggest assessment only after the safe place is named AND the user says they are ready to move on (e.g. "ready", "yes, let's go").
 - During intake: fill presentingProblem/historyNotes/triggers/resources/goals when the user shares them; set intakeComplete true only when a concrete starting target is agreed AND safety screening is OK (no crisis).
-- riskFlag true if suicidality, active crisis, severe dissociation, or feels unsafe — also set riskNotes briefly.
+- riskFlag true if suicidality, active crisis, or feels unsafe - also set riskNotes briefly. Dissociation alone goes in "dissociation", not riskFlag.
+- dissociation (screening question about feeling unreal / disconnected / not in their body): "screening" when they say yes but how strong it is is not clear yet; "cautious" when it is mild, occasional, or only under stress and they can come back; "severe" when they lose time, have memory gaps, find it hard to come back, or it comes with self-harm risk; null when not discussed or they say no.
+- Answering the screening question about everyday life ("yes, all the time when I'm stressed") is history, NOT outOfWindow and NOT needsGrounding. outOfWindow is only for what is happening in the session right now.
 - outOfWindow true ONLY for flooding, dissociation, feeling unreal, feeling unsafe, or losing contact with the present. A high SUDs (8-10) alone is NOT outOfWindow: it is the normal starting baseline for a target and processing must be allowed to start. Never set outOfWindow just because a number is high. If unsure, false.
 - setReport describes the last set the user is talking about: "done" (it finished), "stopped" (something interrupted it or they cut it short), "repeat" (they want the same set again), "unfocused" (they were distracted and want it again rather than moving on). null when they are not reporting on a set.
 - A set that was stopped or that the user wants again does NOT move the phase forward and is NOT read for SUDs/VoC: it is simply run again. Treat "again", "repeat", "I wasn't focused", "it stopped", "something interrupted me" as setReport, not as progress.
@@ -244,7 +258,15 @@ export function threadPatchFromInterpretation(
 
   if (interp.suds != null) patch.suds = interp.suds;
   if (interp.voc != null) patch.voc = interp.voc;
-  if (interp.target) patch.target = interp.target;
+  // In grounding the user describes a safe place, and the interpreter tends to
+  // echo the thread's target back. Neither is a new target.
+  const newTarget =
+    interp.target &&
+    !(thread.phase === "grounding" && thread.target) &&
+    interp.target.trim().toLowerCase() !== (thread.target ?? "").trim().toLowerCase()
+      ? interp.target
+      : null;
+  if (newTarget) patch.target = newTarget;
   if (interp.negativeCognition) {
     patch.negativeCognition = interp.negativeCognition;
   }
@@ -325,8 +347,12 @@ export function threadPatchFromInterpretation(
         patch.intakeComplete = true;
       }
     } else if (
+      // Naming the safe place is not the end of grounding: an echoed target
+      // used to move the session to assessment on the very first grounding
+      // answer ("maybe when I'm in my bedroom"), so the guide treated the safe
+      // place as the target.
       thread.phase === "grounding" &&
-      (interp.target || interp.negativeCognition)
+      (newTarget || interp.negativeCognition)
     ) {
       patch.phase = "assessment";
     } else if (

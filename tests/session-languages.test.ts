@@ -105,7 +105,8 @@ describe("session languages", () => {
     assert.equal(welcomeLineFor("nope"), ENGLISH_WELCOME);
     assert.equal(welcomeLineFor(undefined), ENGLISH_WELCOME);
     assert.match(languageInstruction("sr"), /Serbian/);
-    assert.equal(languageInstruction("en"), "");
+    // English is pinned explicitly too, so short turns cannot drift.
+    assert.match(languageInstruction("en"), /Reply only in English/);
     assert.equal(languageInstruction(null), "");
   });
 

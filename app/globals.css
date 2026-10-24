@@ -2403,15 +2403,36 @@ body:has(.app-shell.session-immersive) .help-fab {
  * text mode). The indicator itself lives in components/agent/ThinkingIndicator
  * (ported from LiveKit Agents UI); this only places it in the transcript.
  */
+.agent-chat-row--thinking {
+  /* Centre the indicator on the avatar (message rows stay bottom-aligned). */
+  align-items: center;
+}
+
 .agent-chat-thinking {
   display: flex;
   align-items: center;
-  min-height: 2rem;
-  padding: 0.35rem 0.25rem;
+  /* Same height as the guide avatar so the dot + label sit on its centre line. */
+  min-height: 44px;
+  /* Start where bubble text starts: bubble padding (1.05rem) + 1px border. */
+  padding: 0 1.05rem 0 calc(1.05rem + 1px);
+}
+
+.agent-chat-thinking .nura-thinking {
+  gap: 0.6rem;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Tight line box so the glyphs, not the leading, define the vertical centre. */
+.agent-chat-thinking .nura-thinking-label {
+  line-height: 1.2;
+  padding-block: 0.05em;
 }
 
 .agent-overlay-line--thinking {
+  display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .agent-overlay-line--thinking .nura-thinking {
@@ -2810,22 +2831,86 @@ body:has(.app-shell.session-immersive) .help-fab {
     opacity 0.12s ease;
 }
 
-.agent-composer-mic:hover {
-  background: color-mix(in srgb, var(--ink, #2a3020) 8%, transparent);
-  opacity: 1;
-  color: var(--ink, #2a3020);
+/*
+ * Dictation mic. Selectors carry .agent-composer so they outrank the themed
+ * chrome and intake colour rules further down (those used to paint a flat
+ * grey disc on hover and hide the listening state).
+ */
+.agent-composer .agent-composer-mic {
+  position: relative;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    opacity 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.agent-overlay--chrome .agent-composer-mic:hover {
-  background: color-mix(in srgb, var(--gc-mic, var(--ink, #2a3020)) 12%, transparent);
-  color: var(--gc-mic, var(--ink, #2a3020));
+/* Hover: calm pastel-green tint, same family as the Voice button. */
+.agent-composer .agent-composer-mic:hover,
+.agent-overlay--chrome .agent-composer .agent-composer-mic:hover {
+  background: color-mix(in srgb, var(--sage, #84b067) 18%, transparent);
+  color: #3d612b;
+  opacity: 1;
 }
 
-.agent-composer-mic.is-listening {
+.agent-composer .agent-composer-mic:focus-visible,
+.agent-overlay--chrome .agent-composer .agent-composer-mic:focus-visible {
+  outline: none;
   opacity: 1;
-  background: color-mix(in srgb, var(--gold, #c6d67e) 35%, transparent);
-  color: var(--ink, #2a3020);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold, #c6d67e) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold, #c6d67e) 80%, transparent);
+}
+
+/* Dictating: filled brand green (Voice button colours) + a soft pulse ring. */
+.agent-composer .agent-composer-mic.is-listening,
+.agent-overlay--chrome .agent-composer .agent-composer-mic.is-listening,
+.agent-overlay--chrome .agent-composer .agent-composer-mic.is-listening:hover {
+  opacity: 1;
+  background: var(--gc-voice-bg, #3d612b);
+  color: var(--gc-voice-fg, #f4f7ee);
+}
+
+.agent-composer .agent-composer-mic.is-listening::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--sage, #84b067) 75%, transparent);
+  pointer-events: none;
+  animation: agentMicPulse 1.6s ease-out infinite;
+}
+
+/* Waiting for the browser to open the mic: same colours, slightly muted. */
+.agent-composer .agent-composer-mic.is-listening.is-starting {
+  opacity: 0.85;
+}
+
+.agent-composer .agent-composer-mic.is-listening.is-starting::after {
+  animation-duration: 1s;
+}
+
+@keyframes agentMicPulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-composer .agent-composer-mic.is-listening::after {
+    animation: none;
+    opacity: 0.8;
+  }
+}
+
+@media (forced-colors: active) {
+  .agent-composer .agent-composer-mic.is-listening {
+    outline: 2px solid Highlight;
+  }
 }
 
 .agent-composer-voice-mode {
@@ -2869,6 +2954,32 @@ body:has(.app-shell.session-immersive) .help-fab {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold, #c6d67e) 80%, transparent);
 }
 
+/*
+ * Closed session: the whole composer is greyed out and inert. The summary
+ * card's "Start next session" is the only action left.
+ */
+.agent-overlay .agent-composer.agent-composer--closed {
+  background: color-mix(in srgb, var(--bg-muted, #eef0ea) 75%, #fff);
+  border-color: color-mix(in srgb, var(--ink, #2a3020) 10%, var(--border));
+  box-shadow: none;
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+
+.agent-overlay .agent-composer.agent-composer--closed .agent-composer-input {
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.agent-overlay .agent-composer.agent-composer--closed button,
+.agent-overlay .agent-composer.agent-composer--closed button:hover {
+  pointer-events: none;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  opacity: 0.55;
+  box-shadow: none;
+}
+
 .agent-composer-hint {
   margin: 0.4rem 0.25rem 0;
   font-size: 0.8125rem;
@@ -2894,84 +3005,6 @@ body:has(.app-shell.session-immersive) .help-fab {
   pointer-events: none;
 }
 
-.agent-voice-wave {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 4.25rem;
-  padding: 0.1rem 0.25rem;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.agent-voice-dock--enter .agent-voice-wave {
-  animation: agentVoiceWaveIn 0.62s cubic-bezier(0.4, 0, 0.2, 1) 0.06s both;
-}
-
-.agent-voice-wave--exit {
-  animation: agentVoiceWaveOut 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.agent-voice-wave-canvas {
-  display: block;
-  width: min(100%, 20rem);
-  height: 4.25rem;
-  /* Soft dissolve at left/right so ribbons fade out instead of hard-stopping */
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    #000 16%,
-    #000 84%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    #000 16%,
-    #000 84%,
-    transparent 100%
-  );
-}
-
-.agent-voice-wave--bls {
-  opacity: 0.45;
-}
-
-/* Listening reads brighter; agent turn softens so motion alone tells the story */
-.agent-voice-wave--listening {
-  opacity: 1;
-}
-
-.agent-voice-wave--thinking,
-.agent-voice-wave--speaking {
-  opacity: 0.78;
-}
-
-.agent-voice-wave--off {
-  opacity: 0.55;
-}
-
-@keyframes agentVoiceWaveIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes agentVoiceWaveOut {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(8px) scale(0.97);
-  }
-}
 
 .agent-overlay--voice .agent-chat-messages,
 .agent-overlay--voice .agent-overlay-body {
@@ -3060,8 +3093,6 @@ body:has(.app-shell.session-immersive) .help-fab {
 @media (prefers-reduced-motion: reduce) {
   .agent-voice-dock--enter,
   .agent-voice-dock--exit,
-  .agent-voice-dock--enter .agent-voice-wave,
-  .agent-voice-wave--exit,
   .agent-voice-dock--enter .agent-voice-bar,
   .agent-voice-dock--exit .agent-voice-bar,
   .agent-overlay--voice .agent-chat-messages,
@@ -3082,7 +3113,6 @@ body:has(.app-shell.session-immersive) .help-fab {
   }
 
   .agent-voice-dock--exit,
-  .agent-voice-wave--exit,
   .agent-voice-dock--exit .agent-voice-bar {
     animation-name: agentVoiceFadeOutOnly;
   }
@@ -3268,6 +3298,10 @@ body:has(.app-shell.session-immersive) .help-fab {
   .agent-overlay .avatar-sm {
     width: 40px;
     height: 40px;
+  }
+
+  .agent-chat-thinking {
+    min-height: 40px;
   }
 
   .agent-composer {

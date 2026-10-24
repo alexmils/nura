@@ -9,10 +9,17 @@ import { checkInQuickReplies, showsSessionQuickReplies } from "@/lib/session-lab
   startBrowserSpeech,
   type BrowserSpeechSession,
 } from "@/lib/browser-speech";
+import {
+  COMPOSER_STRINGS,
+  dictationErrorMessage,
+  dictationPlaceholder,
+  dictationSpeechLang,
+  type DictationState,
+} from "@/lib/dictation";
 import { Avatar } from "./Avatar";
 import type { VoicePhase } from "./useGuidedVoiceMode";
-import { VoiceWave } from "./VoiceWave";
-import { VoiceStage } from "./voice/VoiceStage";
+import { VoiceStage, voiceStageState } from "./voice/VoiceStage";
+import { VoiceDockBeam } from "./voice/VoiceDockBeam";
 import { ThinkingIndicator } from "./agent/ThinkingIndicator";
 import { PhaseBadge } from "./agent/PhaseBadge";
 import { usePhaseTimeline } from "./agent/usePhaseTimeline";
@@ -38,7 +45,8 @@ interface AgentOverlayProps {
   agentTyping?: boolean;
   userAvatarUrl?: string | null;
   userDisplayName?: string;
-  onReply: (text: string) => void;
+  /** `immediate`: quick replies skip the "wait for them to finish" window. */
+  onReply: (text: string, opts?: { immediate?: boolean }) => void;
   onPlayLine: (text: string) => void;
   onRepeatSet?: () => void;
   voiceAvailable?: boolean;
@@ -65,8 +73,17 @@ interface AgentOverlayProps {
   guideLanguage?: string | null;
   /** Set availability line / manual Start set (chat and Voice Mode). */
   setReady?: ReactNode;
-  /** End-of-session summary card, shown above the composer after closure. */
+  /**
+   * End-of-session summary card. In the chat thread it is the last item inside
+   * the message scroll list (one scroll for messages + summary), full column
+   * width like the composer.
+   */
   closureCard?: ReactNode;
+  /**
+   * Session is closed (summary card shown): the composer is disabled and
+   * greyed out, dictation / voice mode are off, nothing can be sent.
+   */
+  sessionClosed?: boolean;
 }
 
 const zeroLevel = () => 0;
@@ -122,13 +139,20 @@ export function AgentOverlay({
   guideLanguage = null,
   setReady = null,
   closureCard = null,
+  sessionClosed = false,
 }: AgentOverlayProps) {
   const chrome = resolveGuidedChatChrome(chromeId);
   const chromeVars = guidedChatChromeCssVars(chrome.theme);
   const guideAvatar = chrome.avatar;
   const [reply, setReply] = useState("");
   const [rollKey, setRollKey] = useState(0);
-  const [dictating, setDictating] = useState(false);
+  /** off -> starting (mic asked) -> listening (engine open). */
+  const [dictationState, setDictationState] = useState<DictationState>("off");
+  /** Speech detected or a transcript arrived in this dictation run. */
+  const [dictationHeard, setDictationHeard] = useState(false);
+  const dictating = dictationState !== "off";
+  /** Feature-detected after mount so server and client render the same tree. */
+  const [speechSupported, setSpeechSupported] = useState(false);
   const [dictationError, setDictationError] = useState<string | null>(null);
   /** Keep voice chrome mounted while exit fade runs. */
   const [voiceExiting, setVoiceExiting] = useState(false);
@@ -140,6 +164,7 @@ export function AgentOverlay({
   const dictationBaseRef = useRef("");
   const lastAgent = [...messages].reverse().find((m) => m.role === "agent");
   const phaseBadges = usePhaseTimeline(messages, phase, phaseChanges);
+  const hasClosureCard = closureCard != null;
   const prevId = useRef<string | null>(null);
   const checkIn = sessionMode === "check_in";
   const intake = phase === "intake";
@@ -165,9 +190,13 @@ export function AgentOverlay({
   })
     ? checkInQuickReplies(phase, { setStopped })
     : [];
-  const canSend = reply.trim().length > 0;
+  const canSend = !sessionClosed && reply.trim().length > 0;
+  /** Placeholder: closed > dictation state > phase hint. English UI. */
+  const composerHint = sessionClosed
+    ? COMPOSER_STRINGS.sessionClosed
+    : (dictationPlaceholder(dictationState, dictationHeard) ?? composerPlaceholderText);
   const userInitial = userDisplayName.trim().charAt(0) || "U";
-  const showDictationMic = isBrowserSpeechSupported();
+  const showDictationMic = speechSupported;
   const showVoiceMode = Boolean(voiceAvailable && onEnterVoice);
   const voiceChrome = voiceActive || voiceExiting;
   /**
@@ -202,43 +231,78 @@ export function AgentOverlay({
     return () => window.clearTimeout(id);
   }, [voiceActive]);
 
-  const stopDictation = () => {
-    dictationRef.current?.abort();
+  /**
+   * Stop dictation. `commit` keeps words the engine heard but had not marked
+   * final yet (user tapped stop); submit / unmount / voice mode just drop the
+   * engine, the input already shows everything heard.
+   */
+  const stopDictation = (commit = false) => {
+    const session = dictationRef.current;
     dictationRef.current = null;
-    setDictating(false);
+    if (commit) session?.stop();
+    else session?.abort();
+    setDictationState("off");
+    setDictationHeard(false);
   };
 
   const toggleDictation = () => {
     if (dictating) {
-      stopDictation();
+      stopDictation(true);
       return;
     }
+    if (sessionClosed) return;
     setDictationError(null);
+    setDictationHeard(false);
     dictationBaseRef.current = reply.trim();
-    const session = startBrowserSpeech({
-      onInterim: (t) => {
-        const base = dictationBaseRef.current;
-        setReply(base ? `${base} ${t}`.trim() : t);
+    let session: BrowserSpeechSession | null = null;
+    const isCurrent = () => session != null && dictationRef.current === session;
+    session = startBrowserSpeech(
+      {
+        onInterim: (t) => {
+          if (!isCurrent()) return;
+          setDictationHeard(true);
+          const base = dictationBaseRef.current;
+          setReply(base ? `${base} ${t}`.trim() : t);
+        },
+        onFinal: (chunk) => {
+          if (!isCurrent() && dictationRef.current !== null) return;
+          setDictationHeard(true);
+          dictationBaseRef.current =
+            `${dictationBaseRef.current} ${chunk}`.trim();
+          setReply(dictationBaseRef.current);
+        },
+        onSpeechStart: () => {
+          if (isCurrent()) setDictationHeard(true);
+        },
+        onStatus: (status) => {
+          if (!isCurrent()) return;
+          if (status === "listening") setDictationState("listening");
+        },
+        onError: (code) => {
+          if (code === "aborted" || code === "no-speech") return;
+          setDictationError(dictationErrorMessage(code));
+          stopDictation();
+        },
+        onEnd: () => {
+          if (isCurrent()) stopDictation();
+        },
       },
-      onFinal: (chunk) => {
-        dictationBaseRef.current =
-          `${dictationBaseRef.current} ${chunk}`.trim();
-        setReply(dictationBaseRef.current);
-      },
-      onError: (code, message) => {
-        if (code === "aborted" || code === "no-speech") return;
-        setDictationError(message);
-        stopDictation();
-      },
-    });
+      {
+        lang: dictationSpeechLang(
+          guideLanguage,
+          typeof navigator !== "undefined" ? navigator.language : null
+        ),
+        // Dictation is a tap-to-talk helper: a dead speech service should say
+        // so at once instead of retrying quietly for ~10 s.
+        networkIsFatal: true,
+      }
+    );
     if (!session) {
-      setDictationError(
-        "Voice isn’t supported in this browser. Try Chrome or Edge."
-      );
+      setDictationError(dictationErrorMessage("unsupported"));
       return;
     }
     dictationRef.current = session;
-    setDictating(true);
+    setDictationState("starting");
   };
 
   useEffect(() => {
@@ -247,6 +311,27 @@ export function AgentOverlay({
   }, [voiceActive]);
 
   useEffect(() => () => stopDictation(), []);
+
+  useEffect(() => {
+    setSpeechSupported(isBrowserSpeechSupported());
+  }, []);
+
+  // Session closed: drop the mic and any half-typed draft right away.
+  useEffect(() => {
+    if (!sessionClosed) return;
+    stopDictation();
+    setReply("");
+    setDictationError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the session closes
+  }, [sessionClosed]);
+
+  // Session closed while Voice Mode is open: leave it once the guide has
+  // finished its last line (do not cut the closing words off mid-sentence).
+  useEffect(() => {
+    if (!sessionClosed || !voiceActive) return;
+    if (voicePhase === "speaking" || voicePhase === "thinking") return;
+    onExitVoice?.();
+  }, [sessionClosed, voiceActive, voicePhase, onExitVoice]);
 
   useEffect(() => {
     if (lastAgent && lastAgent.id !== prevId.current) {
@@ -266,7 +351,7 @@ export function AgentOverlay({
     const el = listRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, hidden, conversationStarted, voiceInterim, agentTyping, showThinking]);
+  }, [messages.length, hidden, conversationStarted, voiceInterim, agentTyping, showThinking, hasClosureCard]);
 
   if (hidden) return null;
 
@@ -294,11 +379,13 @@ export function AgentOverlay({
     <div
       className={`agent-voice-dock${voiceExiting ? " agent-voice-dock--exit" : " agent-voice-dock--enter"}`}
     >
-      <VoiceWave
-        active={voiceChrome}
-        phase={voiceExiting || voiceStalled ? "off" : voicePhase}
-        fadingOut={voiceExiting}
-      />
+      {/* Phone landscape only: voice-glow beam along the pill's bottom edge. */}
+      <VoiceDockBeam
+        state={voiceStageState(voicePhase, { starting: voiceStarting, stalled: voiceStalled, muted: voiceMuted })}
+        exiting={voiceExiting}
+        getInputLevel={getVoiceInputLevel ?? zeroLevel}
+        getOutputLevel={getVoiceOutputLevel ?? zeroLevel}
+      >
       <div className="agent-voice-bar" role="status" aria-live="polite">
         <div
           className={`agent-voice-orb agent-voice-orb--${
@@ -347,6 +434,7 @@ export function AgentOverlay({
           <span>End voice</span>
         </button>
       </div>
+      </VoiceDockBeam>
     </div>
   ) : null;
 
@@ -358,11 +446,12 @@ export function AgentOverlay({
       className={`agent-composer-wrap agent-composer-wrap--enter ${!conversationStarted ? "agent-fade-up agent-fade-up--late" : ""}`}
     >
       <form
-        className={`agent-composer${showDictationMic ? " agent-composer--with-mic" : ""}`}
+        className={`agent-composer${showDictationMic ? " agent-composer--with-mic" : ""}${sessionClosed ? " agent-composer--closed" : ""}`}
         data-guide="composer"
+        aria-disabled={sessionClosed || undefined}
         onSubmit={(e) => {
           e.preventDefault();
-          if (!canSend) return;
+          if (!canSend || sessionClosed) return;
           stopDictation();
           onReply(reply.trim());
           setReply("");
@@ -371,11 +460,12 @@ export function AgentOverlay({
         {showDictationMic ? (
           <button
             type="button"
-            className={`agent-composer-mic${dictating ? " is-listening" : ""}`}
+            className={`agent-composer-mic${dictating ? " is-listening" : ""}${dictationState === "starting" ? " is-starting" : ""}`}
             onClick={toggleDictation}
-            aria-label={dictating ? "Stop dictation" : "Dictate"}
+            disabled={sessionClosed}
+            aria-label={dictating ? COMPOSER_STRINGS.stopDictation : COMPOSER_STRINGS.dictate}
             aria-pressed={dictating}
-            title={dictating ? "Stop dictation" : "Dictate"}
+            title={dictating ? COMPOSER_STRINGS.stopDictation : COMPOSER_STRINGS.dictate}
           >
             <Mic size={22} strokeWidth={2.25} />
           </button>
@@ -383,10 +473,16 @@ export function AgentOverlay({
         <input
           ref={inputRef}
           value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          placeholder={composerPlaceholderText}
+          onChange={(e) => {
+            setReply(e.target.value);
+            // Typing while dictating: keep the edit as the new base so the
+            // next words are appended to it, not written over it.
+            if (dictating) dictationBaseRef.current = e.target.value.trim();
+          }}
+          placeholder={composerHint}
           className="agent-composer-input"
-          aria-label={composerPlaceholderText}
+          aria-label={composerHint}
+          disabled={sessionClosed}
         />
         {canSend ? (
           <button
@@ -401,6 +497,7 @@ export function AgentOverlay({
             type="button"
             className="agent-composer-voice-mode"
             data-guide="voice-mode"
+            disabled={sessionClosed}
             onClick={() => {
               stopDictation();
               onEnterVoice?.();
@@ -412,6 +509,13 @@ export function AgentOverlay({
           </button>
         ) : null}
       </form>
+      <span className="sr-only" role="status" aria-live="polite">
+        {dictating
+          ? dictationHeard
+            ? COMPOSER_STRINGS.listening
+            : COMPOSER_STRINGS.startTalking
+          : ""}
+      </span>
       {dictationError ? (
         <p className="agent-composer-hint" role="status">
           {dictationError}
@@ -421,7 +525,7 @@ export function AgentOverlay({
   );
 
   const quickReplyRow =
-    !voiceChrome && quickReplies.length > 0 ? (
+    !voiceChrome && !sessionClosed && quickReplies.length > 0 ? (
       <div
         className={`agent-quick-replies ${!conversationStarted ? "agent-fade-up agent-fade-up--late" : ""}`}
         role="group"
@@ -438,7 +542,7 @@ export function AgentOverlay({
                 inputRef.current?.focus();
                 return;
               }
-              onReply(q.value);
+              onReply(q.value, { immediate: true });
             }}
           >
             {q.label}
@@ -583,9 +687,11 @@ export function AgentOverlay({
               </div>
             </div>
           ) : null}
+          {hasClosureCard ? (
+            <div className="agent-chat-closure">{closureCard}</div>
+          ) : null}
         </div>
 
-        {closureCard}
         {setReady}
         {quickReplyRow}
         {composer}

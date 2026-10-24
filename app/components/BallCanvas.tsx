@@ -28,6 +28,7 @@ import {
 } from "@/lib/bls-ball-motion";
 import { blsBackgroundIsDark } from "@/lib/bls-prefs";
 import { repeatsLimit } from "@/lib/bls-repeats";
+import "./ball-canvas.css";
 
 interface BallCanvasProps {
   running: boolean;
@@ -331,6 +332,8 @@ export function BallCanvas({
       role="button"
       tabIndex={0}
       onClick={onToggle}
+      // Long-press on iOS / right-click on the set surface: no Copy / Search callout.
+      onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         // Space is owned by SessionWorkspace (start/stop). On role=button, Space
         // keyup also synthesizes a click — that double-fired toggle (stop then

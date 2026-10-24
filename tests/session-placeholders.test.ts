@@ -68,21 +68,20 @@ describe("composer placeholders", () => {
     );
   });
 
-  it("writes the hint in the session language", () => {
+  it("always shows the English hint, whatever the session language (UI is never localized)", () => {
     const sr = composerPlaceholder({
       phase: "desensitization",
       checkIn: false,
       language: "sr",
     });
-    assert.equal(sr, COMPOSER_PLACEHOLDERS.sr.message);
-    assert.notEqual(sr, COMPOSER_PLACEHOLDERS_EN.message);
+    assert.equal(sr, COMPOSER_PLACEHOLDERS_EN.message);
 
     const ja = composerPlaceholder({
       phase: "body_scan",
       checkIn: true,
       language: "ja",
     });
-    assert.equal(ja, COMPOSER_PLACEHOLDERS.ja.bodyScan);
+    assert.equal(ja, COMPOSER_PLACEHOLDERS_EN.bodyScan);
   });
 
   it("falls back to English until the language is known", () => {
@@ -109,7 +108,7 @@ describe("composer placeholders", () => {
       language: "sr",
     });
     assert.match(rating, /SUDs 0–10/);
-    assert.match(rating, /^Šta sada/);
+    assert.match(rating, /^What do you notice now\?/);
 
     const howTrue = composerPlaceholder({
       phase: "installation",
@@ -117,7 +116,7 @@ describe("composer placeholders", () => {
       language: "de",
     });
     assert.match(howTrue, /VoC 0–7/);
-    assert.match(howTrue, /^Wie wahr/);
+    assert.match(howTrue, /^How true/);
   });
 
   it("uses the stopped-set hint when a set was stopped", () => {
@@ -127,7 +126,7 @@ describe("composer placeholders", () => {
       language: "sr",
       setStopped: true,
     });
-    assert.equal(sr, COMPOSER_PLACEHOLDERS.sr.setStopped);
+    assert.equal(sr, COMPOSER_PLACEHOLDERS_EN.setStopped);
     assert.doesNotMatch(sr, /SUDs/);
   });
 });

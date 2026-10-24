@@ -145,6 +145,30 @@
   }
 }
 
+/*
+ * In the guided chat thread the summary is the last item of the message
+ * scroll list (.agent-chat-messages), so messages + summary share one scroll.
+ * Full chat-column width, same as the composer: the negative inline margin
+ * cancels the list's 0.2rem side padding. Shadow kept tight so the scroll
+ * container does not clip it.
+ */
+.agent-chat-closure {
+  flex-shrink: 0;
+  margin-inline: -0.2rem;
+}
+
+.agent-chat-closure .session-closure-card {
+  max-width: none;
+  margin: 0.35rem 0 0.15rem;
+  box-shadow: 0 1px 3px rgba(42, 48, 32, 0.07);
+}
+
+@media (min-width: 640px) {
+  .agent-chat-closure .session-closure-card {
+    padding: 1.2rem 1.4rem 1.3rem;
+  }
+}
+
 /* Phase timeline: a quiet centred pill where each protocol phase begins. */
 .agent-phase-badge {
   display: flex;

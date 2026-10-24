@@ -20,9 +20,16 @@ export interface RotatingWelcomeState {
 }
 
 /**
- * The first agent line cycles through major languages until the person writes
- * something. As soon as the composer draft is recognizable, the line locks to
- * that language and stays there. Only the opening line ever rotates.
+ * App UI is always English (product decision 2026-10-24), so the opening line
+ * no longer cycles through languages: this always returns the stored line as
+ * is. The hook keeps its signature so callers need no change.
+ */
+const ROTATE_WELCOME = false;
+
+/*
+ * Previous behaviour (kept behind ROTATE_WELCOME): the first agent line cycled
+ * through major languages until the person wrote something, then locked to the
+ * language of the composer draft.
  */
 export function useRotatingWelcome(opts: {
   text: string;
@@ -31,7 +38,7 @@ export function useRotatingWelcome(opts: {
   draft: string;
 }): RotatingWelcomeState {
   const { text, enabled, draft } = opts;
-  const localizable = enabled && isWelcomeOpening(text);
+  const localizable = ROTATE_WELCOME && enabled && isWelcomeOpening(text);
   const [index, setIndex] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
 

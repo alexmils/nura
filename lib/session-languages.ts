@@ -753,8 +753,18 @@ export function isWelcomeOpening(text?: string | null): boolean {
  */
 export function languageInstruction(code?: string | null): string {
   const lang = languageByCode(code);
-  if (!lang || lang.code === "en") return "";
-  return `The user writes in ${lang.name} (${lang.code}). Reply only in ${lang.name}, in the script the user used, and keep replying in it until the user switches. Score scales and app labels stay as the app shows them.`;
+  if (!lang) return "";
+  // English is pinned explicitly too. Without a pin the model was free to pick a
+  // language on short or ambiguous turns ("Hi", "Don't understand this
+  // question?", a phase change) and drifted into Serbian in English sessions.
+  return `The user writes in ${lang.name} (${lang.code}) in this session. Reply only in ${lang.name}, in the script the user used, and keep replying in it until the user writes a clear message in another language or asks to switch. Saved memories, the client profile, earlier sessions, admin notes, and the user's country or device never change the reply language. ${clarificationRule(lang.name)} Score scales and app labels stay as the app shows them.`;
+}
+
+/** "I don't understand" is about the question, never about the language. */
+export function clarificationRule(languageName = "the same language"): string {
+  const inLang =
+    languageName === "the same language" ? languageName : `still in ${languageName}`;
+  return `If the user says they do not understand ("I don't get it", "what do you mean?", "ne razumem pitanje"), your QUESTION was unclear, not the language: ask it again in simpler, different words, ${inLang}. Never switch language because of it.`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1028,4 +1038,196 @@ export function detectSessionLanguage(
     return scriptToLanguage(script.id, sample);
   }
   return detectLatin(sample);
+}
+
+/* ------------------------------------------------------------------ */
+/* Per-turn reply language                                            */
+/* ------------------------------------------------------------------ */
+
+function foldTokens(text: string): string[] {
+  return fold(text.replace(/[\u2018\u2019\u02bc]/g, "'"))
+    .split(SPLIT_RE)
+    .filter(Boolean);
+}
+
+/** Inflected / local names people use when they ask for a language. */
+const EXTRA_LANGUAGE_NAMES: Record<string, string[]> = {
+  en: ["engleski", "engleskom", "engleskog", "englesku", "eng"],
+  sr: ["srpski", "srpskom", "srpskog", "srpsku", "serbian", "srpskim"],
+  hr: ["hrvatskom", "hrvatskog"],
+  de: ["nemacki", "nemackom", "njemacki", "njemackom"],
+  ru: ["ruski", "ruskom"],
+  fr: ["francuski", "francuskom"],
+  es: ["spanski", "spanskom", "espanol"],
+  it: ["italijanski", "italijanskom"],
+};
+
+const LANGUAGE_NAME_TO_CODE: Map<string, string> = (() => {
+  const map = new Map<string, string>();
+  const add = (word: string, code: string) => {
+    const key = fold(word);
+    if (key.length >= 3 && !map.has(key)) map.set(key, code);
+  };
+  for (const lang of SESSION_LANGUAGES) {
+    add(lang.name.split(/[\s(]/)[0]!, lang.code);
+    if (!/\s/.test(lang.native)) add(lang.native, lang.code);
+  }
+  for (const [code, words] of Object.entries(EXTRA_LANGUAGE_NAMES)) {
+    for (const word of words) add(word, code);
+  }
+  return map;
+})();
+
+/** Words that turn a language name into a request ("can we talk in ..."). */
+const LANGUAGE_REQUEST_CUES = new Set(
+  [
+    "speak", "talk", "write", "reply", "respond", "answer", "switch", "change",
+    "continue", "use", "in", "please", "pls", "plz", "can", "could", "lets",
+    "let", "prefer", "only", "na", "pricaj", "pricajmo", "pisi", "pisite",
+    "govori", "govorimo", "moze", "mozemo", "mozes", "molim", "prebaci",
+    "prebacimo", "hajde", "nastavi", "nastavimo", "hocu", "zelim", "samo",
+  ].map(fold)
+);
+
+/**
+ * Explicit request to change language ("English please", "can we talk in
+ * Serbian", "može na srpskom"). Returns the requested code, or null.
+ */
+export function explicitLanguageRequest(text?: string | null): string | null {
+  if (!text) return null;
+  const tokens = foldTokens(text.slice(0, 200));
+  if (tokens.length === 0 || tokens.length > 10) return null;
+  const codes = new Set<string>();
+  for (const token of tokens) {
+    const code = LANGUAGE_NAME_TO_CODE.get(token);
+    if (code) codes.add(code);
+  }
+  if (codes.size !== 1) return null;
+  const hasCue = tokens.some((t) => LANGUAGE_REQUEST_CUES.has(t));
+  if (!hasCue && tokens.length > 2) return null;
+  return [...codes][0]!;
+}
+
+const CLARIFICATION_RES: RegExp[] = [
+  /\b(i )?(do ?n'?t|do not|did ?n'?t|did not|can'?t|cannot) (really )?(understand|get( it| that| this| what you mean)?|follow)\b/,
+  /\bwhat (do|did) you mean\b/,
+  /\bwhat does (that|this|it) mean\b/,
+  /\bnot sure what you mean\b/,
+  /\b(i'?m |im )?(confused|confusing|unclear)\b/,
+  /\bcan you (rephrase|explain|clarify|say (it|that) (again|differently))\b/,
+  /^(huh|what|sorry)\s*\?*$/,
+  /^\?+$/,
+  /\bne razumem\b|\bne razumijem\b|\bnisam razum(eo|ela|io|jela)\b/,
+  /\bkako (to )?misli(s|te)\b|\bsta (to )?znaci\b|\bsta misli(s|te)\b/,
+  /\bnije mi jasno\b|\bne kapiram\b/,
+];
+
+/**
+ * "Don't understand this question?" / "what do you mean?" / "ne razumem
+ * pitanje": the QUESTION was unclear. It never means "switch language".
+ */
+export function isClarificationRequest(text?: string | null): boolean {
+  if (!text) return false;
+  const t = fold(text.replace(/[\u2018\u2019\u02bc]/g, "'"))
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!t || t.length > 160) return false;
+  return CLARIFICATION_RES.some((re) => re.test(t));
+}
+
+/** One-word openers that do not carry enough hints for the detector. */
+const GREETING_LANGUAGE: Record<string, string> = {
+  hi: "en", hello: "en", hey: "en", hiya: "en", howdy: "en",
+  zdravo: "sr", cao: "sr", pozdrav: "sr", zdravozdravo: "sr",
+  hola: "es", bonjour: "fr", salut: "fr", hallo: "de", servus: "de",
+  ciao: "it", ola: "pt", oi: "pt", hej: "sv", ahoj: "cs", czesc: "pl",
+};
+
+export function greetingLanguage(text?: string | null): string | null {
+  if (!text) return null;
+  const tokens = foldTokens(text.slice(0, 60));
+  if (tokens.length === 0 || tokens.length > 3) return null;
+  return GREETING_LANGUAGE[tokens[0]!] ?? null;
+}
+
+export interface TurnLanguage {
+  /** Language the guide replies in this turn. */
+  code: string;
+  /** Store this as the thread language (it was decided by the user's text). */
+  pin: boolean;
+  /** The pinned language changed this turn. */
+  changed: boolean;
+  /** The user said the last question was unclear: rephrase, same language. */
+  clarification: boolean;
+  reason: "explicit-request" | "detected" | "greeting" | "kept" | "preference" | "default";
+}
+
+/**
+ * Reply language for one turn. Only what the user writes in THIS session
+ * decides it:
+ * - an explicit request ("English please", "može na srpskom") switches;
+ * - "I don't understand" keeps the current language (it is about the question);
+ * - a message the detector recognizes switches to its language;
+ * - anything short or ambiguous ("Hi", "No", "maybe") keeps the current one;
+ * - before anything is pinned: a greeting's language, then an explicit user
+ *   preference (if the app ever stores one), then English. Browser / country /
+ *   memory never take part.
+ */
+export function resolveTurnLanguage(input: {
+  current?: string | null;
+  userMessage?: string | null;
+  /** Explicit, user-chosen language setting. Never a browser or country guess. */
+  preferred?: string | null;
+}): TurnLanguage {
+  const current = languageByCode(input.current)?.code ?? null;
+  const text = input.userMessage ?? "";
+  const clarification = isClarificationRequest(text);
+  const result = (
+    code: string,
+    pin: boolean,
+    reason: TurnLanguage["reason"]
+  ): TurnLanguage => ({
+    code,
+    pin,
+    changed: pin && code !== current,
+    clarification,
+    reason,
+  });
+
+  const requested = explicitLanguageRequest(text);
+  if (requested) return result(requested, true, "explicit-request");
+
+  if (clarification && current) return result(current, false, "kept");
+
+  const detected = detectSessionLanguage(text);
+  if (detected && !clarification) return result(detected.code, true, "detected");
+
+  if (current) return result(current, false, "kept");
+
+  const greeting = greetingLanguage(text);
+  if (greeting) return result(greeting, true, "greeting");
+
+  if (detected) return result(detected.code, true, "detected");
+
+  const preferred = languageByCode(input.preferred)?.code;
+  if (preferred) return result(preferred, false, "preference");
+
+  return result("en", false, "default");
+}
+
+/**
+ * Last block of the guide prompt: the reply language for this turn, placed
+ * after memory, profile and admin notes so nothing later can outweigh it.
+ */
+export function turnLanguageBlock(turn: TurnLanguage): string {
+  const lang = languageByCode(turn.code) ?? languageByCode("en")!;
+  const lines = [
+    `Reply language for this turn: ${lang.name}. Reply in the language of the user's latest messages in this session (${lang.name}), whatever language the memory, profile, notes or earlier sessions are in.`,
+  ];
+  if (turn.clarification) {
+    lines.push(
+      `The user did not understand your last question. Ask the same thing again in simpler, shorter, different words, in ${lang.name}. Do not switch language and do not repeat the question word for word.`
+    );
+  }
+  return lines.join("\n");
 }

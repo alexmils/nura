@@ -10,6 +10,7 @@ import {
   SESSION_MODE_SELF_SHORT,
 } from "@/lib/brand";
 import { useApp } from "./AppProvider";
+import "./session-start.css";
 
 type Choice = Exclude<SessionKind, "pending">;
 
