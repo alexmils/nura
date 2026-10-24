@@ -15,7 +15,16 @@ import {
   formatTokenCount,
   formatUsdMicros,
 } from "@/lib/admin-llm-format";
-import type { AdminUserDetail } from "@/lib/admin-user-detail";
+import type {
+  AdminUserDetail,
+  AdminUserLoginEvent,
+  AdminUserPaymentEvent,
+} from "@/lib/admin-user-detail";
+import type { AgentThreadHealth } from "@/lib/agent-health-format";
+import {
+  HistoryPagerFooter,
+  usePagedHistory,
+} from "@/app/components/admin/AdminHistoryPager";
 import { formatRetentionActionLabel } from "@/lib/subscription-retention-shared";
 import { fetchJson } from "@/lib/fetch-json";
 import { UserAgentHealthPanel } from "@/app/components/admin/AgentHealthPanels";
@@ -42,6 +51,25 @@ export default function AdminUserDetailPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const winback = useUserWinback(userId);
+  // Long tables show the newest 5; "Load more" pages on the server.
+  const logins = usePagedHistory<AdminUserLoginEvent>(
+    userId,
+    "logins",
+    detail?.loginHistory,
+    detail?.loginHistoryTotal
+  );
+  const payments = usePagedHistory<AdminUserPaymentEvent>(
+    userId,
+    "payments",
+    detail?.paymentHistory,
+    detail?.paymentHistoryTotal
+  );
+  const sessions = usePagedHistory<AgentThreadHealth>(
+    userId,
+    "sessions",
+    detail?.agentHealth?.threads,
+    detail?.agentHealth?.threadsTotal
+  );
 
   const load = useCallback(async () => {
     const me = await fetchJson<{ user?: { role?: string } }>("/api/auth/me");
@@ -141,8 +169,8 @@ export default function AdminUserDetailPage() {
   }
 
   const currency = detail.currency ?? "USD";
-  const loginHistory = detail.loginHistory ?? [];
-  const paymentHistory = detail.paymentHistory ?? [];
+  const loginHistory = logins.items;
+  const paymentHistory = payments.items;
 
   const stripeMode =
     detail.stripeLivemode === true
@@ -218,8 +246,9 @@ export default function AdminUserDetailPage() {
           <div className="admin-user-main">
             {detail.agentHealth ? (
               <UserAgentHealthPanel
-                threads={detail.agentHealth.threads}
+                threads={sessions.items}
                 interpreter={detail.agentHealth.interpreter}
+                footer={<HistoryPagerFooter history={sessions} testId="sessions-pager" />}
               />
             ) : null}
 
@@ -281,6 +310,7 @@ export default function AdminUserDetailPage() {
                   </tbody>
                 </table>
               </div>
+              <HistoryPagerFooter history={payments} testId="payments-pager" />
             </section>
 
             {hasRetention ? (
@@ -356,6 +386,7 @@ export default function AdminUserDetailPage() {
                   </tbody>
                 </table>
               </div>
+              <HistoryPagerFooter history={logins} testId="logins-pager" />
             </section>
           </div>
 

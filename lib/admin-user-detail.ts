@@ -3,21 +3,35 @@ import { getUserById } from "@/lib/users";
 import type { UserStatus } from "@/lib/users";
 import { getUserLlmUsage } from "@/lib/llm-usage";
 import {
+  countUserAuthEvents,
   healLastLoginFromEvents,
+  latestUserLoginEventAt,
   listUserAuthEvents,
   resolveLastLoginAt,
   type UserAuthEvent,
 } from "@/lib/audit-log";
 import {
+  countBillingEventsForUser,
   listBillingEventsForUser,
   type BillingEvent,
 } from "@/lib/billing-events";
+import {
+  ADMIN_HISTORY_FIRST_PAGE,
+  historyPage,
+  type AdminHistoryKind,
+  type AdminHistoryPage,
+} from "@/lib/admin-history-page";
+import type { AgentThreadHealth } from "@/lib/agent-health-format";
 import {
   describeCancelFeedback,
   getLatestCancelFeedbackForUser,
 } from "@/lib/subscription-cancel-feedback";
 import { listRetentionEventsForUser } from "@/lib/subscription-retention";
-import { getUserAgentHealth, type UserAgentHealth } from "@/lib/agent-health";
+import {
+  getUserAgentHealth,
+  listUserGuidedThreads,
+  type UserAgentHealth,
+} from "@/lib/agent-health";
 
 export type AdminUserLoginEvent = UserAuthEvent;
 
@@ -65,8 +79,11 @@ export type AdminUserDetail = {
   llmPromptTokens: number;
   llmCompletionTokens: number;
   llmCostUsdMicros: number;
+  /** Newest rows only; more via GET /api/admin/users/[id]/history. */
   loginHistory: AdminUserLoginEvent[];
+  loginHistoryTotal: number;
   paymentHistory: AdminUserPaymentEvent[];
+  paymentHistoryTotal: number;
   /** Shown when subscription exists but no payment rows yet. */
   paymentHistoryNote: string | null;
   latestCancelFeedback: {
@@ -112,7 +129,9 @@ export async function getAdminUserDetail(
     sub,
     llm,
     loginHistory,
+    loginHistoryTotal,
     paymentHistory,
+    paymentHistoryTotal,
     excluded,
     cancelFeedback,
     retentionEvents,
@@ -148,8 +167,10 @@ export async function getAdminUserDetail(
         [userId]
       ),
       getUserLlmUsage(userId),
-      listUserAuthEvents(userId, 40),
-      listBillingEventsForUser(userId, 40),
+      listUserAuthEvents(userId, ADMIN_HISTORY_FIRST_PAGE),
+      countUserAuthEvents(userId),
+      listBillingEventsForUser(userId, ADMIN_HISTORY_FIRST_PAGE),
+      countBillingEventsForUser(userId),
       pool.query<{ stats_excluded: boolean }>(
         `SELECT COALESCE(stats_excluded, FALSE) AS stats_excluded
          FROM users WHERE id = $1`,
@@ -157,11 +178,13 @@ export async function getAdminUserDetail(
       ),
       getLatestCancelFeedbackForUser(userId),
       listRetentionEventsForUser(userId, 8),
-      getUserAgentHealth(userId),
+      getUserAgentHealth(userId, { limit: ADMIN_HISTORY_FIRST_PAGE }),
     ]);
 
+  // Only a page of history is loaded, so ask for the newest sign-in directly.
   const latestLoginEvent =
-    loginHistory.find((e) => e.action === "user.login")?.createdAt ?? null;
+    loginHistory.find((e) => e.action === "user.login")?.createdAt ??
+    (loginHistoryTotal > loginHistory.length ? await latestUserLoginEventAt(userId) : null);
   let lastLoginAt = resolveLastLoginAt(user.lastLoginAt, latestLoginEvent);
 
   if (!user.lastLoginAt && latestLoginEvent) {
@@ -177,7 +200,7 @@ export async function getAdminUserDetail(
   );
 
   let paymentHistoryNote: string | null = null;
-  if (paymentHistory.length === 0) {
+  if (paymentHistoryTotal === 0) {
     if (hasStripeLink || subscriptionStatus === "trialing") {
       paymentHistoryNote =
         "No payment events stored yet. New Stripe invoices and checkouts will appear here after the next successful webhook.";
@@ -229,7 +252,9 @@ export async function getAdminUserDetail(
     llmCompletionTokens: llm.completionTokens,
     llmCostUsdMicros: llm.costUsdMicros,
     loginHistory,
+    loginHistoryTotal,
     paymentHistory: paymentHistory.map(mapPayment),
+    paymentHistoryTotal,
     paymentHistoryNote,
     latestCancelFeedback: cancelFeedback
       ? {
@@ -241,4 +266,32 @@ export async function getAdminUserDetail(
     retentionEvents,
     agentHealth,
   };
+}
+
+export type AdminHistoryItem = AdminUserLoginEvent | AdminUserPaymentEvent | AgentThreadHealth;
+
+/** Next slice of one paged table on the admin single-user page. */
+export async function getAdminUserHistoryPage(
+  userId: string,
+  kind: AdminHistoryKind,
+  offset: number,
+  limit: number
+): Promise<AdminHistoryPage<AdminHistoryItem>> {
+  await ensureSchemaReady();
+  if (kind === "logins") {
+    const [items, total] = await Promise.all([
+      listUserAuthEvents(userId, limit, offset),
+      countUserAuthEvents(userId),
+    ]);
+    return historyPage<AdminHistoryItem>(items, total, offset);
+  }
+  if (kind === "payments") {
+    const [items, total] = await Promise.all([
+      listBillingEventsForUser(userId, limit, offset),
+      countBillingEventsForUser(userId),
+    ]);
+    return historyPage<AdminHistoryItem>(items.map(mapPayment), total, offset);
+  }
+  const { threads, total } = await listUserGuidedThreads(userId, limit, offset);
+  return historyPage<AdminHistoryItem>(threads, total, offset);
 }

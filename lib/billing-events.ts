@@ -109,12 +109,23 @@ export async function recordBillingEvent(
   return { recorded: true, id };
 }
 
+export async function countBillingEventsForUser(userId: string): Promise<number> {
+  await ensureSchemaReady();
+  const { rows } = await getPool().query<{ c: number }>(
+    `SELECT COUNT(*)::int AS c FROM billing_events WHERE user_id = $1`,
+    [userId]
+  );
+  return rows[0]?.c ?? 0;
+}
+
 export async function listBillingEventsForUser(
   userId: string,
-  limit = 50
+  limit = 50,
+  offset = 0
 ): Promise<BillingEvent[]> {
   await ensureSchemaReady();
   const capped = Math.min(100, Math.max(1, limit));
+  const skip = Math.max(0, Math.floor(offset));
   const { rows } = await getPool().query<{
     id: string;
     user_id: string;
@@ -133,9 +144,9 @@ export async function listBillingEventsForUser(
             description, invoice_id, subscription_id, livemode, occurred_at
      FROM billing_events
      WHERE user_id = $1
-     ORDER BY occurred_at DESC
-     LIMIT $2`,
-    [userId, capped]
+     ORDER BY occurred_at DESC, id DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, capped, skip]
   );
 
   return rows.map((r) => ({

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatDateTime } from "@/lib/admin-format";
 import {
   formatRate,
@@ -39,9 +39,12 @@ function StuckBadge() {
 export function UserAgentHealthPanel({
   threads,
   interpreter,
+  footer,
 }: {
   threads: AgentThreadHealth[];
   interpreter: InterpreterHealth;
+  /** e.g. "Showing 5 of 23" + Load more. */
+  footer?: ReactNode;
 }) {
   return (
     <section className="admin-panel" data-testid="user-agent-health">
@@ -80,6 +83,7 @@ export function UserAgentHealthPanel({
           </tbody>
         </table>
       </div>
+      {footer}
     </section>
   );
 }

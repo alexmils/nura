@@ -172,10 +172,12 @@ export function resolveLastLoginAt(
 
 export async function listUserAuthEvents(
   userId: string,
-  limit = 50
+  limit = 50,
+  offset = 0
 ): Promise<UserAuthEvent[]> {
   await ensureAuditSchema();
   const capped = Math.min(100, Math.max(1, limit));
+  const skip = Math.max(0, Math.floor(offset));
   const { rows } = await getPool().query<{
     id: string;
     action: string;
@@ -186,9 +188,9 @@ export async function listUserAuthEvents(
      FROM audit_events
      WHERE actor_user_id = $1
        AND action IN ('user.login', 'user.logout')
-     ORDER BY created_at DESC
-     LIMIT $2`,
-    [userId, capped]
+     ORDER BY created_at DESC, id DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, capped, skip]
   );
 
   return rows.map((r) => ({
@@ -197,6 +199,29 @@ export async function listUserAuthEvents(
     ip: r.ip,
     createdAt: new Date(r.created_at).toISOString(),
   }));
+}
+
+/** How many sign-in/out rows the admin login history has in total. */
+export async function countUserAuthEvents(userId: string): Promise<number> {
+  await ensureAuditSchema();
+  const { rows } = await getPool().query<{ c: number }>(
+    `SELECT COUNT(*)::int AS c FROM audit_events
+     WHERE actor_user_id = $1 AND action IN ('user.login', 'user.logout')`,
+    [userId]
+  );
+  return rows[0]?.c ?? 0;
+}
+
+/** Newest sign-in time from the audit log (not limited to a page). */
+export async function latestUserLoginEventAt(userId: string): Promise<string | null> {
+  await ensureAuditSchema();
+  const { rows } = await getPool().query<{ created_at: string }>(
+    `SELECT created_at FROM audit_events
+     WHERE actor_user_id = $1 AND action = 'user.login'
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  return rows[0] ? new Date(rows[0].created_at).toISOString() : null;
 }
 
 /** If last_login_at is null but login events exist, heal the column. */

@@ -12,6 +12,8 @@ import { sqlRowCountsInStats } from "@/lib/stats-scope";
 
 export type UserAgentHealth = {
   threads: AgentThreadHealth[];
+  /** All guided threads, not just the page in `threads`. */
+  threadsTotal: number;
   interpreter: InterpreterHealth;
 };
 
@@ -62,29 +64,53 @@ const INTERPRETER_SQL = (where: string) => `
     AND ${where}
   GROUP BY 1, 2`;
 
-export async function getUserAgentHealth(userId: string): Promise<UserAgentHealth> {
+/** One page of a member's guided threads, newest first. */
+export async function listUserGuidedThreads(
+  userId: string,
+  limit = 10,
+  offset = 0
+): Promise<{ threads: AgentThreadHealth[]; total: number }> {
   await ensureSchemaReady();
-  await ensureLlmUsageSchema();
   const pool = getPool();
-  const [lo, hi] = legacyCapBounds();
-  const [threads, interp] = await Promise.all([
+  const capped = Math.min(100, Math.max(1, Math.floor(limit)));
+  const skip = Math.max(0, Math.floor(offset));
+  const [rows, count] = await Promise.all([
     pool.query<ThreadRow>(
       `SELECT t.id, t.title, t.phase, t.mode, t.set_count, t.created_at,
               COUNT(m.id)::int AS message_count, MAX(m.created_at) AS last_message_at
        FROM threads t LEFT JOIN messages m ON m.thread_id = t.id
        WHERE t.user_id = $1 AND t.mode = 'guided'
        GROUP BY t.id
-       ORDER BY t.created_at DESC
-       LIMIT 50`,
+       ORDER BY t.created_at DESC, t.id DESC
+       LIMIT $2 OFFSET $3`,
+      [userId, capped, skip]
+    ),
+    pool.query<{ c: number }>(
+      `SELECT COUNT(*)::int AS c FROM threads WHERE user_id = $1 AND mode = 'guided'`,
       [userId]
     ),
+  ]);
+  return { threads: rows.rows.map(mapThread), total: count.rows[0]?.c ?? 0 };
+}
+
+export async function getUserAgentHealth(
+  userId: string,
+  opts: { limit?: number } = {}
+): Promise<UserAgentHealth> {
+  await ensureSchemaReady();
+  await ensureLlmUsageSchema();
+  const pool = getPool();
+  const [lo, hi] = legacyCapBounds();
+  const [page, interp] = await Promise.all([
+    listUserGuidedThreads(userId, opts.limit ?? 50, 0),
     pool.query<{ purpose: string; at_legacy_cap: boolean; count: number }>(
       INTERPRETER_SQL("user_id = $1").replace("$LO", String(lo)).replace("$HI", String(hi)),
       [userId]
     ),
   ]);
   return {
-    threads: threads.rows.map(mapThread),
+    threads: page.threads,
+    threadsTotal: page.total,
     interpreter: summarizeInterpreterHealth(
       interp.rows.map((r) => ({
         purpose: r.purpose,
