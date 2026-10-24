@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Check, Lock } from "lucide-react";
-import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import {
   CheckoutElementsProvider,
   PaymentElement,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/checkout-page";
 import { metaMoneyFromPlanPrice, trackMetaEvent } from "@/lib/meta-pixel";
 import { TURNSTILE_TOKEN_FIELD } from "@/lib/turnstile-shared";
+import { PAYMENT_APPEARANCE, paymentClientFor } from "./payment-client";
 import "./checkout.css";
 
 type SignedIn = { email: string; name: string | null; role: string };
@@ -46,32 +46,8 @@ type SessionState =
   | { kind: "redirecting"; message: string }
   | { kind: "error"; message: string };
 
-/** Nura colours inside Stripe's iframes. */
-const APPEARANCE = {
-  theme: "stripe" as const,
-  variables: {
-    colorPrimary: "#4a7234",
-    colorText: "#2a3020",
-    colorTextSecondary: "#5c6450",
-    colorBackground: "#ffffff",
-    colorDanger: "#b42318",
-    borderRadius: "10px",
-    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-    spacingUnit: "4px",
-  },
-};
-
-const stripeCache = new Map<string, Promise<Stripe | null>>();
-function stripeFor(publishableKey: string): Promise<Stripe | null> {
-  let p = stripeCache.get(publishableKey);
-  if (!p) {
-    p = loadStripe(publishableKey, {
-      developerTools: { assistant: { enabled: false } },
-    });
-    stripeCache.set(publishableKey, p);
-  }
-  return p;
-}
+const APPEARANCE = PAYMENT_APPEARANCE;
+const stripeFor = paymentClientFor;
 
 async function postJson(url: string, body: unknown) {
   const res = await fetch(url, {
@@ -336,7 +312,7 @@ export function CheckoutView({
                 <Check size={15} aria-hidden /> Cancel anytime from Manage billing.
               </li>
               <li>
-                <Lock size={15} aria-hidden /> Payments are processed securely by Stripe.
+                <Lock size={15} aria-hidden /> Secure payment. Your card details are encrypted.
               </li>
             </ul>
           </aside>

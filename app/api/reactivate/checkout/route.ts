@@ -12,18 +12,25 @@ import { isPlausibleReactivationToken } from "@/lib/reactivation-rules";
  * forwarded link cannot be redeemed into the wrong account.
  */
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { token?: unknown };
+  const body = (await request.json().catch(() => ({}))) as { token?: unknown; ui?: unknown };
   const token = typeof body.token === "string" ? body.token.trim() : "";
   if (!isPlausibleReactivationToken(token)) {
     return NextResponse.json({ error: "This link is not valid", code: "invalid" }, { status: 404 });
   }
   const session = await getSession().catch(() => null);
   try {
-    const { url } = await createReactivationCheckout({
+    const result = await createReactivationCheckout({
       token,
       sessionUserId: session?.sub ?? null,
+      ui: body.ui === "elements" ? "elements" : "hosted",
     });
-    return NextResponse.json({ url });
+    if (result.kind === "elements") {
+      return NextResponse.json({
+        clientSecret: result.clientSecret,
+        publishableKey: result.publishableKey,
+      });
+    }
+    return NextResponse.json({ url: result.url });
   } catch (err) {
     if (err instanceof ReactivationError) {
       const messages: Record<string, string> = {

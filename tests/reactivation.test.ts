@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   buildReactivationCheckoutParams,
+  toElementsReactivationParams,
   firstChargeDate,
   hashReactivationToken,
   isPlausibleReactivationToken,
@@ -111,6 +112,18 @@ describe("buildReactivationCheckoutParams", () => {
       "https://nurahelp.com/reactivate?token=tok_abc&status=success&session_id={CHECKOUT_SESSION_ID}"
     );
     assert.equal(p.cancel_url, "https://nurahelp.com/reactivate?token=tok_abc&status=canceled");
+  });
+  it("on-site payment form: same session, returns to the success URL", () => {
+    const e = toElementsReactivationParams(p) as Record<string, unknown>;
+    assert.equal(e.ui_mode, "elements");
+    assert.equal(
+      e.return_url,
+      "https://nurahelp.com/reactivate?token=tok_abc&status=success&session_id={CHECKOUT_SESSION_ID}"
+    );
+    assert.equal(e.success_url, undefined);
+    assert.equal(e.cancel_url, undefined);
+    assert.deepEqual(e.subscription_data, p.subscription_data);
+    assert.deepEqual(e.metadata, p.metadata);
   });
   it("first charge is 30 days out (or Stripe's trial_end)", () => {
     assert.equal(firstChargeDate(null, now).getTime() - now.getTime(), 30 * DAY);

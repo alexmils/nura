@@ -11,14 +11,20 @@ import {
 import { firstChargeDate, REACTIVATION_TRIAL_DAYS } from "@/lib/reactivation-rules";
 import { isExtensionMarker } from "@/lib/reactivation-extend";
 import { getSubscriptionByUserId } from "@/lib/stripe-admin";
-import { getStripeConfig, resolveBillingPlans } from "@/lib/stripe";
+import { activeStripeLivemode, getStripeConfig, resolveBillingPlans } from "@/lib/stripe";
 import { getSession } from "@/lib/auth/session";
 import "./reactivate.css";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * The "Charge reminder" email (cron /api/cron/trial-charge-reminders) goes out
+ * about two days before a live trial's first charge (isTrialReminderDue).
+ */
+const CHARGE_REMINDER_DAYS = 2;
+
 export const metadata: Metadata = {
-  title: "30 days of Nura, on us | Nura",
+  title: "Your personal invite",
   robots: { index: false, follow: false },
 };
 
@@ -41,6 +47,8 @@ export default async function ReactivatePage({
   let priceLabel: string | null = null;
   let chargeDate: string | null = null;
   let email: string | null = null;
+  let name: string | null = null;
+  let expiresAt: string | null = null;
   let currentChargeDate: string | null = null;
 
   const plans = resolveBillingPlans(await getStripeConfig());
@@ -63,6 +71,8 @@ export default async function ReactivatePage({
       : null;
     state = view?.state ?? "invalid";
     email = view?.email ?? null;
+    name = view?.name ?? null;
+    expiresAt = view?.offer?.expiresAt ?? null;
     // Redeemed just now as "next 30 days free" (still paying): no checkout.
     if (
       state === "used" &&
@@ -91,9 +101,15 @@ export default async function ReactivatePage({
     }
   }
 
+  // Reminder copy only where the reminder is really sent (live trials).
+  const reminderDays =
+    state === "valid" && (await activeStripeLivemode().catch(() => false))
+      ? CHARGE_REMINDER_DAYS
+      : null;
+
   return (
     <div className="reactivate-page">
-      <div className="reactivate-inner">
+      <div className={`reactivate-inner${state === "valid" ? " reactivate-inner--wide" : ""}`}>
         <div className="reactivate-brand">
           <BrandLockup tone="color" />
         </div>
@@ -106,6 +122,9 @@ export default async function ReactivatePage({
           chargeDate={chargeDate}
           currentChargeDate={currentChargeDate}
           email={email}
+          name={name}
+          expiresAt={expiresAt}
+          reminderDays={reminderDays}
           trialDays={REACTIVATION_TRIAL_DAYS}
           signedIn={Boolean(session)}
         />

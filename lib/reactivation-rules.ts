@@ -196,6 +196,24 @@ export function buildReactivationCheckoutParams(input: {
   };
 }
 
+/**
+ * Same session for the on-site payment form (Checkout Elements): no hosted
+ * success/cancel pages, Stripe returns to the success URL after confirm
+ * (including after a 3D Secure step). The page fills `{CHECKOUT_SESSION_ID}`
+ * the same way, so finishing works exactly like the hosted flow.
+ */
+export function toElementsReactivationParams(
+  params: Stripe.Checkout.SessionCreateParams
+): Stripe.Checkout.SessionCreateParams {
+  const { success_url, cancel_url: _cancel, ...rest } = params;
+  void _cancel;
+  return {
+    ...rest,
+    ui_mode: "elements",
+    return_url: success_url,
+  } as unknown as Stripe.Checkout.SessionCreateParams;
+}
+
 /** First charge date the page and the report show: now + 30 days. */
 export function firstChargeDate(trialEndUnix: number | null | undefined, now = new Date()): Date {
   if (trialEndUnix && Number.isFinite(trialEndUnix)) return new Date(trialEndUnix * 1000);

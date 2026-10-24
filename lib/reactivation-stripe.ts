@@ -21,6 +21,7 @@ import { getPublicAppUrl } from "@/lib/platform-settings";
 import {
   buildReactivationCheckoutParams,
   oldSubscriptionAction,
+  toElementsReactivationParams,
   reactivationState,
   type ReactivationState,
 } from "@/lib/reactivation-rules";
@@ -41,11 +42,15 @@ import {
   type ReactivationOffer,
 } from "@/lib/reactivation";
 import { recordBillingEvent } from "@/lib/billing-events";
+import { activeStripeCredentials } from "@/lib/stripe-config";
+import { CHECKOUT_ELEMENTS_API_VERSION } from "@/lib/checkout-page";
 
 export type ReactivationView = {
   state: ReactivationState;
   offer: ReactivationOffer | null;
   email: string | null;
+  /** Member's name for the greeting (may be empty). */
+  name?: string | null;
   /** state "extend": when the next payment is due now, and after the gift. */
   nextChargeAt?: string | null;
   extendedChargeAt?: string | null;
@@ -69,7 +74,12 @@ export async function loadReactivation(token: string): Promise<ReactivationView>
   const state = reactivationState({ offer, subscription: subLike, allowExtend });
   if (state === "valid" || state === "extend") await markReactivationOpened(offer.id).catch(() => {});
   const user = await getUserById(offer.userId);
-  const view: ReactivationView = { state, offer, email: user?.email ?? null };
+  const view: ReactivationView = {
+    state,
+    offer,
+    email: user?.email ?? null,
+    name: user?.name ?? null,
+  };
   if (state === "extend" && sub) {
     const shape = {
       status: sub.status,
@@ -104,11 +114,21 @@ async function refuseLiveTestOffer(offer: ReactivationOffer): Promise<void> {
   }
 }
 
-/** Create the 30-day-trial Checkout Session for an offer token. */
+export type ReactivationCheckoutResult =
+  | { kind: "redirect"; url: string; sessionId: string }
+  | { kind: "elements"; clientSecret: string; publishableKey: string; sessionId: string };
+
+/**
+ * Create the 30-day-trial Checkout Session for an offer token. `ui:
+ * "elements"` returns a client secret for the on-site payment form (same
+ * session settings as /checkout); without a publishable key it falls back to
+ * the hosted page. An "extend" offer never needs a payment form.
+ */
 export async function createReactivationCheckout(input: {
   token: string;
   sessionUserId?: string | null;
-}): Promise<{ url: string; sessionId: string }> {
+  ui?: "elements" | "hosted";
+}): Promise<ReactivationCheckoutResult> {
   const view = await loadReactivation(input.token);
   if (view.offer?.isTest && (view.state === "extend" || view.state === "valid")) {
     await refuseLiveTestOffer(view.offer);
@@ -121,6 +141,7 @@ export async function createReactivationCheckout(input: {
     await redeemReactivationExtension(view.offer);
     const base = (await getPublicAppUrl()).replace(/\/+$/, "");
     return {
+      kind: "redirect",
       url: `${base}/reactivate?token=${encodeURIComponent(input.token)}&status=extended`,
       sessionId: "",
     };
@@ -182,26 +203,42 @@ export async function createReactivationCheckout(input: {
       ? existing.stripe_subscription_id
       : null;
 
-  const session = await stripe.checkout.sessions.create(
-    buildReactivationCheckoutParams({
-      userId: user.id,
-      email: user.email,
-      plan: offer.plan,
-      priceId,
-      customerId,
-      offerId: offer.id,
-      token: input.token,
-      baseUrl: await getPublicAppUrl(),
-    })
-  );
+  const params = buildReactivationCheckoutParams({
+    userId: user.id,
+    email: user.email,
+    plan: offer.plan,
+    priceId,
+    customerId,
+    offerId: offer.id,
+    token: input.token,
+    baseUrl: await getPublicAppUrl(),
+  });
+  const publishableKey =
+    input.ui === "elements"
+      ? activeStripeCredentials(await getStripeConfig()).publishableKey.trim()
+      : "";
+  const session = publishableKey
+    ? await stripe.checkout.sessions.create(toElementsReactivationParams(params), {
+        apiVersion: CHECKOUT_ELEMENTS_API_VERSION,
+      })
+    : await stripe.checkout.sessions.create(params);
   await recordReactivationCheckout({
     id: offer.id,
     checkoutSessionId: session.id,
     oldSubscriptionId: sameEnvOldSub,
     oldStatus: existing?.status ?? null,
   });
+  if (publishableKey) {
+    if (!session.client_secret) throw new ReactivationError("not_configured", 500);
+    return {
+      kind: "elements",
+      clientSecret: session.client_secret,
+      publishableKey,
+      sessionId: session.id,
+    };
+  }
   if (!session.url) throw new ReactivationError("not_configured", 500);
-  return { url: session.url, sessionId: session.id };
+  return { kind: "redirect", url: session.url, sessionId: session.id };
 }
 
 type CheckoutSessionLike = {
