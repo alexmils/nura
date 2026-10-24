@@ -67,16 +67,32 @@ describe("How it works > Check in demo replicates the app", () => {
 
   it("agent avatar is not stretched by .fe-spath-media img (the green bars)", () => {
     assert.match(read("app/components/frontend/section-editor/section-editor.css"), /\.fe-spath-media img,[^{]*\{\s*position: absolute;\s*inset: 0;/);
-    assert.match(css, /\.ssd--check \.agent-chat-row img\.ssd-chat-avatar \{[^}]*position: static;[^}]*inset: auto;[^}]*width: 44px;[^}]*height: 44px;/);
-    assert.match(check, /<div key=\{i\} className="agent-chat-row agent-chat-row--agent">\s*<ChatAvatar \/>/);
+    assert.match(css, /\.ssd--check \.agent-chat-row img\.ssd-chat-avatar \{[^}]*position: static;[^}]*inset: auto;[^}]*width: var\(--ssd-chat-avatar/);
+    assert.match(check, /className=\{`agent-chat-row agent-chat-row--agent\$\{state\}`\}>\s*<ChatAvatar \/>/);
     assert.match(tsx, /className="avatar-img avatar-sm avatar-guide ssd-chat-avatar"/);
     assert.doesNotMatch(css + check, /shimmer|glow|streaming/i);
   });
 
-  it("chat uses the replica's scale (legibility floor on narrow cards); toolbar hidden during chat", () => {
-    assert.match(tsx, /const chat = Math\.max\(scale, /);
+  it("chat is large and readable: ~17px text, ~40px avatar, ~78% column, sized by card width", () => {
+    assert.match(css, /\.ssd-guide \{[^}]*container-type: inline-size;/);
+    assert.match(css, /--ssd-chat-fs: clamp\(12px, 1\.95cqw, 17px\)/);
+    assert.match(css, /--ssd-chat-avatar: clamp\(26px, 4\.4cqw, 40px\)/);
+    assert.match(css, /\.ssd-chat-messages\.agent-chat-messages \{[^}]*width: min\(78%, 46rem\)/);
+    assert.match(css, /\.ssd--check \.agent-chat-text \{[^}]*font-size: var\(--ssd-chat-fs\)/);
+    assert.doesNotMatch(css + tsx, /--ssd-chat-scale|CHECK_CHAT_VIRTUAL_W/);
+    // 1.95cqw of an ~875px desktop card is ~17px.
+    assert.ok(Math.abs(875 * 0.0195 - 17) < 0.2);
     assert.match(css, /\.ssd--check:not\(\.is-set\) \.ssd-app-dock \{[^}]*opacity: 0;[^}]*visibility: hidden/);
-    assert.match(css, /\.ssd-chat-messages\.agent-chat-messages \{[^}]*overflow: hidden;[^}]*justify-content: flex-end/);
+  });
+
+  it("conversation is centered with space reserved; overflow slides up instead of cutting", () => {
+    assert.match(check, /CHECK_SCRIPT\.map\(\(line, i\)/);
+    assert.match(check, /" is-pending"/);
+    assert.match(css, /\.agent-chat-row\.is-pending \{\s*visibility: hidden;/);
+    assert.match(css, /margin-block: auto;/);
+    assert.match(check, /--ssd-chat-shift/);
+    assert.match(css, /transform: translateY\(var\(--ssd-chat-shift, 0px\)\);\s*transition: transform 0\.45s ease;/);
+    assert.match(css, /\.ssd-typing \{[^}]*min-height: 1\.5em;/);
   });
 
   it("chat sits above the set screen and becomes visible after the set", () => {

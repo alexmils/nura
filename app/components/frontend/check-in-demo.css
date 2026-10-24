@@ -5,7 +5,8 @@
  * the app's own .bls-* classes (globals.css) and scaled with one transform,
  * so proportions match the app. The check-in chat uses the app's
  * .agent-chat-* classes, scaled separately so it stays legible in the card.
- * JS (useCheckScale) sets --ssd-scale / --ssd-vh / --ssd-chat-*.
+ * JS (useCheckScale) sets --ssd-scale / --ssd-vh; the chat is sized with
+ * container units (.ssd-guide is an inline-size container = card width).
  */
 
 /* session-path-sticky.css zooms .ssd-frame on wide cards; the replica scales itself. */
@@ -152,6 +153,8 @@
   position: absolute;
   inset: 0;
   z-index: 2;
+  /* cqw in the chat = card width */
+  container-type: inline-size;
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
@@ -168,45 +171,80 @@
     visibility 0s;
 }
 
-/* Chat laid out at its own virtual size and scaled to stay readable. */
+/* Chat sized to the card (cqw = card width): ~17px text, ~38px avatar and a
+   ~78% column on a desktop card; 12px floor on phones. */
 .ssd-guide-inner {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
   box-sizing: border-box;
-  width: var(--ssd-chat-vw, 768px);
-  height: var(--ssd-chat-vh, 432px);
-  transform: scale(var(--ssd-chat-scale, 1));
-  transform-origin: 0 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   align-items: center;
-  /* Keep clear of the docked control bar, like the app overlay. */
-  padding: 2rem 1.5rem;
+  padding: clamp(0.75rem, 3cqw, 1.75rem) clamp(0.75rem, 3cqw, 1.5rem);
   font-family: var(--font-sans), system-ui, sans-serif;
+  --ssd-chat-fs: clamp(12px, 1.95cqw, 17px);
+  --ssd-chat-avatar: clamp(26px, 4.4cqw, 40px);
 }
 
+/* Centered when it fits (auto margins); otherwise top-aligned and slid up by
+   JS (--ssd-chat-shift) so the newest row stays visible. */
 .ssd-chat-messages.agent-chat-messages {
-  width: min(96%, 48rem);
+  position: relative;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: min(78%, 46rem);
+  min-width: min(100%, 17rem);
   max-height: none;
-  overflow: hidden;
-  justify-content: flex-end;
+  margin-block: auto;
+  padding: 0;
+  gap: clamp(6px, 1.4cqw, 14px);
+  overflow: visible;
   scroll-behavior: auto;
+  font-size: var(--ssd-chat-fs);
+  transform: translateY(var(--ssd-chat-shift, 0px));
+  transition: transform 0.45s ease;
+}
+
+.ssd--check .agent-chat-row {
+  gap: 0.6em;
+}
+
+.ssd--check .agent-chat-row.is-pending {
+  visibility: hidden;
+}
+
+.ssd--check .agent-chat-bubble {
+  max-width: 82%;
+  padding: 0.7em 0.95em;
+  border-radius: 1.1em;
+  font-size: var(--ssd-chat-fs);
+}
+
+.ssd--check .agent-chat-bubble--agent {
+  border-bottom-left-radius: 0.35em;
+}
+
+.ssd--check .agent-chat-bubble--user {
+  border-bottom-right-radius: 0.35em;
+}
+
+.ssd--check .agent-chat-text {
+  font-size: var(--ssd-chat-fs);
+  line-height: 1.5;
 }
 
 /* section-editor.css `.fe-spath-media img` (position: absolute; inset: 0;
    100% x 100%; object-fit: cover) also matches this avatar, since the demo
    renders inside .fe-spath-media. The animated row becomes its
    containing block, so the logo was stretched across the whole row behind the
-   bubble (the blurred green bars) and no avatar showed. Pin it back to 44px. */
+   bubble (the blurred green bars) and no avatar showed. Pin it to its size. */
 .ssd--check .agent-chat-row img.ssd-chat-avatar {
   position: static;
   inset: auto;
   display: block;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
+  flex: 0 0 var(--ssd-chat-avatar, 40px);
+  width: var(--ssd-chat-avatar, 40px);
+  height: var(--ssd-chat-avatar, 40px);
   border-radius: 999px;
   object-fit: cover;
 }
@@ -216,7 +254,7 @@
   padding-right: 0;
 }
 
-.ssd--check .agent-chat-row {
+.ssd--check .agent-chat-row:not(.is-pending) {
   animation: ssd-bubble-in 0.3s ease both;
 }
 
@@ -236,7 +274,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  min-height: 1.65rem;
+  /* Same height as one line of text, so the row does not jump. */
+  min-height: 1.5em;
   color: var(--text-secondary, #5b6352);
 }
 
@@ -275,6 +314,7 @@
   .ssd--check .ssd-guide,
   .ssd--check .ssd-setball,
   .ssd--check .agent-chat-row,
+  .ssd--check .ssd-chat-messages,
   .ssd-typing span {
     animation: none !important;
     transition: none !important;

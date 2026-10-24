@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ChevronDown,
   Circle,
@@ -147,7 +147,6 @@ export function RhythmDemo({
  * Reduced motion: the full conversation, static.
  */
 export const CHECK_VIRTUAL_W = 1280;
-export const CHECK_CHAT_VIRTUAL_W = 768;
 export const CHECK_PASS_MS = 1100;
 export const CHECK_SET_PASSES = 2;
 export const CHECK_SET_MS = CHECK_PASS_MS * CHECK_SET_PASSES;
@@ -245,7 +244,7 @@ function ChatAvatar() {
   );
 }
 
-/** Scale factors for the virtual app + chat, from the card's real size. */
+/** Scale factor for the virtual app, from the card's real size. */
 function useCheckScale(ref: { current: HTMLDivElement | null }) {
   useEffect(() => {
     const el = ref.current;
@@ -257,12 +256,8 @@ function useCheckScale(ref: { current: HTMLDivElement | null }) {
       const scale = w / CHECK_VIRTUAL_W;
       // Chat uses the same scale as the replica; narrow cards get a legibility
       // floor so the column fills most of the card instead of 60%.
-      const chat = Math.max(scale, Math.min(1, (Math.min(w, 560) * 0.92) / CHECK_CHAT_VIRTUAL_W));
       el.style.setProperty("--ssd-scale", String(scale));
       el.style.setProperty("--ssd-vh", `${Math.round(h / scale)}px`);
-      el.style.setProperty("--ssd-chat-scale", String(chat));
-      el.style.setProperty("--ssd-chat-vw", `${Math.round(w / chat)}px`);
-      el.style.setProperty("--ssd-chat-vh", `${Math.round(h / chat)}px`);
     };
     apply();
     const ro = new ResizeObserver(apply);
@@ -278,6 +273,29 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
   const [typing, setTyping] = useState(false);
   const [loop, setLoop] = useState(0);
   useCheckScale(rootRef);
+  const chatRef = useRef<HTMLDivElement | null>(null);
+
+  // All rows are laid out from the start (pending ones invisible), so the
+  // conversation sits centered and does not jump. If a small card cannot fit
+  // it, slide the stack up so the newest row stays in view.
+  useEffect(() => {
+    const list = chatRef.current;
+    const box = list?.parentElement;
+    if (!list || !box) return;
+    const fit = () => {
+      const slot = typing ? shown : shown - 1;
+      const row = slot >= 0 ? (list.children[slot] as HTMLElement | undefined) : undefined;
+      const cs = getComputedStyle(box);
+      const avail = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const bottom = row ? row.offsetTop + row.offsetHeight : 0;
+      list.style.setProperty("--ssd-chat-shift", `${-Math.max(0, Math.ceil(bottom - avail))}px`);
+    };
+    fit();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(fit);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [shown, typing]);
 
   useEffect(() => {
     if (!inView) return;
@@ -338,33 +356,33 @@ export function CheckInDemo({ forcePlay = false }: { forcePlay?: boolean }) {
         </div>
         <div className="ssd-guide">
           <div className="ssd-guide-inner">
-            <div className="agent-chat-messages ssd-chat-messages">
-              {CHECK_SCRIPT.slice(0, shown).map((line, i) =>
-                line.role === "agent" ? (
-                  <div key={i} className="agent-chat-row agent-chat-row--agent">
+            <div ref={chatRef} className="agent-chat-messages ssd-chat-messages">
+              {CHECK_SCRIPT.map((line, i) => {
+                const isTyping = typing && i === shown && line.role === "agent";
+                const state = i < shown ? "" : isTyping ? " is-typing" : " is-pending";
+                return line.role === "agent" ? (
+                  <div key={i} className={`agent-chat-row agent-chat-row--agent${state}`}>
                     <ChatAvatar />
-                    <div className="agent-chat-bubble agent-chat-bubble--agent">
-                      <p className="agent-chat-text">{line.text}</p>
-                    </div>
+                    {isTyping ? (
+                      <div className="agent-chat-bubble agent-chat-bubble--agent ssd-typing">
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    ) : (
+                      <div className="agent-chat-bubble agent-chat-bubble--agent">
+                        <p className="agent-chat-text">{line.text}</p>
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div key={i} className="agent-chat-row agent-chat-row--user">
+                  <div key={i} className={`agent-chat-row agent-chat-row--user${state}`}>
                     <div className="agent-chat-bubble agent-chat-bubble--user">
                       <p className="agent-chat-text">{line.text}</p>
                     </div>
                   </div>
-                )
-              )}
-              {typing ? (
-                <div className="agent-chat-row agent-chat-row--agent agent-chat-row--thinking">
-                  <ChatAvatar />
-                  <div className="agent-chat-bubble agent-chat-bubble--agent ssd-typing">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </div>
-              ) : null}
+                );
+              })}
             </div>
           </div>
         </div>
