@@ -170,10 +170,12 @@ describe("marketing section copy", () => {
     const off = normalizeSection("home-values-ticker", {});
     assert.equal(isSectionOn(off), false);
     assert.match(sectionText(off, "words"), /Ground first/);
+    assert.equal(sectionText(off, "height"), "150");
 
-    const on = normalizeSection("home-values-ticker", { _off: "0", words: "One\nTwo" });
+    const on = normalizeSection("home-values-ticker", { _off: "0", words: "One\nTwo", height: "220" });
     assert.equal(isSectionOn(on), true);
     assert.equal(sectionText(on, "words"), "One\nTwo");
+    assert.equal(sectionText(on, "height"), "220");
   });
 
   it("accepts the review spotlight and falls back to the card strip", () => {

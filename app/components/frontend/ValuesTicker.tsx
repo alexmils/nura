@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { linesOf, sectionText } from "@/lib/marketing-sections";
 import { EditablePart } from "./section-editor/EditablePart";
 import { useSectionConfig } from "./section-editor/MarketingCopy";
@@ -22,6 +23,11 @@ export function ValuesTicker() {
     .slice(0, 12)
     .map(asTickerWord)
     .filter(Boolean);
+  const rawHeight = Number(sectionText(copy, "height"));
+  const height =
+    Number.isFinite(rawHeight) && rawHeight > 0
+      ? Math.min(320, Math.max(60, Math.round(rawHeight)))
+      : 150;
 
   if (!words.length) return null;
 
@@ -37,7 +43,12 @@ export function ValuesTicker() {
 
   return (
     <EditablePart id="home-values-ticker" backdrop={false}>
-      <section className="v2-section v2-ticker" id="values" aria-labelledby="v2-ticker-title">
+      <section
+        className="v2-section v2-ticker"
+        id="values"
+        aria-labelledby="v2-ticker-title"
+        style={{ "--v2-ticker-h": `${height}px` } as CSSProperties}
+      >
         <h2 id="v2-ticker-title" className="v2-ticker-sr">
           {words.join(" ")}
         </h2>

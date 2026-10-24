@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   overflow: hidden;
-  min-height: 150px;
+  min-height: var(--v2-ticker-h, 150px);
   background: var(--v2-green-300, #c6d67e);
 }
 
@@ -66,10 +66,10 @@
   }
 }
 
-/* Phones: the same band reads too tall; keep it slimmer. */
+/* Phones: cap the band at 110px, but honour a smaller saved height. */
 @media (max-width: 760px) {
   .v2-ticker-band {
-    min-height: 110px;
+    min-height: min(var(--v2-ticker-h, 150px), 110px);
   }
 }
 

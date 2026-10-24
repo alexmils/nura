@@ -1772,12 +1772,14 @@ const V2_SECTIONS: SectionDef[] = [
     name: "Home: values ticker",
     fields: [
       area("words", "Words", "One per line, up to 12. A full stop is added to each."),
+      text("height", "Band height (px)", "Between 60 and 320. Blank = 150."),
     ],
     defaults: {
       // Decorative band: off until an admin chooses the words.
       _off: "1",
       words:
         "Ground first\nBreathe\nNotice\nGentle pace\nBetween sessions\nYour own time",
+      height: "150",
     },
   },
   {
