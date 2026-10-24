@@ -85,10 +85,22 @@ export async function loadReactivation(token: string): Promise<ReactivationView>
 
 export class ReactivationError extends Error {
   constructor(
-    public code: ReactivationState | "not_configured" | "wrong_account" | "no_price" | "extend_failed",
+    public code: ReactivationState | "not_configured" | "wrong_account" | "no_price" | "extend_failed" | "test_live",
     public status: number
   ) {
     super(code);
+  }
+}
+
+/**
+ * Test links (admin "Send test email") belong to a real member's account.
+ * Clicking through is fine against the Stripe sandbox; in live mode it would
+ * move a real customer's payment or start a real subscription, so refuse.
+ */
+async function refuseLiveTestOffer(offer: ReactivationOffer): Promise<void> {
+  const existing = await getSubscriptionByUserId(offer.userId);
+  if (existing?.stripe_livemode === true || (await activeStripeLivemode())) {
+    throw new ReactivationError("test_live", 409);
   }
 }
 
@@ -98,6 +110,9 @@ export async function createReactivationCheckout(input: {
   sessionUserId?: string | null;
 }): Promise<{ url: string; sessionId: string }> {
   const view = await loadReactivation(input.token);
+  if (view.offer?.isTest && (view.state === "extend" || view.state === "valid")) {
+    await refuseLiveTestOffer(view.offer);
+  }
   if (view.state === "extend" && view.offer) {
     // Still paying: no checkout, the next 30 days are added to the plan.
     if (input.sessionUserId && input.sessionUserId !== view.offer.userId) {

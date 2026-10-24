@@ -36,6 +36,7 @@ export async function POST(request: Request) {
         wrong_account: "This link belongs to a different account. Sign out and open it again.",
         not_configured: "Checkout is not available right now",
         no_price: "Checkout is not available right now",
+        test_live: "This is a test link. Test links only work while payments run in test mode.",
       };
       return NextResponse.json(
         { error: messages[err.code] ?? "Checkout failed", code: err.code },

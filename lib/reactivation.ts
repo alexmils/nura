@@ -33,6 +33,8 @@ export type ReactivationOffer = {
   newSubscriptionId: string | null;
   oldSubscriptionId: string | null;
   oldStatus: string | null;
+  /** A test link an admin sent to themselves; never the member's real one. */
+  isTest: boolean;
 };
 
 type OfferRow = {
@@ -48,6 +50,7 @@ type OfferRow = {
   new_subscription_id: string | null;
   old_subscription_id: string | null;
   old_status: string | null;
+  is_test?: boolean | null;
 };
 
 const iso = (d: Date | null) => (d ? new Date(d).toISOString() : null);
@@ -66,6 +69,7 @@ function rowToOffer(r: OfferRow): ReactivationOffer {
     newSubscriptionId: r.new_subscription_id,
     oldSubscriptionId: r.old_subscription_id,
     oldStatus: r.old_status,
+    isTest: r.is_test === true,
   };
 }
 
@@ -98,6 +102,12 @@ export async function createReactivationOffer(input: {
   createdBy: string | null;
   /** Who minted it; null/"winback_tab" keeps the original rules. */
   source?: ReactivationOfferSource | null;
+  /**
+   * Test link (admin test send). Replaces only an unused older *test* link;
+   * the member's real link is left exactly as it is, and a real link never
+   * deletes a test one.
+   */
+  isTest?: boolean;
   now?: Date;
 }): Promise<{ token: string; offer: ReactivationOffer }> {
   await ensureSchemaReady();
@@ -105,14 +115,24 @@ export async function createReactivationOffer(input: {
   const token = newReactivationToken();
   const plan = await previousPlanForUser(input.userId);
   const expiresAt = reactivationExpiry(input.now);
+  const isTest = input.isTest === true;
   await pool.query(
-    `DELETE FROM reactivation_offers WHERE user_id = $1 AND used_at IS NULL`,
-    [input.userId]
+    `DELETE FROM reactivation_offers WHERE user_id = $1 AND used_at IS NULL AND is_test = $2`,
+    [input.userId, isTest]
   );
   const { rows } = await pool.query<OfferRow>(
-    `INSERT INTO reactivation_offers (id, user_id, token_hash, plan, created_by, expires_at, source)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-    [randomUUID(), input.userId, hashReactivationToken(token), plan, input.createdBy, expiresAt, input.source ?? null]
+    `INSERT INTO reactivation_offers (id, user_id, token_hash, plan, created_by, expires_at, source, is_test)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+    [
+      randomUUID(),
+      input.userId,
+      hashReactivationToken(token),
+      plan,
+      input.createdBy,
+      expiresAt,
+      isTest ? "admin_test" : input.source ?? null,
+      isTest,
+    ]
   );
   return { token, offer: rowToOffer(rows[0]) };
 }
@@ -274,7 +294,7 @@ export async function listReactivationCandidates(now = new Date()): Promise<Reac
   // Someone who already redeemed a link stays listed (status "used") even
   // though their new trial makes them no longer a candidate.
   const { rows: offered } = await getPool().query<{ user_id: string }>(
-    `SELECT DISTINCT user_id FROM reactivation_offers`
+    `SELECT DISTINCT user_id FROM reactivation_offers WHERE NOT is_test`
   );
   const hasOffer = new Set(offered.map((o) => o.user_id));
   const candidates = rows.filter((r) =>
@@ -295,7 +315,7 @@ export async function listReactivationCandidates(now = new Date()): Promise<Reac
   const ids = candidates.map((c) => c.id);
   const { rows: offerRows } = await getPool().query<OfferRow>(
     `SELECT DISTINCT ON (user_id) * FROM reactivation_offers
-     WHERE user_id = ANY($1) ORDER BY user_id, created_at DESC`,
+     WHERE user_id = ANY($1) AND NOT is_test ORDER BY user_id, created_at DESC`,
     [ids]
   );
   const byUser = new Map(offerRows.map((o) => [o.user_id, rowToOffer(o)]));

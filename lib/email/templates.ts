@@ -2,6 +2,7 @@ import { BRAND_COLORS, BRAND_SPOKEN, chromeBrandName } from "@/lib/brand";
 import { EMAIL_LOGO_WIDTH, emailLogoSrcForOrigin } from "@/lib/brand-assets";
 import { reviewStars } from "@/lib/email/review-stars";
 import type { EmailTemplateId } from "@/lib/email/template-labels";
+import { defaultWinbackSubject, type WinbackTemplateData } from "@/lib/email/winback-template";
 
 export type { EmailTemplateId } from "@/lib/email/template-labels";
 
@@ -81,6 +82,8 @@ export type EmailTemplateData = {
     /** True while the paid period is still open. */
     keepsAccess: boolean;
   };
+  /** Built by winbackTemplateData() in lib/email/winback-template.ts. */
+  winback: WinbackTemplateData;
   admin_signup: {
     customerName: string;
     customerEmail: string;
@@ -528,6 +531,45 @@ export function renderEmailTemplate<T extends EmailTemplateId>(
          <p style="margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};">Access: ${safeEnd}</p>
          ${ctaButton(d.homeUrl, "Back to home")}
          <p style="margin:0;font-size:13px;line-height:1.5;color:${mutedColor};">Questions? <a href="mailto:${safeSupport}" style="color:${brandColor};">${safeSupport}</a></p>`
+      );
+      return { subject, html, text };
+    }
+    case "winback": {
+      const d = data as EmailTemplateData["winback"];
+      const safeName = escapeEmailHtml(d.name);
+      const safeUrl = escapeEmailHtml(d.reactivateUrl);
+      const days = Number(d.days) || 30;
+      const subject = defaultWinbackSubject(d.mode, days, siteName);
+      const intro = `Thank you for telling us that something was not working in ${siteName} during your session. We looked into it: the problem was on our side, and we are sorry it got in the way of your practice.`;
+      const text = [
+        `Hi ${d.name},`,
+        "",
+        ...(d.note ? [d.note, ""] : []),
+        intro,
+        "",
+        d.offerLine,
+        "",
+        d.reactivateUrl,
+        "",
+        d.howItWorks,
+        "",
+        "If anything still does not work, just reply to this email and we will help.",
+        "",
+        `The ${siteName} team`,
+      ].join("\n");
+      const p = `margin:0 0 12px;font-size:15px;line-height:1.5;color:${inkColor};`;
+      const html = layout(
+        brand,
+        d.mode === "extend" ? `Your next ${days} days are on us` : `${days} days of ${escapeEmailHtml(siteName)}, on us`,
+        `<p style="${p}">Hi ${safeName},</p>
+         ${d.noteHtml}
+         <p style="${p}">${escapeEmailHtml(intro)}</p>
+         <p style="${p}">${escapeEmailHtml(d.offerLine)}</p>
+         ${ctaButton(safeUrl, escapeEmailHtml(d.ctaLabel))}
+         <p style="${p}">${escapeEmailHtml(d.howItWorks)}</p>
+         <p style="margin:0 0 12px;font-size:13px;line-height:1.5;color:${mutedColor};">Button not working? Paste this link into your browser:<br /><a href="${safeUrl}" style="color:${brandColor};word-break:break-all;">${safeUrl}</a></p>
+         <p style="margin:0;font-size:15px;line-height:1.6;color:${inkColor};">If anything still does not work, just reply to this email and we will help.<br /><br />The ${escapeEmailHtml(siteName)} team</p>`,
+        `This link is personal and works once, until ${escapeEmailHtml(d.expiresAt)}. Please don't forward it.`
       );
       return { subject, html, text };
     }

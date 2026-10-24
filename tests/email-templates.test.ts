@@ -116,6 +116,18 @@ const FIXTURES: Record<string, Record<string, string | boolean>> = {
     billingNote: "Your plan will not renew.",
     keepsAccess: false,
   },
+  winback: {
+    name: "Alex",
+    reactivateUrl: "https://nurahelp.com/reactivate?token=t",
+    expiresAt: "November 23, 2026",
+    days: "30",
+    mode: "trial",
+    offerLine: "We would like to give you 30 days of Nura free.",
+    howItWorks: "Nothing is charged for 30 days.",
+    ctaLabel: "Start my 30 free days",
+    note: "",
+    noteHtml: "",
+  },
   admin_signup: {
     customerName: "Sam",
     customerEmail: "sam@example.com",

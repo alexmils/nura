@@ -15,7 +15,9 @@ import { writeAuditEvent } from "@/lib/audit-log";
 import {
   generateUserWinback,
   getUserWinback,
+  previewUserWinbackEmail,
   sendUserWinbackEmail,
+  sendUserWinbackTestEmail,
   WinbackError,
 } from "@/lib/winback-email";
 
@@ -54,6 +56,9 @@ export async function POST(request: Request) {
     offerId?: string;
     subject?: string;
     body?: string;
+    link?: string;
+    note?: string;
+    to?: string;
   };
   try {
     if (body.action === "generate" && typeof body.userId === "string") {
@@ -89,9 +94,33 @@ export async function POST(request: Request) {
         userId: body.userId,
         subject: body.subject,
         body: body.body,
+        link: body.link,
+        note: body.note,
         actorUserId: auth.user.id,
       });
       return NextResponse.json({ ok: true, winback });
+    }
+    // Rendered "winback" template for the user-page preview. Sends nothing.
+    if (body.action === "user_preview" && typeof body.userId === "string") {
+      const email = await previewUserWinbackEmail({
+        userId: body.userId,
+        link: body.link,
+        subject: body.subject,
+        note: body.note,
+      });
+      return NextResponse.json({ email });
+    }
+    // Test copy with its own one-use test link (rate-limited per admin).
+    // Not a win-back send: no history row, the real link is untouched.
+    if (body.action === "user_test_send" && typeof body.userId === "string") {
+      const sent = await sendUserWinbackTestEmail({
+        userId: body.userId,
+        to: body.to,
+        subject: body.subject,
+        note: body.note,
+        actorUserId: auth.user.id,
+      });
+      return NextResponse.json({ ok: true, test: true, to: sent.to, expiresAt: sent.expiresAt });
     }
     if (body.action === "mark_sent" && typeof body.offerId === "string") {
       await markReactivationSent(body.offerId);

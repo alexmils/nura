@@ -28,6 +28,13 @@ import {
   type ReactivationOfferSource,
 } from "@/lib/reactivation-rules";
 import { isExtensionMarker } from "@/lib/reactivation-extend";
+import { renderStoredTemplate } from "@/lib/email-templates-db";
+import {
+  cleanWinbackNote,
+  cleanWinbackSubject,
+  winbackTemplateData,
+} from "@/lib/email/winback-template";
+import { winbackTestLimiter } from "@/lib/winback-test-limit";
 import {
   buildWinbackEmailDraft,
   problemTextToHtml,
@@ -57,7 +64,7 @@ async function subscriptionOf(userId: string): Promise<SubRow | null> {
 
 export async function hasRedeemedWinback(userId: string): Promise<boolean> {
   const { rows } = await getPool().query(
-    `SELECT 1 FROM reactivation_offers WHERE user_id = $1 AND used_at IS NOT NULL LIMIT 1`,
+    `SELECT 1 FROM reactivation_offers WHERE user_id = $1 AND used_at IS NOT NULL AND NOT is_test LIMIT 1`,
     [userId]
   );
   return rows.length > 0;
@@ -123,6 +130,8 @@ export type PreparedWinbackEmail = {
   subject: string;
   body: string;
   mode: WinbackMode;
+  /** Branded HTML from the "winback" template; plain body → HTML otherwise. */
+  html?: string;
 };
 
 /**
@@ -146,11 +155,12 @@ export async function prepareWinbackEmail(input: {
     user_id: string;
     expires_at: Date;
     used_at: Date | null;
-  }>(`SELECT id, user_id, expires_at, used_at FROM reactivation_offers WHERE token_hash = $1`, [
+    is_test: boolean | null;
+  }>(`SELECT id, user_id, expires_at, used_at, is_test FROM reactivation_offers WHERE token_hash = $1`, [
     hashReactivationToken(token),
   ]);
   const offer = rows[0];
-  if (!offer || offer.user_id !== input.userId) {
+  if (!offer || offer.user_id !== input.userId || offer.is_test) {
     throw new WinbackError("The link in the email is not the current one, generate a new one");
   }
   if (input.expectedOfferId && offer.id !== input.expectedOfferId) {
@@ -196,7 +206,7 @@ export async function deliverWinbackEmail(input: {
       to: p.to,
       subject: p.subject,
       text: p.body,
-      html: problemTextToHtml(p.body),
+      html: p.html ?? problemTextToHtml(p.body),
       templateId: "winback",
       dedupKey: `winback:${p.offerId}`,
     });
@@ -293,7 +303,7 @@ export async function getUserWinback(userId: string, now = new Date()): Promise<
     source: string | null;
   }>(
     `SELECT id, created_at, expires_at, sent_at, opened_at, used_at, checkout_session_id, source
-     FROM reactivation_offers WHERE user_id = $1
+     FROM reactivation_offers WHERE user_id = $1 AND NOT is_test
      ORDER BY (used_at IS NOT NULL) DESC, created_at DESC LIMIT 1`,
     [userId]
   );
@@ -330,14 +340,195 @@ export async function generateUserWinback(input: { userId: string; actorUserId: 
   return { link: out.link, offer: out.offer, draft: out.draft, mode: out.mode };
 }
 
-/** User page: send the previewed email (explicit click only). */
+/** Email shape for the user page; also returned by the preview. */
+export type RenderedWinbackEmail = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  mode: WinbackMode;
+  /** False when the preview uses a placeholder link (no link generated yet). */
+  hasRealLink: boolean;
+};
+
+const PREVIEW_LINK_TOKEN = "preview-link-appears-here-after-generate";
+
+/**
+ * Render the win-back email through the "winback" template (Admin → Email →
+ * Automation, same renderer as every automated mail). The subject typed on
+ * the user page wins over the template's subject; the note is optional.
+ */
+export async function renderUserWinbackEmail(input: {
+  userId: string;
+  link: string;
+  expiresAt: Date;
+  subject?: unknown;
+  note?: unknown;
+  mode?: WinbackMode;
+}): Promise<Omit<RenderedWinbackEmail, "hasRealLink">> {
+  const user = await getUserById(input.userId);
+  if (!user?.email) throw new WinbackError("User not found", 404);
+  const mode = input.mode ?? (await winbackModeForUser(input.userId));
+  const data = winbackTemplateData({
+    name: user.name,
+    link: input.link,
+    expiresAt: input.expiresAt,
+    mode,
+    days: REACTIVATION_TRIAL_DAYS,
+    brand: BRAND_SPOKEN,
+    note: input.note,
+  });
+  const rendered = await renderStoredTemplate("winback", data);
+  const subject = cleanWinbackSubject(input.subject) || cleanWinbackSubject(rendered.subject);
+  if (!subject) throw new WinbackError("Subject is empty");
+  return { to: user.email, subject, html: rendered.html, text: rendered.text, mode };
+}
+
+/**
+ * The person's current real, unused, unexpired offer for a raw link, or null.
+ * Test links never count.
+ */
+async function currentOfferForLink(userId: string, link: unknown) {
+  if (typeof link !== "string") return null;
+  const token = tokenFromWinbackBody(link);
+  if (!token) return null;
+  const { rows } = await getPool().query<{ id: string; user_id: string; expires_at: Date; used_at: Date | null; is_test: boolean | null }>(
+    `SELECT id, user_id, expires_at, used_at, is_test FROM reactivation_offers WHERE token_hash = $1`,
+    [hashReactivationToken(token)]
+  );
+  const o = rows[0];
+  if (!o || o.user_id !== userId || o.is_test || o.used_at) return null;
+  if (new Date(o.expires_at).getTime() <= Date.now()) return null;
+  return o;
+}
+
+/** Live preview for the user page (nothing is sent, nothing is minted). */
+export async function previewUserWinbackEmail(input: {
+  userId: string;
+  link?: unknown;
+  subject?: unknown;
+  note?: unknown;
+}): Promise<RenderedWinbackEmail> {
+  await ensureSchemaReady();
+  const offer = await currentOfferForLink(input.userId, input.link);
+  const link = offer
+    ? String(input.link)
+    : reactivationLink(await getPublicAppUrl(), PREVIEW_LINK_TOKEN);
+  const expiresAt = offer
+    ? new Date(offer.expires_at)
+    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const out = await renderUserWinbackEmail({
+    userId: input.userId,
+    link,
+    expiresAt,
+    subject: input.subject,
+    note: input.note,
+  });
+  return { ...out, hasRealLink: Boolean(offer) };
+}
+
+/**
+ * User page: send the previewed email (explicit click only).
+ *
+ * With `link` (+ subject, optional note) the email is the rendered "winback"
+ * template, exactly what the preview shows. The older `body` form (plain
+ * text with the link inside) still works for other callers.
+ */
 export async function sendUserWinbackEmail(input: {
   userId: string;
   subject: unknown;
-  body: unknown;
+  body?: unknown;
+  link?: unknown;
+  note?: unknown;
   actorUserId: string;
 }): Promise<UserWinback | null> {
+  if (typeof input.link === "string" && input.body === undefined) {
+    await ensureSchemaReady();
+    const offer = await currentOfferForLink(input.userId, input.link);
+    if (!offer) throw new WinbackError("The link is not the current one, or it is used or expired. Generate a new one.");
+    const rendered = await renderUserWinbackEmail({
+      userId: input.userId,
+      link: input.link,
+      expiresAt: new Date(offer.expires_at),
+      subject: input.subject,
+      note: input.note,
+    });
+    // Same checks as before (valid subject, link is the current real offer).
+    const prepared = await prepareWinbackEmail({
+      userId: input.userId,
+      subject: rendered.subject,
+      body: rendered.text,
+      expectedOfferId: offer.id,
+    });
+    await deliverWinbackEmail({ prepared: { ...prepared, html: rendered.html }, actorUserId: input.actorUserId });
+    return getUserWinback(input.userId);
+  }
   const prepared = await prepareWinbackEmail({ userId: input.userId, subject: input.subject, body: input.body });
   await deliverWinbackEmail({ prepared, actorUserId: input.actorUserId });
   return getUserWinback(input.userId);
+}
+
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/**
+ * "Send test email": the exact rendered email, to an address the admin picks,
+ * with a real one-use link that works end to end.
+ *
+ * The link is a separate *test* offer (is_test): it does not replace or use
+ * up the member's real link, is not listed under "Sent win-back emails", does
+ * not mark the real link as sent and never counts as their one win-back.
+ * Redeeming it in live Stripe mode is refused (lib/reactivation-stripe.ts),
+ * so a test click can never change a real customer's live billing.
+ */
+export async function sendUserWinbackTestEmail(input: {
+  userId: string;
+  to: unknown;
+  subject?: unknown;
+  note?: unknown;
+  actorUserId: string;
+}): Promise<{ to: string; expiresAt: string; offerId: string }> {
+  await ensureSchemaReady();
+  const to = typeof input.to === "string" ? input.to.trim().toLowerCase() : "";
+  if (!EMAIL_RE.test(to) || to.length > 254) throw new WinbackError("Enter a valid email address");
+  const user = await getUserById(input.userId);
+  if (!user?.email) throw new WinbackError("User not found", 404);
+  const gate = winbackTestLimiter().take(input.actorUserId);
+  if (!gate.ok) {
+    const mins = Math.max(1, Math.ceil(gate.retryAfterMs / 60000));
+    throw new WinbackError(`Too many test emails. Try again in ${mins} min.`, 429);
+  }
+  const { token, offer } = await createReactivationOffer({
+    userId: input.userId,
+    createdBy: input.actorUserId,
+    isTest: true,
+  });
+  const link = reactivationLink(await getPublicAppUrl(), token);
+  const rendered = await renderUserWinbackEmail({
+    userId: input.userId,
+    link,
+    expiresAt: new Date(offer.expiresAt),
+    subject: input.subject,
+    note: cleanWinbackNote(input.note),
+  });
+  try {
+    await sendEmail({
+      to,
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+      templateId: "winback_test",
+      dedupKey: `winback_test:${offer.id}`,
+    });
+  } catch (err) {
+    await getPool().query(`DELETE FROM reactivation_offers WHERE id = $1 AND is_test`, [offer.id]).catch(() => {});
+    console.error("[winback] test send failed", err);
+    throw new WinbackError("Sending failed, nothing was sent. Check Admin > Email.", 502);
+  }
+  await writeAuditEvent({
+    actorUserId: input.actorUserId,
+    targetUserId: input.userId,
+    action: "reactivation.test_email_sent",
+    detail: { offerId: offer.id, to, expiresAt: offer.expiresAt, test: true },
+  }).catch(() => {});
+  return { to, expiresAt: offer.expiresAt, offerId: offer.id };
 }

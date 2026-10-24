@@ -294,6 +294,9 @@ async function runSchemaMigrations(db: PoolClient) {
     CREATE INDEX IF NOT EXISTS idx_problem_reports_user_source
       ON problem_reports(user_id, source, last_detected_at DESC);
     ALTER TABLE reactivation_offers ADD COLUMN IF NOT EXISTS source TEXT;
+    -- Test win-back links (docs/migrations/2026-10-24-winback-test-offers.sql):
+    -- never replace, consume or count as the member's real link.
+    ALTER TABLE reactivation_offers ADD COLUMN IF NOT EXISTS is_test BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE TABLE IF NOT EXISTS winback_emails (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

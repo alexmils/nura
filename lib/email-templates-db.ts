@@ -8,6 +8,7 @@ import {
 import { renderEmailTemplate } from "@/lib/email/templates";
 import { getPlatformSettings, getPublicAppUrl } from "@/lib/platform-settings";
 import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
+import { winbackTemplateData } from "@/lib/email/winback-template";
 
 export type EmailTemplateRecord = {
   id: EmailTemplateId;
@@ -140,6 +141,13 @@ function sampleData(id: EmailTemplateId) {
         billingNote: "Your plan will not renew.",
         keepsAccess: false,
       };
+    case "winback":
+      return winbackTemplateData({
+        name: base.name,
+        link: "https://example.com/reactivate?token=example-preview-token-not-real",
+        expiresAt: new Date("2026-11-23T00:00:00Z"),
+        mode: "trial",
+      });
     case "admin_signup":
       return {
         customerName: "Sam",

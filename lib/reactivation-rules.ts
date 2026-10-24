@@ -30,10 +30,17 @@ export const REACTIVATION_PATH = "/reactivate";
  * problem report or the admin single-user page move a paying member's next
  * payment 30 days later instead (lib/reactivation-extend.ts).
  */
-export type ReactivationOfferSource = "winback_tab" | "problem_report" | "admin_user";
+export type ReactivationOfferSource = "winback_tab" | "problem_report" | "admin_user" | "admin_test";
 
+/**
+ * "admin_test": the one-use link in a test win-back email an admin sends to
+ * themselves from the single-user page. It behaves like an "admin_user" link
+ * so the whole flow can be clicked through, but the row is flagged is_test:
+ * it never replaces or consumes the member's real link and never counts as
+ * their one win-back (lib/reactivation.ts).
+ */
 export function offerSourceAllowsExtension(source: string | null | undefined): boolean {
-  return source === "problem_report" || source === "admin_user";
+  return source === "problem_report" || source === "admin_user" || source === "admin_test";
 }
 
 const MIN_TOKEN_LENGTH = 32;

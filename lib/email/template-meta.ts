@@ -32,6 +32,7 @@ export const EMAIL_TEMPLATE_GROUP: Record<EmailTemplateId, EmailTemplateGroup> =
   payment_receipt: "Billing",
   payment_failed: "Billing",
   subscription_canceled: "Billing",
+  winback: "Billing",
   trial_started: "Trial",
   trial_charge_reminder: "Trial",
   trial_feedback: "Feedback",
@@ -61,6 +62,8 @@ export const EMAIL_TEMPLATE_DESCRIPTION: Record<EmailTemplateId, string> = {
     "Asks for a new card when a charge does not go through.",
   subscription_canceled:
     "Confirms a cancellation and says when access ends.",
+  winback:
+    "The win-back offer an admin sends from a member's page or a problem report: a one-use link that gives 30 free days. The admin can change the subject and add a personal note before sending. Paying members get the days added to their plan; lapsed members start a free trial.",
   trial_started:
     "Confirms the trial and the date of the first charge.",
   trial_charge_reminder:
@@ -171,6 +174,17 @@ export const EMAIL_TEMPLATE_PLACEHOLDERS: Record<
     { token: "trialEndedOn", description: "Date the trial ended" },
     { token: "appUrl", description: "The app's home screen" },
     { token: "preferencesUrl", description: "Email settings link" },
+  ],
+  winback: [
+    { token: "name", description: "Member's first name, or \"there\"" },
+    { token: "reactivateUrl", description: "The one-use reactivate link, with its token" },
+    { token: "expiresAt", description: "Last day the link works" },
+    { token: "days", description: "Free days in the offer (30)" },
+    { token: "offerLine", description: "Sentence with the offer, worded for paying or lapsed members" },
+    { token: "howItWorks", description: "What happens when they open the link (no charge / payment moves)" },
+    { token: "ctaLabel", description: "Button text" },
+    { token: "note", description: "The admin's personal note as plain text (may be empty)" },
+    { token: "noteHtml", description: "The personal note as an HTML paragraph (empty when there is none)" },
   ],
   admin_signup: [
     { token: "customerName", description: "New member's name" },

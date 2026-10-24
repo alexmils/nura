@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { UserWinback } from "@/lib/winback-email";
 import { WINBACK_MODE_NOTE, type WinbackEmailDraft } from "@/lib/problem-report-rules";
 import { AdminProblemReportsPanel } from "./AdminProblemReportsPanel";
-import { WinbackEmailEditor, type WinbackDraft } from "./WinbackEmailEditor";
+import { type WinbackDraft } from "./WinbackEmailEditor";
+import { WinbackEmailComposer } from "./WinbackEmailComposer";
 import "./admin-user-layout.css";
 
 function fmt(iso: string | null | undefined): string {
@@ -42,6 +43,15 @@ export function useUserWinback(userId: string) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [draft, setDraft] = useState<WinbackDraft | null>(null);
+  const [note, setNote] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+
+  useEffect(() => {
+    void fetch("/api/auth/me", { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ user?: { email?: string } }>)
+      .then((b) => setAdminEmail(b.user?.email ?? ""))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -68,7 +78,13 @@ export function useUserWinback(userId: string) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ userId, ...payload }),
       });
-      const body = (await res.json()) as { error?: string; link?: string; draft?: WinbackEmailDraft; winback?: UserWinback };
+      const body = (await res.json()) as {
+        error?: string;
+        link?: string;
+        draft?: WinbackEmailDraft;
+        winback?: UserWinback;
+        email?: { subject?: string };
+      };
       if (!res.ok) throw new Error(body.error ?? "Failed");
       return body;
     } catch (e) {
@@ -82,22 +98,26 @@ export function useUserWinback(userId: string) {
   async function generate() {
     const body = await post({ action: "user_generate" });
     if (body?.draft && body.link) {
-      setDraft({ ...body.draft, link: body.link });
+      // Subject from the "winback" template (Admin → Email may have changed it).
+      const preview = await post({ action: "user_preview", link: body.link });
+      setNote("");
+      setDraft({ ...body.draft, subject: preview?.email?.subject || body.draft.subject, link: body.link });
       await load();
     }
   }
 
   async function send() {
     if (!draft) return;
-    const body = await post({ action: "user_send", subject: draft.subject, body: draft.body });
+    const body = await post({ action: "user_send", subject: draft.subject, link: draft.link, note });
     if (body) {
       setDraft(null);
+      setNote("");
       if (body.winback) setData(body.winback);
       else await load();
     }
   }
 
-  return { userId, data, error, busy, draft, setDraft, load, generate, send };
+  return { userId, data, error, busy, draft, setDraft, note, setNote, adminEmail, post, load, generate, send };
 }
 
 export type UserWinbackState = ReturnType<typeof useUserWinback>;
@@ -181,12 +201,15 @@ export function AdminUserWinbackActivity(props: { state: UserWinbackState; canWr
       {draft && canWrite ? (
         <div className="admin-user-preview" ref={previewRef}>
           <h3 className="admin-user-subhead" style={{ marginTop: 0 }}>Win-back email preview</h3>
-          <WinbackEmailEditor
+          <WinbackEmailComposer
+            userId={state.userId}
             draft={draft}
+            note={state.note}
             busy={busy}
+            adminEmail={state.adminEmail}
             onChange={state.setDraft}
+            onNoteChange={state.setNote}
             onSend={() => void state.send()}
-            testIdPrefix="user"
           />
         </div>
       ) : null}

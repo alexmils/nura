@@ -118,7 +118,7 @@ const SELECT = `
   SELECT pr.*, u.email AS user_email, u.name AS user_name, t.title AS thread_title,
          o.created_at AS offer_created_at, o.expires_at AS offer_expires_at,
          o.sent_at AS offer_sent_at, o.opened_at AS offer_opened_at, o.used_at AS offer_used_at,
-         EXISTS (SELECT 1 FROM reactivation_offers ro WHERE ro.user_id = pr.user_id AND ro.used_at IS NOT NULL) AS winback_used,
+         EXISTS (SELECT 1 FROM reactivation_offers ro WHERE ro.user_id = pr.user_id AND ro.used_at IS NOT NULL AND NOT ro.is_test) AS winback_used,
          s.status AS sub_status, s.cancel_at_period_end
   FROM problem_reports pr
   JOIN users u ON u.id = pr.user_id

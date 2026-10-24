@@ -10,6 +10,7 @@ import { BRAND_SUPPORT_EMAIL } from "@/lib/brand";
 import { clientIp, writeAuditEvent } from "@/lib/audit-log";
 import { getUserByEmail } from "@/lib/users";
 import { createReviewInvite } from "@/lib/review-invite";
+import { winbackTemplateData } from "@/lib/email/winback-template";
 
 export async function POST(request: Request) {
   const auth = await requirePlatformSettingsAccess();
@@ -113,6 +114,15 @@ export async function POST(request: Request) {
         billingNote: "Your plan will not renew.",
         keepsAccess: false,
       });
+    } else if (id === "winback") {
+      // Design check only: the link is a placeholder. A real one-use link is
+      // sent from a member's page (Win-back email preview → Send test email).
+      await sendTemplateEmail(to.trim(), id, winbackTemplateData({
+        name: sample.name,
+        link: await getAppUrl("/reactivate?token=test-link-not-valid"),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        mode: "trial",
+      }));
     } else if (id === "admin_signup") {
       await sendTemplateEmail(to.trim(), id, {
         customerName: sample.name,

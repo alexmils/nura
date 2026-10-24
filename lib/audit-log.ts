@@ -2,6 +2,7 @@ import { ensureSchemaReady, getPool } from "@/lib/db";
 
 export type AuditAction =
   | "reactivation.link_generated"
+  | "reactivation.test_email_sent"
   | "user.login"
   | "user.logout"
   | "user.invited"

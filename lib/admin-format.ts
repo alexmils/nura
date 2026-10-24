@@ -35,6 +35,7 @@ export {
 
 const ACTION_LABELS: Record<AuditAction, string> = {
   "reactivation.link_generated": "Win-back link generated",
+  "reactivation.test_email_sent": "Win-back test email sent",
   "user.login": "Signed in",
   "user.logout": "Signed out",
   "user.invited": "Invited",
