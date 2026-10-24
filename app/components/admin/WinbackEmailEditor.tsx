@@ -2,6 +2,8 @@
 
 import type { WinbackEmailDraft } from "@/lib/problem-report-rules";
 
+import "./admin-user-layout.css";
+
 export type WinbackDraft = WinbackEmailDraft & { link: string };
 
 /**
@@ -43,7 +45,7 @@ export function WinbackEmailEditor(props: {
       <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
         <button
           type="button"
-          className="admin-btn"
+          className="btn-primary admin-btn-sm"
           disabled={props.busy}
           onClick={() => {
             if (window.confirm(`Send the win-back email to ${draft.to}?`)) props.onSend();
@@ -54,7 +56,7 @@ export function WinbackEmailEditor(props: {
         </button>
         <button
           type="button"
-          className="admin-btn"
+          className="btn-secondary admin-btn-sm"
           onClick={() => void navigator.clipboard?.writeText(draft.link).catch(() => {})}
         >
           Copy link

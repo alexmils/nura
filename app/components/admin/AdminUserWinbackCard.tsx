@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { UserWinback } from "@/lib/winback-email";
 import { WINBACK_MODE_NOTE, type WinbackEmailDraft } from "@/lib/problem-report-rules";
 import { AdminProblemReportsPanel } from "./AdminProblemReportsPanel";
 import { WinbackEmailEditor, type WinbackDraft } from "./WinbackEmailEditor";
+import "./admin-user-layout.css";
 
 function fmt(iso: string | null | undefined): string {
   return iso ? new Date(iso).toLocaleString() : "";
@@ -32,12 +33,11 @@ export function winbackStatusLine(w: Pick<UserWinback, "linkStatus" | "offer">):
 }
 
 /**
- * Admin single-user page: win-back status, generate + send (same rules as
- * the Win-back and Problem reports tabs), sent history, and this person's
- * problem reports with the same actions as the Problem reports tab.
+ * One person's win-back state + actions (same rules as the Win-back and
+ * Problem reports tabs). Shared by the sidebar box and the main-column
+ * activity panel on the admin single-user page.
  */
-export function AdminUserWinbackCard(props: { userId: string; canWrite: boolean }) {
-  const { userId, canWrite } = props;
+export function useUserWinback(userId: string) {
   const [data, setData] = useState<UserWinback | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -97,70 +97,130 @@ export function AdminUserWinbackCard(props: { userId: string; canWrite: boolean 
     }
   }
 
-  const hasActiveLink = data && ["generated", "sent", "opened"].includes(data.linkStatus);
+  return { userId, data, error, busy, draft, setDraft, load, generate, send };
+}
 
+export type UserWinbackState = ReturnType<typeof useUserWinback>;
+
+/** Sidebar box: status, path, Generate / New link. */
+export function AdminUserWinbackBox(props: { state: UserWinbackState; canWrite: boolean }) {
+  const { state, canWrite } = props;
+  const { data, error, busy, draft } = state;
+  const hasActiveLink = data && ["generated", "sent", "opened"].includes(data.linkStatus);
   return (
-    <section className="admin-panel" data-testid="admin-user-winback">
-      <h2 className="admin-panel-title">Win-back &amp; problem reports</h2>
-      <p className="admin-panel-sub">
-        One win-back per person. A new link replaces an unused old one and is shown only once.
-      </p>
-      {error ? <p className="admin-panel-sub">Error: {error}</p> : null}
-      {!data && !error ? <p className="admin-panel-sub">Loading...</p> : null}
-      {data ? (
-        <div style={{ display: "grid", gap: "0.6rem" }}>
-          <dl className="admin-dl">
-            <dt>Win-back</dt>
-            <dd data-testid="user-winback-status">{winbackStatusLine(data)}</dd>
-            <dt>Billing</dt>
-            <dd>
-              {data.subscriptionStatus ?? "none"}
-              {data.cancelAtPeriodEnd ? " (cancel scheduled)" : ""}
-            </dd>
-            <dt>Path</dt>
-            <dd data-testid="user-winback-mode">
-              {data.redeemed ? "Already redeemed: no new link." : WINBACK_MODE_NOTE[data.mode]}
-            </dd>
-          </dl>
-          {canWrite && !data.redeemed && !draft ? (
-            <div>
-              <button type="button" className="admin-btn" disabled={busy} onClick={() => void generate()} data-testid="user-generate-winback">
-                {data.offer && data.linkStatus !== "none" ? "New link + email preview" : "Generate win-back"}
-              </button>
-              {hasActiveLink ? (
-                <p className="admin-panel-sub" style={{ margin: "0.35rem 0 0" }}>
-                  A link is active but can only be shown once. A new one replaces it.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-          {draft && canWrite ? (
-            <WinbackEmailEditor draft={draft} busy={busy} onChange={setDraft} onSend={() => void send()} testIdPrefix="user" />
-          ) : null}
-          <div>
-            <p style={{ fontWeight: 600, margin: "0.5rem 0 0.35rem" }}>Sent win-back emails</p>
-            {data.emails.length === 0 ? (
-              <p className="admin-panel-sub" style={{ margin: 0 }}>None yet.</p>
-            ) : (
-              <ul style={{ margin: 0, paddingLeft: "1.1rem", display: "grid", gap: "0.5rem", fontSize: "0.85rem" }} data-testid="user-winback-history">
-                {data.emails.map((e) => (
-                  <li key={e.id}>
-                    <details>
-                      <summary>
-                        {fmt(e.sentAt)} to {e.to}: <strong>{e.subject}</strong>
-                        {e.problemReportId ? " (from a problem report)" : ""}
-                        {e.sentByEmail ? `, by ${e.sentByEmail}` : ""}
-                      </summary>
-                      <pre style={{ whiteSpace: "pre-wrap", margin: "0.35rem 0 0", fontFamily: "inherit" }}>{e.body}</pre>
-                    </details>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+    <section className="admin-user-box" data-testid="admin-user-winback">
+      <h2 className="admin-user-box-head">Win-back</h2>
+      <div className="admin-user-box-body">
+        {error ? <p className="admin-user-box-msg">Error: {error}</p> : null}
+        {!data && !error ? <p className="admin-user-box-note">Loading...</p> : null}
+        {data ? (
+          <>
+            <dl className="admin-user-kv">
+              <dt>Status</dt>
+              <dd data-testid="user-winback-status">{winbackStatusLine(data)}</dd>
+              <dt>Billing</dt>
+              <dd>
+                {data.subscriptionStatus ?? "none"}
+                {data.cancelAtPeriodEnd ? " (cancel scheduled)" : ""}
+              </dd>
+            </dl>
+            <p className="admin-user-box-note" data-testid="user-winback-mode">
+              {data.redeemed ? "Already redeemed: no new link (one per person)." : WINBACK_MODE_NOTE[data.mode]}
+            </p>
+            {canWrite && !data.redeemed ? (
+              <div className="admin-user-box-actions">
+                {draft ? (
+                  <>
+                    <p className="admin-user-box-note" style={{ flexBasis: "100%" }}>
+                      The email preview is open in the main column. Nothing is sent until you press Send email.
+                    </p>
+                    <button type="button" className="btn-secondary admin-btn-sm" disabled={busy} onClick={() => state.setDraft(null)}>
+                      Close preview
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="btn-primary admin-btn-sm"
+                      disabled={busy}
+                      onClick={() => void state.generate()}
+                      data-testid="user-generate-winback"
+                    >
+                      {data.offer && data.linkStatus !== "none" ? "New link + email preview" : "Generate win-back"}
+                    </button>
+                    {hasActiveLink ? (
+                      <p className="admin-user-box-note" style={{ flexBasis: "100%" }}>
+                        A link is active but can only be shown once. A new one replaces it.
+                      </p>
+                    ) : null}
+                  </>
+                )}
+              </div>
+            ) : null}
+            <p className="admin-user-box-note">One win-back per person. A new link replaces an unused old one.</p>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+/** Main column: email preview (when open), sent win-back emails, problem reports. */
+export function AdminUserWinbackActivity(props: { state: UserWinbackState; canWrite: boolean }) {
+  const { state, canWrite } = props;
+  const { data, busy, draft } = state;
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const hasDraft = Boolean(draft);
+  useEffect(() => {
+    if (hasDraft) previewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [hasDraft]);
+  return (
+    <section className="admin-panel" data-testid="admin-user-winback-activity">
+      <h2 className="admin-panel-title">Problem reports &amp; win-back emails</h2>
+      {draft && canWrite ? (
+        <div className="admin-user-preview" ref={previewRef}>
+          <h3 className="admin-user-subhead" style={{ marginTop: 0 }}>Win-back email preview</h3>
+          <WinbackEmailEditor
+            draft={draft}
+            busy={busy}
+            onChange={state.setDraft}
+            onSend={() => void state.send()}
+            testIdPrefix="user"
+          />
         </div>
       ) : null}
-      <AdminProblemReportsPanel userId={userId} embedded onChanged={() => void load()} />
+      <AdminProblemReportsPanel userId={state.userId} embedded onChanged={() => void state.load()} />
+      <h3 className="admin-user-subhead">Sent win-back emails</h3>
+      {!data ? null : data.emails.length === 0 ? (
+        <p className="admin-panel-sub" style={{ margin: 0 }}>None yet.</p>
+      ) : (
+        <ul style={{ margin: 0, paddingLeft: "1.1rem", display: "grid", gap: "0.5rem", fontSize: "0.85rem" }} data-testid="user-winback-history">
+          {data.emails.map((e) => (
+            <li key={e.id}>
+              <details>
+                <summary>
+                  {fmt(e.sentAt)} to {e.to}: <strong>{e.subject}</strong>
+                  {e.problemReportId ? " (from a problem report)" : ""}
+                  {e.sentByEmail ? `, by ${e.sentByEmail}` : ""}
+                </summary>
+                <pre style={{ whiteSpace: "pre-wrap", margin: "0.35rem 0 0", fontFamily: "inherit" }}>{e.body}</pre>
+              </details>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
+  );
+}
+
+/** Stacked version (box + activity) for places without a sidebar. */
+export function AdminUserWinbackCard(props: { userId: string; canWrite: boolean }) {
+  const state = useUserWinback(props.userId);
+  return (
+    <>
+      <AdminUserWinbackBox state={state} canWrite={props.canWrite} />
+      <AdminUserWinbackActivity state={state} canWrite={props.canWrite} />
+    </>
   );
 }

@@ -14,6 +14,7 @@ import {
   type WinbackEmailDraft,
 } from "@/lib/problem-report-rules";
 import { WinbackEmailEditor, type WinbackDraft } from "./WinbackEmailEditor";
+import "./admin-user-layout.css";
 
 const STATUS_CHIP: Record<ProblemReportStatus, string> = {
   new: "admin-status-chip-default",
@@ -142,7 +143,7 @@ export function AdminProblemReportsPanel(props: {
   return (
     <Wrap className={embedded ? undefined : "admin-panel"} data-testid={embedded ? "user-problem-reports" : "admin-problem-reports"}>
       {embedded ? (
-        <h3 className="admin-panel-title" style={{ fontSize: "1rem", marginTop: "1.25rem" }}>Problem reports</h3>
+        <h3 className="admin-user-subhead">Problem reports</h3>
       ) : (
         <h2 className="admin-panel-title">Problem reports</h2>
       )}
@@ -155,14 +156,21 @@ export function AdminProblemReportsPanel(props: {
         you press Send.
       </p>
       )}
-      <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", margin: "0.5rem 0 1rem" }}>
-        <button type="button" className="admin-btn" aria-pressed={filter === "open"} onClick={() => setFilter("open")}>
-          Open
-        </button>
-        <button type="button" className="admin-btn" aria-pressed={filter === "all"} onClick={() => setFilter("all")}>
-          All
-        </button>
-        <button type="button" className="admin-btn" onClick={() => void load()}>
+      <div className="admin-toolbar">
+        <div className="admin-segmented" role="group" aria-label="Show reports">
+          {(["open", "all"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={filter === f ? "admin-segmented-btn admin-segmented-btn-active" : "admin-segmented-btn"}
+              aria-pressed={filter === f}
+              onClick={() => setFilter(f)}
+            >
+              {f === "open" ? "Open" : "All"}
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn-secondary admin-btn-sm" onClick={() => void load()}>
           Refresh
         </button>
       </div>
@@ -269,7 +277,7 @@ function ReportRows(props: {
           </span>
         </td>
         <td>
-          <button type="button" className="admin-btn" onClick={props.onToggle} aria-expanded={isOpen}>
+          <button type="button" className="btn-secondary admin-btn-sm" onClick={props.onToggle} aria-expanded={isOpen}>
             {isOpen ? "Close" : "Open"}
           </button>
         </td>
@@ -281,17 +289,17 @@ function ReportRows(props: {
               <div style={{ display: "grid", gap: "0.75rem", alignContent: "start" }}>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                   {r.status === "new" || r.status === "dismissed" ? (
-                    <button type="button" className="admin-btn" disabled={busy} onClick={() => props.onStatus("confirmed")}>
+                    <button type="button" className="btn-primary admin-btn-sm" disabled={busy} onClick={() => props.onStatus("confirmed")}>
                       Confirm problem
                     </button>
                   ) : null}
                   {r.status === "new" || r.status === "confirmed" ? (
-                    <button type="button" className="admin-btn" disabled={busy} onClick={() => props.onStatus("dismissed")}>
+                    <button type="button" className="btn-secondary admin-btn-sm" disabled={busy} onClick={() => props.onStatus("dismissed")}>
                       Dismiss
                     </button>
                   ) : null}
                   {r.status === "dismissed" ? (
-                    <button type="button" className="admin-btn" disabled={busy} onClick={() => props.onStatus("new")}>
+                    <button type="button" className="btn-secondary admin-btn-sm" disabled={busy} onClick={() => props.onStatus("new")}>
                       Reopen
                     </button>
                   ) : null}
@@ -307,7 +315,7 @@ function ReportRows(props: {
                   />
                 </label>
                 <div>
-                  <button type="button" className="admin-btn" disabled={busy} onClick={props.onSaveNote}>
+                  <button type="button" className="btn-secondary admin-btn-sm" disabled={busy} onClick={props.onSaveNote}>
                     Save note
                   </button>
                 </div>
@@ -342,7 +350,7 @@ function ReportRows(props: {
                 ) : null}
                 {r.status === "confirmed" && !r.winbackUsed && !draft ? (
                   <div>
-                    <button type="button" className="admin-btn" disabled={busy} onClick={props.onGenerate} data-testid="problem-generate-winback">
+                    <button type="button" className="btn-primary admin-btn-sm" disabled={busy} onClick={props.onGenerate} data-testid="problem-generate-winback">
                       {r.reactivationOfferId ? "Generate new link + email preview" : "Generate win-back"}
                     </button>
                     {r.reactivationOfferId ? (

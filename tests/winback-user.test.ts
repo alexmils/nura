@@ -90,9 +90,9 @@ describe("wiring", () => {
     assert.equal(await noteHelpChatProblem({ userId: null, helpThreadId: "h1", text: "The page won't load" }), null);
     assert.equal(await noteHelpChatProblem({ userId: undefined, helpThreadId: "h1", text: "The app crashed" }), null);
   });
-  it("admin user page shows the win-back card", () => {
+  it("admin user page shows the win-back box", () => {
     const src = read("app/admin/users/[id]/page.tsx");
-    assert.match(src, /<AdminUserWinbackCard userId=\{userId\} canWrite=\{canWrite\} \/>/);
+    assert.match(src, /<AdminUserWinbackBox state=\{winback\} canWrite=\{canWrite\} \/>/);
   });
   it("user-page writes go through platform-admin write auth", () => {
     const src = read("app/api/admin/reactivation/route.ts");
