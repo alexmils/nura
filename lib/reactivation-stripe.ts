@@ -25,7 +25,15 @@ import {
   type ReactivationState,
 } from "@/lib/reactivation-rules";
 import {
+  applyReactivationExtension,
+  extensionMarker,
+  extensionTrialEnd,
+  isExtendableSubscription,
+} from "@/lib/reactivation-extend";
+import {
   consumeReactivationOffer,
+  offerAllowsExtension,
+  releaseReactivationOffer,
   markReactivationOpened,
   reactivationOfferById,
   reactivationOfferByToken,
@@ -38,27 +46,46 @@ export type ReactivationView = {
   state: ReactivationState;
   offer: ReactivationOffer | null;
   email: string | null;
+  /** state "extend": when the next payment is due now, and after the gift. */
+  nextChargeAt?: string | null;
+  extendedChargeAt?: string | null;
 };
+
+const unix = (iso: string | Date | null | undefined) =>
+  iso ? Math.floor(new Date(iso).getTime() / 1000) : null;
 
 /** Resolve a token to what the page should show. Marks the link opened. */
 export async function loadReactivation(token: string): Promise<ReactivationView> {
   const offer = await reactivationOfferByToken(token).catch(() => null);
   if (!offer) return { state: "invalid", offer: null, email: null };
   const sub = await getSubscriptionByUserId(offer.userId);
-  const state = reactivationState({
-    offer,
-    subscription: sub
-      ? { status: sub.status, cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end) }
-      : null,
-  });
-  if (state === "valid") await markReactivationOpened(offer.id).catch(() => {});
+  const subLike = sub
+    ? { status: sub.status, cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end) }
+    : null;
+  const allowExtend =
+    isExtendableSubscription(subLike) && Boolean(sub?.stripe_subscription_id)
+      ? await offerAllowsExtension(offer.id).catch(() => false)
+      : false;
+  const state = reactivationState({ offer, subscription: subLike, allowExtend });
+  if (state === "valid" || state === "extend") await markReactivationOpened(offer.id).catch(() => {});
   const user = await getUserById(offer.userId);
-  return { state, offer, email: user?.email ?? null };
+  const view: ReactivationView = { state, offer, email: user?.email ?? null };
+  if (state === "extend" && sub) {
+    const shape = {
+      status: sub.status,
+      currentPeriodEnd: unix(sub.renews_at),
+      trialEnd: unix(sub.trial_ends_at),
+    };
+    const due = sub.status === "trialing" && shape.trialEnd ? shape.trialEnd : shape.currentPeriodEnd;
+    view.nextChargeAt = due ? new Date(due * 1000).toISOString() : null;
+    view.extendedChargeAt = new Date(extensionTrialEnd(shape) * 1000).toISOString();
+  }
+  return view;
 }
 
 export class ReactivationError extends Error {
   constructor(
-    public code: ReactivationState | "not_configured" | "wrong_account" | "no_price",
+    public code: ReactivationState | "not_configured" | "wrong_account" | "no_price" | "extend_failed",
     public status: number
   ) {
     super(code);
@@ -71,6 +98,18 @@ export async function createReactivationCheckout(input: {
   sessionUserId?: string | null;
 }): Promise<{ url: string; sessionId: string }> {
   const view = await loadReactivation(input.token);
+  if (view.state === "extend" && view.offer) {
+    // Still paying: no checkout, the next 30 days are added to the plan.
+    if (input.sessionUserId && input.sessionUserId !== view.offer.userId) {
+      throw new ReactivationError("wrong_account", 403);
+    }
+    await redeemReactivationExtension(view.offer);
+    const base = (await getPublicAppUrl()).replace(/\/+$/, "");
+    return {
+      url: `${base}/reactivate?token=${encodeURIComponent(input.token)}&status=extended`,
+      sessionId: "",
+    };
+  }
   if (view.state !== "valid" || !view.offer) {
     throw new ReactivationError(view.state, view.state === "invalid" ? 404 : 409);
   }
@@ -271,4 +310,74 @@ export async function finalizeFromSuccessRedirect(input: {
     session,
     livemode: resolved.livemode,
   });
+}
+
+/**
+ * Redeem a problem-report win-back for someone still paying: claim the offer
+ * (one redemption per person, atomic), then move the next payment of the
+ * existing subscription 30 days later (lib/reactivation-extend.ts). If the
+ * Stripe step fails the claim is released so the link still works.
+ */
+export async function redeemReactivationExtension(
+  offer: ReactivationOffer
+): Promise<{ trialEnd: number; subscriptionId: string }> {
+  const existing = await getSubscriptionByUserId(offer.userId);
+  const subId = existing?.stripe_subscription_id;
+  if (!subId) throw new ReactivationError("already_active", 409);
+  const resolved = await resolveStripeClient({
+    livemode: existing?.stripe_livemode ?? null,
+    objectId: subId,
+  });
+  if (!resolved) throw new ReactivationError("not_configured", 503);
+
+  const marker = extensionMarker(subId);
+  const { claimed } = await consumeReactivationOffer({
+    id: offer.id,
+    checkoutSessionId: marker,
+    newSubscriptionId: subId,
+  });
+  if (!claimed) throw new ReactivationError("used", 409);
+
+  try {
+    const result = await applyReactivationExtension({
+      stripe: resolved.stripe,
+      subscriptionId: subId,
+      offerId: offer.id,
+    });
+    if (!result.ok) {
+      await releaseReactivationOffer(offer.id, marker);
+      throw new ReactivationError("extend_failed", 409);
+    }
+    const cfg = await getStripeConfig();
+    const priceIds = stripePriceIdsFromConfig(resolved.livemode ? cfg.live : cfg.sandbox);
+    const mapped = mapStripeSubscription(
+      result.subscription as unknown as Parameters<typeof mapStripeSubscription>[0],
+      priceIds
+    );
+    await syncSubscriptionFromStripe({
+      userId: offer.userId,
+      ...mapped,
+      stripeLivemode: resolved.livemode,
+    });
+    if (!result.alreadyApplied) {
+      await recordBillingEvent({
+        userId: offer.userId,
+        stripeEventId: `reactivation-extend:${offer.id}`,
+        eventType: "reactivation.extended",
+        status: "trial_started",
+        amountCents: 0,
+        currency: mapped.currency,
+        description: `Win-back: next payment moved 30 days (${mapped.plan})`,
+        subscriptionId: subId,
+        livemode: resolved.livemode,
+        occurredAt: Math.floor(Date.now() / 1000),
+      }).catch((err) => console.error("[reactivation] billing event", err));
+    }
+    return { trialEnd: result.trialEnd, subscriptionId: subId };
+  } catch (err) {
+    if (err instanceof ReactivationError) throw err;
+    console.error("[reactivation] extend failed", offer.id, err);
+    await releaseReactivationOffer(offer.id, marker).catch(() => {});
+    throw new ReactivationError("extend_failed", 502);
+  }
 }

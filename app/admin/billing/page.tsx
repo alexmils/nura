@@ -3,6 +3,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminPageHeader } from "@/app/components/admin/AdminPageHeader";
 import { AdminReactivationPanel } from "@/app/components/admin/AdminReactivationPanel";
+import { AdminProblemReportsPanel } from "@/app/components/admin/AdminProblemReportsPanel";
 import { AdminTabs, useAdminTab } from "@/app/components/admin/AdminTabs";
 import { AdminSettingToggle } from "@/app/components/admin/AdminSettingToggle";
 import { formatDateTime, formatMoney } from "@/lib/admin-format";
@@ -33,13 +34,14 @@ const EMPTY_STRIPE: StripeAdminView = {
   live: emptyEnvView(),
 };
 type EnvKey = "sandbox" | "live";
-const TABS = ["overview", "stripe", "subscriptions", "winback", "usage"] as const;
+const TABS = ["overview", "stripe", "subscriptions", "winback", "problems", "usage"] as const;
 type Tab = (typeof TABS)[number];
 const TAB_ITEMS = [
   { id: "overview", label: "Overview" },
   { id: "stripe", label: "Stripe" },
   { id: "subscriptions", label: "Subscriptions" },
   { id: "winback", label: "Win-back" },
+  { id: "problems", label: "Problem reports" },
   { id: "usage", label: "Usage" },
 ] as const;
 function AdminBillingPageInner() {
@@ -561,6 +563,7 @@ function AdminBillingPageInner() {
           </form>
         )}
         {tab === "winback" && <AdminReactivationPanel />}
+        {tab === "problems" && <AdminProblemReportsPanel />}
       {tab === "subscriptions" && (
           <section className="admin-panel">
             <h2 className="admin-panel-title">Subscriptions</h2>

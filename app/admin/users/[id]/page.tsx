@@ -19,6 +19,7 @@ import type { AdminUserDetail } from "@/lib/admin-user-detail";
 import { formatRetentionActionLabel } from "@/lib/subscription-retention-shared";
 import { fetchJson } from "@/lib/fetch-json";
 import { UserAgentHealthPanel } from "@/app/components/admin/AgentHealthPanels";
+import { AdminUserWinbackCard } from "@/app/components/admin/AdminUserWinbackCard";
 
 function shortStripeId(id: string | null): string {
   if (!id) return "—";
@@ -375,6 +376,8 @@ export default function AdminUserDetailPage() {
             interpreter={detail.agentHealth.interpreter}
           />
         ) : null}
+
+        <AdminUserWinbackCard userId={userId} canWrite={canWrite} />
 
         <section className="admin-panel">
           <h2 className="admin-panel-title">Billing / payments</h2>

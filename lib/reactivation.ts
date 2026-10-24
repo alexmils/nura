@@ -12,7 +12,9 @@ import {
   previousPlan,
   reactivationExpiry,
   reactivationLinkStatus,
+  offerSourceAllowsExtension,
   type ReactivationLinkStatus,
+  type ReactivationOfferSource,
 } from "@/lib/reactivation-rules";
 import type { BillingPlanId } from "@/lib/billing-constants";
 import { getStripeConfig, stripePriceIdsFromConfig } from "@/lib/stripe";
@@ -94,6 +96,8 @@ export async function previousPlanForUser(userId: string): Promise<BillingPlanId
 export async function createReactivationOffer(input: {
   userId: string;
   createdBy: string | null;
+  /** Who minted it; null/"winback_tab" keeps the original rules. */
+  source?: ReactivationOfferSource | null;
   now?: Date;
 }): Promise<{ token: string; offer: ReactivationOffer }> {
   await ensureSchemaReady();
@@ -106,9 +110,9 @@ export async function createReactivationOffer(input: {
     [input.userId]
   );
   const { rows } = await pool.query<OfferRow>(
-    `INSERT INTO reactivation_offers (id, user_id, token_hash, plan, created_by, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-    [randomUUID(), input.userId, hashReactivationToken(token), plan, input.createdBy, expiresAt]
+    `INSERT INTO reactivation_offers (id, user_id, token_hash, plan, created_by, expires_at, source)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [randomUUID(), input.userId, hashReactivationToken(token), plan, input.createdBy, expiresAt, input.source ?? null]
   );
   return { token, offer: rowToOffer(rows[0]) };
 }
@@ -182,6 +186,33 @@ export async function consumeReactivationOffer(input: {
   );
   if (rows[0]) return { claimed: true, offer: rowToOffer(rows[0]) };
   return { claimed: false, offer: await reactivationOfferById(input.id) };
+}
+
+/**
+ * Links minted from a problem report or the admin single-user page may
+ * extend a paying subscription (lib/reactivation-extend.ts). Win-back tab
+ * links keep the original "already active" rule.
+ */
+export async function offerAllowsExtension(offerId: string): Promise<boolean> {
+  await ensureSchemaReady();
+  const { rows } = await getPool().query<{ source: string | null; from_report: boolean }>(
+    `SELECT o.source,
+            EXISTS (SELECT 1 FROM problem_reports pr WHERE pr.reactivation_offer_id = o.id) AS from_report
+     FROM reactivation_offers o WHERE o.id = $1`,
+    [offerId]
+  );
+  const row = rows[0];
+  return Boolean(row && (row.from_report || offerSourceAllowsExtension(row.source)));
+}
+
+/** Undo a claim whose Stripe step failed, so the person can try again. */
+export async function releaseReactivationOffer(id: string, checkoutSessionId: string): Promise<void> {
+  await getPool().query(
+    `UPDATE reactivation_offers
+     SET used_at = NULL, checkout_session_id = NULL, new_subscription_id = NULL
+     WHERE id = $1 AND checkout_session_id = $2`,
+    [id, checkoutSessionId]
+  );
 }
 
 export type ReactivationCandidate = {

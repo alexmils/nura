@@ -24,6 +24,18 @@ export const REACTIVATION_LINK_DAYS = 30;
 export const REACTIVATION_TRIAL_KIND = "reactivation";
 export const REACTIVATION_PATH = "/reactivate";
 
+/**
+ * Who minted a link. "winback_tab" (and old rows with no source) keep the
+ * original rule: a paying member sees "already active". Links from a
+ * problem report or the admin single-user page move a paying member's next
+ * payment 30 days later instead (lib/reactivation-extend.ts).
+ */
+export type ReactivationOfferSource = "winback_tab" | "problem_report" | "admin_user";
+
+export function offerSourceAllowsExtension(source: string | null | undefined): boolean {
+  return source === "problem_report" || source === "admin_user";
+}
+
 const MIN_TOKEN_LENGTH = 32;
 const MAX_TOKEN_LENGTH = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -70,12 +82,19 @@ export type ReactivationState =
   | "used"
   | "expired"
   | "already_active"
+  | "extend"
   | "valid";
 
 /** What the /reactivate page shows for a token. */
 export function reactivationState(input: {
   offer: ReactivationOfferLike | null;
   subscription?: ReactivationSubLike | null;
+  /**
+   * The offer came from a confirmed problem report: someone who is still
+   * paying gets their next 30 days free (lib/reactivation-extend.ts) instead
+   * of "already active".
+   */
+  allowExtend?: boolean;
   now?: Date;
 }): ReactivationState {
   const { offer } = input;
@@ -91,7 +110,7 @@ export function reactivationState(input: {
     (sub.status === "active" || sub.status === "trialing") &&
     !sub.cancelAtPeriodEnd
   ) {
-    return "already_active";
+    return input.allowExtend ? "extend" : "already_active";
   }
   return "valid";
 }

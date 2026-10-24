@@ -9,6 +9,8 @@ import {
   loadReactivation,
 } from "@/lib/reactivation-stripe";
 import { firstChargeDate, REACTIVATION_TRIAL_DAYS } from "@/lib/reactivation-rules";
+import { isExtensionMarker } from "@/lib/reactivation-extend";
+import { getSubscriptionByUserId } from "@/lib/stripe-admin";
 import { getStripeConfig, resolveBillingPlans } from "@/lib/stripe";
 import { getSession } from "@/lib/auth/session";
 import "./reactivate.css";
@@ -39,6 +41,7 @@ export default async function ReactivatePage({
   let priceLabel: string | null = null;
   let chargeDate: string | null = null;
   let email: string | null = null;
+  let currentChargeDate: string | null = null;
 
   const plans = resolveBillingPlans(await getStripeConfig());
   const session = await getSession().catch(() => null);
@@ -60,13 +63,30 @@ export default async function ReactivatePage({
       : null;
     state = view?.state ?? "invalid";
     email = view?.email ?? null;
+    // Redeemed just now as "next 30 days free" (still paying): no checkout.
+    if (
+      state === "used" &&
+      status === "extended" &&
+      view?.offer &&
+      isExtensionMarker(view.offer.checkoutSessionId)
+    ) {
+      state = "extended";
+    }
     if (view?.offer) {
       const meta = plans[view.offer.plan];
       planLabel = meta?.label ?? view.offer.plan;
       priceLabel = meta ? `${meta.displayPrice}${meta.displayPeriod}` : null;
       chargeDate = firstChargeDate(null).toISOString();
     }
-    if (state === "valid" && session && view?.offer && session.sub !== view.offer.userId) {
+    if (state === "extend" && view) {
+      currentChargeDate = view.nextChargeAt ?? null;
+      chargeDate = view.extendedChargeAt ?? chargeDate;
+    }
+    if (state === "extended" && view?.offer) {
+      const sub = await getSubscriptionByUserId(view.offer.userId).catch(() => null);
+      chargeDate = sub?.trial_ends_at ? new Date(sub.trial_ends_at).toISOString() : null;
+    }
+    if ((state === "valid" || state === "extend") && session && view?.offer && session.sub !== view.offer.userId) {
       state = "wrong_account";
     }
   }
@@ -84,6 +104,7 @@ export default async function ReactivatePage({
           planLabel={planLabel}
           priceLabel={priceLabel}
           chargeDate={chargeDate}
+          currentChargeDate={currentChargeDate}
           email={email}
           trialDays={REACTIVATION_TRIAL_DAYS}
           signedIn={Boolean(session)}

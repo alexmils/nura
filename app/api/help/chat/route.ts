@@ -33,6 +33,7 @@ import {
   verifyTurnstileToken,
 } from "@/lib/turnstile";
 import { getPool } from "@/lib/db";
+import { noteHelpChatProblem } from "@/lib/help-problem-report";
 
 async function resolveHelpActor(): Promise<
   | { kind: "user"; userId: string; email: string }
@@ -250,6 +251,12 @@ async function handleUserPost(input: {
     authorUserId: input.userId,
     forAdminUnread: true,
   });
+  // "The app isn't working" -> problem report for this account (source help_chat).
+  const problemAck = await noteHelpChatProblem({
+    userId: input.userId,
+    helpThreadId: thread.id,
+    text: input.text,
+  });
 
   const priorUserMessageCount = history.filter((m) => m.role === "user").length;
   void notifyAdminsOfHelpMessage({
@@ -267,6 +274,7 @@ async function handleUserPost(input: {
     text: input.text,
     userId: input.userId,
     settings: input.settings,
+    ackLine: problemAck?.ackLine ?? null,
   });
 
   const messages = await listUserMessages(thread.id);
@@ -285,8 +293,19 @@ async function maybeAiReply(input: {
   text: string;
   userId: string | null;
   settings: Awaited<ReturnType<typeof getHelpSettings>>;
+  /** Problem-report confirmation, added after the reply in the user's language. */
+  ackLine?: string | null;
 }) {
-  if (!input.settings.aiFirstReply) return null;
+  const withAck = (content: string) => (input.ackLine ? `${content}\n\n${input.ackLine}` : content);
+  if (!input.settings.aiFirstReply) {
+    if (!input.ackLine) return null;
+    return addHelpMessage({
+      threadId: input.threadId,
+      role: "assistant",
+      content: input.ackLine,
+      forUserUnread: false,
+    });
+  }
   try {
     const llm = await getLlmRuntimeConfig();
     const messages = await buildHelpAiMessages({
@@ -304,11 +323,11 @@ async function maybeAiReply(input: {
         model: input.settings.aiModel || null,
       })
     ).trim();
-    if (!reply) return null;
+    if (!reply && !input.ackLine) return null;
     return addHelpMessage({
       threadId: input.threadId,
       role: "assistant",
-      content: reply,
+      content: reply ? withAck(reply) : input.ackLine!,
       forUserUnread: false,
     });
   } catch (err) {
@@ -316,8 +335,9 @@ async function maybeAiReply(input: {
     return addHelpMessage({
       threadId: input.threadId,
       role: "assistant",
-      content:
-        "Thanks — I couldn’t generate an automatic reply right now. A teammate will follow up soon.",
+      content: withAck(
+        "Thanks — I couldn’t generate an automatic reply right now. A teammate will follow up soon."
+      ),
     });
   }
 }

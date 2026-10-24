@@ -256,6 +256,58 @@ async function runSchemaMigrations(db: PoolClient) {
     );
     CREATE INDEX IF NOT EXISTS idx_reactivation_offers_user
       ON reactivation_offers(user_id, created_at DESC);
+    -- 2026-10-24 problem reports (docs/migrations/2026-10-24-problem-reports.sql)
+    CREATE TABLE IF NOT EXISTS problem_reports (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      thread_id TEXT REFERENCES threads(id) ON DELETE SET NULL,
+      excerpt TEXT NOT NULL,
+      category TEXT NOT NULL,
+      language TEXT,
+      hit_count INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'new'
+        CHECK (status IN ('new', 'confirmed', 'dismissed', 'winback_sent')),
+      admin_note TEXT,
+      reactivation_offer_id TEXT REFERENCES reactivation_offers(id) ON DELETE SET NULL,
+      emailed_admin_at TIMESTAMPTZ,
+      winback_email_sent_at TIMESTAMPTZ,
+      winback_email_to TEXT,
+      winback_email_subject TEXT,
+      winback_email_body TEXT,
+      events JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_detected_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_problem_reports_user_thread
+      ON problem_reports(user_id, thread_id, last_detected_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_problem_reports_recent
+      ON problem_reports(last_detected_at DESC);
+    -- Problem report source + help chat thread; win-back link source + sent emails
+    -- (docs/migrations/2026-10-24-winback-sources.sql).
+    ALTER TABLE problem_reports ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'guide_session';
+    DO $$ BEGIN
+      ALTER TABLE problem_reports ADD CONSTRAINT problem_reports_source_check
+        CHECK (source IN ('guide_session', 'help_chat', 'admin'));
+    EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    ALTER TABLE problem_reports ADD COLUMN IF NOT EXISTS help_thread_id TEXT;
+    CREATE INDEX IF NOT EXISTS idx_problem_reports_user_source
+      ON problem_reports(user_id, source, last_detected_at DESC);
+    ALTER TABLE reactivation_offers ADD COLUMN IF NOT EXISTS source TEXT;
+    CREATE TABLE IF NOT EXISTS winback_emails (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      offer_id TEXT,
+      problem_report_id TEXT REFERENCES problem_reports(id) ON DELETE SET NULL,
+      mode TEXT,
+      to_email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      body TEXT NOT NULL,
+      sent_by TEXT REFERENCES users(id) ON DELETE SET NULL,
+      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_winback_emails_offer ON winback_emails(offer_id);
+    CREATE INDEX IF NOT EXISTS idx_winback_emails_user ON winback_emails(user_id, sent_at DESC);
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_email_opt_in_at TIMESTAMPTZ;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS brevo_contact_synced_at TIMESTAMPTZ;
@@ -585,6 +637,8 @@ async function runSchemaMigrations(db: PoolClient) {
     -- 2026-10-23 closure card: start values for SUDs / VoC (docs/migrations/2026-10-23-thread-baselines.sql)
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS baseline_suds INTEGER;
     ALTER TABLE threads ADD COLUMN IF NOT EXISTS baseline_voc INTEGER;
+    -- 2026-10-24 dissociation screening level (docs/migrations/2026-10-24-thread-dissociation.sql)
+    ALTER TABLE threads ADD COLUMN IF NOT EXISTS dissociation TEXT;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id) ON DELETE CASCADE;
     ALTER TABLE memories ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'user';
   `);
@@ -677,6 +731,12 @@ function rowToThread(row: QueryResultRow): Thread {
     description: (row.description as string) ?? undefined,
     intakeComplete: Boolean(row.intake_complete),
     agentLanguage: (row.agent_language as string) ?? undefined,
+    dissociation:
+      row.dissociation === "screening" ||
+      row.dissociation === "cautious" ||
+      row.dissociation === "severe"
+        ? (row.dissociation as Thread["dissociation"])
+        : undefined,
     setCount: row.set_count != null ? Number(row.set_count) : undefined,
     lastSetOutcome:
       row.last_set_outcome === "completed" || row.last_set_outcome === "stopped"
@@ -952,7 +1012,7 @@ export async function updateThread(
     `UPDATE threads SET title=$1, phase=$2, target=$3, negative_cognition=$4, positive_cognition=$5,
      suds=$6, voc=$7, summary=$8, incomplete=$9, mode=$10, description=$11, intake_complete=$12,
      agent_language=$13, set_count=$14, last_set_outcome=$15, updated_at=$16,
-     baseline_suds=$18, baseline_voc=$19 WHERE id=$17`,
+     baseline_suds=$18, baseline_voc=$19, dissociation=$20 WHERE id=$17`,
     [
       merged.title,
       merged.phase,
@@ -973,6 +1033,7 @@ export async function updateThread(
       id,
       merged.baselineSuds ?? null,
       merged.baselineVoc ?? null,
+      merged.dissociation ?? null,
     ]
   );
   // Same rule as shouldRecordPhaseChange (lib/phase-timeline): only real changes.

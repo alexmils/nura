@@ -10,9 +10,11 @@ export type ReactivateViewState =
   | "invalid"
   | "already_active"
   | "wrong_account"
+  | "extend"
+  | "extended"
   | "done";
 
-const CLOSED: Record<Exclude<ReactivateViewState, "valid" | "done">, { title: string; body: string }> = {
+const CLOSED: Record<Exclude<ReactivateViewState, "valid" | "done" | "extend" | "extended">, { title: string; body: string }> = {
   used: {
     title: "This link was already used",
     body: "Your free month has been set up. Sign in to continue your sessions.",
@@ -51,6 +53,8 @@ export function ReactivateOfferView(props: {
   planLabel: string | null;
   priceLabel: string | null;
   chargeDate: string | null;
+  /** "extend": when the next payment was due before the free days. */
+  currentChargeDate?: string | null;
   email: string | null;
   trialDays: number;
   signedIn: boolean;
@@ -94,6 +98,57 @@ export function ReactivateOfferView(props: {
         <Link href={openApp} className="reactivate-cta" data-testid="reactivate-open-app">
           {props.signedIn ? "Open Nura" : "Sign in to Nura"}
         </Link>
+      </section>
+    );
+  }
+
+  if (props.state === "extended") {
+    return (
+      <section className="reactivate-card" data-testid="reactivate-extended">
+        <p className="reactivate-eyebrow">All set</p>
+        <h1 className="reactivate-title">Your next {props.trialDays} days are on us</h1>
+        <p className="reactivate-body">
+          Nothing was charged and your plan continues as before.
+          {props.chargeDate ? ` Your next payment is now on ${formatDate(props.chargeDate)}.` : ""}
+        </p>
+        <Link href={openApp} className="reactivate-cta" data-testid="reactivate-open-app">
+          {props.signedIn ? "Open Nura" : "Sign in to Nura"}
+        </Link>
+      </section>
+    );
+  }
+
+  if (props.state === "extend") {
+    return (
+      <section className="reactivate-card" data-testid="reactivate-extend">
+        <p className="reactivate-eyebrow">Thank you for your patience</p>
+        <h1 className="reactivate-title">Your next {props.trialDays} days are on us</h1>
+        <p className="reactivate-body">
+          Something in Nura did not work as it should, and we are sorry. Your plan stays active, and we
+          will move your next payment {props.trialDays} days later.
+        </p>
+        <ul className="reactivate-points">
+          <li>Full access continues, nothing changes in how you use Nura.</li>
+          <li>No checkout and no card details needed. Nothing is charged.</li>
+          <li>
+            {props.currentChargeDate
+              ? `Your next payment moves from ${formatDate(props.currentChargeDate)} to ${formatDate(props.chargeDate)}.`
+              : `Your next payment moves to ${formatDate(props.chargeDate)}.`}
+          </li>
+        </ul>
+        {error ? (
+          <p className="reactivate-error" role="alert">{error}</p>
+        ) : null}
+        <button
+          type="button"
+          className="reactivate-cta"
+          onClick={start}
+          disabled={busy}
+          data-testid="reactivate-extend-start"
+        >
+          {busy ? "Adding your free days..." : `Add my free ${props.trialDays} days`}
+        </button>
+        {props.email ? <p className="reactivate-foot">For {props.email}.</p> : null}
       </section>
     );
   }

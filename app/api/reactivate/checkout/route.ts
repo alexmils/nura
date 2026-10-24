@@ -31,6 +31,8 @@ export async function POST(request: Request) {
         used: "This link has already been used",
         expired: "This link has expired",
         already_active: "Your plan is already active",
+        extend_failed: "We could not add your free days right now. Try again in a moment.",
+        extend: "This offer is not available",
         wrong_account: "This link belongs to a different account. Sign out and open it again.",
         not_configured: "Checkout is not available right now",
         no_price: "Checkout is not available right now",

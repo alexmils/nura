@@ -12,12 +12,27 @@ import {
 import { reactivationLink } from "@/lib/reactivation-rules";
 import { getPublicAppUrl } from "@/lib/platform-settings";
 import { writeAuditEvent } from "@/lib/audit-log";
+import {
+  generateUserWinback,
+  getUserWinback,
+  sendUserWinbackEmail,
+  WinbackError,
+} from "@/lib/winback-email";
 
-/** Win-back candidates: guided mode, zero sets, no longer paying. */
-export async function GET() {
+/**
+ * Win-back candidates: guided mode, zero sets, no longer paying.
+ * ?userId=... -> that person's win-back status + sent emails (user page).
+ */
+export async function GET(request: Request) {
   const auth = await requireAdminAccess();
   if (!isAuthContext(auth)) return auth;
+  const userId = new URL(request.url).searchParams.get("userId");
   try {
+    if (userId) {
+      const winback = await getUserWinback(userId);
+      if (!winback) return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ winback });
+    }
     return NextResponse.json({ candidates: await listReactivationCandidates() });
   } catch (err) {
     console.error("[admin/reactivation]", err);
@@ -37,6 +52,8 @@ export async function POST(request: Request) {
     action?: string;
     userId?: string;
     offerId?: string;
+    subject?: string;
+    body?: string;
   };
   try {
     if (body.action === "generate" && typeof body.userId === "string") {
@@ -50,6 +67,7 @@ export async function POST(request: Request) {
       const { token, offer } = await createReactivationOffer({
         userId: body.userId,
         createdBy: auth.user.id,
+        source: "winback_tab",
       });
       await writeAuditEvent({
         actorUserId: auth.user.id,
@@ -62,12 +80,28 @@ export async function POST(request: Request) {
         offer,
       });
     }
+    // Admin single-user page: any person (admin decision), one redemption each.
+    if (body.action === "user_generate" && typeof body.userId === "string") {
+      return NextResponse.json(await generateUserWinback({ userId: body.userId, actorUserId: auth.user.id }));
+    }
+    if (body.action === "user_send" && typeof body.userId === "string") {
+      const winback = await sendUserWinbackEmail({
+        userId: body.userId,
+        subject: body.subject,
+        body: body.body,
+        actorUserId: auth.user.id,
+      });
+      return NextResponse.json({ ok: true, winback });
+    }
     if (body.action === "mark_sent" && typeof body.offerId === "string") {
       await markReactivationSent(body.offerId);
       return NextResponse.json({ ok: true });
     }
     return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   } catch (err) {
+    if (err instanceof WinbackError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
     console.error("[admin/reactivation] POST", err);
     return NextResponse.json({ error: "Failed" }, { status: 500 });
   }
