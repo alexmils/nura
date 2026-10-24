@@ -259,7 +259,7 @@ export function CheckoutView({
     <div className="nco">
       <header className="nco-bar">
         <Link href="/" className="nco-bar__logo" aria-label="Nura home">
-          <BrandLockup tone="white" />
+          <BrandLockup tone="color" />
         </Link>
         <div className="nco-bar__right">
           <span className="nco-bar__secure">

@@ -1,15 +1,21 @@
 /*
  * Full-screen split checkout (/checkout). Layout ported from the hubcast
  * checkout (dark summary left, light details right), restyled to Nura:
- * deep forest summary, pistachio selection, Action green buttons,
+ * light mint summary (#A4EDA5, brand Paper) with dark forest text, forest
+ * selected plan, Action green buttons,
  * Source Sans 3 everywhere, Roboto Mono kickers.
  */
 
 .nco {
-  --nco-forest: #17241a;
-  --nco-forest-2: #1f3022;
-  --nco-on-dark: #eef5e8;
-  --nco-on-dark-muted: #a9bb9d;
+  --nco-forest: #17361f;
+  /* Left summary on mint. Contrast (WCAG): ink 11.5:1, muted 7.1:1,
+     deep 8.0:1 on #a4eda5; light text on forest 12.5:1. */
+  --nco-sum-bg: #a4eda5;
+  --nco-sum-ink: #13261a;
+  --nco-sum-muted: #2d4a33;
+  --nco-sum-deep: #174520;
+  --nco-sum-line: color-mix(in srgb, #13261a 22%, transparent);
+  --nco-on-forest: #f2fbf1;
   --nco-pistachio: #c6d67e;
   --nco-mint: #a4eda5;
   --nco-ink: #2a3020;
@@ -40,15 +46,15 @@
   pointer-events: none;
 }
 .nco-bar > * { pointer-events: auto; }
-.nco-bar__logo { display: inline-flex; align-items: center; color: var(--nco-on-dark); }
+.nco-bar__logo { display: inline-flex; align-items: center; color: var(--nco-sum-ink); }
 .nco-bar__logo svg, .nco-bar__logo img { height: 1.6rem; width: auto; }
 .nco-bar__right { display: flex; align-items: center; gap: 1.1rem; font-size: 0.9rem; }
-.nco-bar__secure { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--nco-on-dark-muted); }
+.nco-bar__secure { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--nco-sum-muted); }
 .nco-bar__back {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  color: var(--nco-on-dark);
+  color: var(--nco-sum-ink);
   text-decoration: none;
   font-weight: 600;
 }
@@ -61,16 +67,16 @@
 .nco-summary {
   position: relative;
   overflow: hidden;
-  color: var(--nco-on-dark);
-  background: var(--nco-forest);
+  color: var(--nco-sum-ink);
+  background: var(--nco-sum-bg);
 }
 .nco-summary__glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(38rem 28rem at 10% -10%, color-mix(in srgb, var(--nco-pistachio) 22%, transparent), transparent 70%),
-    radial-gradient(30rem 24rem at 110% 110%, color-mix(in srgb, var(--nco-mint) 14%, transparent), transparent 70%);
+    radial-gradient(38rem 28rem at 10% -10%, rgb(255 255 255 / 0.35), transparent 70%),
+    radial-gradient(30rem 24rem at 110% 110%, rgb(255 255 255 / 0.22), transparent 70%);
 }
 .nco-summary__inner {
   position: relative;
@@ -86,7 +92,7 @@
   font-weight: 500;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--nco-on-dark-muted);
+  color: var(--nco-sum-muted);
 }
 .nco-summary__title {
   margin: 0.6rem 0 0;
@@ -109,10 +115,10 @@
   font-size: 1.05rem;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--nco-on-dark-muted);
+  color: var(--nco-sum-muted);
 }
-.nco-summary__trial { margin: 0.75rem 0 0; font-weight: 600; color: var(--nco-pistachio); }
-.nco-summary__tagline { margin: 0.4rem 0 0; color: #cddcc4; font-size: 1rem; line-height: 1.5; }
+.nco-summary__trial { margin: 0.75rem 0 0; font-weight: 700; color: var(--nco-sum-deep); }
+.nco-summary__tagline { margin: 0.4rem 0 0; color: var(--nco-sum-ink); font-size: 1rem; line-height: 1.5; }
 
 .nco-summary__toggle {
   display: none;
@@ -122,9 +128,9 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--nco-pistachio);
+  color: var(--nco-sum-deep);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
 }
 .nco-summary__toggle svg { transition: transform 0.2s ease; }
@@ -136,23 +142,23 @@
   gap: 0.55rem;
   margin: 1.2rem 0 0;
   padding: 0.6rem 0.95rem;
-  border: 1px solid rgb(255 255 255 / 0.2);
+  border: 1px solid var(--nco-sum-line);
   border-radius: 0.75rem;
-  background: rgb(255 255 255 / 0.06);
-  color: var(--nco-on-dark);
+  background: rgb(255 255 255 / 0.55);
+  color: var(--nco-sum-ink);
   font: inherit;
   font-size: 0.95rem;
   text-align: left;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-.nco-chip svg { flex: none; color: var(--nco-pistachio); }
-.nco-chip:hover:not(:disabled):not(.nco-chip--static) { background: rgb(255 255 255 / 0.11); border-color: rgb(255 255 255 / 0.32); }
+.nco-chip svg { flex: none; color: var(--nco-sum-deep); }
+.nco-chip:hover:not(:disabled):not(.nco-chip--static) { background: rgb(255 255 255 / 0.8); border-color: var(--nco-sum-deep); }
 .nco-chip--static { cursor: default; }
 
 .nco-features { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 0.65rem; }
 .nco-features li { display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.97rem; line-height: 1.4; }
-.nco-features svg { flex: none; margin-top: 0.1rem; color: var(--nco-pistachio); }
+.nco-features svg { flex: none; margin-top: 0.1rem; color: var(--nco-sum-deep); }
 
 .nco-plans-block { margin-top: 1.6rem; }
 .nco-plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; margin-top: 0.75rem; }
@@ -164,48 +170,48 @@
   gap: 0.15rem;
   min-width: 0;
   padding: 0.95rem 0.8rem 0.85rem;
-  border: 2px solid rgb(255 255 255 / 0.22);
+  border: 2px solid var(--nco-sum-line);
   border-radius: 0.85rem;
-  background: rgb(255 255 255 / 0.06);
-  color: var(--nco-on-dark);
+  background: rgb(255 255 255 / 0.7);
+  color: var(--nco-sum-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
-.nco-plan:hover:not(:disabled) { border-color: rgb(255 255 255 / 0.4); }
+.nco-plan:hover:not(:disabled) { border-color: var(--nco-sum-deep); }
 .nco-plan:disabled { cursor: progress; }
-.nco-plan.is-featured { border-color: color-mix(in srgb, var(--nco-pistachio) 55%, transparent); background: rgb(255 255 255 / 0.1); }
+.nco-plan.is-featured { border-color: color-mix(in srgb, var(--nco-sum-deep) 55%, transparent); }
 .nco-plan.is-selected {
-  border-color: var(--nco-pistachio);
-  background: var(--nco-pistachio);
-  color: var(--nco-ink);
+  border-color: var(--nco-forest);
+  background: var(--nco-forest);
+  color: var(--nco-on-forest);
 }
-.nco-plan:focus-visible { outline: 3px solid var(--nco-mint); outline-offset: 2px; }
+.nco-plan:focus-visible { outline: 3px solid var(--nco-sum-ink); outline-offset: 2px; }
 .nco-plan__tag {
   position: absolute;
   top: -0.6rem;
   right: 0.6rem;
   padding: 0.12rem 0.45rem;
   border-radius: 999px;
-  background: var(--nco-mint);
-  color: var(--nco-ink);
+  background: var(--nco-forest);
+  color: var(--nco-sum-bg);
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.nco-plan.is-selected .nco-plan__tag { background: var(--nco-forest); color: var(--nco-pistachio); }
+.nco-plan.is-selected .nco-plan__tag { background: var(--nco-sum-bg); color: var(--nco-forest); box-shadow: 0 0 0 2px var(--nco-forest); }
 .nco-plan__name { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
 .nco-plan__price { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .nco-plan__period { font-size: 0.78rem; opacity: 0.75; }
 
-.nco-totals { margin: 1.9rem 0 0; padding-top: 1.1rem; border-top: 1px solid rgb(255 255 255 / 0.14); display: grid; gap: 0.5rem; }
-.nco-totals > div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.95rem; color: #cddcc4; }
+.nco-totals { margin: 1.9rem 0 0; padding-top: 1.1rem; border-top: 1px solid var(--nco-sum-line); display: grid; gap: 0.5rem; }
+.nco-totals > div { display: flex; justify-content: space-between; gap: 1rem; font-size: 0.95rem; color: var(--nco-sum-ink); }
 .nco-totals dt, .nco-totals dd { margin: 0; }
 .nco-totals dd { font-variant-numeric: tabular-nums; }
-.nco-totals .nco-totals__due { margin-top: 0.25rem; color: var(--nco-on-dark); font-size: 1.1rem; font-weight: 700; }
-.nco-totals__note { margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--nco-on-dark-muted); }
+.nco-totals .nco-totals__due { margin-top: 0.25rem; color: var(--nco-sum-ink); font-size: 1.1rem; font-weight: 700; }
+.nco-totals__note { margin: 0.15rem 0 0; font-size: 0.85rem; color: var(--nco-sum-muted); }
 
 /* ---- Right: details + payment ---- */
 .nco-main { background: var(--nco-paper); }
